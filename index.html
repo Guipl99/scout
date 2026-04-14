@@ -2,722 +2,1005 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- build: 2026-04-14 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="veille.io">
-<meta name="theme-color" content="#534AB7">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Scout">
+<meta name="theme-color" content="#0f0f0f">
 <link rel="manifest" href="manifest.json">
-<title>veille.io</title>
+<title>Scout — Veille concurrentielle</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f8f6;color:#1a1a1a;height:100vh;display:flex;flex-direction:column}
-.app-body{display:flex;flex:1;overflow:hidden}
-.sidebar{width:210px;min-width:210px;background:white;border-right:1px solid #e8e8e4;padding:1rem;display:flex;flex-direction:column;gap:2px;height:100%;overflow-y:auto}
-.logo{font-size:15px;font-weight:600;padding:0 0 1rem;border-bottom:1px solid #e8e8e4;margin-bottom:.5rem}
-.logo span{color:#534AB7}
-.nav-section{font-size:10px;color:#999;padding:12px 10px 4px;text-transform:uppercase;letter-spacing:.06em}
-.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;color:#555;cursor:pointer;user-select:none}
-.nav-item:hover{background:#f4f4f1;color:#1a1a1a}
-.nav-item.active{background:#EEEDFE;color:#3C3489;font-weight:500}
-.nav-icon{width:15px;height:15px;flex-shrink:0}
-.main{flex:1;padding:1.5rem;overflow-y:auto;height:100%}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;gap:8px;flex-wrap:wrap}
-.topbar h1{font-size:18px;font-weight:600}
-.btn{padding:7px 14px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid #ddd;background:white;color:#1a1a1a}
-.btn:hover{background:#f4f4f1}
-.btn-primary{background:#534AB7;color:white;border-color:#534AB7}
-.btn-primary:hover{background:#3C3489}
-.btn-sm{padding:4px 10px;font-size:12px}
-.btn-danger{color:#A32D2D;border-color:#F09595;background:white}
-.btn-danger:hover{background:#FCEBEB}
-.panel{display:none}
-.panel.active{display:block}
-.section{background:white;border:1px solid #e8e8e4;border-radius:12px;margin-bottom:1rem}
-.section-header{display:flex;justify-content:space-between;align-items:center;padding:.875rem 1.25rem;border-bottom:1px solid #e8e8e4}
-.section-title{font-size:13px;font-weight:600}
-.section-body{padding:1rem 1.25rem}
-.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem}
-.metric{background:#f4f4f1;border-radius:8px;padding:1rem}
-.metric-label{font-size:11px;color:#888;margin-bottom:4px}
-.metric-value{font-size:22px;font-weight:600}
-.alert-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid #f0f0ec}
-.alert-row:last-child{border-bottom:none}
-.alert-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
-.dot-red{background:#E24B4A}
-.dot-amber{background:#EF9F27}
-.dot-teal{background:#1D9E75}
-.alert-text{flex:1;font-size:13px;line-height:1.5}
-.alert-meta{font-size:11px;color:#999;margin-top:2px}
-.avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
-.av-purple{background:#EEEDFE;color:#3C3489}
-.av-teal{background:#E1F5EE;color:#085041}
-.av-coral{background:#FAECE7;color:#712B13}
-.av-amber{background:#FAEEDA;color:#633806}
-.av-blue{background:#E6F1FB;color:#0C447C}
-.tag{font-size:11px;padding:2px 7px;border-radius:999px;display:inline-block;margin:2px}
-.tag-p{background:#EEEDFE;color:#534AB7}
-.upd-dot{width:6px;height:6px;border-radius:50%;background:#1D9E75;flex-shrink:0}
-.upd-dot.loading{background:#EF9F27;animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-.card{border:1px solid #e8e8e4;border-radius:12px;padding:1rem;cursor:pointer;background:white;transition:border-color .15s}
-.card:hover{border-color:#AFA9EC}
-.card-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.card-name{font-size:13px;font-weight:600}
-.card-sub{font-size:11px;color:#999}
-.card-kpis{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
-.card-kpi{background:#f4f4f1;border-radius:6px;padding:6px 8px}
-.card-kpi-label{font-size:10px;color:#999}
-.card-kpi-value{font-size:12px;font-weight:600}
-.card-footer{font-size:11px;color:#bbb;display:flex;align-items:center;gap:5px}
-.produit-card{border:1px solid #e8e8e4;border-radius:12px;padding:1rem;background:white;cursor:pointer;transition:border-color .15s}
-.produit-card:hover{border-color:#AFA9EC}
-.produit-emoji{font-size:32px;margin-bottom:8px;display:block}
-.produit-name{font-size:14px;font-weight:600;margin-bottom:4px}
-.produit-societe{font-size:11px;color:#999;margin-bottom:6px}
-.produit-desc{font-size:12px;color:#555;line-height:1.5;margin-bottom:8px}
-.produit-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px}
-.pb-core{background:#f4f4f1;color:#555}
-.pb-new{background:#EEEDFE;color:#3C3489}
-.pb-premium{background:#FAEEDA;color:#633806}
-.detail-header{display:flex;align-items:center;gap:14px;margin-bottom:1.25rem}
-.detail-av{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;flex-shrink:0}
-.detail-emoji{font-size:48px;flex-shrink:0}
-.detail-name{font-size:20px;font-weight:600}
-.detail-sub{font-size:13px;color:#999}
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem}
-.kpi-card{background:#f4f4f1;border-radius:8px;padding:10px}
-.kpi-label{font-size:10px;color:#999;margin-bottom:3px}
-.kpi-value{font-size:16px;font-weight:600}
-.kpi-delta{font-size:10px;color:#1D9E75;margin-top:2px}
-.tabs{display:flex;gap:2px;border-bottom:1px solid #e8e8e4;margin-bottom:1rem;overflow-x:auto}
-.tab{padding:7px 12px;font-size:12px;color:#777;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;user-select:none}
-.tab:hover{color:#1a1a1a}
-.tab.active{color:#534AB7;border-bottom-color:#534AB7;font-weight:600}
-.tabpanel{display:none}
-.tabpanel.active{display:block}
-.info-table{width:100%;font-size:13px;border-collapse:collapse}
-.info-table td{padding:8px 0;border-bottom:1px solid #f0f0ec;vertical-align:top}
-.info-table tr:last-child td{border-bottom:none}
-.info-table td:first-child{color:#777;width:40%}
-.info-table td:last-child{font-weight:500}
-.feat-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid #f0f0ec}
-.feat-row:last-child{border-bottom:none}
-.feat-dot{width:7px;height:7px;border-radius:50%;background:#534AB7;flex-shrink:0;margin-top:5px}
-.feat-text{font-size:13px;line-height:1.5;flex:1}
-.badge{font-size:10px;padding:1px 6px;border-radius:999px;margin-left:6px;background:#E1F5EE;color:#0F6E56}
-.badge.new{background:#EEEDFE;color:#3C3489}
-.pricing-tier{border:1px solid #e8e8e4;border-radius:8px;padding:.875rem;margin-bottom:8px}
-.pricing-name{font-size:13px;font-weight:600;margin-bottom:3px}
-.pricing-price{font-size:18px;font-weight:600;color:#534AB7;margin-bottom:5px}
-.pricing-feat{font-size:12px;color:#777;line-height:1.6}
-.src-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:#f4f4f1;color:#666;margin:3px;border:1px solid #e8e8e4}
-.stream-box{background:#f4f4f1;border-radius:8px;padding:1rem;font-size:13px;color:#333;line-height:1.7;min-height:80px}
-.cursor{display:inline-block;width:2px;height:13px;background:#534AB7;animation:blink .8s infinite;vertical-align:middle;margin-left:2px}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-.refresh-bar{display:flex;align-items:center;gap:10px;padding:8px 1.25rem;border-top:1px solid #e8e8e4;font-size:12px;color:#999}
-.recruit-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0ec}
-.recruit-row:last-child{border-bottom:none}
-.recruit-dept{font-size:10px;padding:2px 7px;border-radius:999px;background:#E6F1FB;color:#0C447C;white-space:nowrap;flex-shrink:0;margin-top:2px}
-.recruit-poste{font-size:13px;font-weight:500}
-.recruit-meta{font-size:11px;color:#999;margin-top:2px}
-.history-row{padding:10px 0;border-bottom:1px solid #f0f0ec}
-.history-row:last-child{border-bottom:none}
-.history-period{font-size:12px;font-weight:600;color:#534AB7;margin-bottom:3px}
-.history-volume{font-size:13px}
-.history-signal{font-size:12px;color:#888;margin-top:3px;font-style:italic}
-.toggle{width:36px;height:20px;border-radius:999px;cursor:pointer;transition:background .2s;flex-shrink:0;position:relative;border:none}
-.toggle.on{background:#534AB7}
-.toggle.off{background:#ccc}
-.toggle::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:white;top:3px;transition:left .2s}
-.toggle.on::after{left:19px}
-.toggle.off::after{left:3px}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0ec}
-.toggle-row:last-child{border-bottom:none}
-.tgl-label{font-size:13px}
-.tgl-desc{font-size:11px;color:#999;margin-top:2px}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.form-full{grid-column:1/-1}
-.fg{display:flex;flex-direction:column;gap:4px}
-.fg label{font-size:12px;color:#666}
-.fg input,.fg select,.fg textarea{font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid #ddd;background:white;color:#1a1a1a;width:100%}
-.fg textarea{resize:vertical;min-height:60px}
-.signals-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
-.sig{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid #e8e8e4;border-radius:8px;cursor:pointer;font-size:12px;color:#666;user-select:none}
-.sig.on{border-color:#AFA9EC;background:#EEEDFE;color:#3C3489}
-.sig-dot{width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0}
-.sig.on .sig-dot{background:#534AB7}
-.produit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-.mini-produit{border:1px solid #e8e8e4;border-radius:10px;padding:.875rem;background:white;cursor:pointer;transition:border-color .15s}
-.mini-produit:hover{border-color:#AFA9EC}
-.mini-emoji{font-size:24px;margin-bottom:6px;display:block}
-.mini-name{font-size:12px;font-weight:600;margin-bottom:3px}
-.mini-desc{font-size:11px;color:#777;line-height:1.4}
-.empty-state{text-align:center;padding:3rem 1rem;color:#bbb;font-size:14px}
-.bottom-nav{display:none;background:white;border-top:1px solid #e8e8e4;padding:6px 0;flex-shrink:0}
-.bottom-nav-items{display:flex;justify-content:space-around}
-.bn-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:10px;color:#999;user-select:none;flex:1}
-.bn-item.active{color:#534AB7}
-.bn-icon{width:22px;height:22px}
-@media(max-width:640px){
-  body{height:100dvh}
-  .app-body{height:calc(100dvh - 65px)}
-  .sidebar{display:none}
-  .bottom-nav{display:block}
-  .main{padding:1rem}
-  .metrics{grid-template-columns:repeat(2,1fr)}
-  .kpi-row{grid-template-columns:repeat(2,1fr)}
-  .card-grid{grid-template-columns:1fr}
-  .form-grid{grid-template-columns:1fr}
-  .form-full{grid-column:1}
-  .signals-grid{grid-template-columns:repeat(2,1fr)}
-  .produit-grid{grid-template-columns:repeat(2,1fr)}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #0f0f0f;
+  --bg2: #181818;
+  --bg3: #222;
+  --border: #2a2a2a;
+  --border2: #333;
+  --text: #f0f0f0;
+  --text2: #999;
+  --text3: #555;
+  --accent: #6c63ff;
+  --accent2: #8b84ff;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --teal: #14b8a6;
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── Layout ── */
+.app { display: flex; flex: 1; overflow: hidden; }
+.sidebar { width: 200px; min-width: 200px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1rem 0.75rem; gap: 2px; overflow-y: auto; }
+.main { flex: 1; overflow-y: auto; padding: 1.5rem; }
+
+/* ── Logo ── */
+.logo { display: flex; align-items: center; gap: 8px; padding: 0.5rem 0.5rem 1rem; border-bottom: 1px solid var(--border); margin-bottom: 0.75rem; }
+.logo-icon { width: 24px; height: 24px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+.logo-icon svg { width: 14px; height: 14px; }
+.logo-text { font-size: 14px; font-weight: 600; letter-spacing: -0.3px; }
+.logo-text span { color: var(--accent2); }
+
+/* ── Nav ── */
+.nav-section { font-size: 10px; color: var(--text3); padding: 10px 8px 4px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+.nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: var(--radius); font-size: 13px; color: var(--text2); cursor: pointer; user-select: none; transition: all 0.15s; }
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: #1a1a2e; color: var(--accent2); font-weight: 500; }
+.nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+.nav-badge { margin-left: auto; background: var(--accent); color: white; font-size: 10px; border-radius: 999px; padding: 1px 6px; font-weight: 600; }
+
+/* ── Panels ── */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── Topbar ── */
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 8px; flex-wrap: wrap; }
+.topbar h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.5px; }
+.topbar-actions { display: flex; gap: 8px; }
+
+/* ── Buttons ── */
+.btn { padding: 7px 14px; border-radius: var(--radius); font-size: 13px; font-family: inherit; cursor: pointer; border: 1px solid var(--border2); background: transparent; color: var(--text); transition: all 0.15s; font-weight: 400; }
+.btn:hover { background: var(--bg3); border-color: var(--border2); }
+.btn-primary { background: var(--accent); color: white; border-color: var(--accent); font-weight: 500; }
+.btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-danger { color: var(--red); border-color: #3a1a1a; }
+.btn-danger:hover { background: #2a1010; }
+.btn-ghost { border-color: transparent; color: var(--text2); }
+.btn-ghost:hover { color: var(--text); background: var(--bg3); border-color: transparent; }
+
+/* ── Cards ── */
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.card-header { display: flex; justify-content: space-between; align-items: center; padding: 0.875rem 1.25rem; border-bottom: 1px solid var(--border); }
+.card-title { font-size: 13px; font-weight: 500; color: var(--text); }
+.card-body { padding: 1rem 1.25rem; }
+.card + .card { margin-top: 1rem; }
+
+/* ── Metrics ── */
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+.metric { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
+.metric-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; }
+.metric-value { font-size: 22px; font-weight: 600; font-family: 'DM Mono', monospace; }
+.metric-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+/* ── Alert rows ── */
+.alert-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.alert-row:last-child { border-bottom: none; }
+.alert-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.dot-red { background: var(--red); }
+.dot-amber { background: var(--amber); }
+.dot-teal { background: var(--teal); }
+.dot-green { background: var(--green); }
+.alert-text { flex: 1; font-size: 13px; line-height: 1.5; }
+.alert-meta { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+
+/* ── Entity grid (societes + produits) ── */
+.entity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.entity-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; cursor: pointer; transition: border-color 0.15s; }
+.entity-card:hover { border-color: var(--accent); }
+.entity-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.avatar { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+.av-0 { background: #1a1a2e; color: var(--accent2); }
+.av-1 { background: #0f2a1a; color: #4ade80; }
+.av-2 { background: #2a1a0f; color: #fb923c; }
+.av-3 { background: #1a0f2a; color: #c084fc; }
+.av-4 { background: #0f1a2a; color: #60a5fa; }
+.entity-name { font-size: 14px; font-weight: 500; }
+.entity-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.entity-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.entity-kpi { background: var(--bg3); border-radius: 6px; padding: 6px 8px; }
+.entity-kpi-label { font-size: 10px; color: var(--text3); }
+.entity-kpi-value { font-size: 12px; font-weight: 500; font-family: 'DM Mono', monospace; }
+.entity-footer { display: flex; align-items: center; justify-content: space-between; }
+.entity-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.entity-updated { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; }
+.upd-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 4px; }
+.upd-dot.stale { background: var(--text3); }
+
+/* ── Tags ── */
+.tag { font-size: 10px; padding: 2px 7px; border-radius: 999px; display: inline-block; font-weight: 500; }
+.tag-accent { background: #1a1a2e; color: var(--accent2); }
+.tag-green { background: #0f2a1a; color: #4ade80; }
+.tag-amber { background: #2a1a0a; color: #fbbf24; }
+.tag-red { background: #2a0f0f; color: #f87171; }
+.tag-gray { background: var(--bg3); color: var(--text2); }
+
+/* ── Detail view ── */
+.detail-header { display: flex; align-items: center; gap: 14px; margin-bottom: 1.5rem; }
+.detail-av { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+.detail-name { font-size: 20px; font-weight: 600; letter-spacing: -0.5px; }
+.detail-sub { font-size: 12px; color: var(--text2); margin-top: 3px; }
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+.kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.kpi-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+.kpi-value { font-size: 16px; font-weight: 600; font-family: 'DM Mono', monospace; }
+.kpi-delta { font-size: 10px; color: var(--green); margin-top: 2px; font-family: 'DM Mono', monospace; }
+
+/* ── Tabs ── */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; overflow-x: auto; }
+.tab { padding: 8px 14px; font-size: 12px; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; user-select: none; transition: all 0.15s; font-weight: 400; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent2); border-bottom-color: var(--accent); font-weight: 500; }
+.tabpanel { display: none; }
+.tabpanel.active { display: block; }
+
+/* ── Info table ── */
+.info-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+.info-table td { padding: 8px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+.info-table tr:last-child td { border-bottom: none; }
+.info-table td:first-child { color: var(--text2); width: 38%; font-size: 12px; }
+.info-table td:last-child { font-weight: 500; font-family: 'DM Mono', monospace; font-size: 12px; }
+
+/* ── Features ── */
+.feat-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.feat-row:last-child { border-bottom: none; }
+.feat-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 6px; }
+.feat-text { font-size: 13px; line-height: 1.5; }
+.feat-badge { font-size: 10px; padding: 1px 6px; border-radius: 999px; margin-left: 6px; }
+.fb-core { background: var(--bg3); color: var(--text2); }
+.fb-new { background: #1a1a2e; color: var(--accent2); }
+.fb-premium { background: #2a1a0a; color: #fbbf24; }
+
+/* ── Pricing ── */
+.pricing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.pricing-tier { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
+.pricing-name { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+.pricing-price { font-size: 20px; font-weight: 700; color: var(--accent2); margin-bottom: 6px; font-family: 'DM Mono', monospace; }
+.pricing-feat { font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+/* ── Product cards ── */
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.product-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; cursor: pointer; transition: border-color 0.15s; }
+.product-card:hover { border-color: var(--accent); }
+.product-emoji { font-size: 28px; margin-bottom: 8px; display: block; }
+.product-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.product-company { font-size: 11px; color: var(--text3); margin-bottom: 6px; font-family: 'DM Mono', monospace; }
+.product-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+/* ── Recruitment ── */
+.recruit-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.recruit-row:last-child { border-bottom: none; }
+.recruit-dept { font-size: 10px; padding: 2px 7px; border-radius: 999px; background: #0f1a2a; color: #60a5fa; white-space: nowrap; flex-shrink: 0; margin-top: 2px; font-weight: 500; }
+.recruit-info { flex: 1; }
+.recruit-poste { font-size: 13px; font-weight: 500; }
+.recruit-meta { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+.history-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.history-row:last-child { border-bottom: none; }
+.history-period { font-size: 11px; font-weight: 600; color: var(--accent2); margin-bottom: 3px; font-family: 'DM Mono', monospace; }
+.history-volume { font-size: 13px; }
+.history-signal { font-size: 12px; color: var(--text2); margin-top: 3px; font-style: italic; }
+
+/* ── Stream ── */
+.stream-box { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; font-size: 13px; color: var(--text2); line-height: 1.8; min-height: 80px; }
+.cursor { display: inline-block; width: 2px; height: 13px; background: var(--accent); animation: blink 0.8s infinite; vertical-align: middle; margin-left: 2px; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+.refresh-bar { display: flex; align-items: center; gap: 10px; padding: 8px 1.25rem; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
+.upd-dot-anim { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+.upd-dot-anim.loading { background: var(--amber); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── Source badges ── */
+.src-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 999px; background: var(--bg3); color: var(--text3); margin: 2px; border: 1px solid var(--border); font-family: 'DM Mono', monospace; }
+
+/* ── Toggles ── */
+.toggle { width: 36px; height: 20px; border-radius: 999px; cursor: pointer; transition: background 0.2s; flex-shrink: 0; position: relative; border: none; }
+.toggle.on { background: var(--accent); }
+.toggle.off { background: var(--border2); }
+.toggle::after { content: ''; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: white; top: 3px; transition: left 0.2s; }
+.toggle.on::after { left: 19px; }
+.toggle.off::after { left: 3px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.toggle-row:last-child { border-bottom: none; }
+.tgl-label { font-size: 13px; }
+.tgl-desc { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* ── Competitor list ── */
+.comp-row { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; padding: 12px 1.25rem; display: flex; align-items: center; gap: 12px; }
+
+/* ── Forms ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-full { grid-column: 1 / -1; }
+.fg { display: flex; flex-direction: column; gap: 5px; }
+.fg label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+.fg input, .fg select, .fg textarea { font-size: 13px; padding: 8px 10px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg3); color: var(--text); width: 100%; font-family: inherit; }
+.fg input:focus, .fg select:focus, .fg textarea:focus { outline: none; border-color: var(--accent); }
+.fg textarea { resize: vertical; min-height: 70px; }
+.fg select option { background: var(--bg3); }
+.signals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+.sig { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; font-size: 12px; color: var(--text2); user-select: none; transition: all 0.15s; }
+.sig.on { border-color: var(--accent); background: #1a1a2e; color: var(--accent2); }
+.sig-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); flex-shrink: 0; }
+.sig.on .sig-dot { background: var(--accent); }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 3rem 1rem; color: var(--text3); font-size: 14px; }
+.empty-icon { font-size: 32px; margin-bottom: 1rem; display: block; }
+
+/* ── Produit detail ── */
+.specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.spec-item { background: var(--bg3); border-radius: var(--radius); padding: 10px 12px; }
+.spec-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.spec-value { font-size: 12px; font-family: 'DM Mono', monospace; }
+.changelog-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.changelog-row:last-child { border-bottom: none; }
+.changelog-date { font-size: 10px; color: var(--accent2); font-family: 'DM Mono', monospace; margin-bottom: 3px; }
+.changelog-text { font-size: 13px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pros, .cons { background: var(--bg3); border-radius: var(--radius); padding: 1rem; }
+.pros-title { font-size: 11px; color: var(--green); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; font-weight: 600; }
+.cons-title { font-size: 11px; color: var(--red); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; font-weight: 600; }
+.pro-item, .con-item { font-size: 12px; color: var(--text2); padding: 4px 0; border-bottom: 1px solid var(--border); }
+.pro-item:last-child, .con-item:last-child { border-bottom: none; }
+
+/* ── Bottom nav mobile ── */
+.bottom-nav { display: none; background: var(--bg2); border-top: 1px solid var(--border); padding: 6px 0 env(safe-area-inset-bottom, 6px); flex-shrink: 0; }
+.bottom-nav-items { display: flex; justify-content: space-around; }
+.bn-item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 10px; color: var(--text3); user-select: none; flex: 1; transition: color 0.15s; }
+.bn-item.active { color: var(--accent2); }
+.bn-icon { width: 20px; height: 20px; }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .app { height: calc(100dvh - 60px); }
+  .sidebar { display: none; }
+  .bottom-nav { display: block; }
+  .main { padding: 1rem; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .entity-grid { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-full { grid-column: 1; }
+  .signals-grid { grid-template-columns: repeat(2, 1fr); }
+  .product-grid { grid-template-columns: repeat(2, 1fr); }
+  .pros-cons { grid-template-columns: 1fr; }
+  .specs-grid { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
-<div class="app-body">
-<div class="sidebar">
-  <div class="logo">veille<span>.</span>io</div>
-  <div class="nav-section">Tableau de bord</div>
-  <div class="nav-item active" id="nav-dashboard" onclick="go('dashboard')">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
-    Vue d'ensemble
-  </div>
-  <div class="nav-section">Base de données</div>
-  <div class="nav-item" id="nav-societes" onclick="go('societes')">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M1 14c0-2.8 2.2-5 5-5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.2"/></svg>
-    Sociétés
-  </div>
-  <div class="nav-item" id="nav-produits" onclick="go('produits')">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-    Produits
-  </div>
-  <div class="nav-item" id="nav-comparateur" onclick="go('comparateur')">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 4h5v8H2zM9 4h5v8H9z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
-    Comparateur
-  </div>
-  <div class="nav-section">Configuration</div>
-  <div class="nav-item" id="nav-config" onclick="go('config')">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-    Paramètres
-  </div>
-</div>
-<div class="main">
 
-<!-- DASHBOARD -->
-<div id="panel-dashboard" class="panel active">
-  <div class="topbar"><h1>Vue d'ensemble</h1></div>
-  <div class="metrics">
-    <div class="metric"><div class="metric-label">Sociétés suivies</div><div class="metric-value" id="m-societes">0</div></div>
-    <div class="metric"><div class="metric-label">Produits suivis</div><div class="metric-value" id="m-produits">0</div></div>
-    <div class="metric"><div class="metric-label">Alertes actives</div><div class="metric-value" id="m-alerts">0</div></div>
-    <div class="metric"><div class="metric-label">Fiches à jour</div><div class="metric-value" id="m-fresh">0</div></div>
-  </div>
-  <div class="section">
-    <div class="section-header"><span class="section-title">Dernières alertes</span></div>
-    <div class="section-body" style="padding:.5rem 1.25rem;" id="alerts-list"></div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-    <div class="section">
-      <div class="section-header"><span class="section-title">Sociétés récentes</span><button class="btn btn-sm" onclick="go('societes')">Voir tout</button></div>
-      <div class="section-body" style="padding:.5rem 1.25rem;" id="dash-societes"></div>
+<div class="app">
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-icon"><svg viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="white" stroke-width="1.5"/><path d="M9 9l3 3" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div class="logo-text">scout<span>.</span>io</div>
     </div>
-    <div class="section">
-      <div class="section-header"><span class="section-title">Produits récents</span><button class="btn btn-sm" onclick="go('produits')">Voir tout</button></div>
-      <div class="section-body" style="padding:.5rem 1.25rem;" id="dash-produits"></div>
+    <div class="nav-section">Dashboard</div>
+    <div class="nav-item active" id="nav-dashboard" onclick="go('dashboard')">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
+      Vue d'ensemble
+    </div>
+    <div class="nav-section">Bases de données</div>
+    <div class="nav-item" id="nav-societes" onclick="go('societes')">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M1 14c0-2.8 2.2-5 5-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.3"/></svg>
+      Sociétés
+    </div>
+    <div class="nav-item" id="nav-produits-db" onclick="go('produits-db')">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+      Produits
+    </div>
+    <div class="nav-section">Configuration</div>
+    <div class="nav-item" id="nav-config" onclick="go('config')">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Paramètres
     </div>
   </div>
-</div>
 
-<!-- SOCIETES -->
-<div id="panel-societes" class="panel">
-  <div id="societes-list-view">
-    <div class="topbar"><h1>Sociétés</h1><button class="btn btn-primary" onclick="showSocieteForm()">+ Ajouter</button></div>
-    <div id="societe-form" style="display:none;margin-bottom:1rem;">
-      <div class="section">
-        <div class="section-header"><span class="section-title" id="sf-title">Nouvelle société</span></div>
-        <div class="section-body">
-          <div class="form-grid" style="margin-bottom:1rem;">
-            <div class="fg"><label>Nom *</label><input id="sf-name" placeholder="ex : HubSpot"></div>
-            <div class="fg"><label>Site web *</label><input id="sf-url" placeholder="ex : hubspot.com"></div>
-            <div class="fg"><label>Secteur</label><input id="sf-secteur" placeholder="ex : CRM SaaS"></div>
-            <div class="fg"><label>Fréquence</label><select id="sf-freq"><option>Quotidien</option><option selected>Hebdo</option><option>Mensuel</option></select></div>
-            <div class="fg form-full"><label>Notes</label><textarea id="sf-notes" placeholder="Contexte, points à surveiller..."></textarea></div>
-            <div class="fg form-full"><label>Signaux</label>
-              <div class="signals-grid" id="sf-sigs">
-                <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Prix & offres</div>
-                <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Fonctionnalités</div>
-                <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Recrutements</div>
-                <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>SEO & contenu</div>
-                <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Réseaux sociaux</div>
-                <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Avis clients</div>
-                <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Partenariats</div>
-                <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Levées de fonds</div>
-                <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Presse</div>
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div id="panel-dashboard" class="panel active">
+      <div class="topbar"><h1>Vue d'ensemble</h1></div>
+      <div class="metrics">
+        <div class="metric"><div class="metric-label">Sociétés suivies</div><div class="metric-value" id="m-societes">0</div></div>
+        <div class="metric"><div class="metric-label">Produits suivis</div><div class="metric-value" id="m-produits">0</div></div>
+        <div class="metric"><div class="metric-label">Alertes actives</div><div class="metric-value" id="m-alerts">0</div></div>
+        <div class="metric"><div class="metric-label">Fiches à jour</div><div class="metric-value" id="m-fresh">0</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Dernières alertes</span><button class="btn btn-sm btn-ghost" onclick="fetchAlerts()">Actualiser</button></div>
+        <div class="card-body" style="padding:0.5rem 1.25rem;" id="alerts-list">
+          <div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Aucune alerte</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOCIETES LIST -->
+    <div id="panel-societes" class="panel">
+      <div id="societes-list-view">
+        <div class="topbar">
+          <h1>Sociétés</h1>
+          <button class="btn btn-primary" onclick="showSocieteForm()">+ Ajouter</button>
+        </div>
+        <div id="societe-form-wrap" style="display:none;margin-bottom:1.25rem;">
+          <div class="card">
+            <div class="card-header"><span class="card-title" id="societe-form-title">Nouvelle société</span></div>
+            <div class="card-body">
+              <div class="form-grid" style="margin-bottom:1rem;">
+                <div class="fg"><label>Nom *</label><input id="sf-name" placeholder="ex: HubSpot"></div>
+                <div class="fg"><label>Site web *</label><input id="sf-url" placeholder="ex: hubspot.com"></div>
+                <div class="fg"><label>Secteur</label><input id="sf-secteur" placeholder="ex: CRM SaaS B2B"></div>
+                <div class="fg"><label>Fréquence</label><select id="sf-freq"><option value="quotidien">Quotidien</option><option value="hebdo" selected>Hebdomadaire</option><option value="mensuel">Mensuel</option></select></div>
+                <div class="fg form-full"><label>Notes</label><textarea id="sf-notes" placeholder="Points à surveiller, contexte..."></textarea></div>
+                <div class="fg form-full"><label>Signaux à surveiller</label>
+                  <div class="signals-grid" id="sf-sigs">
+                    <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Prix & offres</div>
+                    <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Fonctionnalités</div>
+                    <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Recrutements</div>
+                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>SEO & contenu</div>
+                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Réseaux sociaux</div>
+                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Avis clients</div>
+                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Partenariats</div>
+                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Levées de fonds</div>
+                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Presse</div>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-ghost" onclick="hideSocieteForm()">Annuler</button>
+                <button class="btn btn-primary" onclick="saveSociete()">Enregistrer</button>
               </div>
             </div>
           </div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;">
-            <button class="btn" onclick="hideSocieteForm()">Annuler</button>
-            <button class="btn btn-primary" onclick="saveSociete()">Enregistrer</button>
+        </div>
+        <div class="entity-grid" id="societes-grid"></div>
+      </div>
+      <div id="societe-detail-view" style="display:none;">
+        <div class="topbar">
+          <button class="btn btn-ghost" onclick="backToSocietes()">← Retour</button>
+          <button class="btn btn-primary" id="s-btn-refresh" onclick="forceScrape('societe')">Forcer mise à jour</button>
+        </div>
+        <div class="detail-header">
+          <div class="detail-av" id="s-av"></div>
+          <div>
+            <div class="detail-name" id="s-name"></div>
+            <div class="detail-sub" id="s-sub"></div>
+            <div style="margin-top:6px;" id="s-tags"></div>
+          </div>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="kpi-label">CA</div><div class="kpi-value" id="s-ca">—</div><div class="kpi-delta" id="s-ca-d"></div></div>
+          <div class="kpi-card"><div class="kpi-label">Clients</div><div class="kpi-value" id="s-cl">—</div><div class="kpi-delta" id="s-cl-d"></div></div>
+          <div class="kpi-card"><div class="kpi-label">Employés</div><div class="kpi-value" id="s-em">—</div><div class="kpi-delta" id="s-em-d"></div></div>
+          <div class="kpi-card"><div class="kpi-label">Prix entrée</div><div class="kpi-value" id="s-pr">—</div><div class="kpi-delta" id="s-pr-d"></div></div>
+        </div>
+        <div class="tabs">
+          <div class="tab active" onclick="showSTab('overview',this)">Général</div>
+          <div class="tab" onclick="showSTab('produits',this)">Produits</div>
+          <div class="tab" onclick="showSTab('pricing',this)">Prix</div>
+          <div class="tab" onclick="showSTab('clients',this)">Clients</div>
+          <div class="tab" onclick="showSTab('recrutement',this)">Recrutement</div>
+          <div class="tab" onclick="showSTab('analyse',this)">Analyse IA</div>
+        </div>
+        <div id="st-overview" class="tabpanel active">
+          <div class="card"><div class="card-header"><span class="card-title">Informations</span></div><div class="card-body"><table class="info-table" id="s-info-table"></table></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">Sources</span></div><div class="card-body" id="s-src"></div></div>
+        </div>
+        <div id="st-produits" class="tabpanel">
+          <div class="card"><div class="card-header"><span class="card-title">Produits détectés</span><button class="btn btn-sm btn-primary" onclick="addProduitFromSociete()">+ Ajouter</button></div>
+          <div class="card-body"><div class="product-grid" id="s-produits-grid"></div></div></div>
+        </div>
+        <div id="st-pricing" class="tabpanel"><div class="pricing-grid" id="s-pricing"></div></div>
+        <div id="st-clients" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Clients & contrats</span></div><div class="card-body"><table class="info-table" id="s-ctab"></table></div></div></div>
+        <div id="st-recrutement" class="tabpanel">
+          <div class="card"><div class="card-header"><span class="card-title">Recrutements actifs</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="s-recruits"></div></div>
+          <div class="card"><div class="card-header"><span class="card-title">Historique</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="s-recruit-history"></div></div>
+        </div>
+        <div id="st-analyse" class="tabpanel">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Analyse IA</span><span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;" id="s-ts"></span></div>
+            <div class="card-body"><div class="stream-box" id="s-analyse"></div></div>
+            <div class="refresh-bar"><div class="upd-dot-anim" id="s-dot"></div><span id="s-info">—</span><button class="btn btn-sm btn-ghost" style="margin-left:auto;" onclick="forceScrape('societe')">Relancer ↗</button></div>
           </div>
         </div>
       </div>
     </div>
-    <div class="card-grid" id="societes-grid"></div>
-  </div>
-  <div id="societe-detail" style="display:none;">
-    <div class="topbar">
-      <button class="btn" onclick="backToSocietes()">← Retour</button>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-sm btn-danger" id="btn-del-s" onclick="deleteSociete()">Supprimer</button>
-        <button class="btn btn-sm" onclick="showSocieteForm(currentSocieteId)">Modifier</button>
-        <button class="btn btn-primary" id="btn-refresh-s" onclick="loadSociete(true)">Actualiser via IA</button>
-      </div>
-    </div>
-    <div class="detail-header">
-      <div class="detail-av" id="sd-av"></div>
-      <div>
-        <div class="detail-name" id="sd-name"></div>
-        <div class="detail-sub" id="sd-url"></div>
-        <div style="margin-top:5px;" id="sd-tags"></div>
-      </div>
-    </div>
-    <div class="kpi-row">
-      <div class="kpi-card"><div class="kpi-label">Chiffre d'affaires</div><div class="kpi-value" id="sd-ca">—</div><div class="kpi-delta" id="sd-cad"></div></div>
-      <div class="kpi-card"><div class="kpi-label">Clients</div><div class="kpi-value" id="sd-cl">—</div><div class="kpi-delta" id="sd-cld"></div></div>
-      <div class="kpi-card"><div class="kpi-label">Employés</div><div class="kpi-value" id="sd-em">—</div><div class="kpi-delta" id="sd-emd"></div></div>
-      <div class="kpi-card"><div class="kpi-label">Prix entrée</div><div class="kpi-value" id="sd-pr">—</div><div class="kpi-delta" id="sd-prd"></div></div>
-    </div>
-    <div class="tabs" id="stabs">
-      <div class="tab active" onclick="showSTab('overview',this)">Vue générale</div>
-      <div class="tab" onclick="showSTab('produits',this)">Produits</div>
-      <div class="tab" onclick="showSTab('prix',this)">Prix</div>
-      <div class="tab" onclick="showSTab('clients',this)">Clients</div>
-      <div class="tab" onclick="showSTab('recrutement',this)">Recrutement</div>
-      <div class="tab" onclick="showSTab('analyse',this)">Analyse IA</div>
-    </div>
-    <div id="st-overview" class="tabpanel active">
-      <div class="section"><div class="section-header"><span class="section-title">Informations générales</span></div><div class="section-body"><table class="info-table" id="sd-info"></table></div></div>
-      <div class="section"><div class="section-header"><span class="section-title">Sources</span></div><div class="section-body" id="sd-src"></div></div>
-    </div>
-    <div id="st-produits" class="tabpanel">
-      <div class="section">
-        <div class="section-header"><span class="section-title">Produits liés</span><button class="btn btn-sm btn-primary" onclick="showProduitForm(null,currentSocieteId)">+ Ajouter un produit</button></div>
-        <div class="section-body"><div class="produit-grid" id="sd-produits"></div></div>
-      </div>
-      <div class="section" style="margin-top:1rem;"><div class="section-header"><span class="section-title">Fonctionnalités</span></div><div class="section-body" style="padding:.5rem 1.25rem;" id="sd-feat"></div></div>
-    </div>
-    <div id="st-prix" class="tabpanel"><div id="sd-pricing"></div></div>
-    <div id="st-clients" class="tabpanel">
-      <div class="section"><div class="section-header"><span class="section-title">Clients & contrats</span></div><div class="section-body"><table class="info-table" id="sd-ctab"></table></div></div>
-    </div>
-    <div id="st-recrutement" class="tabpanel">
-      <div class="section"><div class="section-header"><span class="section-title">Recrutements actifs</span></div><div class="section-body" style="padding:.5rem 1.25rem;" id="sd-recruits"></div></div>
-      <div class="section" style="margin-top:1rem;"><div class="section-header"><span class="section-title">Historique recrutements</span></div><div class="section-body" style="padding:.5rem 1.25rem;" id="sd-rhist"></div></div>
-    </div>
-    <div id="st-analyse" class="tabpanel">
-      <div class="section">
-        <div class="section-header"><span class="section-title">Analyse IA</span><span style="font-size:11px;color:#999;" id="sd-ts"></span></div>
-        <div class="section-body"><div class="stream-box" id="sd-analyse"></div></div>
-        <div class="refresh-bar"><div class="upd-dot" id="sd-dot"></div><span id="sd-status">—</span><button class="btn btn-sm" style="margin-left:auto;" onclick="loadSociete(true)">Relancer ↗</button></div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<!-- PRODUITS -->
-<div id="panel-produits" class="panel">
-  <div id="produits-list-view">
-    <div class="topbar"><h1>Produits</h1><button class="btn btn-primary" onclick="showProduitForm()">+ Ajouter</button></div>
-    <div id="produit-form" style="display:none;margin-bottom:1rem;">
-      <div class="section">
-        <div class="section-header"><span class="section-title" id="pf-title">Nouveau produit</span></div>
-        <div class="section-body">
-          <div class="form-grid" style="margin-bottom:1rem;">
-            <div class="fg"><label>Nom du produit *</label><input id="pf-name" placeholder="ex : HubSpot CRM"></div>
-            <div class="fg"><label>Société *</label><select id="pf-societe"></select></div>
-            <div class="fg"><label>Emoji</label><input id="pf-emoji" placeholder="📊" style="width:80px;"></div>
-            <div class="fg"><label>Badge</label><select id="pf-badge"><option>Core</option><option>Nouveau</option><option>Premium</option></select></div>
-            <div class="fg form-full"><label>Description</label><textarea id="pf-desc" placeholder="Ce que fait ce produit..."></textarea></div>
+    <!-- PRODUITS DB -->
+    <div id="panel-produits-db" class="panel">
+      <div id="produits-list-view">
+        <div class="topbar">
+          <h1>Produits</h1>
+          <button class="btn btn-primary" onclick="showProduitForm()">+ Ajouter</button>
+        </div>
+        <div id="produit-form-wrap" style="display:none;margin-bottom:1.25rem;">
+          <div class="card">
+            <div class="card-header"><span class="card-title" id="produit-form-title">Nouveau produit</span></div>
+            <div class="card-body">
+              <div class="form-grid" style="margin-bottom:1rem;">
+                <div class="fg"><label>Nom du produit *</label><input id="pf-name" placeholder="ex: HubSpot CRM"></div>
+                <div class="fg"><label>Société liée</label><select id="pf-societe"><option value="">— Aucune —</option></select></div>
+                <div class="fg"><label>Emoji</label><input id="pf-emoji" placeholder="📊" style="font-size:20px;"></div>
+                <div class="fg"><label>Badge</label><select id="pf-badge"><option value="Core">Core</option><option value="Nouveau">Nouveau</option><option value="Premium">Premium</option></select></div>
+                <div class="fg"><label>Prix</label><input id="pf-prix" placeholder="ex: $45/mois"></div>
+                <div class="fg"><label>Nouveau ?</label><select id="pf-nouveau"><option value="false">Non</option><option value="true">Oui</option></select></div>
+                <div class="fg form-full"><label>Description courte</label><textarea id="pf-desc" placeholder="Ce que fait ce produit en 1-2 phrases..."></textarea></div>
+              </div>
+              <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-ghost" onclick="hideProduitForm()">Annuler</button>
+                <button class="btn btn-primary" onclick="saveProduit()">Enregistrer</button>
+              </div>
+            </div>
           </div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;">
-            <button class="btn" onclick="hideProduitForm()">Annuler</button>
-            <button class="btn btn-primary" onclick="saveProduit()">Enregistrer</button>
+        </div>
+        <div class="entity-grid" id="produits-grid"></div>
+      </div>
+      <div id="produit-detail-view" style="display:none;">
+        <div class="topbar">
+          <button class="btn btn-ghost" onclick="backToProduits()">← Retour</button>
+          <button class="btn btn-primary" id="p-btn-refresh" onclick="forceScrape('produit')">Forcer mise à jour</button>
+        </div>
+        <div class="detail-header">
+          <div style="font-size:40px;" id="p-emoji">📦</div>
+          <div>
+            <div class="detail-name" id="p-name"></div>
+            <div class="detail-sub" id="p-sub"></div>
+            <div style="margin-top:6px;" id="p-tags"></div>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab active" onclick="showPTab('overview',this)">Vue générale</div>
+          <div class="tab" onclick="showPTab('features',this)">Fonctionnalités</div>
+          <div class="tab" onclick="showPTab('specs',this)">Specs</div>
+          <div class="tab" onclick="showPTab('changelog',this)">Changelog</div>
+          <div class="tab" onclick="showPTab('analyse',this)">Analyse IA</div>
+        </div>
+        <div id="pt-overview" class="tabpanel active">
+          <div class="card" style="margin-bottom:1rem;"><div class="card-header"><span class="card-title">Description</span></div><div class="card-body"><p style="font-size:13px;line-height:1.7;color:var(--text2);" id="p-desc">—</p></div></div>
+          <div class="card" style="margin-bottom:1rem;"><div class="card-header"><span class="card-title">Prix</span></div><div class="card-body"><p style="font-size:20px;font-weight:700;color:var(--accent2);font-family:'DM Mono',monospace;" id="p-prix">—</p></div></div>
+          <div class="pros-cons">
+            <div class="pros"><div class="pros-title">Avantages</div><div id="p-pros"></div></div>
+            <div class="cons"><div class="cons-title">Limites</div><div id="p-cons"></div></div>
+          </div>
+        </div>
+        <div id="pt-features" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Fonctionnalités</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="p-features"></div></div></div>
+        <div id="pt-specs" class="tabpanel"><div class="specs-grid" id="p-specs"></div></div>
+        <div id="pt-changelog" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Changelog</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="p-changelog"></div></div></div>
+        <div id="pt-analyse" class="tabpanel">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Analyse IA</span><span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;" id="p-ts"></span></div>
+            <div class="card-body"><div class="stream-box" id="p-analyse"></div></div>
+            <div class="refresh-bar"><div class="upd-dot-anim" id="p-dot"></div><span id="p-info">—</span><button class="btn btn-sm btn-ghost" style="margin-left:auto;" onclick="forceScrape('produit')">Relancer ↗</button></div>
           </div>
         </div>
       </div>
     </div>
-    <div class="card-grid" id="produits-grid"></div>
-  </div>
-  <div id="produit-detail" style="display:none;">
-    <div class="topbar">
-      <button class="btn" onclick="backToProduits()">← Retour</button>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-sm btn-danger" onclick="deleteProduit()">Supprimer</button>
-        <button class="btn btn-sm" onclick="showProduitForm(currentProduitId)">Modifier</button>
-        <button class="btn btn-primary" id="btn-refresh-p" onclick="loadProduit(true)">Actualiser via IA</button>
-      </div>
+
+    <!-- CONFIG -->
+    <div id="panel-config" class="panel">
+      <div class="topbar"><h1>Paramètres</h1></div>
+      <div class="card"><div class="card-header"><span class="card-title">Notifications</span></div><div class="card-body" style="padding:0.5rem 1.25rem;">
+        <div class="toggle-row"><div><div class="tgl-label">Email quotidien</div><div class="tgl-desc">Résumé des alertes du jour</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
+        <div class="toggle-row"><div><div class="tgl-label">Slack temps réel</div><div class="tgl-desc">Notifications dans un canal dédié</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
+        <div class="toggle-row"><div><div class="tgl-label">Rapport PDF hebdo</div></div><button class="toggle off" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
+      </div></div>
+      <div class="card"><div class="card-header"><span class="card-title">Seuils d'alerte</span></div><div class="card-body" style="padding:0.5rem 1.25rem;">
+        <div class="toggle-row"><div><div class="tgl-label">Changement de prix détecté</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
+        <div class="toggle-row"><div><div class="tgl-label">+5 recrutements par semaine</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
+        <div class="toggle-row"><div><div class="tgl-label">Nouvelle fonctionnalité annoncée</div></div><button class="toggle off" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
+      </div></div>
     </div>
-    <div class="detail-header">
-      <div class="detail-emoji" id="pd-emoji">📦</div>
-      <div>
-        <div class="detail-name" id="pd-name"></div>
-        <div class="detail-sub" id="pd-societe"></div>
-        <div style="margin-top:5px;" id="pd-badge"></div>
-      </div>
-    </div>
-    <div class="section" style="margin-bottom:1rem;">
-      <div class="section-body"><p style="font-size:14px;line-height:1.6;color:#333;" id="pd-desc"></p></div>
-    </div>
-    <div class="tabs">
-      <div class="tab active" onclick="showPTab('overview',this)">Vue générale</div>
-      <div class="tab" onclick="showPTab('fonctions',this)">Fonctionnalités</div>
-      <div class="tab" onclick="showPTab('tarifs',this)">Tarifs</div>
-      <div class="tab" onclick="showPTab('changelog',this)">Changelog</div>
-      <div class="tab" onclick="showPTab('concurrents',this)">Concurrents</div>
-    </div>
-    <div id="pt-overview" class="tabpanel active">
-      <div class="section"><div class="section-header"><span class="section-title">Informations</span></div><div class="section-body"><table class="info-table" id="pd-info"></table></div></div>
-      <div class="section"><div class="section-header"><span class="section-title">Avantages</span></div><div class="section-body" style="padding:.5rem 1.25rem;" id="pd-avantages"></div></div>
-      <div class="section"><div class="section-header"><span class="section-title">Limitations</span></div><div class="section-body" style="padding:.5rem 1.25rem;" id="pd-limitations"></div></div>
-    </div>
-    <div id="pt-fonctions" class="tabpanel">
-      <div class="section"><div class="section-header"><span class="section-title">Fonctionnalités</span></div><div class="section-body" style="padding:.5rem 1.25rem;" id="pd-fonctions"></div></div>
-      <div class="section" style="margin-top:1rem;"><div class="section-header"><span class="section-title">Intégrations</span></div><div class="section-body" id="pd-integrations"></div></div>
-    </div>
-    <div id="pt-tarifs" class="tabpanel">
-      <div class="section"><div class="section-header"><span class="section-title">Tarification</span></div>
-        <div class="section-body">
-          <div class="kpi-row" style="grid-template-columns:1fr 1fr;">
-            <div class="kpi-card"><div class="kpi-label">Prix</div><div class="kpi-value" id="pd-prix">—</div></div>
-            <div class="kpi-card"><div class="kpi-label">Modèle</div><div class="kpi-value" id="pd-prix-detail" style="font-size:13px;">—</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div id="pt-changelog" class="tabpanel">
-      <div class="section"><div class="section-header"><span class="section-title">Historique des mises à jour</span></div><div class="section-body" style="padding:.5rem 1.25rem;" id="pd-changelog"></div></div>
-    </div>
-    <div id="pt-concurrents" class="tabpanel">
-      <div class="section"><div class="section-header"><span class="section-title">Produits concurrents</span></div><div class="section-body" id="pd-concurrents"></div></div>
-      <div class="section" style="margin-top:1rem;"><div class="section-header"><span class="section-title">Sources</span></div><div class="section-body" id="pd-src"></div></div>
-    </div>
+
   </div>
 </div>
 
-<!-- COMPARATEUR -->
-<div id="panel-comparateur" class="panel">
-  <div class="topbar"><h1>Comparateur</h1></div>
-  <div class="section" style="margin-bottom:1rem;">
-    <div class="section-header"><span class="section-title">Sélectionner des produits à comparer</span></div>
-    <div class="section-body">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="comparateur-select"></div>
-      <button class="btn btn-primary" style="margin-top:1rem;" onclick="runComparison()">Comparer</button>
-    </div>
-  </div>
-  <div id="comparateur-result"></div>
-</div>
-
-<!-- CONFIG -->
-<div id="panel-config" class="panel">
-  <div class="topbar"><h1>Paramètres</h1></div>
-  <div class="section">
-    <div class="section-header"><span class="section-title">Notifications</span></div>
-    <div class="section-body" style="padding:.5rem 1.25rem;">
-      <div class="toggle-row"><div><div class="tgl-label">Email</div><div class="tgl-desc">Résumé quotidien</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
-      <div class="toggle-row"><div><div class="tgl-label">Slack</div><div class="tgl-desc">Alertes temps réel</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
-      <div class="toggle-row"><div><div class="tgl-label">Rapport PDF hebdo</div></div><button class="toggle off" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
-    </div>
-  </div>
-  <div class="section">
-    <div class="section-header"><span class="section-title">Mise à jour automatique</span></div>
-    <div class="section-body" style="padding:.5rem 1.25rem;">
-      <div class="toggle-row"><div><div class="tgl-label">Alerte si changement de prix</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
-      <div class="toggle-row"><div><div class="tgl-label">Alerte si nouveaux recrutements</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
-      <div class="toggle-row"><div><div class="tgl-label">Mise à jour auto toutes les 7 jours</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
-    </div>
-  </div>
-</div>
-
-</div>
-</div>
-
-<!-- BOTTOM NAV -->
+<!-- BOTTOM NAV MOBILE -->
 <nav class="bottom-nav">
   <div class="bottom-nav-items">
     <div class="bn-item active" id="bn-dashboard" onclick="go('dashboard')">
-      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
       Accueil
     </div>
     <div class="bn-item" id="bn-societes" onclick="go('societes')">
       <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M1 14c0-2.8 2.2-5 5-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.3"/></svg>
       Sociétés
     </div>
-    <div class="bn-item" id="bn-produits" onclick="go('produits')">
-      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    <div class="bn-item" id="bn-produits-db" onclick="go('produits-db')">
+      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
       Produits
     </div>
-    <div class="bn-item" id="bn-comparateur" onclick="go('comparateur')">
-      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><path d="M2 4h5v8H2zM9 4h5v8H9z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-      Comparer
-    </div>
     <div class="bn-item" id="bn-config" onclick="go('config')">
-      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       Config
     </div>
   </div>
 </nav>
 
 <script>
-const API='https://scout-api-production-fa8d.up.railway.app';
-const COLORS=['av-purple','av-teal','av-coral','av-amber','av-blue'];
-let societes=JSON.parse(localStorage.getItem('vs')||'[]');
-let produits=JSON.parse(localStorage.getItem('vp')||'[]');
-let alerts=JSON.parse(localStorage.getItem('va')||'[]');
-let profileCache=JSON.parse(localStorage.getItem('vpc')||'{}');
-let produitCache=JSON.parse(localStorage.getItem('vppc')||'{}');
-let currentSocieteId=null,currentProduitId=null,editingSocieteId=null,editingProduitId=null;
-function save(){localStorage.setItem('vs',JSON.stringify(societes));localStorage.setItem('vp',JSON.stringify(produits));localStorage.setItem('va',JSON.stringify(alerts));localStorage.setItem('vpc',JSON.stringify(profileCache));localStorage.setItem('vppc',JSON.stringify(produitCache))}
-function go(id){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.querySelectorAll('.bn-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('panel-'+id).classList.add('active');
-  const nav=document.getElementById('nav-'+id);if(nav)nav.classList.add('active');
-  const bn=document.getElementById('bn-'+id);if(bn)bn.classList.add('active');
-  if(id==='dashboard')renderDashboard();
-  if(id==='societes')renderSocietes();
-  if(id==='produits')renderProduits();
-  if(id==='comparateur')renderComparateur();
+const API = 'https://scout-api-production-fa8d.up.railway.app';
+const COLORS = ['av-0','av-1','av-2','av-3','av-4'];
+
+let societes = [];
+let produits = [];
+let currentSocieteId = null;
+let currentProduitId = null;
+let editingSocieteId = null;
+let editingProduitId = null;
+
+// ── Navigation ────────────────────────────────────────────────
+function go(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.bn-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  const nav = document.getElementById('nav-' + id);
+  if (nav) nav.classList.add('active');
+  const bn = document.getElementById('bn-' + id);
+  if (bn) bn.classList.add('active');
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'societes') { backToSocietes(); renderSocietes(); }
+  if (id === 'produits-db') { backToProduits(); renderProduits(); }
 }
-function renderDashboard(){
-  document.getElementById('m-societes').textContent=societes.length;
-  document.getElementById('m-produits').textContent=produits.length;
-  document.getElementById('m-alerts').textContent=alerts.length;
-  const fresh=Object.values(profileCache).filter(p=>p.scrapedAt&&(Date.now()-new Date(p.scrapedAt).getTime())<7*24*60*60*1000).length;
-  document.getElementById('m-fresh').textContent=fresh;
-  const al=document.getElementById('alerts-list');
-  if(!alerts.length){al.innerHTML='<div style="font-size:13px;color:#bbb;padding:.5rem 0;">Aucune alerte pour le moment.</div>';}
-  else{al.innerHTML=alerts.slice(0,5).map(a=>{const s=societes.find(x=>x.id===a.competitorId);return`<div class="alert-row"><div class="alert-dot ${a.color}"></div><div class="alert-text"><strong>${s?s.name:a.competitorId}</strong> ${a.text}<div class="alert-meta">${a.meta}</div></div></div>`;}).join('');}
-  document.getElementById('dash-societes').innerHTML=societes.slice(0,4).map(s=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0ec;cursor:pointer;" onclick="go('societes');setTimeout(()=>openSociete('${s.id}'),100)"><div class="avatar ${s.color}">${s.name.slice(0,2).toUpperCase()}</div><div><div style="font-size:13px;font-weight:500;">${s.name}</div><div style="font-size:11px;color:#999;">${s.secteur||s.url}</div></div></div>`).join('')||'<div style="font-size:13px;color:#bbb;padding:.5rem 0;">Aucune société.</div>';
-  document.getElementById('dash-produits').innerHTML=produits.slice(0,4).map(p=>{const s=societes.find(x=>x.id===p.societe_id);return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0ec;cursor:pointer;" onclick="go('produits');setTimeout(()=>openProduit('${p.id}'),100)"><span style="font-size:20px;">${p.emoji||'📦'}</span><div><div style="font-size:13px;font-weight:500;">${p.name}</div><div style="font-size:11px;color:#999;">${s?s.name:'—'}</div></div></div>`;}).join('')||'<div style="font-size:13px;color:#bbb;padding:.5rem 0;">Aucun produit.</div>';
+
+// ── Tabs ──────────────────────────────────────────────────────
+function showSTab(id, el) {
+  document.querySelectorAll('#societe-detail-view .tabpanel').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#societe-detail-view .tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('st-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+}
+function showPTab(id, el) {
+  document.querySelectorAll('#produit-detail-view .tabpanel').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#produit-detail-view .tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('pt-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function avatarClass(idx) { return COLORS[idx % COLORS.length]; }
+function initials(name) { return name.slice(0,2).toUpperCase(); }
+function tagHtml(label, cls) { return `<span class="tag ${cls}">${label}</span>`; }
+function streamText(elId, text, onDone) {
+  const el = document.getElementById(elId);
+  el.textContent = '';
+  let i = 0;
+  const iv = setInterval(() => {
+    if (i < text.length) { el.textContent += text[i++]; }
+    else { clearInterval(iv); if (onDone) onDone(); }
+  }, 10);
+}
+
+// ── Dashboard ─────────────────────────────────────────────────
+function renderDashboard() {
+  document.getElementById('m-societes').textContent = societes.length;
+  document.getElementById('m-produits').textContent = produits.length;
+  document.getElementById('m-fresh').textContent = societes.filter(s => s.scraped_at && (Date.now() - new Date(s.scraped_at)) / 86400000 < 7).length;
   fetchAlerts();
 }
-async function fetchAlerts(){
-  if(!societes.length)return;
-  try{const ids=societes.map(s=>s.id).join(',');const r=await fetch(API+'/alerts?ids='+encodeURIComponent(ids));const d=await r.json();if(d.alerts&&d.alerts.length){alerts=d.alerts;save();renderDashboard();}}catch(e){}
+
+async function fetchAlerts() {
+  const ids = societes.map(s => s.id);
+  if (!ids.length) { document.getElementById('alerts-list').innerHTML = '<div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Ajoutez des sociétés pour voir les alertes</span></div>'; return; }
+  try {
+    const r = await fetch(API + '/alerts?ids=' + encodeURIComponent(ids.join(',')));
+    const d = await r.json();
+    const el = document.getElementById('alerts-list');
+    document.getElementById('m-alerts').textContent = d.alerts.length;
+    if (!d.alerts.length) { el.innerHTML = '<div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Aucune alerte</span></div>'; return; }
+    const sMap = Object.fromEntries(societes.map(s => [s.id, s]));
+    el.innerHTML = d.alerts.map(a => {
+      const s = sMap[a.societeId];
+      return `<div class="alert-row">
+        <div class="alert-dot ${a.color}"></div>
+        <div class="alert-text"><strong>${s ? s.name : a.societeId}</strong> ${a.text}<div class="alert-meta">${a.meta}</div></div>
+      </div>`;
+    }).join('');
+  } catch(e) { console.error(e); }
 }
-function renderSocietes(){
-  document.getElementById('societes-list-view').style.display='block';
-  document.getElementById('societe-detail').style.display='none';
-  const g=document.getElementById('societes-grid');
-  if(!societes.length){g.innerHTML='<div class="empty-state">Aucune société. Cliquez sur "+ Ajouter".</div>';return;}
-  g.innerHTML=societes.map(s=>{const p=profileCache[s.id];return`<div class="card" onclick="openSociete('${s.id}')"><div class="card-top"><div class="avatar ${s.color}">${s.name.slice(0,2).toUpperCase()}</div><div><div class="card-name">${s.name}</div><div class="card-sub">${s.secteur||s.url}</div></div></div>${p?`<div class="card-kpis"><div class="card-kpi"><div class="card-kpi-label">CA</div><div class="card-kpi-value">${p.ca||'—'}</div></div><div class="card-kpi"><div class="card-kpi-label">Clients</div><div class="card-kpi-value">${p.clients||'—'}</div></div><div class="card-kpi"><div class="card-kpi-label">Employés</div><div class="card-kpi-value">${p.employes||'—'}</div></div><div class="card-kpi"><div class="card-kpi-label">Prix</div><div class="card-kpi-value">${p.prixEntree||'—'}</div></div></div>`:'<div style="font-size:12px;color:#bbb;padding:10px 0;">Cliquer pour enrichir via IA</div>'}<div class="card-footer"><div class="upd-dot"></div>${p?'Mis à jour : '+new Date(p.scrapedAt||Date.now()).toLocaleDateString('fr-FR'):'Non enrichie'}</div></div>`;}).join('');
+
+// ── Societes ──────────────────────────────────────────────────
+async function loadSocietes() {
+  try {
+    const r = await fetch(API + '/societes');
+    const d = await r.json();
+    societes = d.societes || [];
+  } catch(e) { console.error('loadSocietes:', e); }
 }
-function showSocieteForm(id){
-  editingSocieteId=id||null;
-  const s=id?societes.find(x=>x.id===id):null;
-  document.getElementById('sf-title').textContent=s?'Modifier '+s.name:'Nouvelle société';
-  document.getElementById('sf-name').value=s?s.name:'';
-  document.getElementById('sf-url').value=s?s.url:'';
-  document.getElementById('sf-secteur').value=s?s.secteur||'':'';
-  document.getElementById('sf-notes').value=s?s.notes||'':'';
-  const allSigs=['Prix & offres','Fonctionnalités','Recrutements','SEO & contenu','Réseaux sociaux','Avis clients','Partenariats','Levées de fonds','Presse'];
-  document.querySelectorAll('#sf-sigs .sig').forEach((el,i)=>el.classList.toggle('on',s?(s.signals||[]).includes(allSigs[i]):i<3));
-  document.getElementById('societe-form').style.display='block';
-  document.getElementById('societe-form').scrollIntoView({behavior:'smooth'});
+
+function renderSocietes() {
+  const g = document.getElementById('societes-grid');
+  if (!societes.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span class="empty-icon">🏢</span>Aucune société — cliquez sur "+ Ajouter"</div>'; return; }
+  g.innerHTML = societes.map((s, i) => {
+    const data = s.data || {};
+    const stale = !s.scraped_at || (Date.now() - new Date(s.scraped_at)) / 86400000 > 7;
+    return `<div class="entity-card" onclick="openSociete('${s.id}')">
+      <div class="entity-card-top">
+        <div class="avatar ${avatarClass(i)}">${initials(s.name)}</div>
+        <div><div class="entity-name">${s.name}</div><div class="entity-sub">${s.url}${s.secteur ? ' · ' + s.secteur : ''}</div></div>
+      </div>
+      ${data.ca ? `<div class="entity-kpis">
+        <div class="entity-kpi"><div class="entity-kpi-label">CA</div><div class="entity-kpi-value">${data.ca}</div></div>
+        <div class="entity-kpi"><div class="entity-kpi-label">Clients</div><div class="entity-kpi-value">${data.clients||'—'}</div></div>
+        <div class="entity-kpi"><div class="entity-kpi-label">Employés</div><div class="entity-kpi-value">${data.employes||'—'}</div></div>
+        <div class="entity-kpi"><div class="entity-kpi-label">Prix entrée</div><div class="entity-kpi-value">${data.prixEntree||'—'}</div></div>
+      </div>` : '<div style="font-size:12px;color:var(--text3);padding:10px 0;">Cliquer pour enrichir via IA</div>'}
+      <div class="entity-footer">
+        <div class="entity-tags">${(s.signals||[]).slice(0,2).map(sig => tagHtml(sig,'tag-accent')).join('')}</div>
+        <span class="entity-updated"><span class="upd-dot ${stale?'stale':''}"></span>${stale ? 'À actualiser' : 'À jour'}</span>
+      </div>
+    </div>`;
+  }).join('');
 }
-function hideSocieteForm(){document.getElementById('societe-form').style.display='none';editingSocieteId=null;}
-async function saveSociete(){
-  const name=document.getElementById('sf-name').value.trim();
-  const url=document.getElementById('sf-url').value.trim();
-  if(!name||!url){alert('Nom et URL requis.');return;}
-  const signals=Array.from(document.querySelectorAll('#sf-sigs .sig.on')).map(e=>e.textContent.trim());
-  const id=editingSocieteId||(name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')+'_'+Date.now());
-  const data={id,name,url,secteur:document.getElementById('sf-secteur').value.trim(),notes:document.getElementById('sf-notes').value.trim(),signals,color:editingSocieteId?societes.find(s=>s.id===editingSocieteId)?.color:COLORS[societes.length%COLORS.length]};
-  if(editingSocieteId){const idx=societes.findIndex(s=>s.id===editingSocieteId);if(idx!==-1)societes[idx]={...societes[idx],...data};}
-  else{societes.push(data);try{await fetch(API+'/societes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,name,url,secteur:data.secteur})});}catch(e){}}
-  save();hideSocieteForm();
-  if(document.getElementById('societe-detail').style.display!=='none'&&editingSocieteId){openSociete(editingSocieteId);}
-  else{renderSocietes();}
+
+async function openSociete(id) {
+  currentSocieteId = id;
+  const s = societes.find(x => x.id === id);
+  if (!s) return;
+  const i = societes.indexOf(s);
+
+  document.getElementById('societes-list-view').style.display = 'none';
+  document.getElementById('societe-detail-view').style.display = 'block';
+
+  const av = document.getElementById('s-av');
+  av.className = 'detail-av ' + avatarClass(i);
+  av.textContent = initials(s.name);
+  document.getElementById('s-name').textContent = s.name;
+  document.getElementById('s-sub').textContent = s.url + (s.secteur ? ' · ' + s.secteur : '');
+  document.getElementById('s-tags').innerHTML = (s.signals||[]).map(sig => tagHtml(sig,'tag-accent')).join(' ');
+
+  // Fill from cached data if available
+  if (s.data) fillSocieteDetail(s.data, true, s.scraped_at);
+
+  // Load produits for this societe
+  loadSocieteProduits(id);
+
+  // Load fiche from server
+  loadSocieteFiche(id, s);
+  showSTab('overview', document.querySelector('#societe-detail-view .tab'));
 }
-function deleteSociete(){
-  if(!confirm('Supprimer cette société et ses produits ?'))return;
-  produits=produits.filter(p=>p.societe_id!==currentSocieteId);
-  delete profileCache[currentSocieteId];
-  societes=societes.filter(s=>s.id!==currentSocieteId);
-  alerts=alerts.filter(a=>a.competitorId!==currentSocieteId);
-  save();
-  try{fetch(API+'/societes/'+currentSocieteId,{method:'DELETE'});}catch(e){}
-  backToSocietes();
+
+async function loadSocieteFiche(id, s) {
+  const btn = document.getElementById('s-btn-refresh');
+  const dot = document.getElementById('s-dot');
+  btn.disabled = true; btn.textContent = 'Chargement...';
+  dot.classList.add('loading');
+  document.getElementById('s-info').textContent = 'Chargement...';
+
+  try {
+    const url = API + '/societes/' + id + '/fiche?name=' + encodeURIComponent(s.name) + '&url=' + encodeURIComponent(s.url) + '&secteur=' + encodeURIComponent(s.secteur||'') + '&signals=' + encodeURIComponent((s.signals||[]).join(','));
+    const r = await fetch(url);
+    const d = await r.json();
+    if (d.profile) {
+      fillSocieteDetail(d.profile, d.fromCache, d.scrapedAt);
+      // Update local cache
+      const idx = societes.findIndex(x => x.id === id);
+      if (idx !== -1) { societes[idx].data = d.profile; societes[idx].scraped_at = d.scrapedAt; }
+      // Auto-load produits after scrape
+      loadSocieteProduits(id);
+    }
+  } catch(e) { document.getElementById('s-info').textContent = 'Erreur: ' + e.message; }
+  finally { btn.disabled = false; btn.textContent = 'Forcer mise à jour'; dot.classList.remove('loading'); }
 }
-function openSociete(id){
-  currentSocieteId=id;
-  const s=societes.find(x=>x.id===id);if(!s)return;
-  document.getElementById('societes-list-view').style.display='none';
-  document.getElementById('societe-detail').style.display='block';
-  const av=document.getElementById('sd-av');av.className='detail-av '+s.color;av.textContent=s.name.slice(0,2).toUpperCase();
-  document.getElementById('sd-name').textContent=s.name;
-  document.getElementById('sd-url').textContent=s.url+(s.secteur?' · '+s.secteur:'');
-  document.getElementById('sd-tags').innerHTML=(s.signals||[]).map(sig=>`<span class="tag tag-p">${sig}</span>`).join('');
-  const p=profileCache[id];if(p)applyProfile(p,true,p.scrapedAt);
-  renderSProduits(id);
-  showSTab('overview',document.querySelector('#stabs .tab'));
-  setTimeout(()=>loadSociete(false),200);
+
+function fillSocieteDetail(p, fromCache, scrapedAt) {
+  document.getElementById('s-ca').textContent = p.ca || '—';
+  document.getElementById('s-ca-d').textContent = p.caD || '';
+  document.getElementById('s-cl').textContent = p.clients || '—';
+  document.getElementById('s-cl-d').textContent = p.clientsD || '';
+  document.getElementById('s-em').textContent = p.employes || '—';
+  document.getElementById('s-em-d').textContent = p.employesD || '';
+  document.getElementById('s-pr').textContent = p.prixEntree || '—';
+  document.getElementById('s-pr-d').textContent = p.prixD || '';
+
+  document.getElementById('s-info').textContent = fromCache ? 'Cache du ' + new Date(scrapedAt).toLocaleDateString('fr-FR') : 'Mis à jour le ' + new Date(scrapedAt||Date.now()).toLocaleDateString('fr-FR');
+  document.getElementById('s-ts').textContent = scrapedAt ? new Date(scrapedAt).toLocaleDateString('fr-FR') : '';
+
+  document.getElementById('s-info-table').innerHTML = (p.info||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+  document.getElementById('s-src').innerHTML = (p.sources||[]).map(s => `<span class="src-badge">${s}</span>`).join('');
+
+  // pricing
+  document.getElementById('s-pricing').innerHTML = (p.pricing||[]).length
+    ? '<div class="pricing-grid">' + (p.pricing||[]).map(pl => `<div class="pricing-tier"><div class="pricing-name">${pl.name}</div><div class="pricing-price">${pl.price}</div><div class="pricing-feat">${pl.feat}</div></div>`).join('') + '</div>'
+    : '<div class="empty"><span style="color:var(--text3);">Aucune donnée</span></div>';
+
+  document.getElementById('s-ctab').innerHTML = (p.clients_info||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+
+  // recruits
+  const ra = p.recrutements_actifs || [];
+  document.getElementById('s-recruits').innerHTML = ra.length
+    ? ra.map(r => `<div class="recruit-row"><span class="recruit-dept">${r.departement||'—'}</span><div class="recruit-info"><div class="recruit-poste">${r.poste}</div><div class="recruit-meta">${r.lieu||'—'} · ${r.date||'—'}</div></div></div>`).join('')
+    : '<div style="font-size:13px;color:var(--text3);padding:0.5rem 0;">Aucun recrutement actif détecté</div>';
+
+  const rh = p.historique_recrutements || [];
+  document.getElementById('s-recruit-history').innerHTML = rh.length
+    ? rh.map(h => `<div class="history-row"><div class="history-period">${h.periode}</div><div class="history-volume">${h.volume} — ${h.focus}</div><div class="history-signal">${h.signal}</div></div>`).join('')
+    : '<div style="font-size:13px;color:var(--text3);padding:0.5rem 0;">Aucun historique disponible</div>';
+
+  // analyse
+  if (p.analyse) streamText('s-analyse', p.analyse);
 }
-function backToSocietes(){document.getElementById('societes-list-view').style.display='block';document.getElementById('societe-detail').style.display='none';renderSocietes();}
-async function loadSociete(force){
-  const s=societes.find(x=>x.id===currentSocieteId);if(!s)return;
-  const cached=profileCache[currentSocieteId];
-  const age=cached&&cached.scrapedAt?(Date.now()-new Date(cached.scrapedAt).getTime())/(1000*60*60*24):999;
-  if(!force&&cached&&age<7){applyProfile(cached,true,cached.scrapedAt);return;}
-  const btn=document.getElementById('btn-refresh-s');const dot=document.getElementById('sd-dot');
-  btn.textContent=force?'Mise à jour...':'Chargement...';btn.disabled=true;dot.classList.add('loading');
-  document.getElementById('sd-analyse').innerHTML='<span class="cursor"></span>';
-  showSTab('analyse',document.querySelectorAll('#stabs .tab')[5]);
-  try{
-    const params=new URLSearchParams({name:s.name,url:s.url,secteur:s.secteur||'',signals:(s.signals||[]).join(','),...(force?{force:'true'}:{})});
-    const res=await fetch(API+'/societes/'+currentSocieteId+'?'+params);
-    if(!res.ok)throw new Error('Erreur '+res.status);
-    const data=await res.json();
-    if(data.profile){data.profile.scrapedAt=data.scrapedAt||new Date().toISOString();profileCache[currentSocieteId]=data.profile;save();applyProfile(data.profile,data.fromCache,data.scrapedAt);if(data.profile.produits)syncProduitsFromProfile(currentSocieteId,data.profile.produits);renderSProduits(currentSocieteId);fetchAlerts();}
-  }catch(e){document.getElementById('sd-analyse').textContent='Erreur : '+e.message;}
-  finally{btn.textContent='Actualiser via IA';btn.disabled=false;dot.classList.remove('loading');}
+
+async function loadSocieteProduits(societeId) {
+  try {
+    const r = await fetch(API + '/societes/' + societeId + '/produits');
+    const d = await r.json();
+    const grid = document.getElementById('s-produits-grid');
+    const prods = d.produits || [];
+    if (!prods.length) { grid.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:1rem 0;grid-column:1/-1;">Aucun produit lié. Cliquez sur Forcer mise à jour pour détecter automatiquement.</div>'; return; }
+    grid.innerHTML = prods.map(p => `<div class="product-card" onclick="go('produits-db');setTimeout(()=>openProduit('${p.id}'),100)">
+      <span class="product-emoji">${p.emoji||'📦'}</span>
+      <div class="product-name">${p.name}</div>
+      <div class="product-company">${p.prix||'—'}</div>
+      <div class="product-desc">${p.description||'Cliquer pour enrichir via IA'}</div>
+      <div style="margin-top:8px;">${tagHtml(p.badge||'Core', p.badge==='Nouveau'?'tag-accent':p.badge==='Premium'?'tag-amber':'tag-gray')}</div>
+    </div>`).join('');
+    // Merge into global produits list
+    prods.forEach(p => { if (!produits.find(x => x.id === p.id)) produits.push(p); });
+    document.getElementById('m-produits').textContent = produits.length;
+  } catch(e) { console.error(e); }
 }
-function applyProfile(p,fromCache,scrapedAt){
-  document.getElementById('sd-ca').textContent=p.ca||'—';document.getElementById('sd-cad').textContent=p.caD||'';
-  document.getElementById('sd-cl').textContent=p.clients||'—';document.getElementById('sd-cld').textContent=p.clientsD||'';
-  document.getElementById('sd-em').textContent=p.employes||'—';document.getElementById('sd-emd').textContent=p.employesD||'';
-  document.getElementById('sd-pr').textContent=p.prixEntree||'—';document.getElementById('sd-prd').textContent=p.prixD||'';
-  document.getElementById('sd-info').innerHTML=(p.info||[]).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('');
-  document.getElementById('sd-src').innerHTML=(p.sources||[]).map(s=>`<span class="src-badge">${s}</span>`).join('');
-  document.getElementById('sd-feat').innerHTML=(p.features||[]).map(f=>`<div class="feat-row"><div class="feat-dot"></div><div class="feat-text">${f.t}<span class="badge ${f.n?'new':''}">${f.b}</span></div></div>`).join('')||'<div style="font-size:13px;color:#bbb;">Cliquez sur Actualiser via IA.</div>';
-  document.getElementById('sd-pricing').innerHTML=(p.pricing||[]).map(t=>`<div class="pricing-tier"><div class="pricing-name">${t.name}</div><div class="pricing-price">${t.price}</div><div class="pricing-feat">${t.feat}</div></div>`).join('');
-  document.getElementById('sd-ctab').innerHTML=(p.clients_info||[]).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('');
-  document.getElementById('sd-recruits').innerHTML=(p.recrutements_actifs||[]).map(r=>`<div class="recruit-row"><span class="recruit-dept">${r.departement||'—'}</span><div><div class="recruit-poste">${r.poste}</div><div class="recruit-meta">${r.lieu||'—'} · ${r.date||'—'}</div></div></div>`).join('')||'<div style="font-size:13px;color:#bbb;">Aucun recrutement actif détecté.</div>';
-  document.getElementById('sd-rhist').innerHTML=(p.historique_recrutements||[]).map(h=>`<div class="history-row"><div class="history-period">${h.periode}</div><div class="history-volume">${h.volume} — ${h.focus}</div><div class="history-signal">${h.signal}</div></div>`).join('')||'<div style="font-size:13px;color:#bbb;">Aucun historique.</div>';
-  const an=document.getElementById('sd-analyse');const text=p.analyse||'';an.textContent='';let i=0;const iv=setInterval(()=>{if(i<text.length){an.textContent+=text[i++];}else clearInterval(iv);},10);
-  document.getElementById('sd-ts').textContent=fromCache?'Cache · '+new Date(scrapedAt).toLocaleDateString('fr-FR'):new Date(scrapedAt||Date.now()).toLocaleDateString('fr-FR');
-  document.getElementById('sd-status').textContent=fromCache?'Depuis le cache':'Mis à jour à l\'instant';
+
+function backToSocietes() {
+  document.getElementById('societes-list-view').style.display = 'block';
+  document.getElementById('societe-detail-view').style.display = 'none';
+  currentSocieteId = null;
 }
-function syncProduitsFromProfile(societeId,profilProduits){
-  for(const pp of profilProduits){const pid=societeId+'_'+pp.nom.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');if(!produits.find(p=>p.id===pid))produits.push({id:pid,societe_id:societeId,name:pp.nom,emoji:pp.emoji||'📦',description:pp.description||'',badge:pp.badge||'Core'});}
-  save();
+
+// ── Societe form ──────────────────────────────────────────────
+function showSocieteForm(editId) {
+  editingSocieteId = editId || null;
+  const s = editId ? societes.find(x => x.id === editId) : null;
+  document.getElementById('societe-form-title').textContent = s ? 'Modifier ' + s.name : 'Nouvelle société';
+  document.getElementById('sf-name').value = s ? s.name : '';
+  document.getElementById('sf-url').value = s ? s.url : '';
+  document.getElementById('sf-secteur').value = s ? (s.secteur||'') : '';
+  document.getElementById('sf-freq').value = s ? (s.freq||'hebdo') : 'hebdo';
+  document.getElementById('sf-notes').value = s ? (s.notes||'') : '';
+  const allSigs = ['Prix & offres','Fonctionnalités','Recrutements','SEO & contenu','Réseaux sociaux','Avis clients','Partenariats','Levées de fonds','Presse'];
+  document.querySelectorAll('#sf-sigs .sig').forEach((el, i) => el.classList.toggle('on', s ? (s.signals||[]).includes(allSigs[i]) : i < 3));
+  document.getElementById('societe-form-wrap').style.display = 'block';
+  document.getElementById('societe-form-wrap').scrollIntoView({behavior:'smooth'});
 }
-function renderSProduits(societeId){
-  const el=document.getElementById('sd-produits');
-  const sp=produits.filter(p=>p.societe_id===societeId);
-  if(!sp.length){el.innerHTML='<div style="font-size:13px;color:#bbb;padding:.5rem 0;">Aucun produit. Cliquez sur "Actualiser via IA" pour les détecter automatiquement.</div>';return;}
-  el.innerHTML=sp.map(p=>`<div class="mini-produit" onclick="go('produits');setTimeout(()=>openProduit('${p.id}'),100)"><span class="mini-emoji">${p.emoji}</span><div class="mini-name">${p.name}</div><div class="mini-desc">${p.description||'—'}</div></div>`).join('');
+function hideSocieteForm() { document.getElementById('societe-form-wrap').style.display = 'none'; editingSocieteId = null; }
+
+async function saveSociete() {
+  const name = document.getElementById('sf-name').value.trim();
+  const url = document.getElementById('sf-url').value.trim();
+  if (!name || !url) { alert('Nom et URL requis'); return; }
+  const id = editingSocieteId || name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'') + '_' + Date.now();
+  const signals = Array.from(document.querySelectorAll('#sf-sigs .sig.on')).map(e => e.textContent.trim());
+  const body = { id, name, url, secteur: document.getElementById('sf-secteur').value.trim(), signals, freq: document.getElementById('sf-freq').value, notes: document.getElementById('sf-notes').value.trim() };
+  try {
+    await fetch(API + '/societes', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    await loadSocietes();
+    hideSocieteForm();
+    renderSocietes();
+    renderDashboard();
+    // Update produits select
+    populateSocieteSelect();
+  } catch(e) { alert('Erreur: ' + e.message); }
 }
-function showSTab(id,el){
-  document.querySelectorAll('#societe-detail .tabpanel').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('#stabs .tab').forEach(t=>t.classList.remove('active'));
-  const tp=document.getElementById('st-'+id);if(tp)tp.classList.add('active');if(el)el.classList.add('active');
+
+async function deleteSociete(id) {
+  if (!confirm('Supprimer cette société et tous ses produits ?')) return;
+  await fetch(API + '/societes/' + id, { method: 'DELETE' });
+  await loadSocietes();
+  renderSocietes();
+  renderDashboard();
 }
-function renderProduits(){
-  document.getElementById('produits-list-view').style.display='block';
-  document.getElementById('produit-detail').style.display='none';
-  const g=document.getElementById('produits-grid');
-  if(!produits.length){g.innerHTML='<div class="empty-state">Aucun produit. Ajoutez une société et cliquez sur "Actualiser via IA".</div>';return;}
-  g.innerHTML=produits.map(p=>{const s=societes.find(x=>x.id===p.societe_id);const bc=p.badge==='Nouveau'?'pb-new':p.badge==='Premium'?'pb-premium':'pb-core';return`<div class="produit-card" onclick="openProduit('${p.id}')"><span class="produit-emoji">${p.emoji||'📦'}</span><div class="produit-name">${p.name}</div><div class="produit-societe">${s?s.name:'—'}</div><div class="produit-desc">${p.description||'Cliquer pour enrichir via IA'}</div><span class="produit-badge ${bc}">${p.badge||'Core'}</span></div>`;}).join('');
+
+// ── Force scrape ──────────────────────────────────────────────
+async function forceScrape(type) {
+  if (type === 'societe' && currentSocieteId) {
+    const s = societes.find(x => x.id === currentSocieteId);
+    if (!s) return;
+    const btn = document.getElementById('s-btn-refresh');
+    const dot = document.getElementById('s-dot');
+    btn.disabled = true; btn.textContent = 'Mise à jour...';
+    dot.classList.add('loading');
+    document.getElementById('s-info').textContent = 'Scraping en cours...';
+    try {
+      const r = await fetch(API + '/societes/' + currentSocieteId + '/fiche', { method: 'POST' });
+      const d = await r.json();
+      if (d.profile) {
+        fillSocieteDetail(d.profile, false, d.scrapedAt);
+        const idx = societes.findIndex(x => x.id === currentSocieteId);
+        if (idx !== -1) { societes[idx].data = d.profile; societes[idx].scraped_at = d.scrapedAt; }
+        loadSocieteProduits(currentSocieteId);
+      }
+    } catch(e) { alert('Erreur: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Forcer mise à jour'; dot.classList.remove('loading'); }
+  }
+  if (type === 'produit' && currentProduitId) {
+    const btn = document.getElementById('p-btn-refresh');
+    const dot = document.getElementById('p-dot');
+    btn.disabled = true; btn.textContent = 'Mise à jour...';
+    dot.classList.add('loading');
+    document.getElementById('p-info').textContent = 'Scraping en cours...';
+    try {
+      const r = await fetch(API + '/produits/' + currentProduitId + '/fiche', { method: 'POST' });
+      const d = await r.json();
+      if (d.profile) fillProduitDetail(d.profile, d.produit, false, d.scrapedAt);
+    } catch(e) { alert('Erreur: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Forcer mise à jour'; dot.classList.remove('loading'); }
+  }
 }
-function showProduitForm(id,preselectSocieteId){
-  editingProduitId=id||null;
-  const p=id?produits.find(x=>x.id===id):null;
-  document.getElementById('pf-title').textContent=p?'Modifier '+p.name:'Nouveau produit';
-  document.getElementById('pf-name').value=p?p.name:'';
-  document.getElementById('pf-emoji').value=p?p.emoji:'📦';
-  document.getElementById('pf-badge').value=p?p.badge:'Core';
-  document.getElementById('pf-desc').value=p?p.description:'';
-  const sel=document.getElementById('pf-societe');
-  sel.innerHTML=societes.map(s=>`<option value="${s.id}" ${(p?p.societe_id:preselectSocieteId||societes[0]?.id)===s.id?'selected':''}>${s.name}</option>`).join('');
-  document.getElementById('produit-form').style.display='block';
-  document.getElementById('produit-form').scrollIntoView({behavior:'smooth'});
+
+// ── Produits ──────────────────────────────────────────────────
+async function loadAllProduits() {
+  try {
+    const r = await fetch(API + '/produits');
+    const d = await r.json();
+    produits = d.produits || [];
+  } catch(e) { console.error(e); }
 }
-function hideProduitForm(){document.getElementById('produit-form').style.display='none';editingProduitId=null;}
-async function saveProduit(){
-  const name=document.getElementById('pf-name').value.trim();
-  const societe_id=document.getElementById('pf-societe').value;
-  if(!name||!societe_id){alert('Nom et société requis.');return;}
-  const id=editingProduitId||(societe_id+'_'+name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')+'_'+Date.now());
-  const data={id,societe_id,name,emoji:document.getElementById('pf-emoji').value||'📦',badge:document.getElementById('pf-badge').value,description:document.getElementById('pf-desc').value.trim()};
-  if(editingProduitId){const idx=produits.findIndex(p=>p.id===editingProduitId);if(idx!==-1)produits[idx]={...produits[idx],...data};}
-  else{produits.push(data);try{await fetch(API+'/produits',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}catch(e){}}
-  save();hideProduitForm();renderProduits();
+
+function renderProduits() {
+  const g = document.getElementById('produits-grid');
+  if (!produits.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span class="empty-icon">📦</span>Aucun produit — ajoutez une société et actualisez pour détecter automatiquement</div>'; return; }
+  g.innerHTML = produits.map((p, i) => {
+    const stale = !p.scraped_at || (Date.now() - new Date(p.scraped_at)) / 86400000 > 7;
+    return `<div class="entity-card" onclick="openProduit('${p.id}')">
+      <div class="entity-card-top">
+        <div style="font-size:28px;flex-shrink:0;">${p.emoji||'📦'}</div>
+        <div>
+          <div class="entity-name">${p.name}</div>
+          <div class="entity-sub">${p.societe_name||''} ${p.prix ? '· ' + p.prix : ''}</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;">${p.description||'Cliquer pour enrichir via IA'}</p>
+      <div class="entity-footer">
+        <div class="entity-tags">${tagHtml(p.badge||'Core', p.badge==='Nouveau'?'tag-accent':p.badge==='Premium'?'tag-amber':'tag-gray')}${p.nouveau ? tagHtml('Nouveau','tag-green') : ''}</div>
+        <span class="entity-updated"><span class="upd-dot ${stale?'stale':''}"></span>${stale ? 'À actualiser' : 'À jour'}</span>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('m-produits').textContent = produits.length;
 }
-function deleteProduit(){
-  if(!confirm('Supprimer ce produit ?'))return;
-  produits=produits.filter(p=>p.id!==currentProduitId);
-  delete produitCache[currentProduitId];
-  save();
-  try{fetch(API+'/produits/'+encodeURIComponent(currentProduitId),{method:'DELETE'});}catch(e){}
-  backToProduits();
+
+async function openProduit(id) {
+  currentProduitId = id;
+  const p = produits.find(x => x.id === id);
+  if (!p) return;
+
+  document.getElementById('produits-list-view').style.display = 'none';
+  document.getElementById('produit-detail-view').style.display = 'block';
+
+  document.getElementById('p-emoji').textContent = p.emoji || '📦';
+  document.getElementById('p-name').textContent = p.name;
+  document.getElementById('p-sub').textContent = (p.societe_name || '') + (p.prix ? ' · ' + p.prix : '');
+  document.getElementById('p-tags').innerHTML = tagHtml(p.badge||'Core', p.badge==='Nouveau'?'tag-accent':p.badge==='Premium'?'tag-amber':'tag-gray') + (p.nouveau ? ' ' + tagHtml('Nouveau','tag-green') : '');
+
+  if (p.data) fillProduitDetail(p.data, p, true, p.scraped_at);
+
+  showPTab('overview', document.querySelector('#produit-detail-view .tab'));
+
+  // Load from server
+  const btn = document.getElementById('p-btn-refresh');
+  const dot = document.getElementById('p-dot');
+  btn.disabled = true; btn.textContent = 'Chargement...';
+  dot.classList.add('loading');
+  try {
+    const r = await fetch(API + '/produits/' + id + '/fiche');
+    const d = await r.json();
+    if (d.profile) {
+      fillProduitDetail(d.profile, d.produit || p, d.fromCache, d.scrapedAt);
+      const idx = produits.findIndex(x => x.id === id);
+      if (idx !== -1) { produits[idx].data = d.profile; produits[idx].scraped_at = d.scrapedAt; }
+    }
+  } catch(e) { document.getElementById('p-info').textContent = 'Erreur: ' + e.message; }
+  finally { btn.disabled = false; btn.textContent = 'Forcer mise à jour'; dot.classList.remove('loading'); }
 }
-function openProduit(id){
-  currentProduitId=id;
-  const p=produits.find(x=>x.id===id);if(!p)return;
-  const s=societes.find(x=>x.id===p.societe_id);
-  document.getElementById('produits-list-view').style.display='none';
-  document.getElementById('produit-detail').style.display='block';
-  document.getElementById('pd-emoji').textContent=p.emoji||'📦';
-  document.getElementById('pd-name').textContent=p.name;
-  document.getElementById('pd-societe').textContent=s?s.name+' · '+s.url:'—';
-  const bc=p.badge==='Nouveau'?'pb-new':p.badge==='Premium'?'pb-premium':'pb-core';
-  document.getElementById('pd-badge').innerHTML=`<span class="produit-badge ${bc}">${p.badge||'Core'}</span>`;
-  document.getElementById('pd-desc').textContent=p.description||'Cliquez sur "Actualiser via IA" pour enrichir.';
-  const cached=produitCache[id];if(cached)applyProduitProfile(cached);
-  showPTab('overview',document.querySelector('#produit-detail .tab'));
-  setTimeout(()=>loadProduit(false),200);
+
+function fillProduitDetail(d, produit, fromCache, scrapedAt) {
+  document.getElementById('p-desc').textContent = d.description || '—';
+  document.getElementById('p-prix').textContent = d.prix || (produit && produit.prix) || '—';
+  document.getElementById('p-info').textContent = fromCache ? 'Cache du ' + new Date(scrapedAt).toLocaleDateString('fr-FR') : 'Mis à jour le ' + new Date(scrapedAt||Date.now()).toLocaleDateString('fr-FR');
+  document.getElementById('p-ts').textContent = scrapedAt ? new Date(scrapedAt).toLocaleDateString('fr-FR') : '';
+
+  // Pros/Cons
+  document.getElementById('p-pros').innerHTML = (d.avantages||[]).map(a => `<div class="pro-item">+ ${a}</div>`).join('') || '<div class="pro-item" style="color:var(--text3);">—</div>';
+  document.getElementById('p-cons').innerHTML = (d.limites||[]).map(l => `<div class="con-item">− ${l}</div>`).join('') || '<div class="con-item" style="color:var(--text3);">—</div>';
+
+  // Features
+  document.getElementById('p-features').innerHTML = (d.features||[]).map(f => `<div class="feat-row"><div class="feat-dot"></div><div class="feat-text"><strong>${f.titre||f.t||''}</strong>${f.description ? ' — ' + f.description : ''}<span class="feat-badge ${f.nouveau?'fb-new':'fb-core'}">${f.nouveau?'Nouveau':'Core'}</span></div></div>`).join('') || '<div style="color:var(--text3);font-size:13px;">Aucune fonctionnalité</div>';
+
+  // Specs
+  const specs = d.specs || {};
+  document.getElementById('p-specs').innerHTML = Object.entries(specs).map(([k,v]) => `<div class="spec-item"><div class="spec-label">${k}</div><div class="spec-value">${v}</div></div>`).join('') || '<div style="color:var(--text3);font-size:13px;padding:1rem;">Aucune spec</div>';
+
+  // Changelog
+  document.getElementById('p-changelog').innerHTML = (d.changelog||[]).map(c => `<div class="changelog-row"><div class="changelog-date">${c.date||''} ${c.version||''}</div><div class="changelog-text">${c.changement||c.text||''}</div></div>`).join('') || '<div style="color:var(--text3);font-size:13px;padding:0.5rem 0;">Aucun changelog</div>';
+
+  // Analyse
+  if (d.analyse) streamText('p-analyse', d.analyse);
 }
-function backToProduits(){document.getElementById('produits-list-view').style.display='block';document.getElementById('produit-detail').style.display='none';renderProduits();}
-async function loadProduit(force){
-  const p=produits.find(x=>x.id===currentProduitId);if(!p)return;
-  const cached=produitCache[currentProduitId];
-  const age=cached&&cached.scrapedAt?(Date.now()-new Date(cached.scrapedAt).getTime())/(1000*60*60*24):999;
-  if(!force&&cached&&age<7){applyProduitProfile(cached);return;}
-  const btn=document.getElementById('btn-refresh-p');btn.textContent=force?'Mise à jour...':'Chargement...';btn.disabled=true;
-  try{
-    const url=API+'/produits/'+encodeURIComponent(currentProduitId)+(force?'?force=true':'');
-    const res=await fetch(url);if(!res.ok)throw new Error('Erreur '+res.status);
-    const data=await res.json();
-    if(data.produit&&data.produit.data){const pd=data.produit.data;pd.scrapedAt=data.scrapedAt||new Date().toISOString();produitCache[currentProduitId]=pd;const idx=produits.findIndex(x=>x.id===currentProduitId);if(idx!==-1&&pd.description)produits[idx].description=pd.description;document.getElementById('pd-desc').textContent=pd.description||produits.find(x=>x.id===currentProduitId)?.description||'—';save();applyProduitProfile(pd);}
-  }catch(e){console.error(e.message);}
-  finally{btn.textContent='Actualiser via IA';btn.disabled=false;}
+
+function backToProduits() {
+  document.getElementById('produits-list-view').style.display = 'block';
+  document.getElementById('produit-detail-view').style.display = 'none';
+  currentProduitId = null;
 }
-function applyProduitProfile(pd){
-  document.getElementById('pd-info').innerHTML=[['Cible',pd.cible||'—'],['Prix',pd.prix||'—'],['Modèle',pd.prixDetail||'—']].map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('');
-  document.getElementById('pd-prix').textContent=pd.prix||'—';
-  document.getElementById('pd-prix-detail').textContent=pd.prixDetail||'—';
-  document.getElementById('pd-fonctions').innerHTML=(pd.fonctionnalites||[]).map(f=>`<div class="feat-row"><div class="feat-dot"></div><div class="feat-text">${f}</div></div>`).join('')||'<div style="font-size:13px;color:#bbb;">—</div>';
-  document.getElementById('pd-avantages').innerHTML=(pd.avantages||[]).map(f=>`<div class="feat-row"><div class="feat-dot" style="background:#1D9E75;"></div><div class="feat-text">${f}</div></div>`).join('')||'<div style="font-size:13px;color:#bbb;">—</div>';
-  document.getElementById('pd-limitations').innerHTML=(pd.limitations||[]).map(f=>`<div class="feat-row"><div class="feat-dot" style="background:#E24B4A;"></div><div class="feat-text">${f}</div></div>`).join('')||'<div style="font-size:13px;color:#bbb;">—</div>';
-  document.getElementById('pd-integrations').innerHTML='<div style="padding:1rem;">'+(pd.integrations||[]).map(i=>`<span class="src-badge">${i}</span>`).join('')+'</div>';
-  document.getElementById('pd-changelog').innerHTML=(pd.changelog||[]).map(c=>`<div class="history-row"><div class="history-period">${c.date}</div><div class="history-volume">${c.update}</div></div>`).join('')||'<div style="font-size:13px;color:#bbb;">Aucun changelog.</div>';
-  document.getElementById('pd-concurrents').innerHTML='<div style="padding:1rem;">'+(pd.concurrents||[]).map(c=>`<span class="src-badge">${c}</span>`).join('')+'</div>';
-  document.getElementById('pd-src').innerHTML='<div style="padding:1rem;">'+(pd.sources||[]).map(s=>`<span class="src-badge">${s}</span>`).join('')+'</div>';
-  if(pd.description)document.getElementById('pd-desc').textContent=pd.description;
+
+// ── Produit form ──────────────────────────────────────────────
+function populateSocieteSelect() {
+  const sel = document.getElementById('pf-societe');
+  sel.innerHTML = '<option value="">— Aucune —</option>' + societes.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
 }
-function showPTab(id,el){
-  document.querySelectorAll('#produit-detail .tabpanel').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('#produit-detail .tab').forEach(t=>t.classList.remove('active'));
-  const tp=document.getElementById('pt-'+id);if(tp)tp.classList.add('active');if(el)el.classList.add('active');
+
+function showProduitForm(societeId) {
+  editingProduitId = null;
+  document.getElementById('produit-form-title').textContent = 'Nouveau produit';
+  document.getElementById('pf-name').value = '';
+  document.getElementById('pf-emoji').value = '📦';
+  document.getElementById('pf-badge').value = 'Core';
+  document.getElementById('pf-prix').value = '';
+  document.getElementById('pf-desc').value = '';
+  document.getElementById('pf-nouveau').value = 'false';
+  populateSocieteSelect();
+  if (societeId) document.getElementById('pf-societe').value = societeId;
+  document.getElementById('produit-form-wrap').style.display = 'block';
+  document.getElementById('produit-form-wrap').scrollIntoView({behavior:'smooth'});
 }
-function renderComparateur(){
-  const el=document.getElementById('comparateur-select');
-  el.innerHTML=produits.map(p=>{const s=societes.find(x=>x.id===p.societe_id);return`<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #e8e8e4;border-radius:8px;cursor:pointer;font-size:13px;"><input type="checkbox" value="${p.id}" style="width:auto;"> ${p.emoji} ${p.name} <span style="color:#999;font-size:11px;">${s?s.name:''}</span></label>`;}).join('')||'<div style="font-size:13px;color:#bbb;">Ajoutez des produits pour les comparer.</div>';
+function hideProduitForm() { document.getElementById('produit-form-wrap').style.display = 'none'; }
+
+async function saveProduit() {
+  const name = document.getElementById('pf-name').value.trim();
+  if (!name) { alert('Nom requis'); return; }
+  const id = editingProduitId || name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'') + '_' + Date.now();
+  const body = {
+    id, name,
+    societeId: document.getElementById('pf-societe').value || null,
+    emoji: document.getElementById('pf-emoji').value.trim() || '📦',
+    badge: document.getElementById('pf-badge').value,
+    prix: document.getElementById('pf-prix').value.trim(),
+    description: document.getElementById('pf-desc').value.trim(),
+    nouveau: document.getElementById('pf-nouveau').value === 'true'
+  };
+  try {
+    await fetch(API + '/produits', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    await loadAllProduits();
+    hideProduitForm();
+    renderProduits();
+  } catch(e) { alert('Erreur: ' + e.message); }
 }
-function runComparison(){
-  const selected=Array.from(document.querySelectorAll('#comparateur-select input:checked')).map(i=>i.value);
-  if(selected.length<2){alert('Sélectionnez au moins 2 produits.');return;}
-  const items=selected.map(id=>{const p=produits.find(x=>x.id===id);const s=societes.find(x=>x.id===p?.societe_id);const cached=produitCache[id];return{p,s,cached};});
-  document.getElementById('comparateur-result').innerHTML=`<div style="display:grid;grid-template-columns:repeat(${items.length},1fr);gap:12px;">`+items.map(({p,s,cached})=>`<div class="section"><div class="section-header" style="flex-direction:column;align-items:flex-start;gap:4px;"><span style="font-size:20px;">${p?.emoji||'📦'}</span><span class="section-title">${p?.name||'—'}</span><span style="font-size:11px;color:#999;">${s?.name||'—'}</span></div><div class="section-body"><table class="info-table"><tr><td>Prix</td><td>${cached?.prix||'—'}</td></tr><tr><td>Cible</td><td>${cached?.cible||'—'}</td></tr><tr><td>Badge</td><td>${p?.badge||'—'}</td></tr></table>${cached?.avantages?.length?'<div style="margin-top:10px;font-size:12px;font-weight:600;color:#1D9E75;margin-bottom:4px;">Avantages</div>'+cached.avantages.slice(0,3).map(a=>`<div style="font-size:12px;padding:3px 0;">✓ ${a}</div>`).join(''):''}${cached?.limitations?.length?'<div style="margin-top:10px;font-size:12px;font-weight:600;color:#E24B4A;margin-bottom:4px;">Limitations</div>'+cached.limitations.slice(0,2).map(l=>`<div style="font-size:12px;padding:3px 0;">✗ ${l}</div>`).join(''):''}${!cached?'<div style="font-size:12px;color:#bbb;margin-top:8px;">Ouvrez la fiche et cliquez Actualiser via IA.</div>':''}</div></div>`).join('')+'</div>';
+
+function addProduitFromSociete() {
+  go('produits-db');
+  setTimeout(() => showProduitForm(currentSocieteId), 100);
 }
-renderDashboard();
+
+// ── Init ──────────────────────────────────────────────────────
+async function init() {
+  await Promise.all([loadSocietes(), loadAllProduits()]);
+  renderDashboard();
+}
+
+init();
 </script>
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/scout/sw.js');</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/scout/sw.js');
+}
+</script>
 </body>
 </html>
