@@ -673,22 +673,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 <script>
 const API = 'https://scout-api-production-fa8d.up.railway.app';
 
-// Strip cite tags and all HTML from AI responses
+// Strip cite tags from AI responses — keep text inside tags
 function sanitize(text) {
   if (!text || typeof text !== 'string') return text || '—';
   let t = text;
-  // Remove ... blocks entirely (content inside too)
-  t = t.replace(/]*>[\s\S]*?<\/antml:cite>/gi, ' ');
-  // Remove opening antml:cite tags (without closing counterpart)
-  t = t.replace(/]*>/gi, '');
-  t = t.replace(/<\/antml:cite>/gi, '');
-  // Remove <cite ...>...</cite> — keep inner text
+  // Keep text inside antml:cite, remove only the tags
+  t = t.replace(/]*>([\s\S]*?)<\/antml:cite>/gi, '$1');
+  t = t.replace(/<\/?antml:[a-z_:]+[^>]*>/gi, '');
+  // Keep text inside <cite>, remove only the tags
   t = t.replace(/<cite[^>]*>([\s\S]*?)<\/cite>/gi, '$1');
   t = t.replace(/<cite[^>]*>/gi, '');
   t = t.replace(/<\/cite>/gi, '');
   // Remove any remaining HTML tags
   t = t.replace(/<[^>]{0,200}>/g, '');
-  // Normalize whitespace
   t = t.replace(/\s+/g, ' ').trim();
   return t || '—';
 }
@@ -1637,8 +1634,8 @@ async function clearCache() {
   try {
     const r = await fetch(API + '/admin/clear-cache', { method:'POST', headers:{'x-secret':'drone-scout-2026'} });
     const d = await r.json();
-    msg.textContent = '✓ Cache vidé';
-    setTimeout(() => msg.textContent = '', 3000);
+    msg.textContent = '✓ Cache vidé — rechargement...';
+    setTimeout(() => location.reload(), 1500);
   } catch(e) { msg.textContent = 'Erreur: ' + e.message; }
 }
 
