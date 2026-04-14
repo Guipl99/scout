@@ -650,6 +650,7 @@ function go(id) {
   if (id === 'dashboard') renderDashboard();
   if (id === 'societes') { backToSocietes(); loadSocietes().then(renderSocietes); }
   if (id === 'produits-db') { backToProduits(); loadAllProduits().then(renderProduits); }
+  if (id === 'contracts') { loadContracts().then(() => { renderContractStatusFilters(); filterContracts(); loadContractStats(); }); }
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
