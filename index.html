@@ -284,7 +284,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div id="view-detail" style="display:none;">
       <div class="topbar">
         <button class="btn" onclick="backToGrid()">← Retour</button>
-        <button class="btn btn-primary" id="btn-refresh" onclick="doRefresh()">Actualiser via IA</button>
+        <button class="btn btn-primary" id="btn-refresh" onclick="loadFiche(true)">Actualiser via IA</button>
       </div>
       <div class="fiche-hdr">
         <div class="fiche-av" id="d-av"></div>
@@ -622,15 +622,9 @@ function openDetail(id) {
   renderProduits(f.produits || []);
   renderRecruitments(f.recrutements_actifs || [], f.historique_recrutements || []);
 
-  // Si pas encore d'analyse, on la lance automatiquement
-  if (!f.analyse) {
-    document.getElementById('d-analyse').textContent = '';
-    showTab('analyse', document.querySelectorAll('.tab')[5]);
-    setTimeout(() => doRefresh(), 300);
-  } else {
-    document.getElementById('d-analyse').textContent = f.analyse;
-    showTab('overview', document.querySelector('.tab'));
-  }
+  // Charger la fiche depuis le serveur (cache ou scrape)
+  showTab('overview', document.querySelector('.tab'));
+  setTimeout(() => loadFiche(false), 200);
 }
 
 function backToGrid() {
@@ -695,112 +689,144 @@ function renderRecruitments(actifs, historique) {
   }
 }
 
-async function doRefresh() {
+function applyProfile(p, fromCache, scrapedAt) {
+  const c = competitors.find(x => x.id === currentId);
+  if (!DB[currentId]) DB[currentId] = { id: currentId, name: c.name, url: c.url, color: c.color, secteur: c.secteur, signals: c.signals };
+  const f = DB[currentId];
+
+  if (p.ca) { f.ca = p.ca; f.caD = p.caD || ''; }
+  if (p.clients) { f.cl = p.clients; f.clD = p.clientsD || ''; }
+  if (p.employes) { f.em = p.employes; f.emD = p.employesD || ''; }
+  if (p.prixEntree) { f.pr = p.prixEntree; f.prD = p.prixD || ''; }
+  if (p.info) f.info = p.info;
+  if (p.sources) f.sources = p.sources;
+  if (p.features) f.features = p.features;
+  if (p.produits) f.produits = p.produits;
+  if (p.pricing) f.pricing = p.pricing;
+  if (p.clients_info) f.ctab = p.clients_info;
+  if (p.recrutements_actifs) f.recrutements_actifs = p.recrutements_actifs;
+  if (p.historique_recrutements) f.historique_recrutements = p.historique_recrutements;
+  if (p.analyse) f.analyse = p.analyse;
+
+  const dateStr = scrapedAt ? new Date(scrapedAt).toLocaleDateString('fr-FR') : 'À l\'instant';
+  f.updatedAt = fromCache ? 'Cache du ' + dateStr : dateStr;
+
+  // KPIs
+  document.getElementById('d-ca').textContent = f.ca || '—';
+  document.getElementById('d-ca-d').textContent = f.caD || '';
+  document.getElementById('d-cl').textContent = f.cl || '—';
+  document.getElementById('d-cl-d').textContent = f.clD || '';
+  document.getElementById('d-em').textContent = f.em || '—';
+  document.getElementById('d-em-d').textContent = f.emD || '';
+  document.getElementById('d-pr').textContent = f.pr || '—';
+  document.getElementById('d-pr-d').textContent = f.prD || '';
+
+  // Tabs content
+  document.getElementById('d-info').innerHTML = (f.info||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+  document.getElementById('d-src').innerHTML = (f.sources||[]).map(s => `<span class="src-badge">${s}</span>`).join('');
+  document.getElementById('d-feat').innerHTML = (f.features||[]).map(x => `<div class="feat-row"><div class="feat-dot"></div><div class="feat-text">${x.t}<span class="badge ${x.n?'new':''}">${x.b}</span></div></div>`).join('');
+  renderProduits(f.produits || []);
+  document.getElementById('d-pricing').innerHTML = (f.pricing||[]).map(p2 => `<div class="pricing-tier"><div class="pricing-name">${p2.name}</div><div class="pricing-price">${p2.price}</div><div class="pricing-feat">${p2.feat}</div></div>`).join('');
+  document.getElementById('d-ctab').innerHTML = (f.ctab||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+  renderRecruitments(f.recrutements_actifs || [], f.historique_recrutements || []);
+
+  // Stream analyse
+  const el = document.getElementById('d-analyse');
+  const text = f.analyse || '';
+  el.textContent = '';
+  let i = 0;
+  const iv = setInterval(() => {
+    if (i < text.length) { el.textContent += text[i++]; }
+    else { clearInterval(iv); }
+  }, 10);
+}
+
+async function loadFiche(force) {
   if (!currentId) return;
   const c = competitors.find(x => x.id === currentId);
   if (!c) return;
 
-  showTab('analyse', document.querySelectorAll('.tab')[4]);
   const el = document.getElementById('d-analyse');
   const dot = document.getElementById('a-dot');
   const btn = document.getElementById('btn-refresh');
-
   dot.classList.add('loading');
-  document.getElementById('a-info').textContent = 'Recherche web en cours...';
-  btn.textContent = 'Recherche...';
   btn.disabled = true;
+
+  // Check if we already have a fresh local cache
+  const existing = DB[currentId];
+  if (!force && existing && existing.scrapedAt) {
+    const age = (Date.now() - new Date(existing.scrapedAt).getTime()) / (1000*60*60*24);
+    if (age < 7) {
+      console.log('Using local DB cache for', currentId);
+      document.getElementById('a-info').textContent = 'Cache local — ' + new Date(existing.scrapedAt).toLocaleDateString('fr-FR');
+      btn.textContent = 'Forcer mise à jour';
+      dot.classList.remove('loading');
+      btn.disabled = false;
+      applyProfile(existing, true, existing.scrapedAt);
+      showTab('overview', document.querySelector('.tab'));
+      return;
+    }
+  }
+
+  const method = force ? 'POST' : 'GET';
+  const url = force
+    ? API_BASE + '/fiche/' + currentId
+    : API_BASE + '/fiche/' + currentId + '?name=' + encodeURIComponent(c.name) + '&url=' + encodeURIComponent(c.url) + '&secteur=' + encodeURIComponent(c.secteur||'') + '&signals=' + encodeURIComponent((c.signals||[]).join(','));
+
+  const fetchOpts = force
+    ? { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name: c.name, url: c.url, secteur: c.secteur||'', signals: c.signals||[] }) }
+    : { method: 'GET' };
+
+  document.getElementById('a-info').textContent = force ? 'Mise à jour forcée en cours...' : 'Chargement de la fiche...';
+  btn.textContent = force ? 'Mise à jour...' : 'Chargement...';
+  showTab('analyse', document.querySelectorAll('.tab')[5]);
   el.innerHTML = '<span class="cursor"></span>';
 
   try {
-    const res = await fetch(API_BASE + '/analyse', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: c.name, url: c.url, secteur: c.secteur || '', signals: c.signals || [] })
-    });
+    const res = await fetch(url, fetchOpts);
     if (!res.ok) throw new Error('Erreur serveur ' + res.status);
     const data = await res.json();
 
     if (data.profile) {
-      const p = data.profile;
-      // Mettre à jour DB
-      if (!DB[currentId]) DB[currentId] = { id: currentId, name: c.name, url: c.url, color: c.color, secteur: c.secteur, signals: c.signals };
-      const f = DB[currentId];
-      if (p.ca) { f.ca = p.ca; f.caD = p.caD || ''; }
-      if (p.clients) { f.cl = p.clients; f.clD = p.clientsD || ''; }
-      if (p.employes) { f.em = p.employes; f.emD = p.employesD || ''; }
-      if (p.prixEntree) { f.pr = p.prixEntree; f.prD = p.prixD || ''; }
-      if (p.info) f.info = p.info;
-      if (p.sources) f.sources = p.sources;
-      if (p.features) f.features = p.features;
-      if (p.pricing) f.pricing = p.pricing;
-      if (p.clients_info) f.ctab = p.clients_info;
-      if (p.analyse) f.analyse = p.analyse;
-      f.updatedAt = 'À l\'instant';
+      applyProfile(data.profile, data.fromCache, data.scrapedAt);
+      const status = data.fromCache
+        ? 'Depuis le cache — ' + new Date(data.scrapedAt).toLocaleDateString('fr-FR')
+        : 'Mis à jour — ' + new Date(data.scrapedAt).toLocaleDateString('fr-FR');
+      document.getElementById('a-info').textContent = status;
+      btn.textContent = 'Forcer mise à jour';
 
-      // Mettre à jour l'affichage des KPIs
-      document.getElementById('d-ca').textContent = f.ca || '—';
-      document.getElementById('d-ca-d').textContent = f.caD || '';
-      document.getElementById('d-cl').textContent = f.cl || '—';
-      document.getElementById('d-cl-d').textContent = f.clD || '';
-      document.getElementById('d-em').textContent = f.em || '—';
-      document.getElementById('d-em-d').textContent = f.emD || '';
-      document.getElementById('d-pr').textContent = f.pr || '—';
-      document.getElementById('d-pr-d').textContent = f.prD || '';
-
-      // Mettre à jour Vue générale
-      document.getElementById('d-info').innerHTML = (f.info||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
-      document.getElementById('d-src').innerHTML = (f.sources||[]).map(s => `<span class="src-badge">${s}</span>`).join('');
-
-      // Produits
-      if (p.produits) f.produits = p.produits;
-      if (p.recrutements_actifs) f.recrutements_actifs = p.recrutements_actifs;
-      if (p.historique_recrutements) f.historique_recrutements = p.historique_recrutements;
-
-      // Mettre à jour Fonctionnalités
-      document.getElementById('d-feat').innerHTML = (f.features||[]).map(x => `<div class="feat-row"><div class="feat-dot"></div><div class="feat-text">${x.t}<span class="badge ${x.n?'new':''}">${x.b}</span></div></div>`).join('');
-
-      // Mettre à jour Fiches produits
-      renderProduits(f.produits || []);
-
-      // Mettre à jour Prix
-      document.getElementById('d-pricing').innerHTML = (f.pricing||[]).map(p2 => `<div class="pricing-tier"><div class="pricing-name">${p2.name}</div><div class="pricing-price">${p2.price}</div><div class="pricing-feat">${p2.feat}</div></div>`).join('');
-
-      // Mettre à jour Clients
-      document.getElementById('d-ctab').innerHTML = (f.ctab||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
-
-      // Mettre à jour Recrutements
-      renderRecruitments(f.recrutements_actifs || [], f.historique_recrutements || []);
-
-      // Streamer l'analyse
-      const text = f.analyse || '';
-      el.textContent = '';
-      let i = 0;
-      const iv = setInterval(() => {
-        if (i < text.length) { el.textContent += text[i++]; }
-        else {
-          clearInterval(iv);
-          dot.classList.remove('loading');
-          document.getElementById('a-info').textContent = 'Fiche complète — actualisée à l\'instant';
-          btn.textContent = 'Actualiser via IA';
-          btn.disabled = false;
-        }
-      }, 12);
-    } else {
-      // Fallback texte brut
-      const text = data.analysis || 'Aucun résultat.';
-      el.textContent = '';
-      let i = 0;
-      const iv = setInterval(() => {
-        if (i < text.length) { el.textContent += text[i++]; }
-        else { clearInterval(iv); dot.classList.remove('loading'); btn.textContent = 'Actualiser via IA'; btn.disabled = false; }
-      }, 12);
+      // Fetch server alerts
+      fetchServerAlerts();
     }
   } catch(e) {
     el.textContent = 'Erreur : ' + e.message;
+    document.getElementById('a-info').textContent = 'Erreur';
+    btn.textContent = 'Réessayer';
+  } finally {
     dot.classList.remove('loading');
-    btn.textContent = 'Actualiser via IA';
     btn.disabled = false;
   }
+}
+
+async function fetchServerAlerts() {
+  try {
+    const res = await fetch(API_BASE + '/alerts');
+    const data = await res.json();
+    if (data.alerts && data.alerts.length) {
+      // Merge server alerts with local ones
+      const activeIds = competitors.map(c => c.id);
+      const serverAlerts = data.alerts.filter(a => activeIds.includes(a.competitorId)).map(a => ({
+        ...a, id: a.id, color: a.color, text: a.text, meta: a.meta
+      }));
+      alerts = serverAlerts;
+      saveAlerts();
+      renderAlerts();
+    }
+  } catch(e) { console.log('Could not fetch server alerts:', e.message); }
+}
+
+async function doRefresh() {
+  await loadFiche(true);
 }
 
 
