@@ -364,6 +364,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 </div>
 
 <script>
+const API_BASE = 'https://scout-api-production-fa8d.up.railway.app';
 const COLORS = ['av-purple','av-teal','av-coral','av-amber','av-blue'];
 let currentId = null;
 
@@ -534,39 +535,56 @@ function showTab(id, el) {
 
 async function doRefresh() {
   if (!currentId) return;
-  const f = DB[currentId];
-  const btn = document.getElementById('btn-refresh');
-  btn.textContent = 'Recherche...';
-  btn.disabled = true;
-  const dot = document.getElementById('a-dot');
-  dot.classList.add('loading');
-  document.getElementById('a-info').textContent = 'Recherche web en cours...';
+  const c = competitors.find(x => x.id === currentId);
+  if (!c) return;
+
   showTab('analyse', document.querySelectorAll('.tab')[4]);
   const el = document.getElementById('d-analyse');
+  const dot = document.getElementById('a-dot');
+  const btn = document.getElementById('btn-refresh');
+
+  dot.classList.add('loading');
+  document.getElementById('a-info').textContent = 'Recherche en cours...';
+  btn.textContent = 'Recherche...';
+  btn.disabled = true;
   el.innerHTML = '<span class="cursor"></span>';
+
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514', max_tokens:1000,
-        tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:`Tu es analyste en veille concurrentielle. Recherche des informations récentes sur ${f.name} (${f.url}) et rédige une analyse de 150 mots max couvrant : tendances récentes, prix, signaux produit, recrutements, et points de vigilance. Sois factuel et concis.`}]
+    const res = await fetch(API_BASE + '/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: c.name,
+        url: c.url,
+        secteur: c.secteur || '',
+        signals: c.signals || []
       })
     });
+    if (!res.ok) throw new Error('Erreur serveur ' + res.status);
     const data = await res.json();
-    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('') || 'Aucun résultat.';
+    const text = data.analysis || 'Aucun résultat.';
     el.textContent = '';
     let i = 0;
-    const iv = setInterval(()=>{
+    const iv = setInterval(() => {
       if (i < text.length) { el.textContent += text[i++]; }
-      else { clearInterval(iv); dot.classList.remove('loading'); document.getElementById('a-info').textContent = 'Actualisé à l\'instant'; btn.textContent = 'Actualiser via IA'; btn.disabled = false; }
+      else {
+        clearInterval(iv);
+        dot.classList.remove('loading');
+        document.getElementById('a-info').textContent = 'Actualisé à l\'instant';
+        btn.textContent = 'Actualiser via IA';
+        btn.disabled = false;
+        if (!DB[currentId]) DB[currentId] = { id: currentId };
+        DB[currentId].analyse = text;
+      }
     }, 15);
   } catch(e) {
-    el.textContent = 'Erreur. Réessaie.';
-    dot.classList.remove('loading'); btn.textContent = 'Actualiser via IA'; btn.disabled = false;
+    el.textContent = 'Erreur : ' + e.message + '. Vérifie que le serveur est bien démarré.';
+    dot.classList.remove('loading');
+    btn.textContent = 'Actualiser via IA';
+    btn.disabled = false;
   }
 }
+
 
 let editingId = null;
 
