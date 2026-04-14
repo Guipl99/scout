@@ -1,7 +1,62 @@
-const CACHE = 'veille-v1';
+const CACHE_NAME = 'scout-drone-v3';
+const STATIC_ASSETS = [
+  '/scout/',
+  '/scout/index.html',
+  '/scout/manifest.json',
+  '/scout/icon-192.png',
+  '/scout/icon-512.png'
+];
+
+// Install — cache static assets
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/', '/scout/', '/scout/index.html'])));
+  self.skipWaiting();
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
+  );
 });
+
+// Activate — clear old caches
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+// Fetch — network first, fallback to cache
 self.addEventListener('fetch', e => {
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+  const url = new URL(e.request.url);
+  
+  // Always network for API calls (Railway)
+  if (url.hostname.includes('railway.app') || url.hostname.includes('up.railway')) {
+    e.respondWith(
+      fetch(e.request).catch(() => new Response(JSON.stringify({error: 'offline'}), {
+        headers: {'Content-Type': 'application/json'}
+      }))
+    );
+    return;
+  }
+
+  // For app shell — cache first, then network update in background
+  if (url.pathname.startsWith('/scout/')) {
+    e.respondWith(
+      caches.match(e.request).then(cached => {
+        const networkFetch = fetch(e.request).then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+          }
+          return response;
+        }).catch(() => cached);
+        return cached || networkFetch;
+      })
+    );
+    return;
+  }
+
+  // Default: network first
+  e.respondWith(
+    fetch(e.request).catch(() => caches.match(e.request))
+  );
 });
