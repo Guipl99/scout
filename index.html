@@ -554,6 +554,30 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
 <script>
 const API = 'https://scout-api-production-fa8d.up.railway.app';
+
+// Strip XML/HTML tags injected by AI (cite, antml:cite, etc.)
+function sanitize(text) {
+  if (!text || typeof text !== 'string') return text || '—';
+  return text
+    .replace(/]*>|<\/antml:cite>/gi, '')
+    .replace(/<cite[^>]*>|<\/cite>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim() || '—';
+}
+function sanitizeArr(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(item => {
+    if (typeof item === 'string') return sanitize(item);
+    if (Array.isArray(item)) return item.map(v => sanitize(v));
+    if (typeof item === 'object' && item !== null) {
+      const out = {};
+      for (const k in item) out[k] = typeof item[k] === 'string' ? sanitize(item[k]) : item[k];
+      return out;
+    }
+    return item;
+  });
+}
 const DRONE_CATEGORIES = [
   'Tous',
   'Multirotor civil', 'Multirotor industriel', 'Militaire',
@@ -756,8 +780,8 @@ function fillSocieteDetail(p, fromCache, scrapedAt) {
   document.getElementById('s-info').textContent = fromCache ? 'Cache du ' + new Date(scrapedAt).toLocaleDateString('fr-FR') : 'Mis à jour le ' + new Date(scrapedAt||Date.now()).toLocaleDateString('fr-FR');
   document.getElementById('s-ts').textContent = scrapedAt ? new Date(scrapedAt).toLocaleDateString('fr-FR') : '';
 
-  document.getElementById('s-info-table').innerHTML = (p.info||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
-  document.getElementById('s-src').innerHTML = (p.sources||[]).map(s => `<span class="src-badge">${s}</span>`).join('');
+  document.getElementById('s-info-table').innerHTML = sanitizeArr(p.info||[]).map(([k,v]) => `<tr><td>${sanitize(k)}</td><td>${sanitize(v)}</td></tr>`).join('');
+  document.getElementById('s-src').innerHTML = sanitizeArr(p.sources||[]).map(s => `<span class="src-badge">${sanitize(s)}</span>`).join('');
 
   // pricing
   document.getElementById('s-pricing').innerHTML = (p.pricing||[]).length
@@ -792,7 +816,7 @@ function fillSocieteDetail(p, fromCache, scrapedAt) {
     : '<div style="font-size:13px;color:var(--text3);padding:0.5rem 0;">Aucun historique disponible</div>';
 
   // analyse
-  if (p.analyse) streamText('s-analyse', p.analyse);
+  if (p.analyse) streamText('s-analyse', sanitize(p.analyse));
 }
 
 async function loadSocieteProduits(societeId) {
@@ -973,37 +997,37 @@ async function openProduit(id) {
 }
 
 function fillProduitDetail(d, produit, fromCache, scrapedAt) {
-  document.getElementById('p-desc').textContent = d.description || '—';
-  document.getElementById('p-prix').textContent = d.prix || (produit && produit.prix) || '—';
+  document.getElementById('p-desc').textContent = sanitize(d.description) || '—';
+  document.getElementById('p-prix').textContent = sanitize(d.prix) || sanitize(produit && produit.prix) || '—';
   // Cas d'usage, homologations, concurrents
   const casUsage = d.cas_usage || [];
   const homologs = d.homologations || [];
   const concurrents = d.concurrents_directs || [];
   let extraHtml = '';
-  if (casUsage.length) extraHtml += "<div style='margin-top:1rem;'><div style='font-size:11px;color:var(--text3);margin-bottom:6px;'>CAS D'USAGE</div>" + casUsage.map(c => "<span class='tag tag-accent' style='margin:2px;'>" + c + "</span>").join('') + "</div>";
-  if (homologs.length) extraHtml += "<div style='margin-top:0.75rem;'><div style='font-size:11px;color:var(--text3);margin-bottom:6px;'>HOMOLOGATIONS</div>" + homologs.map(h => "<span class='tag tag-green' style='margin:2px;'>" + h + "</span>").join('') + "</div>";
-  if (concurrents.length) extraHtml += "<div style='margin-top:0.75rem;'><div style='font-size:11px;color:var(--text3);margin-bottom:6px;'>CONCURRENTS</div>" + concurrents.map(c => "<span class='tag tag-gray' style='margin:2px;'>" + c + "</span>").join('') + "</div>";
+  if (casUsage.length) extraHtml += "<div style='margin-top:1rem;'><div style='font-size:11px;color:var(--text3);margin-bottom:6px;'>CAS D'USAGE</div>" + sanitizeArr(casUsage).map(c => "<span class='tag tag-accent' style='margin:2px;'>" + c + "</span>").join('') + "</div>";
+  if (homologs.length) extraHtml += "<div style='margin-top:0.75rem;'><div style='font-size:11px;color:var(--text3);margin-bottom:6px;'>HOMOLOGATIONS</div>" + sanitizeArr(homologs).map(h => "<span class='tag tag-green' style='margin:2px;'>" + h + "</span>").join('') + "</div>";
+  if (concurrents.length) extraHtml += "<div style='margin-top:0.75rem;'><div style='font-size:11px;color:var(--text3);margin-bottom:6px;'>CONCURRENTS</div>" + sanitizeArr(concurrents).map(c => "<span class='tag tag-gray' style='margin:2px;'>" + c + "</span>").join('') + "</div>";
   const extraEl = document.getElementById('p-extra');
   if (extraEl) extraEl.innerHTML = extraHtml;
   document.getElementById('p-info').textContent = fromCache ? 'Cache du ' + new Date(scrapedAt).toLocaleDateString('fr-FR') : 'Mis à jour le ' + new Date(scrapedAt||Date.now()).toLocaleDateString('fr-FR');
   document.getElementById('p-ts').textContent = scrapedAt ? new Date(scrapedAt).toLocaleDateString('fr-FR') : '';
 
   // Pros/Cons
-  document.getElementById('p-pros').innerHTML = (d.avantages||[]).map(a => `<div class="pro-item">+ ${a}</div>`).join('') || '<div class="pro-item" style="color:var(--text3);">—</div>';
-  document.getElementById('p-cons').innerHTML = (d.limites||[]).map(l => `<div class="con-item">− ${l}</div>`).join('') || '<div class="con-item" style="color:var(--text3);">—</div>';
+  document.getElementById('p-pros').innerHTML = sanitizeArr(d.avantages||[]).map(a => `<div class="pro-item">+ ${a}</div>`).join('') || '<div class="pro-item" style="color:var(--text3);">—</div>';
+  document.getElementById('p-cons').innerHTML = sanitizeArr(d.limites||[]).map(l => `<div class="con-item">− ${l}</div>`).join('') || '<div class="con-item" style="color:var(--text3);">—</div>';
 
   // Features
-  document.getElementById('p-features').innerHTML = (d.features||[]).map(f => `<div class="feat-row"><div class="feat-dot"></div><div class="feat-text"><strong>${f.titre||f.t||''}</strong>${f.description ? ' — ' + f.description : ''}<span class="feat-badge ${f.nouveau?'fb-new':'fb-core'}">${f.nouveau?'Nouveau':'Core'}</span></div></div>`).join('') || '<div style="color:var(--text3);font-size:13px;">Aucune fonctionnalité</div>';
+  document.getElementById('p-features').innerHTML = sanitizeArr(d.features||[]).map(f => `<div class="feat-row"><div class="feat-dot"></div><div class="feat-text"><strong>${sanitize(f.titre||f.t||'')}</strong>${f.description ? ' — ' + sanitize(f.description) : ''}<span class="feat-badge ${f.nouveau?'fb-new':'fb-core'}">${f.nouveau?'Nouveau':'Core'}</span></div></div>`).join('') || '<div style="color:var(--text3);font-size:13px;">Aucune fonctionnalité</div>';
 
   // Specs
   const specs = d.specs || {};
-  document.getElementById('p-specs').innerHTML = Object.entries(specs).map(([k,v]) => `<div class="spec-item"><div class="spec-label">${k}</div><div class="spec-value">${v}</div></div>`).join('') || '<div style="color:var(--text3);font-size:13px;padding:1rem;">Aucune spec</div>';
+  document.getElementById('p-specs').innerHTML = Object.entries(specs).map(([k,v]) => `<div class="spec-item"><div class="spec-label">${sanitize(k)}</div><div class="spec-value">${sanitize(v)}</div></div>`).join('') || '<div style="color:var(--text3);font-size:13px;padding:1rem;">Aucune spec</div>';
 
   // Changelog
-  document.getElementById('p-changelog').innerHTML = (d.changelog||[]).map(c => `<div class="changelog-row"><div class="changelog-date">${c.date||''} ${c.version||''}</div><div class="changelog-text">${c.changement||c.text||''}</div></div>`).join('') || '<div style="color:var(--text3);font-size:13px;padding:0.5rem 0;">Aucun changelog</div>';
+  document.getElementById('p-changelog').innerHTML = sanitizeArr(d.changelog||[]).map(c => `<div class="changelog-row"><div class="changelog-date">${sanitize(c.date||'')} ${sanitize(c.version||'')}</div><div class="changelog-text">${sanitize(c.changement||c.text||'')}</div></div>`).join('') || '<div style="color:var(--text3);font-size:13px;padding:0.5rem 0;">Aucun changelog</div>';
 
   // Analyse
-  if (d.analyse) streamText('p-analyse', d.analyse);
+  if (d.analyse) streamText('p-analyse', sanitize(d.analyse));
 }
 
 function backToProduits() {
