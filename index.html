@@ -406,6 +406,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="tab" onclick="showSTab('produits',this)">Gamme drones</div>
           <div class="tab" onclick="showSTab('pricing',this)">Financement</div>
           <div class="tab" onclick="showSTab('clients',this)">Marchés</div>
+          <div class="tab" onclick="showSTab('contrats',this)">Contrats</div>
           <div class="tab" onclick="showSTab('recrutement',this)">Recrutement</div>
           <div class="tab" onclick="showSTab('analyse',this)">Analyse IA</div>
         </div>
@@ -419,6 +420,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         </div>
         <div id="st-pricing" class="tabpanel"><div class="pricing-grid" id="s-pricing"></div></div>
         <div id="st-clients" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Marchés & opérateurs</span></div><div class="card-body"><table class="info-table" id="s-ctab"></table></div></div></div>
+        <div id="st-contrats" class="tabpanel">
+          <div class="card"><div class="card-header"><span class="card-title">Contrats & programmes</span></div><div class="section-body" style="padding:0.5rem 1.25rem;" id="s-contrats"></div></div>
+        </div>
         <div id="st-recrutement" class="tabpanel">
           <div class="card"><div class="card-header"><span class="card-title">Recrutements actifs</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="s-recruits"></div></div>
           <div class="card"><div class="card-header"><span class="card-title">Historique</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="s-recruit-history"></div></div>
@@ -487,6 +491,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="tab active" onclick="showPTab('overview',this)">Vue générale</div>
           <div class="tab" onclick="showPTab('features',this)">Technologie</div>
           <div class="tab" onclick="showPTab('specs',this)">Specs techniques</div>
+          <div class="tab" onclick="showPTab('contrats_p',this)">Contrats</div>
           <div class="tab" onclick="showPTab('changelog',this)">Changelog</div>
           <div class="tab" onclick="showPTab('analyse',this)">Analyse IA</div>
         </div>
@@ -501,6 +506,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         </div>
         <div id="pt-features" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Fonctionnalités & technologie</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="p-features"></div></div></div>
         <div id="pt-specs" class="tabpanel"><div class="specs-grid" id="p-specs"></div></div>
+        <div id="pt-contrats_p" class="tabpanel">
+          <div class="card"><div class="card-header"><span class="card-title">Contrats & programmes</span></div><div class="section-body" style="padding:0.5rem 1.25rem;" id="p-contrats"></div></div>
+        </div>
         <div id="pt-changelog" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Changelog</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="p-changelog"></div></div></div>
         <div id="pt-analyse" class="tabpanel">
           <div class="card">
@@ -788,6 +796,9 @@ function fillSocieteDetail(p, fromCache, scrapedAt) {
     ? '<div class="pricing-grid">' + (p.pricing||[]).map(pl => `<div class="pricing-tier"><div class="pricing-name">${pl.name}</div><div class="pricing-price">${pl.price}</div><div class="pricing-feat">${pl.feat}</div></div>`).join('') + '</div>'
     : '<div class="empty"><span style="color:var(--text3);">Aucune donnée</span></div>';
 
+  // Contrats
+  renderContracts(p.contrats || [], 's-contrats');
+
   // Marchés & certifications
   const marcheData = [
     ['Marchés', p.marches || '—'],
@@ -1024,6 +1035,9 @@ function fillProduitDetail(d, produit, fromCache, scrapedAt) {
   document.getElementById('p-specs').innerHTML = Object.entries(specs).map(([k,v]) => `<div class="spec-item"><div class="spec-label">${sanitize(k)}</div><div class="spec-value">${sanitize(v)}</div></div>`).join('') || '<div style="color:var(--text3);font-size:13px;padding:1rem;">Aucune spec</div>';
 
   // Changelog
+  // Contrats produit
+  renderContracts(d.contrats || [], 'p-contrats');
+
   document.getElementById('p-changelog').innerHTML = sanitizeArr(d.changelog||[]).map(c => `<div class="changelog-row"><div class="changelog-date">${sanitize(c.date||'')} ${sanitize(c.version||'')}</div><div class="changelog-text">${sanitize(c.changement||c.text||'')}</div></div>`).join('') || '<div style="color:var(--text3);font-size:13px;padding:0.5rem 0;">Aucun changelog</div>';
 
   // Analyse
@@ -1086,6 +1100,64 @@ function addProduitFromSociete() {
 }
 
 // ── Init ──────────────────────────────────────────────────────
+// ── Contracts ─────────────────────────────────────────────────
+function renderContracts(contracts, elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!contracts || !contracts.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:1rem 0;">Aucun contrat public trouvé — cliquez sur Forcer mise à jour pour rechercher via IA.</div>';
+    return;
+  }
+
+  // Calcul valeur totale connue
+  let totalKnown = 0;
+  contracts.forEach(c => {
+    const match = (c.valeur||'').match(/[\d,.]+/);
+    if (match) {
+      const num = parseFloat(match[0].replace(/,/g,''));
+      if (!isNaN(num) && num < 100000) totalKnown += num; // en millions
+    }
+  });
+
+  let html = '';
+  if (totalKnown > 0) {
+    html += `<div class="contract-total">
+      <span class="contract-total-label">Valeur totale identifiée</span>
+      <span class="contract-total-value">~$${totalKnown.toLocaleString()}M+</span>
+    </div>`;
+  }
+
+  html += contracts.map(c => {
+    const statusClass = 
+      (c.statut||'').includes('cours') ? 'status-ongoing' :
+      (c.statut||'').includes('ivré') ? 'status-delivered' :
+      (c.statut||'').includes('nnulé') ? 'status-cancelled' : 'status-signed';
+
+    const typeTag = c.type ? `<span class="tag tag-gray">${sanitize(c.type)}</span>` : '';
+    const clientTag = c.client ? `<span class="tag tag-accent">${sanitize(c.client)}</span>` : '';
+    const dateTag = c.date ? `<span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${sanitize(c.date)}</span>` : '';
+
+    return `<div class="contract-card">
+      <div class="contract-header">
+        <div class="contract-title">${sanitize(c.titre || c.title || '—')}</div>
+        ${c.valeur && c.valeur !== '—' ? `<div class="contract-value">${sanitize(c.valeur)}</div>` : ''}
+      </div>
+      <div class="contract-meta">
+        ${clientTag}
+        ${typeTag}
+        ${c.statut ? `<span class="${statusClass}">${sanitize(c.statut)}</span>` : ''}
+        ${dateTag}
+        ${c.duree ? `<span style="font-size:11px;color:var(--text3);">${sanitize(c.duree)}</span>` : ''}
+      </div>
+      ${c.produit && c.produit !== '—' ? `<div style="font-size:12px;color:var(--accent2);margin-bottom:4px;font-family:'DM Mono',monospace;">${sanitize(c.produit)}</div>` : ''}
+      ${c.quantite ? `<div style="font-size:12px;color:var(--text2);margin-bottom:4px;">${sanitize(c.quantite)} unités</div>` : ''}
+      ${c.details && c.details !== '—' ? `<div class="contract-detail">${sanitize(c.details)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = html;
+}
+
 // ── Seed ─────────────────────────────────────────────────────
 async function initSeed() {
   const btn = document.getElementById('btn-seed');
