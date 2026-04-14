@@ -134,6 +134,34 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 /* Source badge */
 .src-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #f4f4f1; color: #666; margin: 3px; border: 1px solid #e8e8e4; }
 
+/* Product cards */
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.product-card { border: 1px solid #e8e8e4; border-radius: 10px; padding: 1rem; background: white; }
+.product-emoji { font-size: 28px; margin-bottom: 8px; display: block; }
+.product-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #1a1a1a; }
+.product-desc { font-size: 12px; color: #666; line-height: 1.5; }
+.product-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 999px; margin-top: 8px; }
+.pb-core { background: #f4f4f1; color: #555; }
+.pb-new { background: #EEEDFE; color: #3C3489; }
+.pb-premium { background: #FAEEDA; color: #633806; }
+
+/* Recruitment */
+.recruit-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f0ec; }
+.recruit-row:last-child { border-bottom: none; }
+.recruit-dept { font-size: 10px; padding: 2px 7px; border-radius: 999px; background: #E6F1FB; color: #0C447C; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+.recruit-info { flex: 1; }
+.recruit-poste { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+.recruit-meta { font-size: 11px; color: #999; margin-top: 2px; }
+.history-row { padding: 10px 0; border-bottom: 1px solid #f0f0ec; }
+.history-row:last-child { border-bottom: none; }
+.history-period { font-size: 12px; font-weight: 600; color: #534AB7; margin-bottom: 3px; }
+.history-volume { font-size: 13px; color: #1a1a1a; }
+.history-signal { font-size: 12px; color: #888; margin-top: 3px; font-style: italic; }
+
+@media (max-width: 640px) {
+  .product-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* Streaming */
 .stream-box { background: #f4f4f1; border-radius: 8px; padding: 1rem; font-size: 13px; color: #333; line-height: 1.7; min-height: 80px; }
 .cursor { display: inline-block; width: 2px; height: 13px; background: #534AB7; animation: blink 0.8s infinite; vertical-align: middle; margin-left: 2px; }
@@ -273,21 +301,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       </div>
       <div class="tabs">
         <div class="tab active" onclick="showTab('overview',this)">Vue générale</div>
-        <div class="tab" onclick="showTab('produit',this)">Produit</div>
+        <div class="tab" onclick="showTab('produits',this)">Produits</div>
         <div class="tab" onclick="showTab('prix',this)">Prix</div>
         <div class="tab" onclick="showTab('clients',this)">Clients</div>
+        <div class="tab" onclick="showTab('recrutement',this)">Recrutement</div>
         <div class="tab" onclick="showTab('analyse',this)">Analyse IA</div>
       </div>
       <div id="tp-overview" class="tabpanel active">
         <div class="section"><div class="section-header"><span class="section-title">Informations générales</span></div><div class="section-body"><table class="info-table" id="d-info"></table></div></div>
         <div class="section"><div class="section-header"><span class="section-title">Sources utilisées</span></div><div class="section-body" id="d-src"></div></div>
       </div>
-      <div id="tp-produit" class="tabpanel">
-        <div class="section"><div class="section-header"><span class="section-title">Fonctionnalités</span></div><div class="section-body" style="padding:0.5rem 1.25rem;" id="d-feat"></div></div>
+      <div id="tp-produits" class="tabpanel">
+        <div class="section"><div class="section-header"><span class="section-title">Fiches produits</span></div><div class="section-body" style="padding:0.75rem 1.25rem;" id="d-produits"></div></div>
+        <div class="section" style="margin-top:1rem;"><div class="section-header"><span class="section-title">Fonctionnalités détaillées</span></div><div class="section-body" style="padding:0.5rem 1.25rem;" id="d-feat"></div></div>
       </div>
       <div id="tp-prix" class="tabpanel"><div id="d-pricing"></div></div>
       <div id="tp-clients" class="tabpanel">
         <div class="section"><div class="section-header"><span class="section-title">Clients & contrats</span></div><div class="section-body"><table class="info-table" id="d-ctab"></table></div></div>
+      </div>
+      <div id="tp-recrutement" class="tabpanel">
+        <div class="section"><div class="section-header"><span class="section-title">Recrutements actifs</span></div><div class="section-body" style="padding:0.5rem 1.25rem;" id="d-recruits"></div></div>
+        <div class="section" style="margin-top:1rem;"><div class="section-header"><span class="section-title">Historique & signaux recrutement</span></div><div class="section-body" style="padding:0.5rem 1.25rem;" id="d-recruit-history"></div></div>
       </div>
       <div id="tp-analyse" class="tabpanel">
         <div class="section">
@@ -614,10 +648,14 @@ function openDetail(id) {
     ? f.ctab.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')
     : '<tr><td colspan="2" style="color:#bbb;font-size:13px;">Cliquez sur "Actualiser via IA" pour enrichir cette fiche.</td></tr>';
 
+  // Produits et recrutements
+  renderProduits(f.produits || []);
+  renderRecruitments(f.recrutements_actifs || [], f.historique_recrutements || []);
+
   // Si pas encore d'analyse, on la lance automatiquement
   if (!f.analyse) {
     document.getElementById('d-analyse').textContent = '';
-    showTab('analyse', document.querySelectorAll('.tab')[4]);
+    showTab('analyse', document.querySelectorAll('.tab')[5]);
     setTimeout(() => doRefresh(), 300);
   } else {
     document.getElementById('d-analyse').textContent = f.analyse;
@@ -633,8 +671,58 @@ function backToGrid() {
 function showTab(id, el) {
   document.querySelectorAll('.tabpanel').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tp-' + id).classList.add('active');
+  const tp = document.getElementById('tp-' + id);
+  if (tp) tp.classList.add('active');
   if (el) el.classList.add('active');
+}
+
+function renderProduits(produits) {
+  const el = document.getElementById('d-produits');
+  if (!el) return;
+  if (!produits.length) {
+    el.innerHTML = '<div style="font-size:13px;color:#bbb;padding:1rem 0;">Aucun produit trouvé — cliquez sur Actualiser via IA.</div>';
+    return;
+  }
+  el.innerHTML = '<div class="product-grid">' + produits.map(p => {
+    const badgeClass = p.badge === 'Nouveau' ? 'pb-new' : p.badge === 'Premium' ? 'pb-premium' : 'pb-core';
+    return `<div class="product-card">
+      <span class="product-emoji">${p.emoji || '📦'}</span>
+      <div class="product-name">${p.nom}</div>
+      <div class="product-desc">${p.description}</div>
+      <span class="product-badge ${badgeClass}">${p.badge || 'Core'}</span>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function renderRecruitments(actifs, historique) {
+  const elA = document.getElementById('d-recruits');
+  const elH = document.getElementById('d-recruit-history');
+  if (elA) {
+    if (!actifs.length) {
+      elA.innerHTML = '<div style="font-size:13px;color:#bbb;padding:0.5rem 0;">Aucun recrutement actif trouvé.</div>';
+    } else {
+      elA.innerHTML = actifs.map(r => `
+        <div class="recruit-row">
+          <span class="recruit-dept">${r.departement || '—'}</span>
+          <div class="recruit-info">
+            <div class="recruit-poste">${r.poste}</div>
+            <div class="recruit-meta">${r.lieu || '—'} · ${r.date || '—'}</div>
+          </div>
+        </div>`).join('');
+    }
+  }
+  if (elH) {
+    if (!historique.length) {
+      elH.innerHTML = '<div style="font-size:13px;color:#bbb;padding:0.5rem 0;">Aucun historique disponible.</div>';
+    } else {
+      elH.innerHTML = historique.map(h => `
+        <div class="history-row">
+          <div class="history-period">${h.periode}</div>
+          <div class="history-volume">${h.volume} — ${h.focus}</div>
+          <div class="history-signal">${h.signal}</div>
+        </div>`).join('');
+    }
+  }
 }
 
 async function doRefresh() {
@@ -693,14 +781,25 @@ async function doRefresh() {
       document.getElementById('d-info').innerHTML = (f.info||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
       document.getElementById('d-src').innerHTML = (f.sources||[]).map(s => `<span class="src-badge">${s}</span>`).join('');
 
-      // Mettre à jour Produit
+      // Produits
+      if (p.produits) f.produits = p.produits;
+      if (p.recrutements_actifs) f.recrutements_actifs = p.recrutements_actifs;
+      if (p.historique_recrutements) f.historique_recrutements = p.historique_recrutements;
+
+      // Mettre à jour Fonctionnalités
       document.getElementById('d-feat').innerHTML = (f.features||[]).map(x => `<div class="feat-row"><div class="feat-dot"></div><div class="feat-text">${x.t}<span class="badge ${x.n?'new':''}">${x.b}</span></div></div>`).join('');
+
+      // Mettre à jour Fiches produits
+      renderProduits(f.produits || []);
 
       // Mettre à jour Prix
       document.getElementById('d-pricing').innerHTML = (f.pricing||[]).map(p2 => `<div class="pricing-tier"><div class="pricing-name">${p2.name}</div><div class="pricing-price">${p2.price}</div><div class="pricing-feat">${p2.feat}</div></div>`).join('');
 
       // Mettre à jour Clients
       document.getElementById('d-ctab').innerHTML = (f.ctab||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+
+      // Mettre à jour Recrutements
+      renderRecruitments(f.recrutements_actifs || [], f.historique_recrutements || []);
 
       // Streamer l'analyse
       const text = f.analyse || '';
