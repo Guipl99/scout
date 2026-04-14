@@ -524,6 +524,83 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       </div>
     </div>
 
+    <!-- CONTRACTS -->
+    <div id="panel-contracts" class="panel">
+      <div id="contracts-list-view">
+        <div class="topbar">
+          <h1>Contrats</h1>
+          <button class="btn btn-primary" onclick="showContractForm()">+ Ajouter</button>
+        </div>
+
+        <!-- Stats bar -->
+        <div id="contracts-stats" style="margin-bottom:1.25rem;"></div>
+
+        <!-- Filters -->
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:12px;color:var(--text3);">Statut :</span>
+          <div id="contract-status-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
+          <input id="contracts-search" type="text" placeholder="Rechercher un contrat, client, programme..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);flex:1;min-width:200px;" oninput="filterContracts()">
+          <select id="contracts-type-filter" style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterContracts()">
+            <option value="">Tous les types</option>
+            <option>Program of Record</option>
+            <option>IDIQ</option>
+            <option>FMS</option>
+            <option>Framework</option>
+            <option>Production</option>
+            <option>R&D</option>
+            <option>Export</option>
+            <option>SBIR</option>
+          </select>
+        </div>
+
+        <!-- Add/Edit form -->
+        <div id="contract-form-wrap" style="display:none;margin-bottom:1.25rem;">
+          <div class="card">
+            <div class="card-header"><span class="card-title" id="contract-form-title">Nouveau contrat</span></div>
+            <div class="card-body">
+              <div class="form-grid" style="margin-bottom:1rem;">
+                <div class="fg form-full"><label>Titre du contrat / programme *</label><input id="cf-titre" placeholder="ex: Program of Record MQ-9B SkyGuardian Belgique"></div>
+                <div class="fg"><label>Fabricant</label><select id="cf-societe"><option value="">— Aucun —</option></select></div>
+                <div class="fg"><label>Client / Acheteur</label><input id="cf-client" placeholder="ex: US Army, DGA France, MoD UK..."></div>
+                <div class="fg"><label>Pays client</label><input id="cf-pays" placeholder="ex: USA, France, Israël..."></div>
+                <div class="fg"><label>Agence</label><input id="cf-agence" placeholder="ex: PEO Aviation, OCCAR, DGA..."></div>
+                <div class="fg"><label>Programme parent</label><input id="cf-programme" placeholder="ex: Army Future Vertical Lift, MALE RPAS..."></div>
+                <div class="fg"><label>Valeur</label><input id="cf-valeur" placeholder="ex: $230M, €45M, classifié"></div>
+                <div class="fg"><label>Devise</label><select id="cf-devise"><option value="USD">USD $</option><option value="EUR">EUR €</option><option value="GBP">GBP £</option></select></div>
+                <div class="fg"><label>Type</label>
+                  <select id="cf-type">
+                    <option>Program of Record</option><option>IDIQ</option><option>FMS</option>
+                    <option>Framework</option><option>Production</option><option>R&D</option>
+                    <option>Export</option><option>SBIR</option><option>OTHER</option>
+                  </select>
+                </div>
+                <div class="fg"><label>Statut</label>
+                  <select id="cf-statut">
+                    <option>Attribué</option><option>En cours</option><option>Livré</option>
+                    <option>Appel d'offres ouvert</option><option>Pending</option>
+                    <option>Suspendu</option><option>Annulé</option><option>Inconnu</option>
+                  </select>
+                </div>
+                <div class="fg"><label>Date signature</label><input id="cf-date" type="date"></div>
+                <div class="fg"><label>Date fin</label><input id="cf-datefin" type="date"></div>
+                <div class="fg form-full"><label>Drones / systèmes concernés</label><input id="cf-produits" placeholder="ex: MQ-9B SkyGuardian, Bayraktar TB2 (séparés par virgules)"></div>
+                <div class="fg form-full"><label>Description</label><textarea id="cf-desc" placeholder="Scope du contrat, livrables, conditions..."></textarea></div>
+                <div class="fg form-full"><label>Sources</label><input id="cf-sources" placeholder="ex: SAM.gov, DefenseNews.com (séparées par virgules)"></div>
+              </div>
+              <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-ghost" onclick="hideContractForm()">Annuler</button>
+                <button class="btn btn-primary" onclick="saveContract()">Enregistrer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="contracts-grid"></div>
+      </div>
+    </div>
+
     <!-- CONFIG -->
     <div id="panel-config" class="panel">
       <div class="topbar"><h1>Paramètres</h1></div>
@@ -556,6 +633,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div class="bn-item" id="bn-produits-db" onclick="go('produits-db')">
       <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
       Produits
+    </div>
+    <div class="bn-item" id="bn-contracts" onclick="go('contracts')">
+      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Contrats
     </div>
     <div class="bn-item" id="bn-config" onclick="go('config')">
       <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -1240,6 +1321,187 @@ function renderBrevets(brevets, elId) {
   el.innerHTML = html;
 }
 
+// ── Contracts ─────────────────────────────────────────────────
+let contracts = [];
+let editingContractId = null;
+let activeContractStatut = 'Tous';
+
+const CONTRACT_STATUTS = ['Tous','Attribué','En cours','Appel d’offres ouvert','Pending','Livré','Suspendu','Annulé','Inconnu'];
+
+function statutClass(s) {
+  if (!s) return 'statut-default';
+  if (s.includes('tribué')) return 'statut-attribue';
+  if (s.includes('cours')) return 'statut-en_cours';
+  if (s.includes('ivré')) return 'statut-livre';
+  if (s.includes('ouvert')) return 'statut-ouvert';
+  if (s.toLowerCase().includes('pending')) return 'statut-pending';
+  if (s.includes('nnulé')) return 'statut-annule';
+  return 'statut-default';
+}
+
+async function loadContracts() {
+  try {
+    const r = await fetch(API + '/contracts');
+    const d = await r.json();
+    contracts = d.contracts || [];
+    document.getElementById('m-alerts').textContent = contracts.length;
+  } catch(e) { console.error('loadContracts:', e); }
+}
+
+async function loadContractStats() {
+  try {
+    const r = await fetch(API + '/contracts/stats');
+    const d = await r.json();
+    const el = document.getElementById('contracts-stats');
+    if (!el) return;
+    const total = d.total || {};
+    const totalM = parseFloat(total.total_m || 0);
+    el.innerHTML = `<div class="contracts-stats-grid">
+      <div class="metric"><div class="metric-label">Total contrats</div><div class="metric-value">${total.nb||0}</div></div>
+      <div class="metric"><div class="metric-label">Valeur identifiée</div><div class="metric-value" style="font-size:16px;">~$${totalM.toFixed(0)}M</div></div>
+      ${(d.byStatut||[]).slice(0,4).map(s => `<div class="metric"><div class="metric-label">${s.statut||'—'}</div><div class="metric-value">${s.nb}</div></div>`).join('')}
+    </div>`;
+  } catch(e) {}
+}
+
+function renderContractStatusFilters() {
+  const el = document.getElementById('contract-status-filters');
+  if (!el) return;
+  el.innerHTML = CONTRACT_STATUTS.map(s =>
+    `<button class="tag ${s===activeContractStatut?'tag-accent':'tag-gray'}" style="cursor:pointer;padding:4px 10px;font-size:12px;border:none;" onclick="setContractStatut('${s}')">${s}</button>`
+  ).join('');
+}
+
+function setContractStatut(s) { activeContractStatut = s; renderContractStatusFilters(); filterContracts(); }
+
+function filterContracts() {
+  const search = (document.getElementById('contracts-search')?.value||'').toLowerCase();
+  const type = document.getElementById('contracts-type-filter')?.value || '';
+  const filtered = contracts.filter(c => {
+    const matchStatut = activeContractStatut === 'Tous' || c.statut === activeContractStatut;
+    const matchType = !type || c.type === type;
+    const matchSearch = !search ||
+      (c.titre||'').toLowerCase().includes(search) ||
+      (c.client||'').toLowerCase().includes(search) ||
+      (c.programme||'').toLowerCase().includes(search) ||
+      (c.societe_name||'').toLowerCase().includes(search) ||
+      (c.pays_client||'').toLowerCase().includes(search);
+    return matchStatut && matchType && matchSearch;
+  });
+  renderContractsGrid(filtered);
+}
+
+function renderContractsGrid(list) {
+  const g = document.getElementById('contracts-grid');
+  if (!list) list = contracts;
+  if (!list.length) {
+    g.innerHTML = '<div class="empty"><span class="empty-icon">📋</span>Aucun contrat — cliquez sur "+ Ajouter" pour créer manuellement, ou enrichissez les fiches fabricants via IA.</div>';
+    return;
+  }
+  g.innerHTML = list.map(c => `
+    <div class="contract-list-card" onclick="openContractDetail('${c.id}')">
+      <div class="contract-list-top">
+        <div class="contract-list-info">
+          <div class="contract-list-title">${sanitize(c.titre)}</div>
+          <div class="contract-list-sub">${sanitize(c.societe_name||'—')} · ${sanitize(c.client||'—')} ${c.pays_client?'('+sanitize(c.pays_client)+')':''}</div>
+          ${c.programme ? `<div style="font-size:11px;color:var(--accent2);margin-top:2px;font-family:'DM Mono',monospace;">${sanitize(c.programme)}</div>` : ''}
+        </div>
+        ${c.valeur && c.valeur!=='—' ? `<div class="contract-list-value">${sanitize(c.valeur)}</div>` : ''}
+      </div>
+      <div class="contract-list-footer">
+        <span class="${statutClass(c.statut)}">${sanitize(c.statut||'Inconnu')}</span>
+        ${c.type ? `<span class="tag tag-gray">${sanitize(c.type)}</span>` : ''}
+        ${c.date_signature ? `<span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${new Date(c.date_signature).getFullYear()}</span>` : ''}
+        ${(c.produits||[]).slice(0,2).map(p => `<span class="tag tag-accent" style="font-size:10px;">${sanitize(p)}</span>`).join('')}
+        <div style="margin-left:auto;display:flex;gap:6px;">
+          <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();showContractForm('${c.id}')">Modifier</button>
+          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteContractItem('${c.id}')">Supprimer</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openContractDetail(id) {
+  const c = contracts.find(x => x.id === id);
+  if (!c) return;
+  // For now scroll to and highlight
+  showContractForm(id);
+}
+
+function showContractForm(editId) {
+  editingContractId = editId || null;
+  const c = editId ? contracts.find(x => x.id === editId) : null;
+  document.getElementById('contract-form-title').textContent = c ? 'Modifier le contrat' : 'Nouveau contrat';
+
+  // Populate societe select
+  const sel = document.getElementById('cf-societe');
+  sel.innerHTML = '<option value="">— Aucun fabricant —</option>' + societes.map(s => `<option value="${s.id}" ${c?.societe_id===s.id?'selected':''}>${s.name}</option>`).join('');
+
+  document.getElementById('cf-titre').value = c?.titre || '';
+  document.getElementById('cf-client').value = c?.client || '';
+  document.getElementById('cf-pays').value = c?.pays_client || '';
+  document.getElementById('cf-agence').value = c?.agence || '';
+  document.getElementById('cf-programme').value = c?.programme || '';
+  document.getElementById('cf-valeur').value = c?.valeur || '';
+  document.getElementById('cf-devise').value = c?.devise || 'USD';
+  document.getElementById('cf-type').value = c?.type || 'Program of Record';
+  document.getElementById('cf-statut').value = c?.statut || 'Attribué';
+  document.getElementById('cf-date').value = c?.date_signature ? c.date_signature.split('T')[0] : '';
+  document.getElementById('cf-datefin').value = c?.date_fin ? c.date_fin.split('T')[0] : '';
+  document.getElementById('cf-produits').value = (c?.produits||[]).join(', ');
+  document.getElementById('cf-desc').value = c?.description || '';
+  document.getElementById('cf-sources').value = (c?.sources||[]).join(', ');
+
+  document.getElementById('contract-form-wrap').style.display = 'block';
+  document.getElementById('contract-form-wrap').scrollIntoView({behavior:'smooth'});
+}
+
+function hideContractForm() {
+  document.getElementById('contract-form-wrap').style.display = 'none';
+  editingContractId = null;
+}
+
+async function saveContract() {
+  const titre = document.getElementById('cf-titre').value.trim();
+  if (!titre) { alert('Titre requis'); return; }
+  const id = editingContractId || 'c_' + Date.now();
+  const produits = document.getElementById('cf-produits').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const sources = document.getElementById('cf-sources').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const body = { id, titre,
+    client: document.getElementById('cf-client').value.trim(),
+    pays_client: document.getElementById('cf-pays').value.trim(),
+    agence: document.getElementById('cf-agence').value.trim(),
+    programme: document.getElementById('cf-programme').value.trim(),
+    valeur: document.getElementById('cf-valeur').value.trim(),
+    devise: document.getElementById('cf-devise').value,
+    type: document.getElementById('cf-type').value,
+    statut: document.getElementById('cf-statut').value,
+    date_signature: document.getElementById('cf-date').value || null,
+    date_fin: document.getElementById('cf-datefin').value || null,
+    societe_id: document.getElementById('cf-societe').value || null,
+    produits, sources,
+    description: document.getElementById('cf-desc').value.trim()
+  };
+  try {
+    const method = editingContractId ? 'PUT' : 'POST';
+    const url = editingContractId ? API+'/contracts/'+editingContractId : API+'/contracts';
+    await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    await loadContracts();
+    hideContractForm();
+    filterContracts();
+    loadContractStats();
+  } catch(e) { alert('Erreur: ' + e.message); }
+}
+
+async function deleteContractItem(id) {
+  if (!confirm('Supprimer ce contrat ?')) return;
+  await fetch(API+'/contracts/'+id, { method: 'DELETE' });
+  contracts = contracts.filter(c => c.id !== id);
+  filterContracts();
+  loadContractStats();
+}
+
 // ── Seed ─────────────────────────────────────────────────────
 async function initSeed() {
   const btn = document.getElementById('btn-seed');
@@ -1358,6 +1620,7 @@ async function init() {
   renderSocietes();
   renderProduits();
   renderDashboard();
+  await loadContracts();
   // Check if DB is empty and suggest seed
   if (!societes.length) {
     setTimeout(() => {
