@@ -1116,14 +1116,19 @@ function renderProduits() {
   renderCatFilters();
   filterDrones();
   document.getElementById('m-produits').textContent = produits.length;
-  // Lazy load drone images
-  list.forEach(p => {
-    if (p.image_url) {
-      setDroneImage('img-' + p.id, p.image_url);
-    } else {
-      // Fetch from backend (will search via AI on first call)
-      fetchAndSetDroneImage(p.id, p.name, 'img-' + p.id);
-    }
+  // Lazy load images and logos with stagger to avoid hammering API
+  list.forEach((p, i) => {
+    setTimeout(() => {
+      // Load drone image
+      if (p.image_url) {
+        setDroneImage('img-' + p.id, p.image_url);
+      } else {
+        fetchAndSetDroneImage(p.id, p.name, 'img-' + p.id);
+      }
+      // Load mini logo of manufacturer on drone card
+      const s = societes.find(sx => sx.id === p.societe_id);
+      if (s) loadLogoSmall(s.url, 'logo-card-' + p.id);
+    }, i * 150);
   });
 }
 function _renderProduits_OLD() {
@@ -1592,6 +1597,18 @@ async function deleteContractItem(id) {
 }
 
 // ── Logos & Images ────────────────────────────────────────────
+function loadLogoSmall(url, elId) {
+  const el = document.getElementById(elId);
+  if (!el || !url) return;
+  const domain = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  const img = new Image();
+  img.onload = () => {
+    el.innerHTML = `<img src="https://logo.clearbit.com/${domain}" style="width:20px;height:20px;border-radius:4px;object-fit:contain;background:white;vertical-align:middle;">`;
+  };
+  img.onerror = () => {};
+  img.src = `https://logo.clearbit.com/${domain}`;
+}
+
 async function loadLogo(societeId, url, elId) {
   const el = document.getElementById(elId);
   if (!el) return;
@@ -1752,7 +1769,9 @@ function renderSocietesFiltered(list) {
     const globalIdx = societes.indexOf(s);
     return `<div class="entity-card" onclick="openSociete('${s.id}')">
       <div class="entity-card-top">
-        <div class="avatar ${avatarClass(globalIdx)}">${initials(s.name)}</div>
+        <div id="logo-${s.id}" style="width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          <div class="avatar ${avatarClass(globalIdx)}">${initials(s.name)}</div>
+        </div>
         <div><div class="entity-name">${s.name}</div><div class="entity-sub">${s.pays||''} ${s.secteur ? '· ' + s.secteur.split('/')[0].trim() : ''}</div></div>
       </div>
       ${data.ca ? `<div class="entity-kpis">
@@ -1767,6 +1786,8 @@ function renderSocietesFiltered(list) {
       </div>
     </div>`;
   }).join('');
+  // Lazy-load logos
+  setTimeout(() => list.forEach(s => loadLogo(s.id, s.url, 'logo-' + s.id)), 100);
 }
 
 function renderProduitsFiltered(list) {
@@ -1775,9 +1796,13 @@ function renderProduitsFiltered(list) {
   g.innerHTML = list.map((p) => {
     const stale = !p.scraped_at || (Date.now() - new Date(p.scraped_at)) / 86400000 > 7;
     const badgeCls = p.badge==='Militaire'||p.badge==='Loitering Munition'||p.badge==='Intercepteur'||p.badge==='UCAV'?'tag-red':p.badge==='Industriel'||p.badge==='Maritime/ISR'?'tag-amber':p.badge==='Agriculture'?'tag-green':p.badge==='AAM'?'tag-accent':'tag-accent';
+    const logoS = produits.find ? (societes.find(sx => sx.id === p.societe_id)) : null;
     return `<div class="entity-card" onclick="openProduit('${p.id}')">
+      <div id="img-${p.id}" style="height:110px;overflow:hidden;border-radius:var(--radius) var(--radius) 0 0;background:var(--bg3);display:flex;align-items:center;justify-content:center;margin:-1rem -1.25rem 0.75rem;position:relative;">
+        <span style="font-size:13px;font-weight:600;color:var(--border2);font-family:'DM Mono',monospace;">${(p.name||'').slice(0,3).toUpperCase()}</span>
+      </div>
       <div class="entity-card-top">
-        <div class="avatar av-0" style="width:36px;height:36px;font-size:12px;border-radius:8px;">${(p.name||'').slice(0,2).toUpperCase()}</div>
+        <div id="logo-card-${p.id}" style="width:24px;height:24px;flex-shrink:0;"></div>
         <div>
           <div class="entity-name">${p.name}</div>
           <div class="entity-sub">${p.societe_name||''} ${p.type_drone ? '· ' + p.type_drone : ''}</div>
