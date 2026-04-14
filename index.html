@@ -326,15 +326,21 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div id="panel-dashboard" class="panel active">
       <div class="topbar"><h1>Veille secteur drone</h1></div>
       <div class="metrics">
-        <div class="metric"><div class="metric-label">Fabricants suivis</div><div class="metric-value" id="m-societes">0</div></div>
-        <div class="metric"><div class="metric-label">Drones suivis</div><div class="metric-value" id="m-produits">0</div></div>
-        <div class="metric"><div class="metric-label">Alertes actives</div><div class="metric-value" id="m-alerts">0</div></div>
-        <div class="metric"><div class="metric-label">Fiches à jour</div><div class="metric-value" id="m-fresh">0</div></div>
+        <div class="metric"><div class="metric-label">Fabricants</div><div class="metric-value" id="m-societes">0</div></div>
+        <div class="metric"><div class="metric-label">Drones</div><div class="metric-value" id="m-produits">0</div></div>
+        <div class="metric"><div class="metric-label">Contrats</div><div class="metric-value" id="m-alerts">0</div></div>
+        <div class="metric"><div class="metric-label">Fiches enrichies</div><div class="metric-value" id="m-fresh">0</div></div>
       </div>
       <div class="card">
-        <div class="card-header"><span class="card-title">Dernières alertes</span><button class="btn btn-sm btn-ghost" onclick="fetchAlerts()">Actualiser</button></div>
-        <div class="card-body" style="padding:0.5rem 1.25rem;" id="alerts-list">
-          <div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Aucune alerte</span></div>
+        <div class="card-header">
+          <span class="card-title">Dernières informations</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div id="feed-type-filters" style="display:flex;gap:4px;"></div>
+            <button class="btn btn-sm btn-ghost" onclick="loadFeed()">↻</button>
+          </div>
+        </div>
+        <div id="feed-list" style="padding:0 1.25rem;">
+          <div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Chargement...</span></div>
         </div>
       </div>
     </div>
@@ -764,31 +770,79 @@ function streamText(elId, text, onDone) {
 }
 
 // ── Dashboard ─────────────────────────────────────────────────
+let activeFeedType = 'tous';
+
 function renderDashboard() {
   document.getElementById('m-societes').textContent = societes.length;
   document.getElementById('m-produits').textContent = produits.length;
-  document.getElementById('m-fresh').textContent = societes.filter(s => s.scraped_at && (Date.now() - new Date(s.scraped_at)) / 86400000 < 7).length;
-  fetchAlerts();
+  document.getElementById('m-alerts').textContent = contracts.length;
+  document.getElementById('m-fresh').textContent = [...societes, ...produits].filter(s => s.scraped_at && (Date.now() - new Date(s.scraped_at)) / 86400000 < 7).length;
+  loadFeed();
 }
 
-async function fetchAlerts() {
-  const ids = societes.map(s => s.id);
-  if (!ids.length) { document.getElementById('alerts-list').innerHTML = '<div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Ajoutez des sociétés pour voir les alertes</span></div>'; return; }
+function renderFeedTypeFilters(feed) {
+  const types = ['tous', 'fabricant', 'drone', 'contrat', 'alerte'];
+  const counts = {};
+  feed.forEach(f => { counts[f.icon] = (counts[f.icon]||0)+1; });
+  const el = document.getElementById('feed-type-filters');
+  if (!el) return;
+  el.innerHTML = types.map(t => {
+    const nb = t === 'tous' ? feed.length : (counts[t]||0);
+    if (t !== 'tous' && !nb) return '';
+    return `<button class="tag ${t===activeFeedType?'tag-accent':'tag-gray'}" style="cursor:pointer;padding:3px 8px;font-size:10px;border:none;" onclick="setFeedType('${t}')">${t.charAt(0).toUpperCase()+t.slice(1)} <span style="opacity:0.7;">${nb}</span></button>`;
+  }).join('');
+}
+
+function setFeedType(t) { activeFeedType = t; renderFeedList(window._feedCache||[]); }
+
+function renderFeedList(feed) {
+  window._feedCache = feed;
+  const filtered = activeFeedType === 'tous' ? feed : feed.filter(f => f.icon === activeFeedType);
+  const el = document.getElementById('feed-list');
+  if (!el) return;
+  if (!filtered.length) { el.innerHTML = '<div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Aucune entrée</span></div>'; return; }
+
+  el.innerHTML = filtered.map(f => {
+    const age = timeAgo(f.date);
+    const iconLabel = {fabricant:'FAB',drone:'UAV',contrat:'CTR',alerte:'ALT'}[f.icon]||'—';
+    const iconClass = 'fi-' + f.icon;
+    const clickFn = f.type==='societe' ? `openSociete('${f.id}');go('societes')` :
+                    f.type==='drone'   ? `openProduit('${f.id}');go('produits-db')` :
+                    f.type==='contract'? `go('contracts')` : '';
+    return `<div class="feed-row" onclick="${clickFn}">
+      <div class="feed-icon ${iconClass}">${iconLabel}</div>
+      <div class="feed-body">
+        <div class="feed-title">${sanitize(f.title)}</div>
+        <div class="feed-sub">${sanitize(f.sub||'')}${f.statut ? ' · <span class="'+statutClass(f.statut)+'">'+sanitize(f.statut)+'</span>' : ''}</div>
+      </div>
+      <div class="feed-date">${age}</div>
+    </div>`;
+  }).join('');
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '—';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff/60000);
+  const h = Math.floor(m/60);
+  const d = Math.floor(h/24);
+  if (d > 30) return new Date(dateStr).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+  if (d > 0) return 'il y a ' + d + 'j';
+  if (h > 0) return 'il y a ' + h + 'h';
+  if (m > 0) return 'il y a ' + m + 'min';
+  return 'maintenant';
+}
+
+async function loadFeed() {
   try {
-    const r = await fetch(API + '/alerts?ids=' + encodeURIComponent(ids.join(',')));
+    const r = await fetch(API + '/dashboard/feed');
     const d = await r.json();
-    const el = document.getElementById('alerts-list');
-    document.getElementById('m-alerts').textContent = d.alerts.length;
-    if (!d.alerts.length) { el.innerHTML = '<div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Aucune alerte</span></div>'; return; }
-    const sMap = Object.fromEntries(societes.map(s => [s.id, s]));
-    el.innerHTML = d.alerts.map(a => {
-      const s = sMap[a.societeId];
-      return `<div class="alert-row">
-        <div class="alert-dot ${a.color}"></div>
-        <div class="alert-text"><strong>${s ? s.name : a.societeId}</strong> ${a.text}<div class="alert-meta">${a.meta}</div></div>
-      </div>`;
-    }).join('');
-  } catch(e) { console.error(e); }
+    renderFeedTypeFilters(d.feed);
+    renderFeedList(d.feed);
+  } catch(e) {
+    const el = document.getElementById('feed-list');
+    if (el) el.innerHTML = '<div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Erreur de chargement</span></div>';
+  }
 }
 
 // ── Societes ──────────────────────────────────────────────────
