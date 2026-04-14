@@ -1714,35 +1714,56 @@ if ('serviceWorker' in navigator) {
     .then(r => console.log('[Scout PWA] SW registered', r.scope))
     .catch(e => console.log('[Scout PWA] SW error', e));
 }
+// If already running as standalone PWA, mark button as installed
+if (window.matchMedia('(display-mode: standalone)').matches) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('btn-install-pwa');
+    if (btn) { btn.textContent = '✓ App déjà installée'; btn.disabled = true; btn.style.opacity = '0.5'; }
+  });
+}
 </script>
-<div id="pwa-install-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#534AB7;color:white;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;z-index:9999;font-size:14px;">
-  <span>📲 Installer Scout sur votre écran d'accueil</span>
-  <div style="display:flex;gap:8px;">
-    <button onclick="installPWA()" style="background:white;color:#534AB7;border:none;padding:6px 14px;border-radius:6px;font-weight:600;cursor:pointer;">Installer</button>
-    <button onclick="document.getElementById('pwa-install-bar').style.display='none'" style="background:transparent;color:white;border:1px solid rgba(255,255,255,0.4);padding:6px 10px;border-radius:6px;cursor:pointer;">✕</button>
-  </div>
-</div>
 <script>
 let deferredPrompt = null;
+let pwaInstalled = window.matchMedia('(display-mode: standalone)').matches;
+
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredPrompt = e;
-  const bar = document.getElementById('pwa-install-bar');
-  if (bar) bar.style.display = 'flex';
+  // Update install button state
+  const btn = document.getElementById('btn-install-pwa');
+  if (btn) { btn.textContent = '📲 Installer l\'app'; btn.disabled = false; btn.style.opacity = '1'; }
 });
-function installPWA() {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(() => {
-    deferredPrompt = null;
-    const bar = document.getElementById('pwa-install-bar');
-    if (bar) bar.style.display = 'none';
-  });
-}
+
 window.addEventListener('appinstalled', () => {
-  const bar = document.getElementById('pwa-install-bar');
-  if (bar) bar.style.display = 'none';
+  pwaInstalled = true;
+  const btn = document.getElementById('btn-install-pwa');
+  if (btn) { btn.textContent = '✓ App installée'; btn.disabled = true; btn.style.opacity = '0.5'; }
 });
+
+function installPWA() {
+  if (pwaInstalled) {
+    alert('Scout est déjà installé sur cet appareil !');
+    return;
+  }
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(choice => {
+      deferredPrompt = null;
+      const btn = document.getElementById('btn-install-pwa');
+      if (choice.outcome === 'accepted') {
+        if (btn) { btn.textContent = '✓ Installation en cours...'; btn.disabled = true; }
+      }
+    });
+  } else {
+    // Fallback: show manual instructions
+    const msg = 'Pour installer Scout :\n\n' +
+      '1. Appuyez sur ⋮ (menu Chrome, en haut à droite)\n' +
+      '2. Appuyez sur "Ajouter à l\'écran d\'accueil"\n' +
+      '3. Confirmez\n\n' +
+      'Si vous l\'avez déjà refusé, allez dans\nParamètres Chrome → Notifications\npour réinitialiser.';
+    alert(msg);
+  }
+}
 </script>
 </body>
 </html>
