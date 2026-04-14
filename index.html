@@ -1597,101 +1597,66 @@ async function deleteContractItem(id) {
 }
 
 // ── Logos & Images ────────────────────────────────────────────
-function loadLogoSmall(url, elId) {
+function loadLogoSmall(societeId, elId) {
   const el = document.getElementById(elId);
-  if (!el || !url) return;
-  const domain = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  if (!el || !societeId) return;
   const img = new Image();
   img.onload = () => {
-    el.innerHTML = `<img src="https://logo.clearbit.com/${domain}" style="width:20px;height:20px;border-radius:4px;object-fit:contain;background:white;vertical-align:middle;">`;
+    el.innerHTML = `<img src="${API}/societes/${societeId}/logo" style="width:20px;height:20px;border-radius:4px;object-fit:contain;background:white;">`;
   };
   img.onerror = () => {};
-  img.src = `https://logo.clearbit.com/${domain}`;
+  img.src = API + '/societes/' + societeId + '/logo';
 }
 
-async function loadLogo(societeId, url, elId) {
+function loadLogo(societeId, url, elId) {
   const el = document.getElementById(elId);
-  if (!el) return;
-  try {
-    const domain = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-    // Try Clearbit first, fallback to Google favicon
-    const sources = [
-      `https://logo.clearbit.com/${domain}`,
-      `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
-      `https://icons.duckduckgo.com/ip3/${domain}.ico`
-    ];
-    let loaded = false;
-    for (const logoUrl of sources) {
-      if (loaded) break;
-      await new Promise(resolve => {
-        if (loaded) return resolve();
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          if (loaded) return resolve();
-          loaded = true;
-          // Only show if image is substantial (not a tiny 16px favicon for Clearbit)
-          if (logoUrl.includes('clearbit') && (img.width < 20 || img.height < 20)) {
-            resolve(); return;
-          }
-          const size = logoUrl.includes('clearbit') ? '36px' : '24px';
-          const pad = logoUrl.includes('clearbit') ? '2px' : '6px';
-          el.innerHTML = `<img src="${logoUrl}" alt="" style="width:${size};height:${size};border-radius:8px;object-fit:contain;background:white;padding:${pad};">`;
-          resolve();
-        };
-        img.onerror = () => resolve();
-        img.src = logoUrl;
-        setTimeout(() => resolve(), 3000);
-      });
-    }
-  } catch(e) {}
+  if (!el || !societeId) return;
+  // Use backend proxy — no CORS issues
+  const proxyUrl = API + '/societes/' + societeId + '/logo';
+  const img = new Image();
+  img.onload = () => {
+    el.innerHTML = `<img src="${proxyUrl}" alt="" style="width:36px;height:36px;border-radius:8px;object-fit:contain;background:white;padding:2px;">`;
+  };
+  img.onerror = () => {}; // keep initials on error
+  img.src = proxyUrl;
 }
 
-async function loadDroneImage(produitId, name, elId, detailWrapId) {
-  // Check if already stored in DB
-  try {
-    const r = await fetch(API + '/produits/' + produitId + '/image');
-    const d = await r.json();
-    if (d.image_url) {
-      setDroneImage(elId, d.image_url);
-      if (detailWrapId) setDroneImageDetail(detailWrapId, d.image_url);
+function loadDroneImage(produitId, name, elId, detailWrapId) {
+  // Use proxy URL — backend fetches/caches the image
+  const proxyUrl = API + '/produits/' + produitId + '/image';
+  if (elId) {
+    const el = document.getElementById(elId);
+    if (el && !el.querySelector('img')) {
+      const img = new Image();
+      img.onload = () => { el.innerHTML = `<img src="${proxyUrl}" alt="${name}" style="width:100%;height:110px;object-fit:cover;">`; };
+      img.onerror = () => {};
+      img.src = proxyUrl;
     }
-  } catch(e) {}
+  }
+  if (detailWrapId) {
+    const el = document.getElementById(detailWrapId);
+    if (el) {
+      const img = new Image();
+      img.onload = () => { el.innerHTML = `<img src="${proxyUrl}" alt="${name}" style="width:100%;height:60px;object-fit:cover;border-radius:var(--radius);">`; };
+      img.onerror = () => {};
+      img.src = proxyUrl;
+    }
+  }
 }
 
-async function fetchAndSetDroneImage(produitId, name, elId) {
-  // Only fetch if element exists and is empty
-  const el = document.getElementById(elId);
-  if (!el || el.querySelector('img')) return;
-  try {
-    const r = await fetch(API + '/produits/' + produitId + '/image');
-    const d = await r.json();
-    if (d.image_url) {
-      setDroneImage(elId, d.image_url);
-      // Update local cache
-      const p = produits.find(x => x.id === produitId);
-      if (p) p.image_url = d.image_url;
-    }
-  } catch(e) {}
+function fetchAndSetDroneImage(produitId, name, elId) {
+  loadDroneImage(produitId, name, elId, null);
 }
 
 function setDroneImage(elId, url) {
-  const el = document.getElementById(elId);
-  if (!el || !url) return;
-  const img = new Image();
-  img.onload = () => { el.innerHTML = `<img src="${url}" alt="" style="width:100%;height:120px;object-fit:cover;">` };
-  img.onerror = () => {};
-  img.src = url;
+  loadDroneImage(url.includes('/produits/') ? url.split('/')[4] : null, '', elId, null);
 }
 
 function setDroneImageDetail(wrapId, url) {
   const el = document.getElementById(wrapId);
   if (!el || !url) return;
-  el.style.background = 'var(--bg3)';
   const img = new Image();
-  img.onload = () => {
-    el.innerHTML = `<img src="${url}" alt="" style="width:100%;height:60px;object-fit:cover;border-radius:var(--radius);">`;
-  };
+  img.onload = () => { el.innerHTML = `<img src="${url}" alt="" style="width:100%;height:60px;object-fit:cover;border-radius:var(--radius);">`; };
   img.onerror = () => {};
   img.src = url;
 }
@@ -1825,7 +1790,7 @@ async function init() {
     renderDashboard();
   } catch(e) {
     console.error('Init error:', e);
-    document.getElementById('m-societes').textContent = '!';
+    document.getElementById('m-societes').textContent = '—';
   }
 }
 
