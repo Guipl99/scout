@@ -1111,7 +1111,7 @@ async function openProduit(id) {
   document.getElementById('produit-detail-view').style.display = 'block';
 
   document.getElementById('p-emoji').textContent = (p.name||'').slice(0,2).toUpperCase();
-  loadDroneImage(p.id, p.name, 'img-' + p.id, 'p-img-wrap');
+  loadDroneImage(p.id, p.image_url||null, p.name, 'img-' + p.id, 'p-img-wrap');
   document.getElementById('p-name').textContent = p.name;
   document.getElementById('p-sub').textContent = (p.societe_name || '') + (p.prix ? ' · ' + p.prix : '');
   document.getElementById('p-tags').innerHTML = tagHtml(p.badge||'Core', p.badge==='Nouveau'?'tag-accent':p.badge==='Premium'?'tag-amber':'tag-gray') + (p.nouveau ? ' ' + tagHtml('Nouveau','tag-green') : '');
@@ -1569,31 +1569,31 @@ function loadLogo(societeId, url, elId) {
   img.src = proxyUrl;
 }
 
-function loadDroneImage(produitId, name, elId, detailWrapId) {
-  // Use proxy URL — backend fetches/caches the image
-  const proxyUrl = API + '/produits/' + produitId + '/image';
-  if (elId) {
+function loadDroneImage(produitId, imageUrl, name, elId, detailWrapId) {
+  // If we have a direct URL, use it — otherwise use proxy (slower, triggers AI search)
+  const src = imageUrl || (API + '/produits/' + produitId + '/image');
+  function setImg(elId, h) {
     const el = document.getElementById(elId);
-    if (el && !el.querySelector('img')) {
-      const img = new Image();
-      img.onload = () => { el.innerHTML = `<img src="${proxyUrl}" alt="${name}" style="width:100%;height:110px;object-fit:cover;">`; };
-      img.onerror = () => {};
-      img.src = proxyUrl;
-    }
+    if (!el || el.querySelector('img')) return;
+    const img = new Image();
+    img.onload = () => { el.innerHTML = `<img src="${src}" alt="${name}" style="width:100%;height:${h};object-fit:cover;">`; };
+    img.onerror = () => {
+      // If direct URL failed, try proxy
+      if (imageUrl) {
+        const proxyUrl = API + '/produits/' + produitId + '/image';
+        const img2 = new Image();
+        img2.onload = () => { el.innerHTML = `<img src="${proxyUrl}" alt="${name}" style="width:100%;height:${h};object-fit:cover;">`; };
+        img2.src = proxyUrl;
+      }
+    };
+    img.src = src;
   }
-  if (detailWrapId) {
-    const el = document.getElementById(detailWrapId);
-    if (el) {
-      const img = new Image();
-      img.onload = () => { el.innerHTML = `<img src="${proxyUrl}" alt="${name}" style="width:100%;height:60px;object-fit:cover;border-radius:var(--radius);">`; };
-      img.onerror = () => {};
-      img.src = proxyUrl;
-    }
-  }
+  if (elId) setImg(elId, '110px');
+  if (detailWrapId) setImg(detailWrapId, '60px');
 }
 
-function fetchAndSetDroneImage(produitId, name, elId) {
-  loadDroneImage(produitId, name, elId, null);
+function fetchAndSetDroneImage(produitId, imageUrl, name, elId) {
+  loadDroneImage(produitId, imageUrl, name, elId, null);
 }
 
 function setDroneImage(elId, url) {
