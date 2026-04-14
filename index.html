@@ -350,10 +350,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div id="societes-list-view">
         <div class="topbar">
           <h1>Fabricants</h1>
-          <div class="topbar-actions">
-            <button class="btn btn-ghost" onclick="loadSocietes().then(renderSocietes)" title="Actualiser">↻</button>
-            <button class="btn btn-primary" onclick="showSocieteForm()">+ Ajouter</button>
-          </div>
+<button class="btn btn-ghost" onclick="loadSocietes().then(renderSocietes)" title="Actualiser">↻</button>
         </div>
         <div id="societe-form-wrap" style="display:none;margin-bottom:1.25rem;">
           <div class="card">
@@ -399,7 +396,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div id="societe-detail-view" style="display:none;">
         <div class="topbar">
           <button class="btn btn-ghost" onclick="backToSocietes()">← Retour</button>
-          <button class="btn btn-primary" id="s-btn-refresh" onclick="forceScrape('societe')">Forcer mise à jour</button>
+          
         </div>
         <div class="detail-header">
           <div class="detail-av" id="s-av"></div>
@@ -430,7 +427,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="card"><div class="card-header"><span class="card-title">Sources</span></div><div class="card-body" id="s-src"></div></div>
         </div>
         <div id="st-produits" class="tabpanel">
-          <div class="card"><div class="card-header"><span class="card-title">Drones détectés</span><button class="btn btn-sm btn-primary" onclick="addProduitFromSociete()">+ Ajouter</button></div>
+          <div class="card"><div class="card-header"><span class="card-title">Drones détectés</span></div>
           <div class="card-body"><div class="product-grid" id="s-produits-grid"></div></div></div>
         </div>
         <div id="st-pricing" class="tabpanel"><div class="pricing-grid" id="s-pricing"></div></div>
@@ -449,7 +446,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="card">
             <div class="card-header"><span class="card-title">Analyse IA</span><span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;" id="s-ts"></span></div>
             <div class="card-body"><div class="stream-box" id="s-analyse"></div></div>
-            <div class="refresh-bar"><div class="upd-dot-anim" id="s-dot"></div><span id="s-info">—</span><button class="btn btn-sm btn-ghost" style="margin-left:auto;" onclick="forceScrape('societe')">Relancer ↗</button></div>
+            <div class="refresh-bar"><div class="upd-dot-anim" id="s-dot"></div><span id="s-info">—</span></div>
           </div>
         </div>
       </div>
@@ -460,10 +457,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div id="produits-list-view">
         <div class="topbar">
           <h1>Drones</h1>
-          <div class="topbar-actions">
-            <button class="btn btn-ghost" onclick="loadAllProduits().then(renderProduits)" title="Actualiser">↻</button>
-            <button class="btn btn-primary" onclick="showProduitForm()">+ Ajouter</button>
-          </div>
+<button class="btn btn-ghost" onclick="loadAllProduits().then(renderProduits)" title="Actualiser">↻</button>
         </div>
         <div id="produit-form-wrap" style="display:none;margin-bottom:1.25rem;">
           <div class="card">
@@ -498,7 +492,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div id="produit-detail-view" style="display:none;">
         <div class="topbar">
           <button class="btn btn-ghost" onclick="backToProduits()">← Retour</button>
-          <button class="btn btn-primary" id="p-btn-refresh" onclick="forceScrape('produit')">Forcer mise à jour</button>
+          
         </div>
         <div class="detail-header">
           <div class="avatar av-0" style="width:48px;height:48px;font-size:16px;border-radius:10px;" id="p-emoji"></div>
@@ -535,7 +529,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="card">
             <div class="card-header"><span class="card-title">Analyse IA</span><span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;" id="p-ts"></span></div>
             <div class="card-body"><div class="stream-box" id="p-analyse"></div></div>
-            <div class="refresh-bar"><div class="upd-dot-anim" id="p-dot"></div><span id="p-info">—</span><button class="btn btn-sm btn-ghost" style="margin-left:auto;" onclick="forceScrape('produit')">Relancer ↗</button></div>
+            <div class="refresh-bar"><div class="upd-dot-anim" id="p-dot"></div><span id="p-info">—</span></div>
           </div>
         </div>
       </div>
@@ -546,7 +540,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div id="contracts-list-view">
         <div class="topbar">
           <h1>Contrats</h1>
-          <button class="btn btn-primary" onclick="showContractForm()">+ Ajouter</button>
+          
         </div>
 
         <!-- Stats bar -->
@@ -989,7 +983,7 @@ async function loadSocieteProduits(societeId) {
     grid.innerHTML = prods.map(p => `<div class="product-card" onclick="go('produits-db');setTimeout(()=>openProduit('${p.id}'),100)">
       <div class="product-name">${p.name}</div>
       <div class="product-company">${p.type_drone||''} ${p.prix ? '· ' + p.prix : ''}</div>
-      <div class="product-desc">${p.description||'Cliquer pour enrichir via IA'}</div>
+      <div class="product-desc">${p.description||'Données en cours de collecte'}</div>
       <div style="margin-top:8px;">${tagHtml(p.badge||'Civil', p.badge==='Militaire'?'tag-red':p.badge==='Industriel'?'tag-amber':p.badge==='Agriculture'?'tag-green':'tag-accent')}</div>
     </div>`).join('');
     // Merge into global produits list
@@ -1016,7 +1010,7 @@ function showSocieteForm(editId) {
   document.getElementById('sf-notes').value = s ? (s.notes||'') : '';
   const allSigs = ['Prix & offres','Fonctionnalités','Recrutements','SEO & contenu','Réseaux sociaux','Avis clients','Partenariats','Levées de fonds','Presse'];
   document.querySelectorAll('#sf-sigs .sig').forEach((el, i) => el.classList.toggle('on', s ? (s.signals||[]).includes(allSigs[i]) : i < 3));
-  document.getElementById('societe-form-wrap').style.display = 'block';
+  return; // Forms disabled for public users
   document.getElementById('societe-form-wrap').scrollIntoView({behavior:'smooth'});
 }
 function hideSocieteForm() { document.getElementById('societe-form-wrap').style.display = 'none'; editingSocieteId = null; }
@@ -1197,7 +1191,7 @@ function showProduitForm(societeId) {
   document.getElementById('pf-nouveau').value = 'false';
   populateSocieteSelect();
   if (societeId) document.getElementById('pf-societe').value = societeId;
-  document.getElementById('produit-form-wrap').style.display = 'block';
+  return; // Forms disabled for public users
   document.getElementById('produit-form-wrap').scrollIntoView({behavior:'smooth'});
 }
 function hideProduitForm() { document.getElementById('produit-form-wrap').style.display = 'none'; }
@@ -1495,7 +1489,7 @@ function showContractForm(editId) {
   document.getElementById('cf-desc').value = c?.description || '';
   document.getElementById('cf-sources').value = (c?.sources||[]).join(', ');
 
-  document.getElementById('contract-form-wrap').style.display = 'block';
+  return; // Forms disabled for public users
   document.getElementById('contract-form-wrap').scrollIntoView({behavior:'smooth'});
 }
 
@@ -1717,7 +1711,7 @@ function renderSocietesFiltered(list) {
         <div class="entity-kpi"><div class="entity-kpi-label">Modèles</div><div class="entity-kpi-value">${data.nb_modeles||'—'}</div></div>
         <div class="entity-kpi"><div class="entity-kpi-label">Employés</div><div class="entity-kpi-value">${data.employes||'—'}</div></div>
         <div class="entity-kpi"><div class="entity-kpi-label">Marché</div><div class="entity-kpi-value" style="font-size:10px;">${(data.marches||'—').slice(0,20)}</div></div>
-      </div>` : '<div style="font-size:12px;color:var(--text3);padding:10px 0;">Cliquer pour enrichir via IA</div>'}
+      </div>` : '<div style="font-size:12px;color:var(--text3);padding:10px 0;">Données en cours de collecte</div>'}
       <div class="entity-footer">
         <div class="entity-tags">${tagHtml(s.pays||'—','tag-gray')}</div>
         <span class="entity-updated"><span class="upd-dot ${stale?'stale':''}"></span>${stale ? 'À actualiser' : 'À jour'}</span>
@@ -1746,7 +1740,7 @@ function renderProduitsFiltered(list) {
           <div class="entity-sub">${p.societe_name||''} ${p.type_drone ? '· ' + p.type_drone : ''}</div>
         </div>
       </div>
-      <p style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;">${(p.description||'Cliquer pour enrichir via IA').slice(0,100)}${p.description && p.description.length > 100 ? '...' : ''}</p>
+      <p style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;">${(p.description||'Données en cours de collecte').slice(0,100)}${p.description && p.description.length > 100 ? '...' : ''}</p>
       <div class="entity-footer">
         <div class="entity-tags">${tagHtml(p.badge||'Civil', badgeCls)}${p.prix ? ' <span class="tag tag-gray">'+p.prix+'</span>' : ''}</div>
         <span class="entity-updated"><span class="upd-dot ${stale?'stale':''}"></span>${stale?'À actualiser':'À jour'}</span>
