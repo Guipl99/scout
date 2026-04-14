@@ -107,9 +107,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .entity-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; cursor: pointer; transition: border-color 0.15s; overflow: hidden; }
 .logo-avatar { width: 36px; height: 36px; flex-shrink: 0; }
 .logo-avatar img { width: 36px; height: 36px; border-radius: 8px; object-fit: contain; background: white; padding: 2px; }
-.drone-img-wrap { width: 100%; height: 120px; overflow: hidden; border-radius: var(--radius); background: var(--bg3); display: flex; align-items: center; justify-content: center; margin: -1rem -1.25rem 0; width: calc(100% + 2.5rem); }
-.drone-img-wrap img { width: 100%; height: 120px; object-fit: cover; }
-.drone-img-placeholder { font-size: 22px; font-weight: 700; color: var(--text3); font-family: 'DM Mono', monospace; }
+.drone-img-wrap { height: 110px; overflow: hidden; border-radius: var(--radius) var(--radius) 0 0; background: var(--bg3); display: flex; align-items: center; justify-content: center; margin: -1rem -1.25rem 0.75rem; }
+.drone-img-wrap img { width: 100%; height: 110px; object-fit: cover; }
+.drone-img-placeholder { font-size: 20px; font-weight: 700; color: var(--border2); font-family: 'DM Mono', monospace; }
 .entity-card:hover { border-color: var(--accent); }
 .entity-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .avatar { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; font-family: 'DM Mono', monospace; }
@@ -662,12 +662,14 @@ const API = 'https://scout-api-production-fa8d.up.railway.app';
 // Strip XML/HTML tags injected by AI (cite, antml:cite, etc.)
 function sanitize(text) {
   if (!text || typeof text !== 'string') return text || '—';
-  return text
-    .replace(/]*>|<\/antml:cite>/gi, '')
-    .replace(/<cite[^>]*>|<\/cite>/gi, '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\s+/g, ' ')
-    .trim() || '—';
+  // Use DOM parser to strip all tags safely
+  const div = document.createElement('div');
+  div.innerHTML = text
+    .replace(/]*>/gi, '')
+    .replace(/<\/antml:cite>/gi, '')
+    .replace(/<cite[^>]*>/gi, '')
+    .replace(/<\/cite>/gi, '');
+  return (div.textContent || div.innerText || '').replace(/\s+/g, ' ').trim() || '—';
 }
 function sanitizeArr(arr) {
   if (!Array.isArray(arr)) return [];
@@ -1055,7 +1057,14 @@ function renderProduits() {
   filterDrones();
   document.getElementById('m-produits').textContent = produits.length;
   // Lazy load drone images
-  list.forEach(p => { if (p.image_url) setDroneImage('img-' + p.id, p.image_url); });
+  list.forEach(p => {
+    if (p.image_url) {
+      setDroneImage('img-' + p.id, p.image_url);
+    } else {
+      // Fetch from backend (will search via AI on first call)
+      fetchAndSetDroneImage(p.id, p.name, 'img-' + p.id);
+    }
+  });
 }
 function _renderProduits_OLD() {
   const g = document.getElementById('produits-grid');
@@ -1528,15 +1537,36 @@ async function loadLogo(societeId, url, elId) {
   if (!el) return;
   try {
     const domain = url.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-    const logoUrl = `https://logo.clearbit.com/${domain}`;
-    const img = new Image();
-    img.onload = () => {
-      el.innerHTML = `<img src="${logoUrl}" alt="" style="width:36px;height:36px;border-radius:8px;object-fit:contain;background:white;padding:2px;">`;
-      // Also store in backend
-      fetch(API + '/societes/' + societeId + '/logo').catch(()=>{});
-    };
-    img.onerror = () => {}; // keep initials avatar on error
-    img.src = logoUrl;
+    // Try Clearbit first, fallback to Google favicon
+    const sources = [
+      `https://logo.clearbit.com/${domain}`,
+      `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
+      `https://icons.duckduckgo.com/ip3/${domain}.ico`
+    ];
+    let loaded = false;
+    for (const logoUrl of sources) {
+      if (loaded) break;
+      await new Promise(resolve => {
+        if (loaded) return resolve();
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          if (loaded) return resolve();
+          loaded = true;
+          // Only show if image is substantial (not a tiny 16px favicon for Clearbit)
+          if (logoUrl.includes('clearbit') && (img.width < 20 || img.height < 20)) {
+            resolve(); return;
+          }
+          const size = logoUrl.includes('clearbit') ? '36px' : '24px';
+          const pad = logoUrl.includes('clearbit') ? '2px' : '6px';
+          el.innerHTML = `<img src="${logoUrl}" alt="" style="width:${size};height:${size};border-radius:8px;object-fit:contain;background:white;padding:${pad};">`;
+          resolve();
+        };
+        img.onerror = () => resolve();
+        img.src = logoUrl;
+        setTimeout(() => resolve(), 3000);
+      });
+    }
   } catch(e) {}
 }
 
@@ -1548,6 +1578,22 @@ async function loadDroneImage(produitId, name, elId, detailWrapId) {
     if (d.image_url) {
       setDroneImage(elId, d.image_url);
       if (detailWrapId) setDroneImageDetail(detailWrapId, d.image_url);
+    }
+  } catch(e) {}
+}
+
+async function fetchAndSetDroneImage(produitId, name, elId) {
+  // Only fetch if element exists and is empty
+  const el = document.getElementById(elId);
+  if (!el || el.querySelector('img')) return;
+  try {
+    const r = await fetch(API + '/produits/' + produitId + '/image');
+    const d = await r.json();
+    if (d.image_url) {
+      setDroneImage(elId, d.image_url);
+      // Update local cache
+      const p = produits.find(x => x.id === produitId);
+      if (p) p.image_url = d.image_url;
     }
   } catch(e) {}
 }
