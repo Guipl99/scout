@@ -319,7 +319,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
     <!-- DASHBOARD -->
     <div id="panel-dashboard" class="panel active">
-      <div class="topbar"><h1>Veille secteur drone</h1></div>
+      <div class="topbar">
+        <h1>Veille secteur drone</h1>
+        <button class="btn btn-primary" onclick="initSeed()" id="btn-seed">Initialiser la base de référence</button>
+      </div>
       <div class="metrics">
         <div class="metric"><div class="metric-label">Fabricants suivis</div><div class="metric-value" id="m-societes">0</div></div>
         <div class="metric"><div class="metric-label">Drones suivis</div><div class="metric-value" id="m-produits">0</div></div>
@@ -372,6 +375,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
               </div>
             </div>
           </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:12px;color:var(--text3);">Secteur :</span>
+          <div id="secteur-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem;align-items:center;">
+          <input id="societes-search" type="text" placeholder="Rechercher un fabricant..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);width:100%;max-width:320px;" oninput="filterSocietes()">
         </div>
         <div class="entity-grid" id="societes-grid"></div>
       </div>
@@ -453,6 +463,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
               </div>
             </div>
           </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:12px;color:var(--text3);">Catégorie :</span>
+          <div id="cat-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem;align-items:center;">
+          <input id="drones-search" type="text" placeholder="Rechercher un drone..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);width:100%;max-width:320px;" oninput="filterDrones()">
         </div>
         <div class="entity-grid" id="produits-grid"></div>
       </div>
@@ -540,6 +557,27 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
 <script>
 const API = 'https://scout-api-production-fa8d.up.railway.app';
+const DRONE_CATEGORIES = [
+  'Tous',
+  'Multirotor civil', 'Multirotor industriel', 'Militaire',
+  'Aile fixe ISR', 'Aile fixe cartographie', 'Aile fixe maritime',
+  'VTOL', 'VTOL cargo', 'AAM',
+  'Loitering Munition', 'Intercepteur', 'UCAV',
+  'FPV/Loisir', 'Micro-drone ISR', 'Nano-drone',
+  'Cargo', 'Agriculture', 'Maritime/ISR', 'Industriel'
+];
+const FABRICANT_SECTEURS = [
+  'Tous',
+  'Civil / Industriel',
+  'Défense / ISR',
+  'Défense / Loitering',
+  'Défense / Intercepteurs',
+  'AAM / eVTOL Passagers',
+  'Cargo / Livraison',
+  'Agriculture / Cartographie',
+  'Maritime / Surveillance',
+  'Industriel / Inspection'
+];
 const COLORS = ['av-0','av-1','av-2','av-3','av-4'];
 
 let societes = [];
@@ -630,6 +668,10 @@ async function loadSocietes() {
 }
 
 function renderSocietes() {
+  renderSecteurFilters();
+  filterSocietes();
+}
+function _renderSocietes_OLD() {
   const g = document.getElementById('societes-grid');
   if (!societes.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span class="empty-icon">🏭</span>Aucun fabricant — cliquez sur "+ Ajouter"</div>'; return; }
   g.innerHTML = societes.map((s, i) => {
@@ -872,6 +914,11 @@ async function loadAllProduits() {
 }
 
 function renderProduits() {
+  renderCatFilters();
+  filterDrones();
+  document.getElementById('m-produits').textContent = produits.length;
+}
+function _renderProduits_OLD() {
   const g = document.getElementById('produits-grid');
   if (!produits.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span class="empty-icon">🚁</span>Aucun drone — ajoutez un fabricant et actualisez pour détecter automatiquement</div>'; return; }
   g.innerHTML = produits.map((p, i) => {
@@ -1018,9 +1065,130 @@ function addProduitFromSociete() {
 }
 
 // ── Init ──────────────────────────────────────────────────────
+// ── Seed ─────────────────────────────────────────────────────
+async function initSeed() {
+  const btn = document.getElementById('btn-seed');
+  if (!confirm('Initialiser la base de référence avec 20 fabricants et 25 drones ? Les données existantes seront conservées.')) return;
+  btn.disabled = true; btn.textContent = 'Initialisation...';
+  try {
+    // Seed via API - run seed script on server
+    const r = await fetch(API + '/seed', {
+      method: 'POST',
+      headers: { 'x-seed-secret': 'drone-scout-seed-2026', 'Content-Type': 'application/json' }
+    });
+    // Wait a moment then reload
+    btn.textContent = 'Chargement...';
+    await new Promise(r => setTimeout(r, 3000));
+    await Promise.all([loadSocietes(), loadAllProduits()]);
+    renderSocietes(); renderProduits(); renderDashboard();
+    btn.textContent = 'Base initialisée ✓';
+    setTimeout(() => { btn.textContent = 'Réinitialiser la base'; btn.disabled = false; }, 3000);
+  } catch(e) {
+    btn.textContent = 'Erreur — réessayer';
+    btn.disabled = false;
+    alert('Erreur: ' + e.message);
+  }
+}
+
+// ── Filters ───────────────────────────────────────────────────
+let activeCat = 'Tous';
+let activeSecteur = 'Tous';
+
+function renderCatFilters() {
+  const el = document.getElementById('cat-filters');
+  if (!el) return;
+  el.innerHTML = DRONE_CATEGORIES.map(c => `<button class="tag ${c===activeCat?'tag-accent':'tag-gray'}" style="cursor:pointer;padding:4px 10px;font-size:12px;border:none;" onclick="setCat('${c}')">${c}</button>`).join('');
+}
+
+function renderSecteurFilters() {
+  const el = document.getElementById('secteur-filters');
+  if (!el) return;
+  el.innerHTML = FABRICANT_SECTEURS.map(s => `<button class="tag ${s===activeSecteur?'tag-accent':'tag-gray'}" style="cursor:pointer;padding:4px 10px;font-size:12px;border:none;" onclick="setSecteur('${s}')">${s}</button>`).join('');
+}
+
+function setCat(cat) { activeCat = cat; renderCatFilters(); filterDrones(); }
+function setSecteur(s) { activeSecteur = s; renderSecteurFilters(); filterSocietes(); }
+
+function filterDrones() {
+  const search = (document.getElementById('drones-search')?.value || '').toLowerCase();
+  const filtered = produits.filter(p => {
+    const matchCat = activeCat === 'Tous' || p.badge === activeCat || p.type_drone === activeCat || (p.badge && p.badge.includes(activeCat));
+    const matchSearch = !search || p.name.toLowerCase().includes(search) || (p.societe_name||'').toLowerCase().includes(search) || (p.description||'').toLowerCase().includes(search);
+    return matchCat && matchSearch;
+  });
+  renderProduitsFiltered(filtered);
+}
+
+function filterSocietes() {
+  const search = (document.getElementById('societes-search')?.value || '').toLowerCase();
+  const filtered = societes.filter(s => {
+    const matchSect = activeSecteur === 'Tous' || (s.secteur||'').includes(activeSecteur);
+    const matchSearch = !search || s.name.toLowerCase().includes(search) || (s.pays||'').toLowerCase().includes(search) || (s.secteur||'').toLowerCase().includes(search);
+    return matchSect && matchSearch;
+  });
+  renderSocietesFiltered(filtered);
+}
+
+function renderSocietesFiltered(list) {
+  const g = document.getElementById('societes-grid');
+  if (!list.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span style="color:var(--text3);">Aucun fabricant pour ce filtre</span></div>'; return; }
+  g.innerHTML = list.map((s, i) => {
+    const data = s.data || {};
+    const stale = !s.scraped_at || (Date.now() - new Date(s.scraped_at)) / 86400000 > 7;
+    const globalIdx = societes.indexOf(s);
+    return `<div class="entity-card" onclick="openSociete('${s.id}')">
+      <div class="entity-card-top">
+        <div class="avatar ${avatarClass(globalIdx)}">${initials(s.name)}</div>
+        <div><div class="entity-name">${s.name}</div><div class="entity-sub">${s.pays||''} ${s.secteur ? '· ' + s.secteur.split('/')[0].trim() : ''}</div></div>
+      </div>
+      ${data.ca ? `<div class="entity-kpis">
+        <div class="entity-kpi"><div class="entity-kpi-label">CA</div><div class="entity-kpi-value">${data.ca}</div></div>
+        <div class="entity-kpi"><div class="entity-kpi-label">Modèles</div><div class="entity-kpi-value">${data.nb_modeles||'—'}</div></div>
+        <div class="entity-kpi"><div class="entity-kpi-label">Employés</div><div class="entity-kpi-value">${data.employes||'—'}</div></div>
+        <div class="entity-kpi"><div class="entity-kpi-label">Marché</div><div class="entity-kpi-value" style="font-size:10px;">${(data.marches||'—').slice(0,20)}</div></div>
+      </div>` : '<div style="font-size:12px;color:var(--text3);padding:10px 0;">Cliquer pour enrichir via IA</div>'}
+      <div class="entity-footer">
+        <div class="entity-tags">${tagHtml(s.pays||'—','tag-gray')}</div>
+        <span class="entity-updated"><span class="upd-dot ${stale?'stale':''}"></span>${stale ? 'À actualiser' : 'À jour'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderProduitsFiltered(list) {
+  const g = document.getElementById('produits-grid');
+  if (!list.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span style="color:var(--text3);">Aucun drone pour ce filtre</span></div>'; return; }
+  g.innerHTML = list.map((p) => {
+    const stale = !p.scraped_at || (Date.now() - new Date(p.scraped_at)) / 86400000 > 7;
+    const badgeCls = p.badge==='Militaire'||p.badge==='Loitering Munition'||p.badge==='Intercepteur'||p.badge==='UCAV'?'tag-red':p.badge==='Industriel'||p.badge==='Maritime/ISR'?'tag-amber':p.badge==='Agriculture'?'tag-green':p.badge==='AAM'?'tag-accent':'tag-accent';
+    return `<div class="entity-card" onclick="openProduit('${p.id}')">
+      <div class="entity-card-top">
+        <div style="font-size:28px;flex-shrink:0;">${p.emoji||'🚁'}</div>
+        <div>
+          <div class="entity-name">${p.name}</div>
+          <div class="entity-sub">${p.societe_name||''} ${p.type_drone ? '· ' + p.type_drone : ''}</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;">${(p.description||'Cliquer pour enrichir via IA').slice(0,100)}${p.description && p.description.length > 100 ? '...' : ''}</p>
+      <div class="entity-footer">
+        <div class="entity-tags">${tagHtml(p.badge||'Civil', badgeCls)}${p.prix ? ' <span class="tag tag-gray">'+p.prix+'</span>' : ''}</div>
+        <span class="entity-updated"><span class="upd-dot ${stale?'stale':''}"></span>${stale?'À actualiser':'À jour'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 async function init() {
   await Promise.all([loadSocietes(), loadAllProduits()]);
+  renderSocietes();
+  renderProduits();
   renderDashboard();
+  // Check if DB is empty and suggest seed
+  if (!societes.length) {
+    setTimeout(() => {
+      if (confirm("La base de référence est vide. Voulez-vous l'initialiser avec les principaux fabricants et drones du secteur ?")) initSeed();
+    }, 500);
+  }
 }
 
 init();
