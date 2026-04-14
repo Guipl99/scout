@@ -608,7 +608,7 @@ async function doRefresh() {
   const btn = document.getElementById('btn-refresh');
 
   dot.classList.add('loading');
-  document.getElementById('a-info').textContent = 'Recherche en cours...';
+  document.getElementById('a-info').textContent = 'Recherche web en cours...';
   btn.textContent = 'Recherche...';
   btn.disabled = true;
   el.innerHTML = '<span class="cursor"></span>';
@@ -617,32 +617,77 @@ async function doRefresh() {
     const res = await fetch(API_BASE + '/analyse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: c.name,
-        url: c.url,
-        secteur: c.secteur || '',
-        signals: c.signals || []
-      })
+      body: JSON.stringify({ name: c.name, url: c.url, secteur: c.secteur || '', signals: c.signals || [] })
     });
     if (!res.ok) throw new Error('Erreur serveur ' + res.status);
     const data = await res.json();
-    const text = data.analysis || 'Aucun résultat.';
-    el.textContent = '';
-    let i = 0;
-    const iv = setInterval(() => {
-      if (i < text.length) { el.textContent += text[i++]; }
-      else {
-        clearInterval(iv);
-        dot.classList.remove('loading');
-        document.getElementById('a-info').textContent = 'Actualisé à l\'instant';
-        btn.textContent = 'Actualiser via IA';
-        btn.disabled = false;
-        if (!DB[currentId]) DB[currentId] = { id: currentId };
-        DB[currentId].analyse = text;
-      }
-    }, 15);
+
+    if (data.profile) {
+      const p = data.profile;
+      // Mettre à jour DB
+      if (!DB[currentId]) DB[currentId] = { id: currentId, name: c.name, url: c.url, color: c.color, secteur: c.secteur, signals: c.signals };
+      const f = DB[currentId];
+      if (p.ca) { f.ca = p.ca; f.caD = p.caD || ''; }
+      if (p.clients) { f.cl = p.clients; f.clD = p.clientsD || ''; }
+      if (p.employes) { f.em = p.employes; f.emD = p.employesD || ''; }
+      if (p.prixEntree) { f.pr = p.prixEntree; f.prD = p.prixD || ''; }
+      if (p.info) f.info = p.info;
+      if (p.sources) f.sources = p.sources;
+      if (p.features) f.features = p.features;
+      if (p.pricing) f.pricing = p.pricing;
+      if (p.clients_info) f.ctab = p.clients_info;
+      if (p.analyse) f.analyse = p.analyse;
+      f.updatedAt = 'À l\'instant';
+
+      // Mettre à jour l'affichage des KPIs
+      document.getElementById('d-ca').textContent = f.ca || '—';
+      document.getElementById('d-ca-d').textContent = f.caD || '';
+      document.getElementById('d-cl').textContent = f.cl || '—';
+      document.getElementById('d-cl-d').textContent = f.clD || '';
+      document.getElementById('d-em').textContent = f.em || '—';
+      document.getElementById('d-em-d').textContent = f.emD || '';
+      document.getElementById('d-pr').textContent = f.pr || '—';
+      document.getElementById('d-pr-d').textContent = f.prD || '';
+
+      // Mettre à jour Vue générale
+      document.getElementById('d-info').innerHTML = (f.info||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+      document.getElementById('d-src').innerHTML = (f.sources||[]).map(s => `<span class="src-badge">${s}</span>`).join('');
+
+      // Mettre à jour Produit
+      document.getElementById('d-feat').innerHTML = (f.features||[]).map(x => `<div class="feat-row"><div class="feat-dot"></div><div class="feat-text">${x.t}<span class="badge ${x.n?'new':''}">${x.b}</span></div></div>`).join('');
+
+      // Mettre à jour Prix
+      document.getElementById('d-pricing').innerHTML = (f.pricing||[]).map(p2 => `<div class="pricing-tier"><div class="pricing-name">${p2.name}</div><div class="pricing-price">${p2.price}</div><div class="pricing-feat">${p2.feat}</div></div>`).join('');
+
+      // Mettre à jour Clients
+      document.getElementById('d-ctab').innerHTML = (f.ctab||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+
+      // Streamer l'analyse
+      const text = f.analyse || '';
+      el.textContent = '';
+      let i = 0;
+      const iv = setInterval(() => {
+        if (i < text.length) { el.textContent += text[i++]; }
+        else {
+          clearInterval(iv);
+          dot.classList.remove('loading');
+          document.getElementById('a-info').textContent = 'Fiche complète — actualisée à l\'instant';
+          btn.textContent = 'Actualiser via IA';
+          btn.disabled = false;
+        }
+      }, 12);
+    } else {
+      // Fallback texte brut
+      const text = data.analysis || 'Aucun résultat.';
+      el.textContent = '';
+      let i = 0;
+      const iv = setInterval(() => {
+        if (i < text.length) { el.textContent += text[i++]; }
+        else { clearInterval(iv); dot.classList.remove('loading'); btn.textContent = 'Actualiser via IA'; btn.disabled = false; }
+      }, 12);
+    }
   } catch(e) {
-    el.textContent = 'Erreur : ' + e.message + '. Vérifie que le serveur est bien démarré.';
+    el.textContent = 'Erreur : ' + e.message;
     dot.classList.remove('loading');
     btn.textContent = 'Actualiser via IA';
     btn.disabled = false;
