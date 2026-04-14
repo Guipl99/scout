@@ -621,6 +621,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <!-- CONFIG -->
     <div id="panel-config" class="panel">
       <div class="topbar"><h1>Paramètres</h1></div>
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="card-header"><span class="card-title">Maintenance</span></div>
+        <div class="card-body" style="padding:0.75rem 1.25rem;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" onclick="cleanData()">Nettoyer les données corrompues</button>
+          <button class="btn btn-danger" onclick="clearCache()">Vider le cache scraping</button>
+          <span id="maint-msg" style="font-size:12px;color:var(--text3);align-self:center;"></span>
+        </div>
+      </div>
       <div class="card"><div class="card-header"><span class="card-title">Notifications</span></div><div class="card-body" style="padding:0.5rem 1.25rem;">
         <div class="toggle-row"><div><div class="tgl-label">Email quotidien</div><div class="tgl-desc">Résumé des alertes du jour</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
         <div class="toggle-row"><div><div class="tgl-label">Slack temps réel</div><div class="tgl-desc">Notifications dans un canal dédié</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
@@ -1609,6 +1617,29 @@ function setDroneImageDetail(wrapId, url) {
   img.onload = () => { el.innerHTML = `<img src="${url}" alt="" style="width:100%;height:60px;object-fit:cover;border-radius:var(--radius);">`; };
   img.onerror = () => {};
   img.src = url;
+}
+
+// ── Maintenance ───────────────────────────────────────────────
+async function cleanData() {
+  const msg = document.getElementById('maint-msg');
+  msg.textContent = 'Nettoyage en cours...';
+  try {
+    const r = await fetch(API + '/admin/clean-data', { method:'POST', headers:{'x-secret':'drone-scout-2026'} });
+    const d = await r.json();
+    msg.textContent = `✓ ${d.societes_cleaned} sociétés + ${d.produits_cleaned} drones nettoyés`;
+    setTimeout(() => msg.textContent = '', 5000);
+  } catch(e) { msg.textContent = 'Erreur: ' + e.message; }
+}
+async function clearCache() {
+  if (!confirm('Vider tout le cache ? Les fiches seront re-scrapées à la prochaine ouverture.')) return;
+  const msg = document.getElementById('maint-msg');
+  msg.textContent = 'Vidage en cours...';
+  try {
+    const r = await fetch(API + '/admin/clear-cache', { method:'POST', headers:{'x-secret':'drone-scout-2026'} });
+    const d = await r.json();
+    msg.textContent = '✓ Cache vidé';
+    setTimeout(() => msg.textContent = '', 3000);
+  } catch(e) { msg.textContent = 'Erreur: ' + e.message; }
 }
 
 // ── Seed ─────────────────────────────────────────────────────
