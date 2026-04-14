@@ -662,14 +662,18 @@ const API = 'https://scout-api-production-fa8d.up.railway.app';
 // Strip XML/HTML tags injected by AI (cite, antml:cite, etc.)
 function sanitize(text) {
   if (!text || typeof text !== 'string') return text || '—';
-  // Use DOM parser to strip all tags safely
-  const div = document.createElement('div');
-  div.innerHTML = text
-    .replace(/]*>/gi, '')
-    .replace(/<\/antml:cite>/gi, '')
-    .replace(/<cite[^>]*>/gi, '')
-    .replace(/<\/cite>/gi, '');
-  return (div.textContent || div.innerText || '').replace(/\s+/g, ' ').trim() || '—';
+  let t = text;
+  // Remove antml:cite tags with attributes
+  t = t.replace(/]*>/gi, '');
+  t = t.replace(/<\/antml:cite>/gi, '');
+  // Remove regular cite tags
+  t = t.replace(/<cite[^>]*>/gi, '');
+  t = t.replace(/<\/cite>/gi, '');
+  // Remove any remaining HTML tags
+  t = t.replace(/<[^>]+>/g, '');
+  // Normalize whitespace
+  t = t.replace(/\s+/g, ' ').trim();
+  return t || '—';
 }
 function sanitizeArr(arr) {
   if (!Array.isArray(arr)) return [];
@@ -749,12 +753,14 @@ function initials(name) { return name.slice(0,2).toUpperCase(); }
 function tagHtml(label, cls) { return `<span class="tag ${cls}">${label}</span>`; }
 function streamText(elId, text, onDone) {
   const el = document.getElementById(elId);
+  if (!el) return;
+  const clean = sanitize(text);
   el.textContent = '';
   let i = 0;
   const iv = setInterval(() => {
-    if (i < text.length) { el.textContent += text[i++]; }
+    if (i < clean.length) { el.textContent += clean[i++]; }
     else { clearInterval(iv); if (onDone) onDone(); }
-  }, 10);
+  }, 8);
 }
 
 // ── Dashboard ─────────────────────────────────────────────────
