@@ -352,38 +352,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <h1>Fabricants</h1>
 
         </div>
-        <div id="societe-form-wrap" style="display:none;margin-bottom:1.25rem;">
-          <div class="card">
-            <div class="card-header"><span class="card-title" id="societe-form-title">Nouvelle société</span></div>
-            <div class="card-body">
-              <div class="form-grid" style="margin-bottom:1rem;">
-                <div class="fg"><label>Nom du fabricant *</label><input id="sf-name" placeholder="ex: DJI, Parrot, Delair..."></div>
-                <div class="fg"><label>Site web *</label><input id="sf-url" placeholder="ex: dji.com"></div>
-                <div class="fg"><label>Segment drone</label><input id="sf-secteur" placeholder="ex: Militaire, Civil, Agriculture..."></div>
-                <div class="fg"><label>Pays</label><input id="sf-pays" placeholder="ex: Chine, France, USA..."></div>
-                <div class="fg"><label>Fréquence</label><select id="sf-freq"><option value="quotidien">Quotidien</option><option value="hebdo" selected>Hebdomadaire</option><option value="mensuel">Mensuel</option></select></div>
-                <div class="fg form-full"><label>Notes</label><textarea id="sf-notes" placeholder="Points à surveiller, contexte..."></textarea></div>
-                <div class="fg form-full"><label>Signaux à surveiller</label>
-                  <div class="signals-grid" id="sf-sigs">
-                    <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Nouveaux modèles</div>
-                    <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Prix & offres</div>
-                    <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Certifications</div>
-                    <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Levées de fonds</div>
-                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Recrutements</div>
-                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Partenariats</div>
-                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Réglementaire</div>
-                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Contrats publics</div>
-                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Presse & brevets</div>
-                  </div>
-                </div>
-              </div>
-              <div style="display:flex;gap:8px;justify-content:flex-end;">
-                
-                
-              </div>
-            </div>
-          </div>
-        </div>
+        
         <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
           <span style="font-size:12px;color:var(--text3);">Secteur :</span>
           <div id="secteur-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
@@ -459,27 +428,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <h1>Drones</h1>
 
         </div>
-        <div id="produit-form-wrap" style="display:none;margin-bottom:1.25rem;">
-          <div class="card">
-            <div class="card-header"><span class="card-title" id="produit-form-title">Nouveau produit</span></div>
-            <div class="card-body">
-              <div class="form-grid" style="margin-bottom:1rem;">
-                <div class="fg"><label>Nom du drone *</label><input id="pf-name" placeholder="ex: DJI Mavic 3, Parrot ANAFI..."></div>
-                <div class="fg"><label>Fabricant</label><select id="pf-societe"><option value="">— Aucune —</option></select></div>
-                <div class="fg"><label>Emoji</label><input id="pf-emoji" placeholder="📊" style="font-size:20px;"></div>
-                <div class="fg"><label>Usage</label><select id="pf-badge"><option value="Civil">Civil</option><option value="Militaire">Militaire</option><option value="Industriel">Industriel</option><option value="Agriculture">Agriculture</option><option value="FPV/Loisir">FPV/Loisir</option></select></div>
-                <div class="fg"><label>Prix indicatif</label><input id="pf-prix" placeholder="ex: 2 499€ ou sur devis"></div>
-                <div class="fg"><label>Type</label><select id="pf-type"><option value="">—</option><option value="Multirotor">Multirotor</option><option value="Aile fixe">Aile fixe</option><option value="VTOL">VTOL</option><option value="Hybride">Hybride</option><option value="Nano">Nano</option><option value="Cargo">Cargo</option></select></div>
-              <div class="fg"><label>Nouveau modèle ?</label><select id="pf-nouveau"><option value="false">Non</option><option value="true">Oui</option></select></div>
-                <div class="fg form-full"><label>Description</label><textarea id="pf-desc" placeholder="Type de drone, usage principal, points clés..."></textarea></div>
-              </div>
-              <div style="display:flex;gap:8px;justify-content:flex-end;">
-                
-                
-              </div>
-            </div>
-          </div>
-        </div>
+        
         <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
           <span style="font-size:12px;color:var(--text3);">Catégorie :</span>
           <div id="cat-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
@@ -540,6 +489,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div id="contracts-list-view">
         <div class="topbar">
           <h1>Contrats</h1>
+          <button class="btn btn-ghost" onclick="scrapeTenders()" id="btn-scrape-tenders" title="Scraper les appels d'offres récents via IA">🔍 Actualiser tenders</button>
           
         </div>
 
@@ -567,46 +517,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         </div>
 
         <!-- Add/Edit form -->
-        <div id="contract-form-wrap" style="display:none;margin-bottom:1.25rem;">
-          <div class="card">
-            <div class="card-header"><span class="card-title" id="contract-form-title">Nouveau contrat</span></div>
-            <div class="card-body">
-              <div class="form-grid" style="margin-bottom:1rem;">
-                <div class="fg form-full"><label>Titre du contrat / programme *</label><input id="cf-titre" placeholder="ex: Program of Record MQ-9B SkyGuardian Belgique"></div>
-                <div class="fg"><label>Fabricant</label><select id="cf-societe"><option value="">— Aucun —</option></select></div>
-                <div class="fg"><label>Client / Acheteur</label><input id="cf-client" placeholder="ex: US Army, DGA France, MoD UK..."></div>
-                <div class="fg"><label>Pays client</label><input id="cf-pays" placeholder="ex: USA, France, Israël..."></div>
-                <div class="fg"><label>Agence</label><input id="cf-agence" placeholder="ex: PEO Aviation, OCCAR, DGA..."></div>
-                <div class="fg"><label>Programme parent</label><input id="cf-programme" placeholder="ex: Army Future Vertical Lift, MALE RPAS..."></div>
-                <div class="fg"><label>Valeur</label><input id="cf-valeur" placeholder="ex: $230M, €45M, classifié"></div>
-                <div class="fg"><label>Devise</label><select id="cf-devise"><option value="USD">USD $</option><option value="EUR">EUR €</option><option value="GBP">GBP £</option></select></div>
-                <div class="fg"><label>Type</label>
-                  <select id="cf-type">
-                    <option>Program of Record</option><option>IDIQ</option><option>FMS</option>
-                    <option>Framework</option><option>Production</option><option>R&D</option>
-                    <option>Export</option><option>SBIR</option><option>OTHER</option>
-                  </select>
-                </div>
-                <div class="fg"><label>Statut</label>
-                  <select id="cf-statut">
-                    <option>Attribué</option><option>En cours</option><option>Livré</option>
-                    <option>Appel d'offres ouvert</option><option>Pending</option>
-                    <option>Suspendu</option><option>Annulé</option><option>Inconnu</option>
-                  </select>
-                </div>
-                <div class="fg"><label>Date signature</label><input id="cf-date" type="date"></div>
-                <div class="fg"><label>Date fin</label><input id="cf-datefin" type="date"></div>
-                <div class="fg form-full"><label>Drones / systèmes concernés</label><input id="cf-produits" placeholder="ex: MQ-9B SkyGuardian, Bayraktar TB2 (séparés par virgules)"></div>
-                <div class="fg form-full"><label>Description</label><textarea id="cf-desc" placeholder="Scope du contrat, livrables, conditions..."></textarea></div>
-                <div class="fg form-full"><label>Sources</label><input id="cf-sources" placeholder="ex: SAM.gov, DefenseNews.com (séparées par virgules)"></div>
-              </div>
-              <div style="display:flex;gap:8px;justify-content:flex-end;">
-                
-                
-              </div>
-            </div>
-          </div>
-        </div>
+        
 
         <div id="contracts-grid"></div>
       </div>
@@ -1375,6 +1286,36 @@ function statutClass(s) {
   return 'statut-default';
 }
 
+let contractTypeTab = 'all';
+
+function setContractTypeTab(tab) {
+  contractTypeTab = tab;
+  ['all','contracts','tenders'].forEach(t => {
+    const el = document.getElementById('ctab-' + t);
+    if (el) el.className = 'tag ' + (t === tab ? 'tag-accent' : 'tag-gray');
+  });
+  filterContracts();
+}
+
+async function scrapeTenders() {
+  const btn = document.getElementById('btn-scrape-tenders');
+  btn.disabled = true; btn.textContent = '⏳ Scraping tenders...';
+  try {
+    const r = await fetch(API + '/admin/scrape-tenders', {
+      method: 'POST', headers: { 'x-secret': 'drone-scout-2026' }
+    });
+    const d = await r.json();
+    btn.textContent = `✓ ${d.tenders_added} tenders ajoutés`;
+    await loadContracts();
+    filterContracts();
+    setContractTypeTab('tenders');
+    setTimeout(() => { btn.textContent = '🔍 Actualiser tenders'; btn.disabled = false; }, 4000);
+  } catch(e) {
+    btn.textContent = 'Erreur';
+    btn.disabled = false;
+  }
+}
+
 async function loadContracts() {
   try {
     const r = await fetch(API + '/contracts');
@@ -1431,7 +1372,7 @@ function renderContractsGrid(list) {
   const g = document.getElementById('contracts-grid');
   if (!list) list = contracts;
   if (!list.length) {
-    g.innerHTML = '<div class="empty"><span class="empty-icon">📋</span>Aucun contrat — cliquez sur "+ Ajouter" pour créer manuellement, ou enrichissez les fiches fabricants via IA.</div>';
+    g.innerHTML = '<div class="empty"><span class="empty-icon">📋</span>Aucun contrat identifié — les données sont enrichies hebdomadairement.</div>';
     return;
   }
   g.innerHTML = list.map(c => `
