@@ -7,10 +7,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Scout">
+<meta name="apple-mobile-web-app-title" content="Drone Scout">
 <meta name="theme-color" content="#0f0f0f">
 <link rel="manifest" href="manifest.json">
-<title>Scout — Veille concurrentielle</title>
+<title>Scout — Veille secteur drone</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap');
 
@@ -292,7 +292,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   <div class="sidebar">
     <div class="logo">
       <div class="logo-icon"><svg viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4" stroke="white" stroke-width="1.5"/><path d="M9 9l3 3" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>
-      <div class="logo-text">scout<span>.</span>io</div>
+      <div class="logo-text">drone<span>.</span>scout</div>
     </div>
     <div class="nav-section">Dashboard</div>
     <div class="nav-item active" id="nav-dashboard" onclick="go('dashboard')">
@@ -319,10 +319,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
     <!-- DASHBOARD -->
     <div id="panel-dashboard" class="panel active">
-      <div class="topbar"><h1>Vue d'ensemble</h1></div>
+      <div class="topbar"><h1>Veille secteur drone</h1></div>
       <div class="metrics">
-        <div class="metric"><div class="metric-label">Sociétés suivies</div><div class="metric-value" id="m-societes">0</div></div>
-        <div class="metric"><div class="metric-label">Produits suivis</div><div class="metric-value" id="m-produits">0</div></div>
+        <div class="metric"><div class="metric-label">Fabricants suivis</div><div class="metric-value" id="m-societes">0</div></div>
+        <div class="metric"><div class="metric-label">Drones suivis</div><div class="metric-value" id="m-produits">0</div></div>
         <div class="metric"><div class="metric-label">Alertes actives</div><div class="metric-value" id="m-alerts">0</div></div>
         <div class="metric"><div class="metric-label">Fiches à jour</div><div class="metric-value" id="m-fresh">0</div></div>
       </div>
@@ -338,7 +338,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div id="panel-societes" class="panel">
       <div id="societes-list-view">
         <div class="topbar">
-          <h1>Sociétés</h1>
+          <h1>Fabricants</h1>
           <button class="btn btn-primary" onclick="showSocieteForm()">+ Ajouter</button>
         </div>
         <div id="societe-form-wrap" style="display:none;margin-bottom:1.25rem;">
@@ -346,22 +346,23 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="card-header"><span class="card-title" id="societe-form-title">Nouvelle société</span></div>
             <div class="card-body">
               <div class="form-grid" style="margin-bottom:1rem;">
-                <div class="fg"><label>Nom *</label><input id="sf-name" placeholder="ex: HubSpot"></div>
-                <div class="fg"><label>Site web *</label><input id="sf-url" placeholder="ex: hubspot.com"></div>
-                <div class="fg"><label>Secteur</label><input id="sf-secteur" placeholder="ex: CRM SaaS B2B"></div>
+                <div class="fg"><label>Nom du fabricant *</label><input id="sf-name" placeholder="ex: DJI, Parrot, Delair..."></div>
+                <div class="fg"><label>Site web *</label><input id="sf-url" placeholder="ex: dji.com"></div>
+                <div class="fg"><label>Segment drone</label><input id="sf-secteur" placeholder="ex: Militaire, Civil, Agriculture..."></div>
+                <div class="fg"><label>Pays</label><input id="sf-pays" placeholder="ex: Chine, France, USA..."></div>
                 <div class="fg"><label>Fréquence</label><select id="sf-freq"><option value="quotidien">Quotidien</option><option value="hebdo" selected>Hebdomadaire</option><option value="mensuel">Mensuel</option></select></div>
                 <div class="fg form-full"><label>Notes</label><textarea id="sf-notes" placeholder="Points à surveiller, contexte..."></textarea></div>
                 <div class="fg form-full"><label>Signaux à surveiller</label>
                   <div class="signals-grid" id="sf-sigs">
+                    <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Nouveaux modèles</div>
                     <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Prix & offres</div>
-                    <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Fonctionnalités</div>
-                    <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Recrutements</div>
-                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>SEO & contenu</div>
-                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Réseaux sociaux</div>
-                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Avis clients</div>
+                    <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Certifications</div>
+                    <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Levées de fonds</div>
+                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Recrutements</div>
                     <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Partenariats</div>
-                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Levées de fonds</div>
-                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Presse</div>
+                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Réglementaire</div>
+                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Contrats publics</div>
+                    <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Presse & brevets</div>
                   </div>
                 </div>
               </div>
@@ -388,16 +389,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           </div>
         </div>
         <div class="kpi-row">
-          <div class="kpi-card"><div class="kpi-label">CA</div><div class="kpi-value" id="s-ca">—</div><div class="kpi-delta" id="s-ca-d"></div></div>
-          <div class="kpi-card"><div class="kpi-label">Clients</div><div class="kpi-value" id="s-cl">—</div><div class="kpi-delta" id="s-cl-d"></div></div>
+          <div class="kpi-card"><div class="kpi-label">CA estimé</div><div class="kpi-value" id="s-ca">—</div><div class="kpi-delta" id="s-ca-d"></div></div>
+          <div class="kpi-card"><div class="kpi-label">Nb modèles</div><div class="kpi-value" id="s-cl">—</div><div class="kpi-delta" id="s-cl-d"></div></div>
           <div class="kpi-card"><div class="kpi-label">Employés</div><div class="kpi-value" id="s-em">—</div><div class="kpi-delta" id="s-em-d"></div></div>
-          <div class="kpi-card"><div class="kpi-label">Prix entrée</div><div class="kpi-value" id="s-pr">—</div><div class="kpi-delta" id="s-pr-d"></div></div>
+          <div class="kpi-card"><div class="kpi-label">Prix de base</div><div class="kpi-value" id="s-pr">—</div><div class="kpi-delta" id="s-pr-d"></div></div>
         </div>
         <div class="tabs">
           <div class="tab active" onclick="showSTab('overview',this)">Général</div>
-          <div class="tab" onclick="showSTab('produits',this)">Produits</div>
-          <div class="tab" onclick="showSTab('pricing',this)">Prix</div>
-          <div class="tab" onclick="showSTab('clients',this)">Clients</div>
+          <div class="tab" onclick="showSTab('produits',this)">Gamme drones</div>
+          <div class="tab" onclick="showSTab('pricing',this)">Financement</div>
+          <div class="tab" onclick="showSTab('clients',this)">Marchés</div>
           <div class="tab" onclick="showSTab('recrutement',this)">Recrutement</div>
           <div class="tab" onclick="showSTab('analyse',this)">Analyse IA</div>
         </div>
@@ -406,11 +407,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="card"><div class="card-header"><span class="card-title">Sources</span></div><div class="card-body" id="s-src"></div></div>
         </div>
         <div id="st-produits" class="tabpanel">
-          <div class="card"><div class="card-header"><span class="card-title">Produits détectés</span><button class="btn btn-sm btn-primary" onclick="addProduitFromSociete()">+ Ajouter</button></div>
+          <div class="card"><div class="card-header"><span class="card-title">Drones détectés</span><button class="btn btn-sm btn-primary" onclick="addProduitFromSociete()">+ Ajouter</button></div>
           <div class="card-body"><div class="product-grid" id="s-produits-grid"></div></div></div>
         </div>
         <div id="st-pricing" class="tabpanel"><div class="pricing-grid" id="s-pricing"></div></div>
-        <div id="st-clients" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Clients & contrats</span></div><div class="card-body"><table class="info-table" id="s-ctab"></table></div></div></div>
+        <div id="st-clients" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Marchés & opérateurs</span></div><div class="card-body"><table class="info-table" id="s-ctab"></table></div></div></div>
         <div id="st-recrutement" class="tabpanel">
           <div class="card"><div class="card-header"><span class="card-title">Recrutements actifs</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="s-recruits"></div></div>
           <div class="card"><div class="card-header"><span class="card-title">Historique</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="s-recruit-history"></div></div>
@@ -429,7 +430,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div id="panel-produits-db" class="panel">
       <div id="produits-list-view">
         <div class="topbar">
-          <h1>Produits</h1>
+          <h1>Drones</h1>
           <button class="btn btn-primary" onclick="showProduitForm()">+ Ajouter</button>
         </div>
         <div id="produit-form-wrap" style="display:none;margin-bottom:1.25rem;">
@@ -437,13 +438,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="card-header"><span class="card-title" id="produit-form-title">Nouveau produit</span></div>
             <div class="card-body">
               <div class="form-grid" style="margin-bottom:1rem;">
-                <div class="fg"><label>Nom du produit *</label><input id="pf-name" placeholder="ex: HubSpot CRM"></div>
-                <div class="fg"><label>Société liée</label><select id="pf-societe"><option value="">— Aucune —</option></select></div>
+                <div class="fg"><label>Nom du drone *</label><input id="pf-name" placeholder="ex: DJI Mavic 3, Parrot ANAFI..."></div>
+                <div class="fg"><label>Fabricant</label><select id="pf-societe"><option value="">— Aucune —</option></select></div>
                 <div class="fg"><label>Emoji</label><input id="pf-emoji" placeholder="📊" style="font-size:20px;"></div>
-                <div class="fg"><label>Badge</label><select id="pf-badge"><option value="Core">Core</option><option value="Nouveau">Nouveau</option><option value="Premium">Premium</option></select></div>
-                <div class="fg"><label>Prix</label><input id="pf-prix" placeholder="ex: $45/mois"></div>
-                <div class="fg"><label>Nouveau ?</label><select id="pf-nouveau"><option value="false">Non</option><option value="true">Oui</option></select></div>
-                <div class="fg form-full"><label>Description courte</label><textarea id="pf-desc" placeholder="Ce que fait ce produit en 1-2 phrases..."></textarea></div>
+                <div class="fg"><label>Usage</label><select id="pf-badge"><option value="Civil">Civil</option><option value="Militaire">Militaire</option><option value="Industriel">Industriel</option><option value="Agriculture">Agriculture</option><option value="FPV/Loisir">FPV/Loisir</option></select></div>
+                <div class="fg"><label>Prix indicatif</label><input id="pf-prix" placeholder="ex: 2 499€ ou sur devis"></div>
+                <div class="fg"><label>Type</label><select id="pf-type"><option value="">—</option><option value="Multirotor">Multirotor</option><option value="Aile fixe">Aile fixe</option><option value="VTOL">VTOL</option><option value="Hybride">Hybride</option><option value="Nano">Nano</option><option value="Cargo">Cargo</option></select></div>
+              <div class="fg"><label>Nouveau modèle ?</label><select id="pf-nouveau"><option value="false">Non</option><option value="true">Oui</option></select></div>
+                <div class="fg form-full"><label>Description</label><textarea id="pf-desc" placeholder="Type de drone, usage principal, points clés..."></textarea></div>
               </div>
               <div style="display:flex;gap:8px;justify-content:flex-end;">
                 <button class="btn btn-ghost" onclick="hideProduitForm()">Annuler</button>
@@ -469,8 +471,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         </div>
         <div class="tabs">
           <div class="tab active" onclick="showPTab('overview',this)">Vue générale</div>
-          <div class="tab" onclick="showPTab('features',this)">Fonctionnalités</div>
-          <div class="tab" onclick="showPTab('specs',this)">Specs</div>
+          <div class="tab" onclick="showPTab('features',this)">Technologie</div>
+          <div class="tab" onclick="showPTab('specs',this)">Specs techniques</div>
           <div class="tab" onclick="showPTab('changelog',this)">Changelog</div>
           <div class="tab" onclick="showPTab('analyse',this)">Analyse IA</div>
         </div>
@@ -481,8 +483,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="pros"><div class="pros-title">Avantages</div><div id="p-pros"></div></div>
             <div class="cons"><div class="cons-title">Limites</div><div id="p-cons"></div></div>
           </div>
+          <div id="p-extra" style="margin-top:1rem;"></div>
         </div>
-        <div id="pt-features" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Fonctionnalités</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="p-features"></div></div></div>
+        <div id="pt-features" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Fonctionnalités & technologie</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="p-features"></div></div></div>
         <div id="pt-specs" class="tabpanel"><div class="specs-grid" id="p-specs"></div></div>
         <div id="pt-changelog" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Changelog</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="p-changelog"></div></div></div>
         <div id="pt-analyse" class="tabpanel">
@@ -628,14 +631,14 @@ async function loadSocietes() {
 
 function renderSocietes() {
   const g = document.getElementById('societes-grid');
-  if (!societes.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span class="empty-icon">🏢</span>Aucune société — cliquez sur "+ Ajouter"</div>'; return; }
+  if (!societes.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span class="empty-icon">🏭</span>Aucun fabricant — cliquez sur "+ Ajouter"</div>'; return; }
   g.innerHTML = societes.map((s, i) => {
     const data = s.data || {};
     const stale = !s.scraped_at || (Date.now() - new Date(s.scraped_at)) / 86400000 > 7;
     return `<div class="entity-card" onclick="openSociete('${s.id}')">
       <div class="entity-card-top">
         <div class="avatar ${avatarClass(i)}">${initials(s.name)}</div>
-        <div><div class="entity-name">${s.name}</div><div class="entity-sub">${s.url}${s.secteur ? ' · ' + s.secteur : ''}</div></div>
+        <div><div class="entity-name">${s.name}</div><div class="entity-sub">${s.url}${s.pays ? ' · ' + s.pays : ''}${s.secteur ? ' · ' + s.secteur : ''}</div></div>
       </div>
       ${data.ca ? `<div class="entity-kpis">
         <div class="entity-kpi"><div class="entity-kpi-label">CA</div><div class="entity-kpi-value">${data.ca}</div></div>
@@ -686,7 +689,7 @@ async function loadSocieteFiche(id, s) {
   document.getElementById('s-info').textContent = 'Chargement...';
 
   try {
-    const url = API + '/societes/' + id + '/fiche?name=' + encodeURIComponent(s.name) + '&url=' + encodeURIComponent(s.url) + '&secteur=' + encodeURIComponent(s.secteur||'') + '&signals=' + encodeURIComponent((s.signals||[]).join(','));
+    const url = API + '/societes/' + id + '/fiche?name=' + encodeURIComponent(s.name) + '&url=' + encodeURIComponent(s.url) + '&pays=' + encodeURIComponent(s.pays||'') + '&secteur=' + encodeURIComponent(s.secteur||'') + '&signals=' + encodeURIComponent((s.signals||[]).join(','));
     const r = await fetch(url);
     const d = await r.json();
     if (d.profile) {
@@ -704,8 +707,8 @@ async function loadSocieteFiche(id, s) {
 function fillSocieteDetail(p, fromCache, scrapedAt) {
   document.getElementById('s-ca').textContent = p.ca || '—';
   document.getElementById('s-ca-d').textContent = p.caD || '';
-  document.getElementById('s-cl').textContent = p.clients || '—';
-  document.getElementById('s-cl-d').textContent = p.clientsD || '';
+  document.getElementById('s-cl').textContent = p.nb_modeles || (p.gamme_produits ? p.gamme_produits.length + ' modèles' : '—');
+  document.getElementById('s-cl-d').textContent = p.marches ? p.marches.slice(0,30) : '';
   document.getElementById('s-em').textContent = p.employes || '—';
   document.getElementById('s-em-d').textContent = p.employesD || '';
   document.getElementById('s-pr').textContent = p.prixEntree || '—';
@@ -722,7 +725,21 @@ function fillSocieteDetail(p, fromCache, scrapedAt) {
     ? '<div class="pricing-grid">' + (p.pricing||[]).map(pl => `<div class="pricing-tier"><div class="pricing-name">${pl.name}</div><div class="pricing-price">${pl.price}</div><div class="pricing-feat">${pl.feat}</div></div>`).join('') + '</div>'
     : '<div class="empty"><span style="color:var(--text3);">Aucune donnée</span></div>';
 
-  document.getElementById('s-ctab').innerHTML = (p.clients_info||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+  // Marchés & certifications
+  const marcheData = [
+    ['Marchés', p.marches || '—'],
+    ['Pays de fabrication', p.pays_fabrication || '—'],
+    ['Certifications', (p.certifications||[]).join(', ') || '—'],
+    ['Clients notables', (p.clients_notables||[]).join(', ') || '—'],
+    ['Partenariats', (p.partenariats||[]).join(', ') || '—'],
+  ];
+  document.getElementById('s-ctab').innerHTML = marcheData.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+
+  // Levées de fonds dans la section pricing
+  const levees = p.levees_fonds || [];
+  document.getElementById('s-pricing').innerHTML = levees.length
+    ? '<div style="display:flex;flex-direction:column;gap:8px;">' + levees.map(l => `<div class="pricing-tier"><div class="pricing-name">${l.serie || 'Levée'} · ${l.date || '—'}</div><div class="pricing-price">${l.montant || '—'}</div><div class="pricing-feat">${l.investisseurs || '—'}</div></div>`).join('') + '</div>'
+    : '<div class="empty"><span style="color:var(--text3);">Aucune levée de fonds connue</span></div>';
 
   // recruits
   const ra = p.recrutements_actifs || [];
@@ -747,11 +764,11 @@ async function loadSocieteProduits(societeId) {
     const prods = d.produits || [];
     if (!prods.length) { grid.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:1rem 0;grid-column:1/-1;">Aucun produit lié. Cliquez sur Forcer mise à jour pour détecter automatiquement.</div>'; return; }
     grid.innerHTML = prods.map(p => `<div class="product-card" onclick="go('produits-db');setTimeout(()=>openProduit('${p.id}'),100)">
-      <span class="product-emoji">${p.emoji||'📦'}</span>
+      <span class="product-emoji">${p.emoji||'🚁'}</span>
       <div class="product-name">${p.name}</div>
-      <div class="product-company">${p.prix||'—'}</div>
+      <div class="product-company">${p.type_drone||''} ${p.prix ? '· ' + p.prix : ''}</div>
       <div class="product-desc">${p.description||'Cliquer pour enrichir via IA'}</div>
-      <div style="margin-top:8px;">${tagHtml(p.badge||'Core', p.badge==='Nouveau'?'tag-accent':p.badge==='Premium'?'tag-amber':'tag-gray')}</div>
+      <div style="margin-top:8px;">${tagHtml(p.badge||'Civil', p.badge==='Militaire'?'tag-red':p.badge==='Industriel'?'tag-amber':p.badge==='Agriculture'?'tag-green':'tag-accent')}</div>
     </div>`).join('');
     // Merge into global produits list
     prods.forEach(p => { if (!produits.find(x => x.id === p.id)) produits.push(p); });
@@ -769,7 +786,7 @@ function backToSocietes() {
 function showSocieteForm(editId) {
   editingSocieteId = editId || null;
   const s = editId ? societes.find(x => x.id === editId) : null;
-  document.getElementById('societe-form-title').textContent = s ? 'Modifier ' + s.name : 'Nouvelle société';
+  document.getElementById('societe-form-title').textContent = s ? 'Modifier ' + s.name : 'Nouveau fabricant';
   document.getElementById('sf-name').value = s ? s.name : '';
   document.getElementById('sf-url').value = s ? s.url : '';
   document.getElementById('sf-secteur').value = s ? (s.secteur||'') : '';
@@ -788,7 +805,7 @@ async function saveSociete() {
   if (!name || !url) { alert('Nom et URL requis'); return; }
   const id = editingSocieteId || name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'') + '_' + Date.now();
   const signals = Array.from(document.querySelectorAll('#sf-sigs .sig.on')).map(e => e.textContent.trim());
-  const body = { id, name, url, secteur: document.getElementById('sf-secteur').value.trim(), signals, freq: document.getElementById('sf-freq').value, notes: document.getElementById('sf-notes').value.trim() };
+  const body = { id, name, url, pays: document.getElementById('sf-pays').value.trim(), secteur: document.getElementById('sf-secteur').value.trim(), signals, freq: document.getElementById('sf-freq').value, notes: document.getElementById('sf-notes').value.trim() };
   try {
     await fetch(API + '/societes', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
     await loadSocietes();
@@ -856,7 +873,7 @@ async function loadAllProduits() {
 
 function renderProduits() {
   const g = document.getElementById('produits-grid');
-  if (!produits.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span class="empty-icon">📦</span>Aucun produit — ajoutez une société et actualisez pour détecter automatiquement</div>'; return; }
+  if (!produits.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span class="empty-icon">🚁</span>Aucun drone — ajoutez un fabricant et actualisez pour détecter automatiquement</div>'; return; }
   g.innerHTML = produits.map((p, i) => {
     const stale = !p.scraped_at || (Date.now() - new Date(p.scraped_at)) / 86400000 > 7;
     return `<div class="entity-card" onclick="openProduit('${p.id}')">
@@ -914,6 +931,16 @@ async function openProduit(id) {
 function fillProduitDetail(d, produit, fromCache, scrapedAt) {
   document.getElementById('p-desc').textContent = d.description || '—';
   document.getElementById('p-prix').textContent = d.prix || (produit && produit.prix) || '—';
+  // Cas d'usage, homologations, concurrents
+  const casUsage = d.cas_usage || [];
+  const homologs = d.homologations || [];
+  const concurrents = d.concurrents_directs || [];
+  let extraHtml = '';
+  if (casUsage.length) extraHtml += "<div style='margin-top:1rem;'><div style='font-size:11px;color:var(--text3);margin-bottom:6px;'>CAS D'USAGE</div>" + casUsage.map(c => "<span class='tag tag-accent' style='margin:2px;'>" + c + "</span>").join('') + "</div>";
+  if (homologs.length) extraHtml += "<div style='margin-top:0.75rem;'><div style='font-size:11px;color:var(--text3);margin-bottom:6px;'>HOMOLOGATIONS</div>" + homologs.map(h => "<span class='tag tag-green' style='margin:2px;'>" + h + "</span>").join('') + "</div>";
+  if (concurrents.length) extraHtml += "<div style='margin-top:0.75rem;'><div style='font-size:11px;color:var(--text3);margin-bottom:6px;'>CONCURRENTS</div>" + concurrents.map(c => "<span class='tag tag-gray' style='margin:2px;'>" + c + "</span>").join('') + "</div>";
+  const extraEl = document.getElementById('p-extra');
+  if (extraEl) extraEl.innerHTML = extraHtml;
   document.getElementById('p-info').textContent = fromCache ? 'Cache du ' + new Date(scrapedAt).toLocaleDateString('fr-FR') : 'Mis à jour le ' + new Date(scrapedAt||Date.now()).toLocaleDateString('fr-FR');
   document.getElementById('p-ts').textContent = scrapedAt ? new Date(scrapedAt).toLocaleDateString('fr-FR') : '';
 
@@ -970,8 +997,9 @@ async function saveProduit() {
   const body = {
     id, name,
     societeId: document.getElementById('pf-societe').value || null,
-    emoji: document.getElementById('pf-emoji').value.trim() || '📦',
+    emoji: document.getElementById('pf-emoji').value.trim() || '🚁',
     badge: document.getElementById('pf-badge').value,
+    type_drone: document.getElementById('pf-type') ? document.getElementById('pf-type').value : '',
     prix: document.getElementById('pf-prix').value.trim(),
     description: document.getElementById('pf-desc').value.trim(),
     nouveau: document.getElementById('pf-nouveau').value === 'true'
