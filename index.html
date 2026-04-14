@@ -665,18 +665,21 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 <script>
 const API = 'https://scout-api-production-fa8d.up.railway.app';
 
-// Strip XML/HTML tags injected by AI (cite, antml:cite, etc.)
+// Strip cite tags and all HTML from AI responses
 function sanitize(text) {
   if (!text || typeof text !== 'string') return text || '—';
   let t = text;
-  // Remove antml:cite tags with attributes
+  // Remove ... blocks entirely (content inside too)
+  t = t.replace(/]*>[\s\S]*?<\/antml:cite>/gi, ' ');
+  // Remove opening antml:cite tags (without closing counterpart)
   t = t.replace(/]*>/gi, '');
   t = t.replace(/<\/antml:cite>/gi, '');
-  // Remove regular cite tags
+  // Remove <cite ...>...</cite> — keep inner text
+  t = t.replace(/<cite[^>]*>([\s\S]*?)<\/cite>/gi, '$1');
   t = t.replace(/<cite[^>]*>/gi, '');
   t = t.replace(/<\/cite>/gi, '');
   // Remove any remaining HTML tags
-  t = t.replace(/<[^>]+>/g, '');
+  t = t.replace(/<[^>]{0,200}>/g, '');
   // Normalize whitespace
   t = t.replace(/\s+/g, ' ').trim();
   return t || '—';
