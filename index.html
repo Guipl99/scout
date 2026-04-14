@@ -438,32 +438,73 @@ function renderGrid() {
 }
 
 function openDetail(id) {
-  const f = DB[id];
-  if (!f) { alert('Fiche non encore disponible pour ce concurrent.'); return; }
+  const c = competitors.find(x => x.id === id);
+  if (!c) return;
   currentId = id;
+
+  // Si pas de fiche DB, on crée une fiche vide à partir des infos du concurrent
+  let f = DB[id];
+  if (!f) {
+    f = {
+      id, name: c.name, url: c.url, color: c.color,
+      secteur: c.secteur || '—', freq: c.freq,
+      signals: c.signals || [],
+      updatedAt: 'Non enrichie',
+      ca: c.ca || '—', caD: '', cl: '—', clD: '',
+      em: c.employees || '—', emD: '', pr: '—', prD: '',
+      info: [
+        ['Site web', c.url],
+        ['Secteur', c.secteur || '—'],
+        ['Fréquence', c.freq || '—'],
+        ['Notes', c.notes || '—']
+      ],
+      sources: [],
+      features: [],
+      pricing: [],
+      ctab: [],
+      analyse: ''
+    };
+  }
+
   document.getElementById('view-grid').style.display = 'none';
   document.getElementById('view-detail').style.display = 'block';
   const av = document.getElementById('d-av');
-  av.className = 'fiche-av ' + f.color;
+  av.className = 'fiche-av ' + (c.color || 'av-purple');
   av.textContent = f.name.slice(0,2).toUpperCase();
   document.getElementById('d-name').textContent = f.name;
-  document.getElementById('d-url').textContent = f.url + ' · ' + f.secteur;
-  document.getElementById('d-tags').innerHTML = f.signals.map(s => `<span class="tag tag-p">${s}</span>`).join('');
-  document.getElementById('d-ca').textContent = f.ca;
-  document.getElementById('d-ca-d').textContent = f.caD;
-  document.getElementById('d-cl').textContent = f.cl;
-  document.getElementById('d-cl-d').textContent = f.clD;
-  document.getElementById('d-em').textContent = f.em;
-  document.getElementById('d-em-d').textContent = f.emD;
-  document.getElementById('d-pr').textContent = f.pr;
-  document.getElementById('d-pr-d').textContent = f.prD;
-  document.getElementById('d-info').innerHTML = f.info.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
-  document.getElementById('d-src').innerHTML = f.sources.map(s => `<span class="src-badge">${s}</span>`).join('');
-  document.getElementById('d-feat').innerHTML = f.features.map(x => `<div class="feat-row"><div class="feat-dot"></div><div class="feat-text">${x.t}<span class="badge ${x.n?'new':''}">${x.b}</span></div></div>`).join('');
-  document.getElementById('d-pricing').innerHTML = f.pricing.map(p => `<div class="pricing-tier"><div class="pricing-name">${p.name}</div><div class="pricing-price">${p.price}</div><div class="pricing-feat">${p.feat}</div></div>`).join('');
-  document.getElementById('d-ctab').innerHTML = f.ctab.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
-  document.getElementById('d-analyse').textContent = f.analyse;
-  showTab('overview', document.querySelector('.tab'));
+  document.getElementById('d-url').textContent = f.url + (f.secteur !== '—' ? ' · ' + f.secteur : '');
+  document.getElementById('d-tags').innerHTML = (f.signals||[]).map(s => `<span class="tag tag-p">${s}</span>`).join('');
+  document.getElementById('d-ca').textContent = f.ca || '—';
+  document.getElementById('d-ca-d').textContent = f.caD || '';
+  document.getElementById('d-cl').textContent = f.cl || '—';
+  document.getElementById('d-cl-d').textContent = f.clD || '';
+  document.getElementById('d-em').textContent = f.em || '—';
+  document.getElementById('d-em-d').textContent = f.emD || '';
+  document.getElementById('d-pr').textContent = f.pr || '—';
+  document.getElementById('d-pr-d').textContent = f.prD || '';
+  document.getElementById('d-info').innerHTML = (f.info||[]).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+  document.getElementById('d-src').innerHTML = (f.sources||[]).length
+    ? f.sources.map(s => `<span class="src-badge">${s}</span>`).join('')
+    : '<span style="font-size:13px;color:#bbb;">Cliquez sur "Actualiser via IA" pour enrichir cette fiche automatiquement.</span>';
+  document.getElementById('d-feat').innerHTML = (f.features||[]).length
+    ? f.features.map(x => `<div class="feat-row"><div class="feat-dot"></div><div class="feat-text">${x.t}<span class="badge ${x.n?'new':''}">${x.b}</span></div></div>`).join('')
+    : '<div style="font-size:13px;color:#bbb;padding:1rem 0;">Cliquez sur "Actualiser via IA" pour enrichir cette fiche.</div>';
+  document.getElementById('d-pricing').innerHTML = (f.pricing||[]).length
+    ? f.pricing.map(p => `<div class="pricing-tier"><div class="pricing-name">${p.name}</div><div class="pricing-price">${p.price}</div><div class="pricing-feat">${p.feat}</div></div>`).join('')
+    : '<div style="font-size:13px;color:#bbb;padding:1rem;">Cliquez sur "Actualiser via IA" pour enrichir cette fiche.</div>';
+  document.getElementById('d-ctab').innerHTML = (f.ctab||[]).length
+    ? f.ctab.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')
+    : '<tr><td colspan="2" style="color:#bbb;font-size:13px;">Cliquez sur "Actualiser via IA" pour enrichir cette fiche.</td></tr>';
+
+  // Si pas encore d'analyse, on la lance automatiquement
+  if (!f.analyse) {
+    document.getElementById('d-analyse').textContent = '';
+    showTab('analyse', document.querySelectorAll('.tab')[4]);
+    setTimeout(() => doRefresh(), 300);
+  } else {
+    document.getElementById('d-analyse').textContent = f.analyse;
+    showTab('overview', document.querySelector('.tab'));
+  }
 }
 
 function backToGrid() {
