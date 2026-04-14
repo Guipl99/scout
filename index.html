@@ -242,11 +242,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     </div>
     <div class="section">
       <div class="section-header"><span class="section-title">Dernières alertes</span></div>
-      <div class="section-body" style="padding:0.5rem 1.25rem;">
-        <div class="alert-row"><div class="alert-dot dot-red"></div><div class="alert-text"><strong>HubSpot</strong> a baissé ses prix de 20% sur le plan Pro<div class="alert-meta">Prix · Il y a 2h</div></div></div>
-        <div class="alert-row"><div class="alert-dot dot-amber"></div><div class="alert-text"><strong>Salesforce</strong> a publié 3 nouvelles offres d'emploi en ingénierie IA<div class="alert-meta">Recrutement · Il y a 5h</div></div></div>
-        <div class="alert-row"><div class="alert-dot dot-teal"></div><div class="alert-text"><strong>Pipedrive</strong> a lancé une nouvelle intégration Slack<div class="alert-meta">Produit · Il y a 1j</div></div></div>
-      </div>
+      <div class="section-body" style="padding:0.5rem 1.25rem;" id="alerts-list"></div>
     </div>
   </div>
 
@@ -471,6 +467,46 @@ const DEFAULT_COMPETITORS = [
   {id:'pipedrive',name:'Pipedrive',url:'pipedrive.com',color:'av-coral',signals:['Fonctionnalités','Réseaux sociaux'],freq:'Hebdo',secteur:'CRM PME'},
 ];
 
+const ALL_ALERTS = [
+  {id:'hubspot', color:'dot-red', text:'a baissé ses prix de 20% sur le plan Pro', meta:'Prix · Il y a 2h'},
+  {id:'salesforce', color:'dot-amber', text:'a publié 3 nouvelles offres d'emploi en ingénierie IA', meta:'Recrutement · Il y a 5h'},
+  {id:'pipedrive', color:'dot-teal', text:'a lancé une nouvelle intégration Slack', meta:'Produit · Il y a 1j'},
+];
+
+function loadAlerts() {
+  try {
+    const saved = localStorage.getItem('veille_alerts');
+    return saved ? JSON.parse(saved) : ALL_ALERTS;
+  } catch(e) { return ALL_ALERTS; }
+}
+
+function saveAlerts() {
+  try { localStorage.setItem('veille_alerts', JSON.stringify(alerts)); } catch(e) {}
+}
+
+let alerts = loadAlerts();
+
+function renderAlerts() {
+  const el = document.getElementById('alerts-list');
+  if (!el) return;
+  // Filtrer pour ne garder que les alertes des concurrents existants
+  const activeIds = competitors.map(c => c.id);
+  const visible = alerts.filter(a => activeIds.includes(a.id));
+  if (!visible.length) {
+    el.innerHTML = '<div style="font-size:13px;color:#bbb;padding:0.5rem 0;">Aucune alerte pour vos concurrents actuels.</div>';
+  } else {
+    el.innerHTML = visible.map(a => {
+      const c = competitors.find(x => x.id === a.id);
+      return `<div class="alert-row">
+        <div class="alert-dot ${a.color}"></div>
+        <div class="alert-text"><strong>${c ? c.name : a.id}</strong> ${a.text}<div class="alert-meta">${a.meta}</div></div>
+      </div>`;
+    }).join('');
+  }
+  // Mettre à jour le compteur
+  document.getElementById('m-count').textContent = competitors.length;
+}
+
 function loadCompetitors() {
   try {
     const saved = localStorage.getItem('veille_competitors');
@@ -494,7 +530,11 @@ function go(id) {
   if (bn) bn.classList.add('active');
   if (id === 'fiches') renderGrid();
   if (id === 'concurrents') renderCompList();
+  if (id === 'dashboard') renderAlerts();
 }
+
+// Init au chargement
+renderAlerts();
 
 function renderGrid() {
   document.getElementById('view-grid').style.display = 'block';
@@ -766,6 +806,7 @@ function deleteComp(id) {
   competitors = competitors.filter(c => c.id !== id);
   saveCompetitors();
   renderCompList();
+  renderAlerts();
 }
 
 function saveComp() {
