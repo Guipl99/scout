@@ -407,6 +407,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="tab" onclick="showSTab('pricing',this)">Financement</div>
           <div class="tab" onclick="showSTab('clients',this)">Marchés</div>
           <div class="tab" onclick="showSTab('contrats',this)">Contrats</div>
+          <div class="tab" onclick="showSTab('brevets',this)">Brevets</div>
           <div class="tab" onclick="showSTab('recrutement',this)">Recrutement</div>
           <div class="tab" onclick="showSTab('analyse',this)">Analyse IA</div>
         </div>
@@ -422,6 +423,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <div id="st-clients" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Marchés & opérateurs</span></div><div class="card-body"><table class="info-table" id="s-ctab"></table></div></div></div>
         <div id="st-contrats" class="tabpanel">
           <div class="card"><div class="card-header"><span class="card-title">Contrats & programmes</span></div><div class="section-body" style="padding:0.5rem 1.25rem;" id="s-contrats"></div></div>
+        </div>
+        <div id="st-brevets" class="tabpanel">
+          <div id="s-brevets-content"></div>
         </div>
         <div id="st-recrutement" class="tabpanel">
           <div class="card"><div class="card-header"><span class="card-title">Recrutements actifs</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="s-recruits"></div></div>
@@ -799,6 +803,9 @@ function fillSocieteDetail(p, fromCache, scrapedAt) {
   // Contrats
   renderContracts(p.contrats || [], 's-contrats');
 
+  // Brevets
+  renderBrevets(p.brevets || null, 's-brevets-content');
+
   // Marchés & certifications
   const marcheData = [
     ['Marchés', p.marches || '—'],
@@ -1154,6 +1161,81 @@ function renderContracts(contracts, elId) {
       ${c.details && c.details !== '—' ? `<div class="contract-detail">${sanitize(c.details)}</div>` : ''}
     </div>`;
   }).join('');
+
+  el.innerHTML = html;
+}
+
+// ── Patents ───────────────────────────────────────────────────
+function renderBrevets(brevets, elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!brevets || (!brevets.brevets_notables?.length && !brevets.total_estime)) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:1rem 0;">Aucune donnée brevet — cliquez sur Forcer mise à jour pour rechercher via IA (Google Patents, USPTO, EPO).</div>';
+    return;
+  }
+
+  let html = '';
+
+  // Stats overview
+  html += `<div class="patent-stat">
+    <div class="patent-stat-grid">
+      <div class="patent-stat-item">
+        <div class="patent-stat-label">Brevets estimés</div>
+        <div class="patent-stat-value">${sanitize(brevets.total_estime || '—')}</div>
+      </div>
+      <div class="patent-stat-item">
+        <div class="patent-stat-label">Brevets notables trouvés</div>
+        <div class="patent-stat-value">${(brevets.brevets_notables||[]).length}</div>
+      </div>
+    </div>`;
+
+  if (brevets.domaines_cles?.length) {
+    html += `<div style="margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Domaines clés</div>
+      <div class="domains-list">${sanitizeArr(brevets.domaines_cles).map(d => `<span class="tag tag-accent">${d}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  if (brevets.strategie_ip && brevets.strategie_ip !== '—') {
+    html += `<div style="font-size:12px;color:var(--text2);line-height:1.5;padding-top:8px;border-top:1px solid var(--border);">
+      <span style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;">Stratégie IP</span><br>
+      ${sanitize(brevets.strategie_ip)}
+    </div>`;
+  }
+  html += '</div>';
+
+  // Notable patents list
+  const notables = brevets.brevets_notables || [];
+  if (notables.length) {
+    html += `<div style="margin-bottom:0.5rem;">
+      <div style="font-size:13px;font-weight:500;margin-bottom:0.75rem;">Brevets notables</div>`;
+    html += sanitizeArr(notables).map(p => {
+      const officeClass = p.office === 'USPTO' ? 'tag-accent' : p.office === 'EPO' ? 'tag-green' : p.office === 'CNIPA' ? 'tag-red' : 'tag-gray';
+      return `<div class="patent-card">
+        <div class="patent-header">
+          <div class="patent-title">${sanitize(p.titre || '—')}</div>
+          ${p.numero && p.numero !== '—' ? `<div class="patent-num">${sanitize(p.numero)}</div>` : ''}
+        </div>
+        <div class="patent-meta">
+          ${p.office ? `<span class="tag ${officeClass}">${sanitize(p.office)}</span>` : ''}
+          ${p.domaine ? `<span class="tag tag-gray">${sanitize(p.domaine)}</span>` : ''}
+          ${p.date && p.date !== '—' ? `<span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${sanitize(p.date)}</span>` : ''}
+        </div>
+        ${p.importance && p.importance !== '—' ? `<div class="patent-importance">${sanitize(p.importance)}</div>` : ''}
+      </div>`;
+    }).join('');
+    html += '</div>';
+  }
+
+  // Litiges
+  if (brevets.litiges?.length && brevets.litiges[0] !== '—') {
+    html += `<div class="card" style="margin-top:1rem;">
+      <div class="card-header"><span class="card-title">Litiges & contentieux IP</span></div>
+      <div class="card-body" style="padding:0.5rem 1.25rem;">
+        ${sanitizeArr(brevets.litiges).map(l => `<div class="alert-row"><div class="alert-dot dot-amber"></div><div class="alert-text">${l}</div></div>`).join('')}
+      </div>
+    </div>`;
+  }
 
   el.innerHTML = html;
 }
