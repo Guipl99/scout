@@ -769,12 +769,8 @@ function streamText(elId, text, onDone) {
   const el = document.getElementById(elId);
   if (!el) return;
   const clean = sanitize(text);
-  el.textContent = '';
-  let i = 0;
-  const iv = setInterval(() => {
-    if (i < clean.length) { el.textContent += clean[i++]; }
-    else { clearInterval(iv); if (onDone) onDone(); }
-  }, 8);
+  el.textContent = clean;
+  if (onDone) onDone();
 }
 
 // ── Dashboard ─────────────────────────────────────────────────
