@@ -336,7 +336,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <span class="card-title">Dernières informations</span>
           <div style="display:flex;gap:8px;align-items:center;">
             <div id="feed-type-filters" style="display:flex;gap:4px;"></div>
-            <button class="btn btn-sm btn-ghost" onclick="loadFeed()">↻</button>
+            
           </div>
         </div>
         <div id="feed-list" style="padding:0 1.25rem;">
@@ -350,7 +350,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div id="societes-list-view">
         <div class="topbar">
           <h1>Fabricants</h1>
-<button class="btn btn-ghost" onclick="loadSocietes().then(renderSocietes)" title="Actualiser">↻</button>
+
         </div>
         <div id="societe-form-wrap" style="display:none;margin-bottom:1.25rem;">
           <div class="card">
@@ -378,8 +378,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
                 </div>
               </div>
               <div style="display:flex;gap:8px;justify-content:flex-end;">
-                <button class="btn btn-ghost" onclick="hideSocieteForm()">Annuler</button>
-                <button class="btn btn-primary" onclick="saveSociete()">Enregistrer</button>
+                
+                
               </div>
             </div>
           </div>
@@ -395,7 +395,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       </div>
       <div id="societe-detail-view" style="display:none;">
         <div class="topbar">
-          <button class="btn btn-ghost" onclick="backToSocietes()">← Retour</button>
+          
           
         </div>
         <div class="detail-header">
@@ -457,7 +457,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div id="produits-list-view">
         <div class="topbar">
           <h1>Drones</h1>
-<button class="btn btn-ghost" onclick="loadAllProduits().then(renderProduits)" title="Actualiser">↻</button>
+
         </div>
         <div id="produit-form-wrap" style="display:none;margin-bottom:1.25rem;">
           <div class="card">
@@ -474,8 +474,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
                 <div class="fg form-full"><label>Description</label><textarea id="pf-desc" placeholder="Type de drone, usage principal, points clés..."></textarea></div>
               </div>
               <div style="display:flex;gap:8px;justify-content:flex-end;">
-                <button class="btn btn-ghost" onclick="hideProduitForm()">Annuler</button>
-                <button class="btn btn-primary" onclick="saveProduit()">Enregistrer</button>
+                
+                
               </div>
             </div>
           </div>
@@ -491,7 +491,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       </div>
       <div id="produit-detail-view" style="display:none;">
         <div class="topbar">
-          <button class="btn btn-ghost" onclick="backToProduits()">← Retour</button>
+          
           
         </div>
         <div class="detail-header">
@@ -601,8 +601,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
                 <div class="fg form-full"><label>Sources</label><input id="cf-sources" placeholder="ex: SAM.gov, DefenseNews.com (séparées par virgules)"></div>
               </div>
               <div style="display:flex;gap:8px;justify-content:flex-end;">
-                <button class="btn btn-ghost" onclick="hideContractForm()">Annuler</button>
-                <button class="btn btn-primary" onclick="saveContract()">Enregistrer</button>
+                
+                
               </div>
             </div>
           </div>
@@ -618,20 +618,20 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div class="card" style="margin-bottom:1rem;">
         <div class="card-header"><span class="card-title">Maintenance</span></div>
         <div class="card-body" style="padding:0.75rem 1.25rem;display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn" onclick="cleanData()">Nettoyer les données corrompues</button>
-          <button class="btn btn-danger" onclick="clearCache()">Vider le cache scraping</button>
+          
+          
           <span id="maint-msg" style="font-size:12px;color:var(--text3);align-self:center;"></span>
         </div>
       </div>
       <div class="card"><div class="card-header"><span class="card-title">Notifications</span></div><div class="card-body" style="padding:0.5rem 1.25rem;">
-        <div class="toggle-row"><div><div class="tgl-label">Email quotidien</div><div class="tgl-desc">Résumé des alertes du jour</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
-        <div class="toggle-row"><div><div class="tgl-label">Slack temps réel</div><div class="tgl-desc">Notifications dans un canal dédié</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
-        <div class="toggle-row"><div><div class="tgl-label">Rapport PDF hebdo</div></div><button class="toggle off" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
+        <div class="toggle-row"><div><div class="tgl-label">Email quotidien</div><div class="tgl-desc">Résumé des alertes du jour</div></div></div>
+        <div class="toggle-row"><div><div class="tgl-label">Slack temps réel</div><div class="tgl-desc">Notifications dans un canal dédié</div></div></div>
+        <div class="toggle-row"><div><div class="tgl-label">Rapport PDF hebdo</div></div></div>
       </div></div>
       <div class="card"><div class="card-header"><span class="card-title">Seuils d'alerte</span></div><div class="card-body" style="padding:0.5rem 1.25rem;">
-        <div class="toggle-row"><div><div class="tgl-label">Changement de prix détecté</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
-        <div class="toggle-row"><div><div class="tgl-label">+5 recrutements par semaine</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
-        <div class="toggle-row"><div><div class="tgl-label">Nouvelle fonctionnalité annoncée</div></div><button class="toggle off" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
+        <div class="toggle-row"><div><div class="tgl-label">Changement de prix détecté</div></div></div>
+        <div class="toggle-row"><div><div class="tgl-label">+5 recrutements par semaine</div></div></div>
+        <div class="toggle-row"><div><div class="tgl-label">Nouvelle fonctionnalité annoncée</div></div></div>
       </div></div>
     </div>
 
@@ -787,7 +787,7 @@ function renderFeedTypeFilters(feed) {
   el.innerHTML = types.map(t => {
     const nb = t === 'tous' ? feed.length : (counts[t]||0);
     if (t !== 'tous' && !nb) return '';
-    return `<button class="tag ${t===activeFeedType?'tag-accent':'tag-gray'}" style="cursor:pointer;padding:3px 8px;font-size:10px;border:none;" onclick="setFeedType('${t}')">${t.charAt(0).toUpperCase()+t.slice(1)} <span style="opacity:0.7;">${nb}</span></button>`;
+    return ``;
   }).join('');
 }
 
@@ -917,7 +917,7 @@ async function loadSocieteFiche(id, s) {
       loadSocieteProduits(id);
     }
   } catch(e) { document.getElementById('s-info').textContent = 'Erreur: ' + e.message; }
-  finally { btn.disabled = false; btn.textContent = 'Forcer mise à jour'; dot.classList.remove('loading'); }
+  finally { dot.classList.remove('loading'); }
 }
 
 function fillSocieteDetail(p, fromCache, scrapedAt) {
@@ -979,7 +979,7 @@ async function loadSocieteProduits(societeId) {
     const d = await r.json();
     const grid = document.getElementById('s-produits-grid');
     const prods = d.produits || [];
-    if (!prods.length) { grid.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:1rem 0;grid-column:1/-1;">Aucun produit lié. Cliquez sur Forcer mise à jour pour détecter automatiquement.</div>'; return; }
+    if (!prods.length) { grid.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:1rem 0;grid-column:1/-1;">Données en cours de collecte.</div>'; return; }
     grid.innerHTML = prods.map(p => `<div class="product-card" onclick="go('produits-db');setTimeout(()=>openProduit('${p.id}'),100)">
       <div class="product-name">${p.name}</div>
       <div class="product-company">${p.type_drone||''} ${p.prix ? '· ' + p.prix : ''}</div>
@@ -1061,7 +1061,7 @@ async function forceScrape(type) {
         loadSocieteProduits(currentSocieteId);
       }
     } catch(e) { alert('Erreur: ' + e.message); }
-    finally { btn.disabled = false; btn.textContent = 'Forcer mise à jour'; dot.classList.remove('loading'); }
+    finally { dot.classList.remove('loading'); }
   }
   if (type === 'produit' && currentProduitId) {
     const btn = document.getElementById('p-btn-refresh');
@@ -1074,7 +1074,7 @@ async function forceScrape(type) {
       const d = await r.json();
       if (d.profile) fillProduitDetail(d.profile, d.produit, false, d.scrapedAt);
     } catch(e) { alert('Erreur: ' + e.message); }
-    finally { btn.disabled = false; btn.textContent = 'Forcer mise à jour'; dot.classList.remove('loading'); }
+    finally { dot.classList.remove('loading'); }
   }
 }
 
@@ -1128,7 +1128,7 @@ async function openProduit(id) {
       if (idx !== -1) { produits[idx].data = d.profile; produits[idx].scraped_at = d.scrapedAt; }
     }
   } catch(e) { document.getElementById('p-info').textContent = 'Erreur: ' + e.message; }
-  finally { btn.disabled = false; btn.textContent = 'Forcer mise à jour'; dot.classList.remove('loading'); }
+  finally { dot.classList.remove('loading'); }
 }
 
 function fillProduitDetail(d, produit, fromCache, scrapedAt) {
@@ -1229,7 +1229,7 @@ function renderContracts(contracts, elId) {
   const el = document.getElementById(elId);
   if (!el) return;
   if (!contracts || !contracts.length) {
-    el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:1rem 0;">Aucun contrat public trouvé — cliquez sur Forcer mise à jour pour rechercher via IA.</div>';
+    el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:1rem 0;">Aucun contrat identifié.</div>';
     return;
   }
 
@@ -1287,7 +1287,7 @@ function renderBrevets(brevets, elId) {
   const el = document.getElementById(elId);
   if (!el) return;
   if (!brevets || (!brevets.brevets_notables?.length && !brevets.total_estime)) {
-    el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:1rem 0;">Aucune donnée brevet — cliquez sur Forcer mise à jour pour rechercher via IA (Google Patents, USPTO, EPO).</div>';
+    el.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:1rem 0;">Données brevets en cours de collecte.</div>';
     return;
   }
 
@@ -1404,7 +1404,7 @@ function renderContractStatusFilters() {
   const el = document.getElementById('contract-status-filters');
   if (!el) return;
   el.innerHTML = CONTRACT_STATUTS.map(s =>
-    `<button class="tag ${s===activeContractStatut?'tag-accent':'tag-gray'}" style="cursor:pointer;padding:4px 10px;font-size:12px;border:none;" onclick="setContractStatut('${s}')">${s}</button>`
+    ``
   ).join('');
 }
 
@@ -1450,8 +1450,8 @@ function renderContractsGrid(list) {
         ${c.date_signature ? `<span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${new Date(c.date_signature).getFullYear()}</span>` : ''}
         ${(c.produits||[]).slice(0,2).map(p => `<span class="tag tag-accent" style="font-size:10px;">${sanitize(p)}</span>`).join('')}
         <div style="margin-left:auto;display:flex;gap:6px;">
-          <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();showContractForm('${c.id}')">Modifier</button>
-          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteContractItem('${c.id}')">Supprimer</button>
+          
+          
         </div>
       </div>
     </div>
@@ -1660,13 +1660,13 @@ let activeSecteur = 'Tous';
 function renderCatFilters() {
   const el = document.getElementById('cat-filters');
   if (!el) return;
-  el.innerHTML = DRONE_CATEGORIES.map(c => `<button class="tag ${c===activeCat?'tag-accent':'tag-gray'}" style="cursor:pointer;padding:4px 10px;font-size:12px;border:none;" onclick="setCat('${c}')">${c}</button>`).join('');
+  el.innerHTML = DRONE_CATEGORIES.map(c => ``).join('');
 }
 
 function renderSecteurFilters() {
   const el = document.getElementById('secteur-filters');
   if (!el) return;
-  el.innerHTML = FABRICANT_SECTEURS.map(s => `<button class="tag ${s===activeSecteur?'tag-accent':'tag-gray'}" style="cursor:pointer;padding:4px 10px;font-size:12px;border:none;" onclick="setSecteur('${s}')">${s}</button>`).join('');
+  el.innerHTML = FABRICANT_SECTEURS.map(s => ``).join('');
 }
 
 function setCat(cat) { activeCat = cat; renderCatFilters(); filterDrones(); }
@@ -1714,7 +1714,7 @@ function renderSocietesFiltered(list) {
       </div>` : '<div style="font-size:12px;color:var(--text3);padding:10px 0;">Données en cours de collecte</div>'}
       <div class="entity-footer">
         <div class="entity-tags">${tagHtml(s.pays||'—','tag-gray')}</div>
-        <span class="entity-updated"><span class="upd-dot ${stale?'stale':''}"></span>${stale ? 'À actualiser' : 'À jour'}</span>
+        <span class="entity-updated"><span class="upd-dot "></span>Hebdomadaire</span>
       </div>
     </div>`;
   }).join('');
@@ -1743,7 +1743,7 @@ function renderProduitsFiltered(list) {
       <p style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;">${(p.description||'Données en cours de collecte').slice(0,100)}${p.description && p.description.length > 100 ? '...' : ''}</p>
       <div class="entity-footer">
         <div class="entity-tags">${tagHtml(p.badge||'Civil', badgeCls)}${p.prix ? ' <span class="tag tag-gray">'+p.prix+'</span>' : ''}</div>
-        <span class="entity-updated"><span class="upd-dot ${stale?'stale':''}"></span>${stale?'À actualiser':'À jour'}</span>
+        <span class="entity-updated"><span class="upd-dot "></span>Hebdomadaire</span>
       </div>
     </div>`;
   }).join('');
