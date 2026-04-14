@@ -810,15 +810,18 @@ async function loadFiche(force) {
 
 async function fetchServerAlerts() {
   try {
-    const res = await fetch(API_BASE + '/alerts');
+    const ids = competitors.map(c => c.id).join(',');
+    if (!ids) return;
+    const res = await fetch(API_BASE + '/alerts?ids=' + encodeURIComponent(ids));
     const data = await res.json();
     if (data.alerts && data.alerts.length) {
-      // Merge server alerts with local ones
-      const activeIds = competitors.map(c => c.id);
-      const serverAlerts = data.alerts.filter(a => activeIds.includes(a.competitorId)).map(a => ({
-        ...a, id: a.id, color: a.color, text: a.text, meta: a.meta
+      alerts = data.alerts.map(a => ({
+        id: a.id,
+        competitorId: a.competitorId,
+        color: a.color,
+        text: a.text,
+        meta: a.meta
       }));
-      alerts = serverAlerts;
       saveAlerts();
       renderAlerts();
     }
