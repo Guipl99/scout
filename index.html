@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="veille.io">
+<meta name="theme-color" content="#534AB7">
+<link rel="manifest" href="manifest.json">
 <title>veille.io — Veille concurrentielle</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -681,6 +687,11 @@ function saveComp() {
   hideForm();
   saveCompetitors();
   renderCompList();
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/scout/sw.js');
 }
 </script>
 </body>
