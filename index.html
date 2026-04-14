@@ -271,7 +271,47 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
   <!-- CONCURRENTS -->
   <div id="panel-concurrents" class="panel">
-    <div class="topbar"><h1>Concurrents</h1><button class="btn btn-primary" onclick="document.getElementById('modal-bg').classList.add('open')">+ Ajouter</button></div>
+    <div class="topbar"><h1>Concurrents</h1><button class="btn btn-primary" onclick="showAddForm()">+ Ajouter un concurrent</button></div>
+
+    <!-- Formulaire ajout/édition inline -->
+    <div id="comp-form" style="display:none; margin-bottom:1.25rem;">
+      <div class="section">
+        <div class="section-header"><span class="section-title" id="form-title">Nouveau concurrent</span></div>
+        <div class="section-body">
+          <div class="form-grid" style="margin-bottom:1rem;">
+            <div class="fg"><label>Nom de l'entreprise *</label><input id="f-name" placeholder="ex : HubSpot"></div>
+            <div class="fg"><label>Site web *</label><input id="f-url" placeholder="ex : hubspot.com"></div>
+            <div class="fg"><label>Secteur / marché</label><input id="f-secteur" placeholder="ex : CRM SaaS B2B"></div>
+            <div class="fg"><label>Fréquence de surveillance</label>
+              <select id="f-freq"><option>Quotidien</option><option selected>Hebdo</option><option>Mensuel</option></select>
+            </div>
+            <div class="fg"><label>CA estimé</label><input id="f-ca" placeholder="ex : $50M ARR"></div>
+            <div class="fg"><label>Nombre d'employés</label><input id="f-employees" placeholder="ex : 500"></div>
+            <div class="fg form-full"><label>Notes / contexte</label>
+              <textarea id="f-notes" placeholder="Points à surveiller, positionnement, différenciateurs..."></textarea>
+            </div>
+            <div class="fg form-full"><label>Signaux à surveiller</label>
+              <div class="signals-grid" id="form-sigs">
+                <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Prix & offres</div>
+                <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Fonctionnalités</div>
+                <div class="sig on" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Recrutements</div>
+                <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>SEO & contenu</div>
+                <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Réseaux sociaux</div>
+                <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Avis clients</div>
+                <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Partenariats</div>
+                <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Levées de fonds</div>
+                <div class="sig" onclick="this.classList.toggle('on')"><div class="sig-dot"></div>Presse</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn" onclick="hideForm()">Annuler</button>
+            <button class="btn btn-primary" onclick="saveComp()">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="comp-list"></div>
   </div>
 
@@ -474,23 +514,74 @@ async function doRefresh() {
   }
 }
 
+let editingId = null;
+
+function showAddForm() {
+  editingId = null;
+  document.getElementById('form-title').textContent = 'Nouveau concurrent';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-url').value = '';
+  document.getElementById('f-secteur').value = '';
+  document.getElementById('f-freq').value = 'Hebdo';
+  document.getElementById('f-ca').value = '';
+  document.getElementById('f-employees').value = '';
+  document.getElementById('f-notes').value = '';
+  document.querySelectorAll('#form-sigs .sig').forEach((s,i) => s.classList.toggle('on', i < 3));
+  document.getElementById('comp-form').style.display = 'block';
+  document.getElementById('comp-form').scrollIntoView({behavior:'smooth'});
+}
+
+function showEditForm(id) {
+  const c = competitors.find(x => x.id === id);
+  if (!c) return;
+  editingId = id;
+  document.getElementById('form-title').textContent = 'Modifier ' + c.name;
+  document.getElementById('f-name').value = c.name;
+  document.getElementById('f-url').value = c.url;
+  document.getElementById('f-secteur').value = c.secteur || '';
+  document.getElementById('f-freq').value = c.freq || 'Hebdo';
+  document.getElementById('f-ca').value = c.ca || '';
+  document.getElementById('f-employees').value = c.employees || '';
+  document.getElementById('f-notes').value = c.notes || '';
+  const allSigs = ['Prix & offres','Fonctionnalités','Recrutements','SEO & contenu','Réseaux sociaux','Avis clients','Partenariats','Levées de fonds','Presse'];
+  document.querySelectorAll('#form-sigs .sig').forEach((s,i) => s.classList.toggle('on', (c.signals||[]).includes(allSigs[i])));
+  document.getElementById('comp-form').style.display = 'block';
+  document.getElementById('comp-form').scrollIntoView({behavior:'smooth'});
+}
+
+function hideForm() {
+  document.getElementById('comp-form').style.display = 'none';
+  editingId = null;
+}
+
 function renderCompList() {
-  document.getElementById('comp-list').innerHTML = competitors.map(c => `
-    <div class="comp-row">
-      <div class="avatar ${c.color}">${c.name.slice(0,2).toUpperCase()}</div>
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:600;">${c.name}</div>
-        <div style="font-size:11px;color:#999;">${c.url} · ${c.secteur} · ${c.freq}</div>
-        <div style="margin-top:4px;">${c.signals.map(s=>`<span class="tag tag-p">${s}</span>`).join('')}</div>
+  const list = document.getElementById('comp-list');
+  if (!competitors.length) {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:#bbb;font-size:14px;">Aucun concurrent configuré. Cliquez sur &quot;+ Ajouter un concurrent&quot;.</div>';
+  } else {
+    list.innerHTML = competitors.map(c => `
+      <div class="comp-row">
+        <div class="avatar ${c.color}">${c.name.slice(0,2).toUpperCase()}</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;">${c.name}</div>
+          <div style="font-size:11px;color:#999;">${c.url}${c.secteur ? ' · ' + c.secteur : ''}${c.freq ? ' · ' + c.freq : ''}</div>
+          ${c.ca || c.employees ? `<div style="font-size:11px;color:#777;margin-top:2px;">${c.ca ? 'CA : ' + c.ca : ''}${c.ca && c.employees ? ' · ' : ''}${c.employees ? c.employees + ' employés' : ''}</div>` : ''}
+          <div style="margin-top:4px;">${(c.signals||[]).map(s => '<span class=\"tag tag-p\">' + s + '</span>').join('')}</div>
+          ${c.notes ? `<div style="font-size:12px;color:#888;margin-top:4px;font-style:italic;">${c.notes}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <button class="btn btn-sm" onclick="go('fiches');setTimeout(()=>openDetail('${c.id}'),80)">Voir fiche</button>
+          <button class="btn btn-sm" onclick="showEditForm('${c.id}')">Modifier</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteComp('${c.id}')">Supprimer</button>
+        </div>
       </div>
-      <button class="btn btn-sm" onclick="go('fiches');setTimeout(()=>openDetail('${c.id}'),80)">Voir fiche</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteComp('${c.id}')">Supprimer</button>
-    </div>
-  `).join('');
+    `).join('');
+  }
   document.getElementById('m-count').textContent = competitors.length;
 }
 
 function deleteComp(id) {
+  if (!confirm('Supprimer ce concurrent ?')) return;
   competitors = competitors.filter(c => c.id !== id);
   renderCompList();
 }
@@ -499,11 +590,22 @@ function saveComp() {
   const name = document.getElementById('f-name').value.trim();
   const url = document.getElementById('f-url').value.trim();
   if (!name || !url) { alert('Nom et URL requis.'); return; }
-  const id = name.toLowerCase().replace(/\s+/g,'_') + '_' + Date.now();
-  const signals = Array.from(document.querySelectorAll('#modal-sigs .sig.on')).map(e => e.textContent.trim());
-  competitors.push({id, name, url, color: COLORS[competitors.length % COLORS.length], signals, freq: document.getElementById('f-freq').value, secteur: document.getElementById('f-secteur').value});
-  document.getElementById('modal-bg').classList.remove('open');
-  document.getElementById('m-count').textContent = competitors.length;
+  const signals = Array.from(document.querySelectorAll('#form-sigs .sig.on')).map(e => e.textContent.trim());
+  const data = { name, url,
+    secteur: document.getElementById('f-secteur').value.trim(),
+    freq: document.getElementById('f-freq').value,
+    ca: document.getElementById('f-ca').value.trim(),
+    employees: document.getElementById('f-employees').value.trim(),
+    notes: document.getElementById('f-notes').value.trim(),
+    signals };
+  if (editingId) {
+    const idx = competitors.findIndex(c => c.id === editingId);
+    if (idx !== -1) competitors[idx] = {...competitors[idx], ...data};
+  } else {
+    const id = name.toLowerCase().replace(/\s+/g,'_') + '_' + Date.now();
+    competitors.push({id, color: COLORS[competitors.length % COLORS.length], ...data});
+  }
+  hideForm();
   renderCompList();
 }
 </script>
