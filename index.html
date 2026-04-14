@@ -806,8 +806,8 @@ function renderFeedList(feed) {
     const age = timeAgo(f.date);
     const iconLabel = {fabricant:'FAB',drone:'UAV',contrat:'CTR',alerte:'ALT'}[f.icon]||'—';
     const iconClass = 'fi-' + f.icon;
-    const clickFn = f.type==='societe' ? `openSociete('${f.id}');go('societes')` :
-                    f.type==='drone'   ? `openProduit('${f.id}');go('produits-db')` :
+    const clickFn = f.type==='societe' ? `go('societes');setTimeout(()=>openSociete('${f.id}'),200)` :
+                    f.type==='drone'   ? `go('produits-db');setTimeout(()=>openProduit('${f.id}'),200)` :
                     f.type==='contract'? `go('contracts')` : '';
     return `<div class="feed-row" onclick="${clickFn}">
       <div class="feed-icon ${iconClass}">${iconLabel}</div>
@@ -860,30 +860,7 @@ function renderSocietes() {
   renderSecteurFilters();
   filterSocietes();
 }
-function _renderSocietes_OLD() {
-  const g = document.getElementById('societes-grid');
-  if (!societes.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span class="empty-icon">🏭</span>Aucun fabricant — cliquez sur "+ Ajouter"</div>'; return; }
-  g.innerHTML = societes.map((s, i) => {
-    const data = s.data || {};
-    const stale = !s.scraped_at || (Date.now() - new Date(s.scraped_at)) / 86400000 > 7;
-    return `<div class="entity-card" onclick="openSociete('${s.id}')">
-      <div class="entity-card-top">
-        <div class="avatar ${avatarClass(i)}">${initials(s.name)}</div>
-        <div><div class="entity-name">${s.name}</div><div class="entity-sub">${s.url}${s.pays ? ' · ' + s.pays : ''}${s.secteur ? ' · ' + s.secteur : ''}</div></div>
-      </div>
-      ${data.ca ? `<div class="entity-kpis">
-        <div class="entity-kpi"><div class="entity-kpi-label">CA</div><div class="entity-kpi-value">${data.ca}</div></div>
-        <div class="entity-kpi"><div class="entity-kpi-label">Clients</div><div class="entity-kpi-value">${data.clients||'—'}</div></div>
-        <div class="entity-kpi"><div class="entity-kpi-label">Employés</div><div class="entity-kpi-value">${data.employes||'—'}</div></div>
-        <div class="entity-kpi"><div class="entity-kpi-label">Prix entrée</div><div class="entity-kpi-value">${data.prixEntree||'—'}</div></div>
-      </div>` : '<div style="font-size:12px;color:var(--text3);padding:10px 0;">Cliquer pour enrichir via IA</div>'}
-      <div class="entity-footer">
-        <div class="entity-tags">${(s.signals||[]).slice(0,2).map(sig => tagHtml(sig,'tag-accent')).join('')}</div>
-        <span class="entity-updated"><span class="upd-dot ${stale?'stale':''}"></span>${stale ? 'À actualiser' : 'À jour'}</span>
-      </div>
-    </div>`;
-  }).join('');
-}
+
 
 async function openSociete(id) {
   currentSocieteId = id;
@@ -904,7 +881,15 @@ async function openSociete(id) {
   // Fill from cached data if available
   if (s.data) fillSocieteDetail(s.data, true, s.scraped_at);
   // Load logo in detail header
-  loadLogo(s.id, s.url, 'd-av-wrap');
+  // Load logo replacing the avatar in detail header
+  const avWrap = document.getElementById('d-av-wrap');
+  if (avWrap) {
+    const proxyUrl = API + '/societes/' + s.id + '/logo';
+    const img = new Image();
+    img.onload = () => { avWrap.innerHTML = `<img src="${proxyUrl}" alt="" style="width:48px;height:48px;border-radius:10px;object-fit:contain;background:white;padding:3px;">`; };
+    img.onerror = () => {};
+    img.src = proxyUrl;
+  }
 
   // Load produits for this societe
   loadSocieteProduits(id);
@@ -952,11 +937,6 @@ function fillSocieteDetail(p, fromCache, scrapedAt) {
 
   document.getElementById('s-info-table').innerHTML = sanitizeArr(p.info||[]).map(([k,v]) => `<tr><td>${sanitize(k)}</td><td>${sanitize(v)}</td></tr>`).join('');
   document.getElementById('s-src').innerHTML = sanitizeArr(p.sources||[]).map(s => `<span class="src-badge">${sanitize(s)}</span>`).join('');
-
-  // pricing
-  document.getElementById('s-pricing').innerHTML = (p.pricing||[]).length
-    ? '<div class="pricing-grid">' + (p.pricing||[]).map(pl => `<div class="pricing-tier"><div class="pricing-name">${pl.name}</div><div class="pricing-price">${pl.price}</div><div class="pricing-feat">${pl.feat}</div></div>`).join('') + '</div>'
-    : '<div class="empty"><span style="color:var(--text3);">Aucune donnée</span></div>';
 
   // Contrats
   renderContracts(p.contrats || [], 's-contrats');
@@ -1116,43 +1096,8 @@ function renderProduits() {
   renderCatFilters();
   filterDrones();
   document.getElementById('m-produits').textContent = produits.length;
-  // Lazy load images and logos with stagger to avoid hammering API
-  list.forEach((p, i) => {
-    setTimeout(() => {
-      // Load drone image
-      if (p.image_url) {
-        setDroneImage('img-' + p.id, p.image_url);
-      } else {
-        fetchAndSetDroneImage(p.id, p.name, 'img-' + p.id);
-      }
-      // Load mini logo of manufacturer on drone card
-      const s = societes.find(sx => sx.id === p.societe_id);
-      if (s) loadLogoSmall(s.url, 'logo-card-' + p.id);
-    }, i * 150);
-  });
 }
-function _renderProduits_OLD() {
-  const g = document.getElementById('produits-grid');
-  if (!produits.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span class="empty-icon">🚁</span>Aucun drone — ajoutez un fabricant et actualisez pour détecter automatiquement</div>'; return; }
-  g.innerHTML = produits.map((p, i) => {
-    const stale = !p.scraped_at || (Date.now() - new Date(p.scraped_at)) / 86400000 > 7;
-    return `<div class="entity-card" onclick="openProduit('${p.id}')">
-      <div class="entity-card-top">
-        <div class="avatar av-0" style="width:36px;height:36px;font-size:12px;border-radius:8px;">${(p.name||'').slice(0,2).toUpperCase()}</div>
-        <div>
-          <div class="entity-name">${p.name}</div>
-          <div class="entity-sub">${p.societe_name||''} ${p.prix ? '· ' + p.prix : ''}</div>
-        </div>
-      </div>
-      <p style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;">${p.description||'Cliquer pour enrichir via IA'}</p>
-      <div class="entity-footer">
-        <div class="entity-tags">${tagHtml(p.badge||'Core', p.badge==='Nouveau'?'tag-accent':p.badge==='Premium'?'tag-amber':'tag-gray')}${p.nouveau ? tagHtml('Nouveau','tag-green') : ''}</div>
-        <span class="entity-updated"><span class="upd-dot ${stale?'stale':''}"></span>${stale ? 'À actualiser' : 'À jour'}</span>
-      </div>
-    </div>`;
-  }).join('');
-  document.getElementById('m-produits').textContent = produits.length;
-}
+
 
 async function openProduit(id) {
   currentProduitId = id;
@@ -1242,8 +1187,8 @@ function showProduitForm(societeId) {
   editingProduitId = null;
   document.getElementById('produit-form-title').textContent = 'Nouveau produit';
   document.getElementById('pf-name').value = '';
-  document.getElementById('pf-emoji').value = '📦';
-  document.getElementById('pf-badge').value = 'Core';
+  if (document.getElementById('pf-emoji')) document.getElementById('pf-emoji').value = '🚁';
+  if (document.getElementById('pf-badge')) document.getElementById('pf-badge').value = 'Civil';
   document.getElementById('pf-prix').value = '';
   document.getElementById('pf-desc').value = '';
   document.getElementById('pf-nouveau').value = 'false';
@@ -1649,7 +1594,9 @@ function fetchAndSetDroneImage(produitId, name, elId) {
 }
 
 function setDroneImage(elId, url) {
-  loadDroneImage(url.includes('/produits/') ? url.split('/')[4] : null, '', elId, null);
+  const el = document.getElementById(elId);
+  if (!el || !url) return;
+  el.innerHTML = `<img src="${url}" alt="" style="width:100%;height:110px;object-fit:cover;">`;
 }
 
 function setDroneImageDetail(wrapId, url) {
@@ -1790,7 +1737,6 @@ async function init() {
     renderDashboard();
   } catch(e) {
     console.error('Init error:', e);
-    document.getElementById('m-societes').textContent = '—';
   }
 }
 
