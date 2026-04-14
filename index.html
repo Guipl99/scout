@@ -403,11 +403,24 @@ const DB = {
   }
 };
 
-let competitors = [
+const DEFAULT_COMPETITORS = [
   {id:'hubspot',name:'HubSpot',url:'hubspot.com',color:'av-purple',signals:['Prix & offres','Fonctionnalités','SEO'],freq:'Quotidien',secteur:'CRM SaaS'},
   {id:'salesforce',name:'Salesforce',url:'salesforce.com',color:'av-teal',signals:['Prix','Recrutement','Partenariats'],freq:'Hebdo',secteur:'CRM Enterprise'},
   {id:'pipedrive',name:'Pipedrive',url:'pipedrive.com',color:'av-coral',signals:['Fonctionnalités','Réseaux sociaux'],freq:'Hebdo',secteur:'CRM PME'},
 ];
+
+function loadCompetitors() {
+  try {
+    const saved = localStorage.getItem('veille_competitors');
+    return saved ? JSON.parse(saved) : DEFAULT_COMPETITORS;
+  } catch(e) { return DEFAULT_COMPETITORS; }
+}
+
+function saveCompetitors() {
+  try { localStorage.setItem('veille_competitors', JSON.stringify(competitors)); } catch(e) {}
+}
+
+let competitors = loadCompetitors();
 
 function go(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -624,6 +637,7 @@ function renderCompList() {
 function deleteComp(id) {
   if (!confirm('Supprimer ce concurrent ?')) return;
   competitors = competitors.filter(c => c.id !== id);
+  saveCompetitors();
   renderCompList();
 }
 
@@ -647,6 +661,7 @@ function saveComp() {
     competitors.push({id, color: COLORS[competitors.length % COLORS.length], ...data});
   }
   hideForm();
+  saveCompetitors();
   renderCompList();
 }
 </script>
