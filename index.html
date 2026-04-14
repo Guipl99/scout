@@ -987,7 +987,6 @@ async function loadSocieteProduits(societeId) {
     const prods = d.produits || [];
     if (!prods.length) { grid.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:1rem 0;grid-column:1/-1;">Aucun produit lié. Cliquez sur Forcer mise à jour pour détecter automatiquement.</div>'; return; }
     grid.innerHTML = prods.map(p => `<div class="product-card" onclick="go('produits-db');setTimeout(()=>openProduit('${p.id}'),100)">
-      <span class="product-emoji">${p.emoji||''}</span>
       <div class="product-name">${p.name}</div>
       <div class="product-company">${p.type_drone||''} ${p.prix ? '· ' + p.prix : ''}</div>
       <div class="product-desc">${p.description||'Cliquer pour enrichir via IA'}</div>
