@@ -180,7 +180,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
 .product-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; cursor: pointer; transition: border-color 0.15s; }
 .product-card:hover { border-color: var(--accent); }
-.product-emoji { font-size: 28px; margin-bottom: 8px; display: block; }
+
 .product-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
 .product-company { font-size: 11px; color: var(--text3); margin-bottom: 6px; font-family: 'DM Mono', monospace; }
 .product-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
@@ -476,7 +476,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <button class="btn btn-primary" id="p-btn-refresh" onclick="forceScrape('produit')">Forcer mise à jour</button>
         </div>
         <div class="detail-header">
-          <div style="font-size:40px;" id="p-emoji">📦</div>
+          <div class="avatar av-0" style="width:48px;height:48px;font-size:16px;border-radius:10px;" id="p-emoji"></div>
           <div>
             <div class="detail-name" id="p-name"></div>
             <div class="detail-sub" id="p-sub"></div>
@@ -803,7 +803,7 @@ async function loadSocieteProduits(societeId) {
     const prods = d.produits || [];
     if (!prods.length) { grid.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:1rem 0;grid-column:1/-1;">Aucun produit lié. Cliquez sur Forcer mise à jour pour détecter automatiquement.</div>'; return; }
     grid.innerHTML = prods.map(p => `<div class="product-card" onclick="go('produits-db');setTimeout(()=>openProduit('${p.id}'),100)">
-      <span class="product-emoji">${p.emoji||'🚁'}</span>
+      <span class="product-emoji">${p.emoji||''}</span>
       <div class="product-name">${p.name}</div>
       <div class="product-company">${p.type_drone||''} ${p.prix ? '· ' + p.prix : ''}</div>
       <div class="product-desc">${p.description||'Cliquer pour enrichir via IA'}</div>
@@ -922,7 +922,7 @@ function _renderProduits_OLD() {
     const stale = !p.scraped_at || (Date.now() - new Date(p.scraped_at)) / 86400000 > 7;
     return `<div class="entity-card" onclick="openProduit('${p.id}')">
       <div class="entity-card-top">
-        <div style="font-size:28px;flex-shrink:0;">${p.emoji||'📦'}</div>
+        <div class="avatar av-0" style="width:36px;height:36px;font-size:12px;border-radius:8px;">${(p.name||'').slice(0,2).toUpperCase()}</div>
         <div>
           <div class="entity-name">${p.name}</div>
           <div class="entity-sub">${p.societe_name||''} ${p.prix ? '· ' + p.prix : ''}</div>
@@ -946,7 +946,7 @@ async function openProduit(id) {
   document.getElementById('produits-list-view').style.display = 'none';
   document.getElementById('produit-detail-view').style.display = 'block';
 
-  document.getElementById('p-emoji').textContent = p.emoji || '📦';
+  document.getElementById('p-emoji').textContent = (p.name||'').slice(0,2).toUpperCase();
   document.getElementById('p-name').textContent = p.name;
   document.getElementById('p-sub').textContent = (p.societe_name || '') + (p.prix ? ' · ' + p.prix : '');
   document.getElementById('p-tags').innerHTML = tagHtml(p.badge||'Core', p.badge==='Nouveau'?'tag-accent':p.badge==='Premium'?'tag-amber':'tag-gray') + (p.nouveau ? ' ' + tagHtml('Nouveau','tag-green') : '');
@@ -1160,7 +1160,7 @@ function renderProduitsFiltered(list) {
     const badgeCls = p.badge==='Militaire'||p.badge==='Loitering Munition'||p.badge==='Intercepteur'||p.badge==='UCAV'?'tag-red':p.badge==='Industriel'||p.badge==='Maritime/ISR'?'tag-amber':p.badge==='Agriculture'?'tag-green':p.badge==='AAM'?'tag-accent':'tag-accent';
     return `<div class="entity-card" onclick="openProduit('${p.id}')">
       <div class="entity-card-top">
-        <div style="font-size:28px;flex-shrink:0;">${p.emoji||'🚁'}</div>
+        <div class="avatar av-0" style="width:36px;height:36px;font-size:12px;border-radius:8px;">${(p.name||'').slice(0,2).toUpperCase()}</div>
         <div>
           <div class="entity-name">${p.name}</div>
           <div class="entity-sub">${p.societe_name||''} ${p.type_drone ? '· ' + p.type_drone : ''}</div>
