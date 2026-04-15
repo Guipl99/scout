@@ -1761,6 +1761,17 @@ function setDroneImageDetail(wrapId, url) {
 }
 
 // ── Maintenance ───────────────────────────────────────────────
+async function scrapeTethered() {
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '⏳ Scraping tethered (1-2 min)...';
+  try {
+    const r = await fetch(API + '/admin/scrape-tethered', { method: 'POST', headers: { 'x-secret': 'drone-scout-2026' } });
+    const d = await r.json();
+    btn.textContent = d.ok ? `✓ ${d.societes} fabricants, ${d.drones} drones ajoutés` : 'Erreur: ' + d.error;
+    setTimeout(() => { btn.textContent = '🪁 Scraper tethered drones'; btn.disabled = false; }, 5000);
+  } catch(e) { btn.textContent = 'Erreur réseau'; btn.disabled = false; }
+}
+
 async function scrapeDefenseContracts() {
   const btn = event.target;
   btn.disabled = true; btn.textContent = '⏳ Scraping (2-3 min)...';
@@ -1830,7 +1841,7 @@ let activeDomaine = 'Tous';
 let activeSecteur = 'Tous';
 let activePays = 'Tous';
 
-const CAT_MAP_AIR = ['Tous','ISR / Reconnaissance','UCAV / Strike','Loitering Munition','VTOL','FPV / Combat','Nano / Micro ISR','Multirotor tactique'];
+const CAT_MAP_AIR = ['Tous','ISR / Reconnaissance','UCAV / Strike','Loitering Munition','VTOL','FPV / Combat','Nano / Micro ISR','Multirotor tactique','Tethered UAV'];
 const CAT_MAP_GROUND = ['Tous','UGV Combat','UGV Logistique','UGV EOD','Robot quadrupède','Humanoïde'];
 const CAT_MAP_MARITIME = ['Tous','USV Combat','USV Patrouille','USV Frappe','UUV / AUV'];
 
@@ -1913,6 +1924,7 @@ function filterDrones() {
         case 'Multirotor tactique':
           return t.includes('multirotor');
         // ── TERRESTRE ──────────────────────────────────────────
+        case 'Tethered UAV': return t.includes('tether');
         case 'UGV Combat':
           return t.includes('ugv') && (
             d.includes('combat')||d.includes('arm')||d.includes('armé')||
