@@ -1926,17 +1926,6 @@ function renderSecteurFilters() {
 }
 function setSecteur(s) { activeSecteur = s; renderSecteurFilters(); filterSocietes(); }
 
-function filterDrones() {
-  const search = (document.getElementById('drones-search')?.value || '').toLowerCase();
-  const filtered = produits.filter(p => {
-    const matchCat = activeCat === 'Tous' || p.badge === activeCat || p.type_drone === activeCat || (p.badge && p.badge.includes(activeCat));
-    const matchSearch = !search || p.name.toLowerCase().includes(search) || (p.societe_name||'').toLowerCase().includes(search) || (p.description||'').toLowerCase().includes(search);
-    return matchCat && matchSearch;
-  });
-  const dbg = document.getElementById('produits-debug');
-  if (dbg) dbg.textContent = filtered.length + ' / ' + produits.length + ' systèmes — domaine: ' + activeDomaine + ' cat: ' + activeCat;
-  renderProduitsFiltered(filtered);
-}
 
 function filterSocietes() {
   const search = (document.getElementById('societes-search')?.value || '').toLowerCase();
