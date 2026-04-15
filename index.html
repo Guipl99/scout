@@ -1868,14 +1868,7 @@ function filterDrones() {
 
   // Step 1: filter by domaine
   if (activeDomaine !== 'Tous') {
-    // Debug: log type_drone distribution
-    const typeCounts = {};
-    list.forEach(p => { const t=p.type_drone||'NULL'; typeCounts[t]=(typeCounts[t]||0)+1; });
-    console.log('[Filter] activeDomaine='+activeDomaine+' type_drone counts:', JSON.stringify(typeCounts).slice(0,300));
-    const sample = list.slice(0,3).map(p=>p.name+'('+p.type_drone+')').join(', ');
-    console.log('[Filter] sample:', sample);
     list = list.filter(p => getDomaine(p) === activeDomaine);
-    console.log('[Filter] after domain filter:', list.length, 'items');
   }
 
   // Step 2: filter by cat
