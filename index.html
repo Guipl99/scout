@@ -429,12 +429,18 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
         </div>
         
-        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
-          <span style="font-size:12px;color:var(--text3);">Catégorie :</span>
-          <div id="cat-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        <!-- Domaine tabs -->
+        <div style="display:flex;gap:6px;margin-bottom:0.6rem;flex-wrap:wrap;">
+          <button id="df-Tous" class="tag tag-accent" onclick="setDomaine('Tous')" style="cursor:pointer;border:none;font-size:12px;">Tous</button>
+          <button id="df-Aerien" class="tag tag-gray" onclick="setDomaine('Aérien')" style="cursor:pointer;border:none;font-size:12px;">✈ Aérien</button>
+          <button id="df-Terrestre" class="tag tag-gray" onclick="setDomaine('Terrestre')" style="cursor:pointer;border:none;font-size:12px;">🛡 Terrestre</button>
+          <button id="df-Maritime" class="tag tag-gray" onclick="setDomaine('Maritime')" style="cursor:pointer;border:none;font-size:12px;">⚓ Maritime</button>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:1rem;align-items:center;">
-          <input id="drones-search" type="text" placeholder="Rechercher un drone..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);width:100%;max-width:320px;" oninput="filterDrones()">
+        <!-- Cat filters -->
+        <div id="cat-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0.75rem;"></div>
+        <!-- Search -->
+        <div style="margin-bottom:1rem;">
+          <input id="drones-search" type="text" placeholder="Rechercher un système..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);width:100%;max-width:320px;" oninput="filterDrones()">
         </div>
         <div class="entity-grid" id="produits-grid"></div>
       </div>
@@ -1003,8 +1009,7 @@ async function loadAllProduits() {
 }
 
 function renderProduits() {
-  renderCatFilters();
-  filterDrones();
+  setDomaine('Tous');
   document.getElementById('m-produits').textContent = produits.length;
 }
 
@@ -1733,15 +1738,30 @@ async function initSeed() {
 
 // ── Filters ───────────────────────────────────────────────────
 let activeCat = 'Tous';
+let activeDomaine = 'Tous';
+
+const CAT_MAP_AIR = ['Tous','ISR / Reconnaissance','UCAV / Strike','Loitering Munition','VTOL','FPV / Combat','Nano / Micro ISR','Multirotor tactique','Tethered'];
+const CAT_MAP_GROUND = ['Tous','UGV Combat','UGV Logistique','UGV EOD','Robot quadrupède','Humanoïde','Exosquelette'];
+const CAT_MAP_MARITIME = ['Tous','USV Combat','USV Patrouille','USV Frappe','UUV / AUV'];
+
+const TYPE_TO_DOMAINE = {
+  'UGV':'Terrestre','USV':'Maritime','UUV':'Maritime',
+};
+
+function getDomaine(p) {
+  if (p.domaine) return p.domaine;
+  if (TYPE_TO_DOMAINE[p.type_drone]) return TYPE_TO_DOMAINE[p.type_drone];
+  return 'Aérien';
+}
 let activeSecteur = 'Tous';
 
-let activeDomaine = 'Tous';
 
 function setDomaine(d) {
   activeDomaine = d;
+  const map = {'Tous':'Tous','Aérien':'Aerien','Terrestre':'Terrestre','Maritime':'Maritime'};
   ['Tous','Aerien','Terrestre','Maritime'].forEach(k => {
     const el = document.getElementById('df-' + k);
-    if (el) el.className = 'tag ' + (k === d.replace('é','e') ? 'tag-accent' : 'tag-gray');
+    if (el) el.className = 'tag ' + (map[d] === k ? 'tag-accent' : 'tag-gray');
   });
   activeCat = 'Tous';
   renderCatFilters();
@@ -1749,9 +1769,10 @@ function setDomaine(d) {
 }
 
 function getCatsForDomaine() {
-  if (activeDomaine === 'Terrestre') return DRONE_CATS_GROUND;
-  if (activeDomaine === 'Maritime') return DRONE_CATS_MARITIME;
-  return DRONE_CATS_AIR;
+  if (activeDomaine === 'Terrestre') return CAT_MAP_GROUND;
+  if (activeDomaine === 'Maritime') return CAT_MAP_MARITIME;
+  if (activeDomaine === 'Aérien') return CAT_MAP_AIR;
+  return CAT_MAP_AIR; // Tous — show air cats as default
 }
 
 function getDomaineBadgeColor(type_drone) {
