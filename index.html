@@ -583,6 +583,63 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 </nav>
 
 <script>
+
+// ── Seed data fallback (when API is unavailable) ──────────────
+const SEED_PRODUITS = [
+  // AERIEN — ISR
+  {id:'bayraktar_tb2',name:'Bayraktar TB2',societe_name:'Baykar',type_drone:'Aile fixe ISR',badge:'Militaire',prix:'$5M',description:'MALE 650kg 27h missiles MAM-L — Ukraine, Azerbaïdjan, 30+ nations.'},
+  {id:'dji_m350',name:'DJI Matrice 350 RTK',societe_name:'DJI',type_drone:'Multirotor',badge:'Industriel',prix:'6 999€',description:'Plateforme industrielle de référence. Triple redondance, IP55, 55 min autonomie.'},
+  {id:'dji_mavic3e',name:'DJI Mavic 3 Enterprise',societe_name:'DJI',type_drone:'Multirotor',badge:'Industriel',prix:'2 999€',description:'Drone professionnel compact inspection, cartographie et surveillance.'},
+  {id:'skydio_x10',name:'Skydio X10',societe_name:'Skydio',type_drone:'Multirotor',badge:'Militaire',prix:'Sur contrat',description:'IA obstacle avoidance — US Army. NDAA Blue UAS cleared.'},
+  {id:'parrot_anafi_usa',name:'ANAFI USA',societe_name:'Parrot',type_drone:'Multirotor',badge:'Militaire',prix:'7 000€',description:'NDAA compliant. Zoom 32x, thermique FLIR, chiffré. Police armée pompiers.'},
+  {id:'mq9_reaper',name:'MQ-9 Reaper',societe_name:'General Atomics',type_drone:'Aile fixe ISR',badge:'Militaire',prix:'Sur contrat',description:'MALE 1700kg 27h Hellfire — USAF 30+ nations standard OTAN.'},
+  {id:'scan_eagle',name:'ScanEagle 3',societe_name:'Insitu (Boeing)',type_drone:'Aile fixe ISR',badge:'Militaire',prix:'Sur contrat',description:'ISR catapulte 24h — 1 million heures vol US Navy Marines 20+ nations.'},
+  {id:'hermes_900',name:'Hermes 900',societe_name:'Elbit Systems',type_drone:'Aile fixe ISR',badge:'Militaire',prix:'Sur contrat',description:'MALE certifié EASA 1180kg 36h. Marine nationale France.'},
+  {id:'heron_1',name:'Heron 1',societe_name:'IAI',type_drone:'Aile fixe ISR',badge:'Militaire',prix:'Sur contrat',description:'MALE ISR 1150kg 52h — Inde Canada Allemagne Australie.'},
+  {id:'quantum_vector',name:'Quantum Vector',societe_name:'Quantum Systems',type_drone:'VTOL',badge:'Militaire',prix:'Sur contrat',description:'VTOL ISR 60min 80km — validé Ukraine Bundeswehr GPS-denied.'},
+  {id:'puma3ae',name:'Puma 3 AE',societe_name:'AeroVironment',type_drone:'Aile fixe ISR',badge:'Militaire',prix:'Sur contrat',description:'ISR main-launched 3.2kg 2.5h SOCOM waterproof.'},
+  {id:'rq11_raven',name:'RQ-11 Raven',societe_name:'AeroVironment',type_drone:'Aile fixe ISR',badge:'Militaire',prix:'Sur contrat',description:'Nano ISR man-launched 1.9kg — standard armée US 50+ nations.'},
+  {id:'switchblade300',name:'Switchblade 300',societe_name:'AeroVironment',type_drone:'Loitering Munition',badge:'Loitering Munition',prix:'Sur contrat',description:'Loitering tube 2.7kg anti-personnel 10min SOCOM Ukraine.'},
+  {id:'switchblade600',name:'Switchblade 600',societe_name:'AeroVironment',type_drone:'Loitering Munition',badge:'Loitering Munition',prix:'Sur contrat',description:'Loitering antiblindage 23kg tandem HEAT 40min 40km Ukraine.'},
+  {id:'kargu2',name:'Kargu-2',societe_name:'STM Defense',type_drone:'Loitering Munition',badge:'Loitering Munition',prix:'Sur contrat',description:'Loitering swarm autonome 7kg IA — Libye 2021 premier emploi IA létale.'},
+  {id:'lancet3',name:'Lancet-3',societe_name:'Zala Aero (Kalashnikov)',type_drone:'Loitering Munition',badge:'Loitering Munition',prix:'Sur contrat',description:'Loitering anti-char 12kg EO/IR — milliers destructions Ukraine OSINT.'},
+  {id:'shahed136',name:'Shahed-136',societe_name:'HESA',type_drone:'Loitering Munition',badge:'Loitering Munition',prix:'Sur contrat',description:'Loitering kamikaze 700km moteur moto — 4000+ lancés Ukraine Russie.'},
+  {id:'hero120',name:'Hero-120',societe_name:'UVision',type_drone:'Loitering Munition',badge:'Loitering Munition',prix:'Sur contrat',description:'Antiblindage tandem HEAT 12.5kg 60km — export 20+ nations.'},
+  {id:'xq58',name:'XQ-58A Valkyrie',societe_name:'Kratos Defense',type_drone:'UCAV',badge:'Militaire',prix:'Sur contrat',description:'UCAV CCA low-cost Mach 0.9 — F-22 F-35 wingman USAF.'},
+  {id:'brinc_lemur2',name:'BRINC Lemur 2',societe_name:'BRINC',type_drone:'Nano-drone',badge:'Militaire',prix:'Sur contrat',description:'Drone indoor tactique passe-portes SWAT — 300+ départements police USA.'},
+  {id:'black_hornet',name:'Black Hornet',societe_name:'Teledyne FLIR',type_drone:'Nano-drone',badge:'Militaire',prix:'Sur contrat',description:'Nano ISR 33g 25min — standard OTAN 50+ armées.'},
+  {id:'anafi_thermal',name:'ANAFI Thermal',societe_name:'Parrot',type_drone:'Multirotor',badge:'Industriel',prix:'3 000€',description:'Dual capteur visible+FLIR. Pompiers inspection thermique.'},
+  {id:'dji_dock2',name:'DJI Dock 2',societe_name:'DJI',type_drone:'Multirotor',badge:'Industriel',prix:'4 999€',description:'Dock autonome 24/7 surveillance périmètre. IP55.'},
+  {id:'percepto_sparrow',name:'Percepto Sparrow 2',societe_name:'Percepto',type_drone:'Multirotor',badge:'Industriel',prix:'~$5k/mois',description:'Dock autonome FAA BVLOS certifié infrastructure critique.'},
+  {id:'orion_hale',name:'Global Hawk / Triton',societe_name:'Northrop Grumman',type_drone:'Aile fixe ISR',badge:'Militaire',prix:'Sur contrat',description:'HALE 14 600kg 30h ISR stratosphérique — USAF US Navy OTAN.'},
+  // TERRESTRE — UGV
+  {id:'themis_ugv',name:'THeMIS UGV',societe_name:'Milrem Robotics',type_drone:'UGV',badge:'Militaire',prix:'Sur contrat',description:'UGV modulaire 1.6t OTAN — logistique armé ISR. Déployé Ukraine 10+ nations.'},
+  {id:'type_x',name:'Type-X RCV',societe_name:'Milrem Robotics',type_drone:'UGV',badge:'Militaire',prix:'Sur contrat',description:'Robotic Combat Vehicle 12t armé 30mm autonome — loyal wingman chars OTAN.'},
+  {id:'ghost_vision60',name:'Vision 60 Q-UGV',societe_name:'Ghost Robotics',type_drone:'UGV',badge:'Militaire',prix:'$150 000+',description:'Robot quadrupède 51kg patrouille bases USAF Tyndall. Option SPUR fusil.'},
+  {id:'boston_spot',name:'Spot',societe_name:'Boston Dynamics',type_drone:'UGV',badge:'Industriel',prix:'$74 500',description:'Robot quadrupède 32kg inspection sécurité. Law enforcement pompiers nucléaire.'},
+  {id:'boston_atlas',name:'Atlas',societe_name:'Boston Dynamics',type_drone:'UGV',badge:'Militaire',prix:'Sur contrat',description:'Robot humanoïde bipède R&D défense logistique DoD.'},
+  {id:'agility_digit',name:'Digit',societe_name:'Agility Robotics',type_drone:'UGV',badge:'Militaire',prix:'Sur contrat',description:'Humanoïde bipède 65kg logistique entrepôts + DARPA défense.'},
+  {id:'figure_02',name:'Figure 02',societe_name:'Figure AI',type_drone:'UGV',badge:'Militaire',prix:'Sur contrat',description:'Humanoïde IA 60kg BMW + DoD dual-use logistics.'},
+  {id:'ripsaw_m5',name:'Ripsaw M5',societe_name:'Textron Systems',type_drone:'UGV',badge:'Militaire',prix:'Sur contrat',description:'UGV combat armé 8.1t chenilles US Army. Optionnel 30mm XM914 Javelin.'},
+  {id:'mission_master',name:'Mission Master SP',societe_name:'Rheinmetall',type_drone:'UGV',badge:'Militaire',prix:'Sur contrat',description:'UGV logistique 900kg chenilles modulaire Bundeswehr OTAN.'},
+  {id:'packbot',name:'PackBot 510',societe_name:'Endeavor Robotics (FLIR)',type_drone:'UGV',badge:'Militaire',prix:'$150 000',description:'Robot EOD 19kg — 5 000+ déployés Irak Afghanistan.'},
+  {id:'maars',name:'MAARS',societe_name:'QinetiQ',type_drone:'UGV',badge:'Militaire',prix:'Sur contrat',description:'Modular Armed Robotic System 166kg armé M240B — US Marines clearing.'},
+  {id:'elbit_rook',name:'Rook UGV',societe_name:'Elbit Systems',type_drone:'UGV',badge:'Militaire',prix:'Sur contrat',description:'UGV logistique armé 300kg Tsahal — resupply combat + capteurs ISR.'},
+  {id:'iai_rex',name:'REX MK2',societe_name:'IAI',type_drone:'UGV',badge:'Militaire',prix:'Sur contrat',description:'UGV frontière 300kg Israël — détection intrusion patrouille autonome.'},
+  {id:'anymal',name:'ANYmal D',societe_name:'ANYbotics',type_drone:'UGV',badge:'Industriel',prix:'$150 000+',description:'Robot quadrupède IP67 ATEX inspection offshore nucléaire sécurité.'},
+  {id:'kaplan_ugv',name:'KAPLAN UGV',societe_name:'ASELSAN',type_drone:'UGV',badge:'Militaire',prix:'Sur contrat',description:'UGV armé turc 8t mitrailleuse + ATGM — programme national SSB Turquie.'},
+  // MARITIME — USV/UUV
+  {id:'sea_baby',name:'Sea Baby USV',societe_name:'UA Torpedo',type_drone:'USV',badge:'Militaire',prix:'Sur contrat',description:'USV kamikaze 500kg explosifs Ukraine — pont Kertch flotte Mer Noire.'},
+  {id:'magura_v5',name:'MAGURA V5',societe_name:'UA Torpedo',type_drone:'USV',badge:'Militaire',prix:'Sur contrat',description:'USV combat Ukraine 320kg 42 nœuds — Moskva classe croiseurs détruits.'},
+  {id:'protector_usv',name:'Protector Mk2 USV',societe_name:'Rafael',type_drone:'USV',badge:'Militaire',prix:'Sur contrat',description:'USV armé 30mm 9m — Marine israélienne Singapour escorte portuaire.'},
+  {id:'seagull_usv',name:'Seagull USV',societe_name:'Elbit Systems',type_drone:'USV',badge:'Militaire',prix:'Sur contrat',description:'USV 12m ASW sonar + mine hunting ISR — Marine israélienne.'},
+  {id:'boeing_orca',name:'Orca XLUUV',societe_name:'Boeing',type_drone:'UUV',badge:'Militaire',prix:'Sur contrat',description:'Sous-marin drone 51t 6500 miles autonomie — mines torpilles ISR US Navy.'},
+  {id:'ghost_shark',name:'Ghost Shark XLUUV',societe_name:'Anduril',type_drone:'UUV',badge:'Militaire',prix:'Sur contrat',description:'XLUUV australien autonome combat — AUS Navy 6 unités commandées.'},
+  {id:'remus_600',name:'REMUS 600',societe_name:'HII',type_drone:'UUV',badge:'Militaire',prix:'Sur contrat',description:'AUV ISR 600m déminage MCM US Navy — export 20+ marines.'},
+  {id:'cusv',name:'CUSV L3Harris',societe_name:'L3Harris',type_drone:'USV',badge:'Militaire',prix:'Sur contrat',description:'Common Unmanned Surface Vehicle 7m US Navy mine chasse MCM.'},
+  {id:'wave_glider',name:'Wave Glider SV3',societe_name:'Liquid Robotics (Boeing)',type_drone:'USV',badge:'Militaire',prix:'Sur contrat',description:'USV propulsion vague 0 carburant 1 an autonomie — US Navy ASW.'},
+  {id:'bluebottle',name:'Bluebottle USV',societe_name:'Ocius Technology',type_drone:'USV',badge:'Militaire',prix:'Sur contrat',description:'USV solaire éolien 90j persistant ISR — AUS Navy surveillance.'},
+];
 const API = 'https://scout-api-production-fa8d.up.railway.app';
 
 // Strip cite tags from AI responses — keep text inside tags
@@ -1001,12 +1058,16 @@ async function forceScrape(type) {
 // ── Produits ──────────────────────────────────────────────────
 async function loadAllProduits() {
   try {
-    const r = await fetch(API + '/produits');
+    const r = await fetch(API + '/produits', {signal: AbortSignal.timeout(8000)});
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     produits = d.produits || [];
-    console.log('[Scout] Loaded', produits.length, 'drones');
-  } catch(e) { console.error('loadAllProduits:', e); }
+    console.log('[Scout] Loaded', produits.length, 'systemes from API');
+  } catch(e) {
+    console.warn('[Scout] API unavailable, using seed data:', e.message);
+    produits = SEED_PRODUITS;
+    console.log('[Scout] Using', produits.length, 'seed systemes');
+  }
 }
 
 function renderProduits() {
