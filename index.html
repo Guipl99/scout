@@ -1761,6 +1761,22 @@ function setDroneImageDetail(wrapId, url) {
 }
 
 // ── Maintenance ───────────────────────────────────────────────
+async function scrapeDefenseContracts() {
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '⏳ Scraping (2-3 min)...';
+  try {
+    // First clean civilian contracts
+    await fetch(API + '/admin/clean-defense', { method: 'POST', headers: { 'x-secret': 'drone-scout-2026' } });
+    // Then scrape defense contracts
+    const r = await fetch(API + '/admin/scrape-contracts', { method: 'POST', headers: { 'x-secret': 'drone-scout-2026' } });
+    const d = await r.json();
+    btn.textContent = `✓ ${d.added} contrats défense ajoutés`;
+    setTimeout(() => { btn.textContent = '🔍 Scraper contrats défense'; btn.disabled = false; }, 5000);
+  } catch(e) {
+    btn.textContent = 'Erreur'; btn.disabled = false;
+  }
+}
+
 async function cleanData() {
   const msg = document.getElementById('maint-msg');
   msg.textContent = 'Nettoyage en cours...';
