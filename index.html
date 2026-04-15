@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Drone Scout">
 <meta name="theme-color" content="#0f0f0f">
 <link rel="manifest" href="manifest.json">
-<title>Scout — Veille secteur drone</title>
+<title>Scout — DefSec Robotics Intelligence</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap');
 
@@ -324,10 +324,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
     <!-- DASHBOARD -->
     <div id="panel-dashboard" class="panel active">
-      <div class="topbar"><h1>Veille secteur drone</h1></div>
+      <div class="topbar"><h1>DefSec Robotics Intelligence</h1></div>
       <div class="metrics">
-        <div class="metric"><div class="metric-label">Fabricants</div><div class="metric-value" id="m-societes">0</div></div>
-        <div class="metric"><div class="metric-label">Drones</div><div class="metric-value" id="m-produits">0</div></div>
+        <div class="metric"><div class="metric-label">Constructeurs</div><div class="metric-value" id="m-societes">0</div></div>
+        <div class="metric"><div class="metric-label">Systèmes</div><div class="metric-value" id="m-produits">0</div></div>
         <div class="metric"><div class="metric-label">Contrats</div><div class="metric-value" id="m-alerts">0</div></div>
         <div class="metric"><div class="metric-label">Fiches enrichies</div><div class="metric-value" id="m-fresh">0</div></div>
       </div>
@@ -425,7 +425,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div id="panel-produits-db" class="panel">
       <div id="produits-list-view">
         <div class="topbar">
-          <h1>Drones</h1>
+          <h1>Systèmes</h1>
 
         </div>
         
@@ -618,15 +618,16 @@ const DRONE_CATEGORIES = [
 ];
 const FABRICANT_SECTEURS = [
   'Tous',
-  'Civil / Industriel',
-  'Défense / ISR',
-  'Défense / Loitering',
-  'Défense / Intercepteurs',
-  'AAM / eVTOL Passagers',
-  'Cargo / Livraison',
-  'Agriculture / Cartographie',
-  'Maritime / Surveillance',
-  'Industriel / Inspection'
+  'Défense / Militaire',
+  'Sécurité / Law Enforcement',
+  'C-UAS / Anti-drone',
+  'ISR / Renseignement',
+  'UCAV / Strike',
+  'Loitering Munition',
+  'UGV / Robotique terrestre',
+  'USV / Maritime autonome',
+  'AAM / Transport sécurité',
+  'Civil / Dual-use',
 ];
 const COLORS = ['av-0','av-1','av-2','av-3','av-4'];
 
@@ -1734,6 +1735,32 @@ async function initSeed() {
 let activeCat = 'Tous';
 let activeSecteur = 'Tous';
 
+let activeDomaine = 'Tous';
+
+function setDomaine(d) {
+  activeDomaine = d;
+  ['Tous','Aerien','Terrestre','Maritime'].forEach(k => {
+    const el = document.getElementById('df-' + k);
+    if (el) el.className = 'tag ' + (k === d.replace('é','e') ? 'tag-accent' : 'tag-gray');
+  });
+  activeCat = 'Tous';
+  renderCatFilters();
+  filterDrones();
+}
+
+function getCatsForDomaine() {
+  if (activeDomaine === 'Terrestre') return DRONE_CATS_GROUND;
+  if (activeDomaine === 'Maritime') return DRONE_CATS_MARITIME;
+  return DRONE_CATS_AIR;
+}
+
+function getDomaineBadgeColor(type_drone) {
+  if (!type_drone) return 'tag-gray';
+  if (['UGV Combat','UGV Logistique','UGV EOD / Déminage','UGV Patrouille','Robot quadrupède','UGV','Exosquelette'].includes(type_drone)) return 'tag-amber';
+  if (['USV Combat','USV Patrouille / ISR','USV MCM / Déminage','UUV / AUV','USV Frappe / Kamikaze','USV','UUV'].includes(type_drone)) return 'tag-blue';
+  return null;
+}
+
 function renderCatFilters() {
   const el = document.getElementById('cat-filters');
   if (!el) return;
@@ -1819,8 +1846,12 @@ function renderProduitsFiltered(list) {
       </div>
       <p style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;">${(p.description||'Données en cours de collecte').slice(0,100)}${p.description && p.description.length > 100 ? '...' : ''}</p>
       <div class="entity-footer">
-        <div class="entity-tags">${tagHtml(p.badge||'Civil', badgeCls)}${p.prix ? ' <span class="tag tag-gray">'+p.prix+'</span>' : ''}</div>
-        <span class="entity-updated"><span class="upd-dot "></span>Hebdomadaire</span>
+        <div class="entity-tags">
+          ${['UGV','USV','UUV'].includes(p.type_drone) ? `<span class="tag ${p.type_drone==='UGV'?'tag-amber':'tag-blue'}" style="font-size:10px;">${p.type_drone==='UGV'?'🛡 Terrestre':'⚓ Maritime'}</span>` : ''}
+          ${tagHtml(p.badge||'Civil', badgeCls)}
+          ${p.prix && p.prix!=='Sur devis' && p.prix!=='Sur contrat' ? '<span class="tag tag-gray">'+p.prix+'</span>' : ''}
+        </div>
+        <span class="entity-updated"><span class="upd-dot"></span>Hebdo</span>
       </div>
     </div>`;
   }).join('');
