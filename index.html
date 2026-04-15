@@ -442,6 +442,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <div style="margin-bottom:1rem;">
           <input id="drones-search" type="text" placeholder="Rechercher un système..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);width:100%;max-width:320px;" oninput="filterDrones()">
         </div>
+        <div id="produits-debug" style="font-size:11px;color:var(--text3);margin-bottom:6px;"></div>
         <div class="entity-grid" id="produits-grid"></div>
       </div>
       <div id="produit-detail-view" style="display:none;">
@@ -1813,6 +1814,8 @@ function filterDrones() {
     const matchSearch = !search || p.name.toLowerCase().includes(search) || (p.societe_name||'').toLowerCase().includes(search) || (p.description||'').toLowerCase().includes(search);
     return matchCat && matchSearch;
   });
+  const dbg = document.getElementById('produits-debug');
+  if (dbg) dbg.textContent = filtered.length + ' / ' + produits.length + ' systèmes — domaine: ' + activeDomaine + ' cat: ' + activeCat;
   renderProduitsFiltered(filtered);
 }
 
