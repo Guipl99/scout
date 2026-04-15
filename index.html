@@ -498,39 +498,36 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <!-- CONTRACTS -->
     <div id="panel-contracts" class="panel">
       <div id="contracts-list-view">
-        <div class="topbar">
-          <h1>Contrats</h1>
+        <div class="topbar"><h1>Contrats & Tenders</h1></div>
 
-          
+        <!-- KPI bar compact -->
+        <div id="contracts-stats"></div>
+
+        <!-- Tabs Contrats / Live Tenders -->
+        <div style="display:flex;gap:6px;margin-bottom:0.75rem;border-bottom:1px solid var(--border2);padding-bottom:0.5rem;">
+          <button id="ctab-contracts" class="tag tag-accent" onclick="setContractTypeTab('contracts')" style="cursor:pointer;border:none;">📋 Contrats attribués</button>
+          <button id="ctab-live" class="tag tag-gray" onclick="setContractTypeTab('live')" style="cursor:pointer;border:none;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 2s infinite;"></span>Live Tenders</button>
         </div>
 
-        <!-- Stats bar -->
-        <div id="contracts-stats" style="margin-bottom:1.25rem;"></div>
+        <!-- Live tenders panel -->
+        <div id="live-tenders-panel" style="display:none;"></div>
 
-        <!-- Filters -->
-        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
-          <span style="font-size:12px;color:var(--text3);">Statut :</span>
-          <div id="contract-status-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        <!-- Contracts filters + grid -->
+        <div id="contracts-main-panel">
+          <div style="display:flex;gap:8px;margin-bottom:0.75rem;flex-wrap:wrap;">
+            <input id="contracts-search" type="text" placeholder="Rechercher un contrat, client, programme..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);flex:1;min-width:180px;" oninput="filterContracts()">
+            <select id="contracts-type-filter" style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterContracts()">
+              <option value="">Tous les types</option>
+              <option>Program of Record</option>
+              <option>IDIQ</option>
+              <option>FMS</option>
+              <option>Production</option>
+              <option>R&D</option>
+              <option>Export</option>
+            </select>
+          </div>
+          <div id="contracts-grid" class="entity-grid"></div>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
-          <input id="contracts-search" type="text" placeholder="Rechercher un contrat, client, programme..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);flex:1;min-width:200px;" oninput="filterContracts()">
-          <select id="contracts-type-filter" style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterContracts()">
-            <option value="">Tous les types</option>
-            <option>Program of Record</option>
-            <option>IDIQ</option>
-            <option>FMS</option>
-            <option>Framework</option>
-            <option>Production</option>
-            <option>R&D</option>
-            <option>Export</option>
-            <option>SBIR</option>
-          </select>
-        </div>
-
-        <!-- Add/Edit form -->
-        
-
-        <div id="contracts-grid" class="entity-grid"></div>
       </div>
     </div>
 
@@ -1373,32 +1370,20 @@ let liveTendersLoaded = false;
 
 function setContractTypeTab(tab) {
   contractTypeTab = tab;
-  ['all','contracts','tenders','live'].forEach(t => {
+  ['contracts','live'].forEach(t => {
     const el = document.getElementById('ctab-' + t);
     if (el) el.className = 'tag ' + (t === tab ? 'tag-accent' : 'tag-gray');
   });
   const livePanel = document.getElementById('live-tenders-panel');
-  const mainGrid = document.getElementById('contracts-grid');
-  const statsEl = document.getElementById('contracts-stats');
-  const filtersEl = document.getElementById('contract-statut-filters');
-  const searchEl = document.querySelector('#panel-contracts input');
-  const typeFilter = document.getElementById('contracts-type-filter');
+  const mainPanel = document.getElementById('contracts-main-panel');
   if (tab === 'live') {
-    livePanel.style.display = 'block';
-    mainGrid.style.display = 'none';
-    if (statsEl) statsEl.style.display = 'none';
-    if (filtersEl) filtersEl.style.display = 'none';
-    if (searchEl) searchEl.style.display = 'none';
-    if (typeFilter) typeFilter.style.display = 'none';
+    if (livePanel) livePanel.style.display = 'block';
+    if (mainPanel) mainPanel.style.display = 'none';
     if (!liveTendersLoaded) loadLiveTenders();
     else renderLiveTenders();
   } else {
-    livePanel.style.display = 'none';
-    mainGrid.style.display = '';
-    if (statsEl) statsEl.style.display = '';
-    if (filtersEl) filtersEl.style.display = '';
-    if (searchEl) searchEl.style.display = '';
-    if (typeFilter) typeFilter.style.display = '';
+    if (livePanel) livePanel.style.display = 'none';
+    if (mainPanel) mainPanel.style.display = 'block';
     filterContracts();
   }
 }
@@ -1525,10 +1510,23 @@ async function loadContractStats() {
     if (!el) return;
     const total = d.total || {};
     const totalM = parseFloat(total.total_m || 0);
-    el.innerHTML = `<div class="contracts-stats-grid">
-      <div class="metric"><div class="metric-label">Total contrats</div><div class="metric-value">${total.nb||0}</div></div>
-      <div class="metric"><div class="metric-label">Valeur identifiée</div><div class="metric-value" style="font-size:16px;">~$${totalM.toFixed(0)}M</div></div>
-      ${(d.byStatut||[]).slice(0,4).map(s => `<div class="metric"><div class="metric-label">${s.statut||'—'}</div><div class="metric-value">${s.nb}</div></div>`).join('')}
+    const byStatut = d.byStatut || [];
+    el.innerHTML = `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1rem;padding:0.75rem 1rem;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);">
+      <div style="display:flex;flex-direction:column;">
+        <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Total</span>
+        <span style="font-size:22px;font-weight:700;color:var(--text);">${total.nb||0}</span>
+      </div>
+      <div style="width:1px;background:var(--border2);margin:4px 0;"></div>
+      <div style="display:flex;flex-direction:column;">
+        <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Valeur identifiée</span>
+        <span style="font-size:22px;font-weight:700;color:var(--accent2);">~$${totalM >= 1000 ? (totalM/1000).toFixed(1)+'B' : totalM.toFixed(0)+'M'}</span>
+      </div>
+      ${byStatut.slice(0,4).map(s => `
+      <div style="width:1px;background:var(--border2);margin:4px 0;"></div>
+      <div style="display:flex;flex-direction:column;">
+        <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">${s.statut||'—'}</span>
+        <span style="font-size:22px;font-weight:700;color:var(--text);">${s.nb}</span>
+      </div>`).join('')}
     </div>`;
   } catch(e) {}
 }
@@ -1564,10 +1562,10 @@ function renderContractsGrid(list) {
   const g = document.getElementById('contracts-grid');
   if (!list) list = contracts;
   if (!list.length) {
-    g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span style="color:var(--text3);">Aucun contrat identifié — données enrichies hebdomadairement.</span></div>';
+    g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span style="color:var(--text3);">Aucun contrat — les fiches fabricants sont enrichies chaque semaine.</span></div>';
     return;
   }
-  const isTender = c => c.statut === "Appel d'offres ouvert";
+  const isTender = c => c.statut === "Appel d\'offres ouvert";
   g.innerHTML = list.map(c => {
     const tender = isTender(c);
     const valeurStr = c.valeur && c.valeur !== '—' ? c.valeur : null;
