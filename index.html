@@ -2096,7 +2096,7 @@ function filterSocietes() {
   const filtered = societes.filter(s => {
     const matchPays = activePays === 'Tous' || (s.pays||'').split('/')[0].trim() === activePays;
     const matchSearch = !search || s.name.toLowerCase().includes(search) || (s.pays||'').toLowerCase().includes(search) || (s.secteur||'').toLowerCase().includes(search);
-    returnmatchPays && matchSearch;
+    return matchPays && matchSearch;
   });
   renderSocietesFiltered(filtered);
 }
