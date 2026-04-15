@@ -1777,6 +1777,26 @@ function setDroneImageDetail(wrapId, url) {
 }
 
 // ── Maintenance ───────────────────────────────────────────────
+async function aiFetchImages() {
+  const btn = document.getElementById('btn-ai-imgs');
+  btn.disabled = true;
+  let total = 0;
+  for (let batch = 0; batch < 12; batch++) {
+    btn.textContent = `⏳ Batch ${batch+1}/12 en cours...`;
+    try {
+      const r = await fetch(API + '/admin/ai-fetch-images?batch=' + batch, {
+        method: 'POST', headers: {'x-secret':'drone-scout-2026'}
+      });
+      const d = await r.json();
+      if (d.done) break;
+      total += d.updated || 0;
+      btn.textContent = `⏳ ${total} images trouvées — batch ${batch+1}/12...`;
+    } catch(e) { break; }
+  }
+  btn.textContent = `✓ ${total} images IA ajoutées`;
+  setTimeout(() => { btn.textContent = '🤖 IA — images manquantes (~3 min)'; btn.disabled = false; }, 8000);
+}
+
 async function fetchProductImages() {
   const btn = document.getElementById('btn-fetch-imgs');
   btn.disabled = true; btn.textContent = '⏳ Chargement images (30s)...';
