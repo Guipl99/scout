@@ -1879,25 +1879,26 @@ function filterDrones() {
     list = list.filter(p => {
       const t = t_check(p), n = n_check(p), d = d_check(p);
       switch(activeCat) {
-        case 'ISR / Reconnaissance': return ['aile fixe isr','micro-drone isr','nano-drone','aile fixe maritime','aile fixe','micro-drone','nano drone'].includes(t) || t.includes('isr') || t.includes('reconnais');
-        case 'UCAV / Strike': return t === 'ucav' || t.includes('ucav');
-        case 'Loitering Munition': return t.includes('loitering') || t.includes('munition');
-        case 'VTOL': return t.includes('vtol');
-        case 'FPV / Combat': return t.includes('fpv');
-        case 'Nano / Micro ISR': return t.includes('nano') || t.includes('micro');
-        case 'Multirotor tactique': return t.includes('multirotor');
-        case 'Tethered': return t.includes('tether');
-        case 'UGV Combat': return t === 'UGV' && (d.includes('combat')||d.includes('arm')||n.includes('ripsaw')||n.includes('type-x')||n.includes('kaplan')||n.includes('maars')||n.includes('legion'));
-        case 'UGV Logistique': return t === 'UGV' && (d.includes('logistique')||d.includes('resupply')||n.includes('mission master')||n.includes('husky')||n.includes('warthog')||n.includes('rook'));
-        case 'UGV EOD': return t === 'UGV' && (d.includes('eod')||d.includes('demin')||n.includes('packbot')||n.includes('teodor'));
-        case 'Robot quadrupède': return t === 'UGV' && (n.includes('spot')||n.includes('anymal')||n.includes('vision 60')||n.includes('summit')||d.includes('quadrup'));
-        case 'Humanoïde': return t === 'UGV' && (n.includes('digit')||n.includes('figure')||n.includes('apollo')||n.includes('atlas')||d.includes('humano')||d.includes('bip'));
-        case 'USV Combat': return t === 'USV' && (d.includes('arm')||d.includes('combat')||n.includes('protector')||n.includes('sea baby')||n.includes('magura')||n.includes('sharktech'));
-        case 'USV Patrouille': return t === 'USV' && (d.includes('patrol')||d.includes('isr')||d.includes('surveil')||n.includes('mariner')||n.includes('bluebottle')||n.includes('wave glider')||n.includes('drix'));
-        case 'USV Frappe': return t === 'USV' && (d.includes('frappe')||d.includes('kamikaze')||d.includes('explos')||n.includes('sea baby')||n.includes('magura'));
-        case 'UUV / AUV': return t === 'UUV' || n.includes('orca')||n.includes('ghost shark')||n.includes('remus')||n.includes('hugin')||n.includes('gavia')||n.includes('alister');
+        case 'ISR / Reconnaissance': return t==='aile fixe isr'||t==='aile fixe maritime'||t==='aile fixe'||t==='micro-drone isr'||t==='nano-drone';
+        case 'UCAV / Strike': return t==='ucav';
+        case 'Loitering Munition': return t==='loitering munition';
+        case 'VTOL': return t==='vtol'||t==='vtol cargo';
+        case 'FPV / Combat': return t==='fpv'||t==='fpv/loisir';
+        case 'Nano / Micro ISR': return t==='nano-drone'||t==='micro-drone isr';
+        case 'Multirotor tactique': return t==='multirotor'||t==='multirotor tactique';
+        case 'Tethered': return t==='tethered uav';
+        case 'UGV Combat': return t==='ugv'&&(d.includes('combat')||d.includes('arm')||d.includes('armé')||n.includes('ripsaw')||n.includes('type-x')||n.includes('kaplan')||n.includes('maars')||n.includes('legion')||n.includes('rex mk')||n.includes('themis')||n.includes('rook'));
+        case 'UGV Logistique': return t==='ugv'&&(d.includes('logistique')||d.includes('resupply')||d.includes('logistic')||n.includes('mission master')||n.includes('husky')||n.includes('warthog')||n.includes('probot')||n.includes('guardian xo'));
+        case 'UGV EOD': return t==='ugv'&&(d.includes('eod')||d.includes('demin')||d.includes('ied')||n.includes('packbot')||n.includes('teodor')||n.includes('firstlook'));
+        case 'Robot quadrupède': return t==='ugv'&&(n.includes('spot')||n.includes('anymal')||n.includes('vision 60')||n.includes('summit')||d.includes('quadrup'));
+        case 'Humanoïde': return t==='ugv'&&(n.includes('digit')||n.includes('figure')||n.includes('apollo')||n.includes('atlas')||d.includes('humano')||d.includes('bip'));
+        case 'USV Combat': return (t==='usv'||t==='maritime/isr')&&(d.includes('arm')||d.includes('armé')||d.includes('combat')||d.includes('explos')||n.includes('protector')||n.includes('sea baby')||n.includes('magura')||n.includes('sharktech'));
+        case 'USV Patrouille': return t==='usv'&&!(n.includes('sea baby')||n.includes('magura'));
+        case 'USV Frappe': return (t==='usv'||t==='maritime/isr')&&(d.includes('explos')||d.includes('kamikaze')||n.includes('sea baby')||n.includes('magura'));
+        case 'UUV / AUV': return t==='uuv';
         default: return true;
       }
+
     });
   }
 
