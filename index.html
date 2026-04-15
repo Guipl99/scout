@@ -858,6 +858,7 @@ async function loadSocietes() {
 
 function renderSocietes() {
   if (typeof renderSecteurFilters === 'function') renderSecteurFilters();
+  if (typeof renderPaysFilters === 'function') renderPaysFilters();
   filterSocietes();
 }
 
