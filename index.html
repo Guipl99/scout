@@ -839,6 +839,11 @@ async function loadFeed() {
     const d = await r.json();
     renderFeedTypeFilters(d.feed);
     renderFeedList(d.feed);
+    if (d.db) {
+      console.log('=== DB STATS ===');
+      console.log('Produits:', d.db.produits);
+      console.log('Sociétés:', d.db.societes);
+    }
   } catch(e) {
     const el = document.getElementById('feed-list');
     if (el) el.innerHTML = '<div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Erreur de chargement</span></div>';
