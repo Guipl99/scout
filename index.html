@@ -2110,32 +2110,19 @@ function renderProduitsFiltered(list) {
   }).join('');
 }
 
-// Load product images: direct image_url from DB (Wikipedia/manufacturer)
+// Load product images via Railway proxy (avoids CORS, cached server-side)
 function loadProductImages(list) {
   list.forEach(p => {
+    if (!p.image_url) return; // no image in DB yet
     const el = document.getElementById('img-' + p.id);
     if (!el) return;
-
-    const showImg = (url) => {
-      el.innerHTML = `<img src="${url}" alt="${p.name}" style="width:100%;height:110px;object-fit:cover;display:block;border-radius:var(--radius) var(--radius) 0 0;" onerror="this.parentElement.innerHTML=''">`;
+    // Use Railway proxy endpoint - cached in memory after first load
+    const proxyUrl = API + '/produits/' + p.id + '/image';
+    const img = new Image();
+    img.onload = () => {
+      el.innerHTML = `<img src="${proxyUrl}" alt="${p.name}" style="width:100%;height:110px;object-fit:cover;display:block;border-radius:var(--radius) var(--radius) 0 0;">`;
     };
-
-    // 1. Direct image_url from DB (stored by fetch-images)
-    if (p.image_url) {
-      showImg(p.image_url);
-      return;
-    }
-
-    // 2. Try GitHub Pages local asset
-    const tryLocal = (exts, i) => {
-      if (i >= exts.length) return;
-      const url = IMG_BASE + p.id + '.' + exts[i];
-      const img = new Image();
-      img.onload = () => showImg(url);
-      img.onerror = () => tryLocal(exts, i + 1);
-      img.src = url;
-    };
-    tryLocal(IMG_EXTS, 0);
+    img.src = proxyUrl;
   });
 }
 
