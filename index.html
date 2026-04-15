@@ -1777,6 +1777,17 @@ function setDroneImageDetail(wrapId, url) {
 }
 
 // ── Maintenance ───────────────────────────────────────────────
+async function fetchProductImages() {
+  const btn = document.getElementById('btn-fetch-imgs');
+  btn.disabled = true; btn.textContent = '⏳ Chargement images (30s)...';
+  try {
+    const r = await fetch(API + '/admin/fetch-images', { method: 'POST', headers: { 'x-secret': 'drone-scout-2026' } });
+    const d = await r.json();
+    btn.textContent = d.ok ? `✓ ${d.fetched} images chargées` : 'Erreur';
+    setTimeout(() => { btn.textContent = '🖼 Charger images produits (Wikipedia)'; btn.disabled = false; }, 5000);
+  } catch(e) { btn.textContent = 'Erreur'; btn.disabled = false; }
+}
+
 async function scrapeTethered() {
   const btn = event.target;
   btn.disabled = true; btn.textContent = '⏳ Scraping tethered (1-2 min)...';
@@ -2099,24 +2110,36 @@ function renderProduitsFiltered(list) {
   }).join('');
 }
 
-// Load product images from GitHub Pages assets
+// Load product images: 1) GitHub Pages assets 2) DB image_url (Wikipedia proxy)
 function loadProductImages(list) {
   list.forEach(p => {
     const el = document.getElementById('img-' + p.id);
     if (!el) return;
-    // Try each extension
-    const tryLoad = (exts, i) => {
-      if (i >= exts.length) return; // no image found, keep placeholder
+
+    const showImg = (url) => {
+      el.style.background = '#111';
+      el.innerHTML = `<img src="${url}" alt="${p.name}" style="width:100%;height:110px;object-fit:cover;display:block;border-radius:var(--radius) var(--radius) 0 0;">`;
+    };
+
+    // 1. Try GitHub Pages local asset first
+    const tryLocal = (exts, i) => {
+      if (i >= exts.length) {
+        // 2. Fallback: DB image_url (Wikipedia via API proxy)
+        if (p.image_url) {
+          const proxyUrl = API + '/produits/' + p.id + '/image';
+          const img = new Image();
+          img.onload = () => showImg(proxyUrl);
+          img.src = proxyUrl;
+        }
+        return;
+      }
       const url = IMG_BASE + p.id + '.' + exts[i];
       const img = new Image();
-      img.onload = () => {
-        el.style.background = '#000';
-        el.innerHTML = `<img src="${url}" alt="${p.name}" style="width:100%;height:110px;object-fit:cover;display:block;">`;
-      };
-      img.onerror = () => tryLoad(exts, i + 1);
+      img.onload = () => showImg(url);
+      img.onerror = () => tryLocal(exts, i + 1);
       img.src = url;
     };
-    tryLoad(IMG_EXTS, 0);
+    tryLocal(IMG_EXTS, 0);
   });
 }
 
