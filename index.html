@@ -832,7 +832,7 @@ async function loadSocietes() {
 }
 
 function renderSocietes() {
-  renderSecteurFilters();
+  if (typeof renderSecteurFilters === 'function') renderSecteurFilters();
   filterSocietes();
 }
 
@@ -1071,8 +1071,16 @@ async function loadAllProduits() {
 }
 
 function renderProduits() {
-  setDomaine('Tous');
   document.getElementById('m-produits').textContent = produits.length;
+  // Reset domain and show all
+  activeDomaine = 'Tous';
+  activeCat = 'Tous';
+  ['Tous','Air','Ground','Maritime'].forEach(k => {
+    const el = document.getElementById('df-' + k);
+    if (el) el.className = 'tag ' + (k === 'Tous' ? 'tag-accent' : 'tag-gray');
+  });
+  renderCatFilters();
+  filterDrones();
 }
 
 
@@ -1801,41 +1809,32 @@ async function initSeed() {
 // ── Filters ───────────────────────────────────────────────────
 let activeCat = 'Tous';
 let activeDomaine = 'Tous';
+let activeSecteur = 'Tous';
+let activePays = 'Tous';
 
 const CAT_MAP_AIR = ['Tous','ISR / Reconnaissance','UCAV / Strike','Loitering Munition','VTOL','FPV / Combat','Nano / Micro ISR','Multirotor tactique','Tethered'];
-const CAT_MAP_GROUND = ['Tous','UGV Combat','UGV Logistique','UGV EOD','Robot quadrupède','Humanoïde','Exosquelette'];
+const CAT_MAP_GROUND = ['Tous','UGV Combat','UGV Logistique','UGV EOD','Robot quadrupède','Humanoïde'];
 const CAT_MAP_MARITIME = ['Tous','USV Combat','USV Patrouille','USV Frappe','UUV / AUV'];
 
-const TYPE_TO_DOMAINE = {
-  'UGV':'Terrestre','USV':'Maritime','UUV':'Maritime',
-};
-
 function getDomaine(p) {
-  const t = (p.type_drone || '').toLowerCase();
-  // Ground systems
-  if (t === 'ugv') return 'Ground';
-  if (t.includes('ugv') || t.includes('exosq')) return 'Ground';
-  // Maritime systems  
-  if (t === 'usv' || t === 'uuv') return 'Maritime';
-  if (t.includes('maritime')) return 'Maritime';
-  // Name-based detection
+  const t = (p.type_drone || '').toUpperCase();
+  if (t === 'UGV') return 'Ground';
+  if (t === 'USV' || t === 'UUV') return 'Maritime';
   const n = (p.name || '').toLowerCase();
-  const ugvNames = ['themis','type-x','vision 60','spot','atlas ugv','digit','figure 0','apollo','anymal','husky','warthog','summit xl','packbot','maars','teodor','kaplan','rook ugv','legion-x','rex mk','probot','guardian xo','ripsaw','mission master','sarcos','sarcos'];
-  const usvNames = ['sea baby','magura','protector mk','seagull usv','cusv','devil ray','wave glider','drix','alister','orca xluu','ghost shark','remus','hugin','gavia','bluebottle','mariner usv','arcims','sm300','sharktech'];
-  if (ugvNames.some(k => n.includes(k))) return 'Ground';
-  if (usvNames.some(k => n.includes(k))) return 'Maritime';
+  const ugvK = ['themis','type-x','vision 60','spot','atlas ugv','digit','figure 0','apollo','anymal','husky','warthog','summit xl','packbot','maars','teodor','kaplan','rook ugv','legion-x','rex mk','probot','guardian xo','ripsaw','mission master','sarcos'];
+  const usvK = ['sea baby','magura','protector mk','seagull usv','cusv','devil ray','wave glider','drix','alister','orca','ghost shark','remus','hugin','gavia','bluebottle','mariner usv','arcims','sm300','sharktech'];
+  if (ugvK.some(k => n.includes(k))) return 'Ground';
+  if (usvK.some(k => n.includes(k))) return 'Maritime';
   return 'Air';
 }
-let activeSecteur = 'Tous';
-
 
 function setDomaine(d) {
   activeDomaine = d;
+  activeCat = 'Tous';
   ['Tous','Air','Ground','Maritime'].forEach(k => {
     const el = document.getElementById('df-' + k);
-    if (el) el.className = 'tag ' + (d === k ? 'tag-accent' : 'tag-gray');
+    if (el) el.className = 'tag ' + (k === d ? 'tag-accent' : 'tag-gray');
   });
-  activeCat = 'Tous';
   renderCatFilters();
   filterDrones();
 }
@@ -1847,25 +1846,84 @@ function getCatsForDomaine() {
 }
 
 function getDomaineBadgeColor(type_drone) {
-  if (!type_drone) return 'tag-gray';
-  if (['UGV Combat','UGV Logistique','UGV EOD / Déminage','UGV Patrouille','Robot quadrupède','UGV','Exosquelette'].includes(type_drone)) return 'tag-amber';
-  if (['USV Combat','USV Patrouille / ISR','USV MCM / Déminage','UUV / AUV','USV Frappe / Kamikaze','USV','UUV'].includes(type_drone)) return 'tag-blue';
+  if (!type_drone) return null;
+  if (['UGV'].includes(type_drone)) return 'tag-amber';
+  if (['USV','UUV'].includes(type_drone)) return 'tag-blue';
   return null;
 }
 
 function renderCatFilters() {
   const el = document.getElementById('cat-filters');
   if (!el) return;
-  el.innerHTML = DRONE_CATEGORIES.map(c => ``).join('');
+  const cats = getCatsForDomaine();
+  el.innerHTML = cats.map(c =>
+    `<button class="tag ${c===activeCat?'tag-accent':'tag-gray'}" onclick="setCat('${c}')" style="cursor:pointer;border:none;font-size:12px;">${c}</button>`
+  ).join('');
 }
 
-function renderSecteurFilters() {
-  const el = document.getElementById('secteur-filters');
-  if (!el) return;
-  el.innerHTML = FABRICANT_SECTEURS.map(s => ``).join('');
+function filterDrones() {
+  const searchEl = document.getElementById('drones-search');
+  const search = searchEl ? searchEl.value.toLowerCase() : '';
+  let list = produits;
+
+  // Step 1: filter by domaine
+  if (activeDomaine !== 'Tous') {
+    list = list.filter(p => getDomaine(p) === activeDomaine);
+  }
+
+  // Step 2: filter by cat
+  if (activeCat !== 'Tous') {
+    const t_check = (p) => (p.type_drone||'').toUpperCase();
+    const n_check = (p) => (p.name||'').toLowerCase();
+    const d_check = (p) => (p.description||'').toLowerCase();
+    list = list.filter(p => {
+      const t = t_check(p), n = n_check(p), d = d_check(p);
+      switch(activeCat) {
+        case 'ISR / Reconnaissance': return ['AILE FIXE ISR','MICRO-DRONE ISR','NANO-DRONE','AILE FIXE MARITIME','AILE FIXE'].includes(t);
+        case 'UCAV / Strike': return t === 'UCAV';
+        case 'Loitering Munition': return t === 'LOITERING MUNITION';
+        case 'VTOL': return t === 'VTOL' || t === 'VTOL CARGO';
+        case 'FPV / Combat': return t === 'FPV' || t === 'FPV/LOISIR';
+        case 'Nano / Micro ISR': return t === 'NANO-DRONE' || t === 'MICRO-DRONE ISR';
+        case 'Multirotor tactique': return t === 'MULTIROTOR' || t === 'MULTIROTOR TACTIQUE';
+        case 'Tethered': return t === 'TETHERED UAV' || t === 'TETHERED';
+        case 'UGV Combat': return t === 'UGV' && (d.includes('combat')||d.includes('arm')||n.includes('ripsaw')||n.includes('type-x')||n.includes('kaplan')||n.includes('maars')||n.includes('legion'));
+        case 'UGV Logistique': return t === 'UGV' && (d.includes('logistique')||d.includes('resupply')||n.includes('mission master')||n.includes('husky')||n.includes('warthog')||n.includes('rook'));
+        case 'UGV EOD': return t === 'UGV' && (d.includes('eod')||d.includes('demin')||n.includes('packbot')||n.includes('teodor'));
+        case 'Robot quadrupède': return t === 'UGV' && (n.includes('spot')||n.includes('anymal')||n.includes('vision 60')||n.includes('summit')||d.includes('quadrup'));
+        case 'Humanoïde': return t === 'UGV' && (n.includes('digit')||n.includes('figure')||n.includes('apollo')||n.includes('atlas')||d.includes('humano')||d.includes('bip'));
+        case 'USV Combat': return t === 'USV' && (d.includes('arm')||d.includes('combat')||n.includes('protector')||n.includes('sea baby')||n.includes('magura')||n.includes('sharktech'));
+        case 'USV Patrouille': return t === 'USV' && (d.includes('patrol')||d.includes('isr')||d.includes('surveil')||n.includes('mariner')||n.includes('bluebottle')||n.includes('wave glider')||n.includes('drix'));
+        case 'USV Frappe': return t === 'USV' && (d.includes('frappe')||d.includes('kamikaze')||d.includes('explos')||n.includes('sea baby')||n.includes('magura'));
+        case 'UUV / AUV': return t === 'UUV' || n.includes('orca')||n.includes('ghost shark')||n.includes('remus')||n.includes('hugin')||n.includes('gavia')||n.includes('alister');
+        default: return true;
+      }
+    });
+  }
+
+  // Step 3: search
+  if (search) {
+    list = list.filter(p =>
+      (p.name||'').toLowerCase().includes(search) ||
+      (p.societe_name||'').toLowerCase().includes(search) ||
+      (p.description||'').toLowerCase().includes(search)
+    );
+  }
+
+  const dbg = document.getElementById('produits-debug');
+  if (dbg) dbg.textContent = list.length + ' / ' + produits.length + ' systèmes  [' + activeDomaine + ' > ' + activeCat + ']';
+
+  renderProduitsFiltered(list);
 }
 
 function setCat(cat) { activeCat = cat; renderCatFilters(); filterDrones(); }
+function renderSecteurFilters() {
+  const el = document.getElementById('secteur-filters');
+  if (!el) return;
+  el.innerHTML = FABRICANT_SECTEURS.map(s =>
+    `<button class="tag ${s===activeSecteur?'tag-accent':'tag-gray'}" onclick="setSecteur('${s}')" style="cursor:pointer;border:none;font-size:12px;">${s}</button>`
+  ).join('');
+}
 function setSecteur(s) { activeSecteur = s; renderSecteurFilters(); filterSocietes(); }
 
 function filterDrones() {
@@ -1952,14 +2010,11 @@ function renderProduitsFiltered(list) {
 }
 
 async function init() {
-  try {
-    await Promise.all([loadSocietes(), loadAllProduits(), loadContracts()]);
-    renderSocietes();
-    renderProduits();
-    renderDashboard();
-  } catch(e) {
-    console.error('Init error:', e);
-  }
+  // Load each independently so one failure doesn't block others
+  await Promise.allSettled([loadSocietes(), loadAllProduits(), loadContracts()]);
+  try { renderSocietes(); } catch(e) { console.error('renderSocietes:', e); }
+  try { renderProduits(); } catch(e) { console.error('renderProduits:', e); }
+  try { renderDashboard(); } catch(e) { console.error('renderDashboard:', e); }
 }
 
 init().then(() => {
