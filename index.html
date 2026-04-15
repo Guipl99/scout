@@ -1124,6 +1124,8 @@ async function openProduit(id) {
   document.getElementById('p-sub').textContent = (p.societe_name || '') + (p.prix ? ' · ' + p.prix : '');
   document.getElementById('p-tags').innerHTML = tagHtml(p.badge||'Core', p.badge==='Nouveau'?'tag-accent':p.badge==='Premium'?'tag-amber':'tag-gray') + (p.nouveau ? ' ' + tagHtml('Nouveau','tag-green') : '');
 
+  // Always clear fields first to avoid stale data from previous product
+  clearProduitDetail();
   if (p.data) fillProduitDetail(p.data, p, true, p.scraped_at);
 
   showPTab('overview', document.querySelector('#produit-detail-view .tab'));
@@ -1143,6 +1145,16 @@ async function openProduit(id) {
     }
   } catch(e) { document.getElementById('p-info').textContent = 'Erreur: ' + e.message; }
   finally { dot.classList.remove('loading'); }
+}
+
+function clearProduitDetail() {
+  const empty = '—';
+  const els = ['p-desc','p-prix','p-info','p-ts'];
+  els.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
+  ['p-pros','p-cons','p-features','p-specs','p-extra','p-contrats','p-changelog','p-analyse'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
 }
 
 function fillProduitDetail(d, produit, fromCache, scrapedAt) {
