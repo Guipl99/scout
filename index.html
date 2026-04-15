@@ -432,8 +432,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <!-- Domaine tabs -->
         <div style="display:flex;gap:6px;margin-bottom:0.6rem;flex-wrap:wrap;">
           <button id="df-Tous" class="tag tag-accent" onclick="setDomaine('Tous')" style="cursor:pointer;border:none;font-size:12px;">Tous</button>
-          <button id="df-Aerien" class="tag tag-gray" onclick="setDomaine('Aérien')" style="cursor:pointer;border:none;font-size:12px;">✈ Aérien</button>
-          <button id="df-Terrestre" class="tag tag-gray" onclick="setDomaine('Terrestre')" style="cursor:pointer;border:none;font-size:12px;">🛡 Terrestre</button>
+          <button id="df-Air" class="tag tag-gray" onclick="setDomaine('Air')" style="cursor:pointer;border:none;font-size:12px;">✈ Aérien</button>
+          <button id="df-Ground" class="tag tag-gray" onclick="setDomaine('Ground')" style="cursor:pointer;border:none;font-size:12px;">🛡 Terrestre</button>
           <button id="df-Maritime" class="tag tag-gray" onclick="setDomaine('Maritime')" style="cursor:pointer;border:none;font-size:12px;">⚓ Maritime</button>
         </div>
         <!-- Cat filters -->
@@ -1749,27 +1749,29 @@ const TYPE_TO_DOMAINE = {
 };
 
 function getDomaine(p) {
-  // Explicit domaine field takes priority
-  if (p.domaine && p.domaine !== 'Aérien') return p.domaine;
-  // Derive from type_drone
   const t = (p.type_drone || '').toLowerCase();
-  if (t === 'ugv' || t.startsWith('ugv') || t.includes('quadrup') || t.includes('humano') || t.includes('exosq')) return 'Terrestre';
-  if (t === 'usv' || t === 'uuv' || t.includes('maritime') || t.startsWith('usv') || t.startsWith('uuv')) return 'Maritime';
-  // Derive from name keywords
+  // Ground systems
+  if (t === 'ugv') return 'Ground';
+  if (t.includes('ugv') || t.includes('exosq')) return 'Ground';
+  // Maritime systems  
+  if (t === 'usv' || t === 'uuv') return 'Maritime';
+  if (t.includes('maritime')) return 'Maritime';
+  // Name-based detection
   const n = (p.name || '').toLowerCase();
-  if (['themis','type-x','vision 60','spot','atlas','digit','figure','apollo','anymal','husky','warthog','summit','packbot','maars','teodor','kaplan','rook','legion','rex mk','probot','guardian xo'].some(k => n.includes(k))) return 'Terrestre';
-  if (['sea baby','magura','protector usv','seagull usv','cusv','devil ray','wave glider','drix','alister','orca xluuv','ghost shark','remus','hugin','gavia','bluebottle','mariner usv','arcims','sm300'].some(k => n.includes(k))) return 'Maritime';
-  return 'Aérien';
+  const ugvNames = ['themis','type-x','vision 60','spot','atlas ugv','digit','figure 0','apollo','anymal','husky','warthog','summit xl','packbot','maars','teodor','kaplan','rook ugv','legion-x','rex mk','probot','guardian xo','ripsaw','mission master','sarcos','sarcos'];
+  const usvNames = ['sea baby','magura','protector mk','seagull usv','cusv','devil ray','wave glider','drix','alister','orca xluu','ghost shark','remus','hugin','gavia','bluebottle','mariner usv','arcims','sm300','sharktech'];
+  if (ugvNames.some(k => n.includes(k))) return 'Ground';
+  if (usvNames.some(k => n.includes(k))) return 'Maritime';
+  return 'Air';
 }
 let activeSecteur = 'Tous';
 
 
 function setDomaine(d) {
   activeDomaine = d;
-  const map = {'Tous':'Tous','Aérien':'Aerien','Terrestre':'Terrestre','Maritime':'Maritime'};
-  ['Tous','Aerien','Terrestre','Maritime'].forEach(k => {
+  ['Tous','Air','Ground','Maritime'].forEach(k => {
     const el = document.getElementById('df-' + k);
-    if (el) el.className = 'tag ' + (map[d] === k ? 'tag-accent' : 'tag-gray');
+    if (el) el.className = 'tag ' + (d === k ? 'tag-accent' : 'tag-gray');
   });
   activeCat = 'Tous';
   renderCatFilters();
@@ -1777,9 +1779,9 @@ function setDomaine(d) {
 }
 
 function getCatsForDomaine() {
-  if (activeDomaine === 'Terrestre') return CAT_MAP_GROUND;
+  if (activeDomaine === 'Ground') return CAT_MAP_GROUND;
   if (activeDomaine === 'Maritime') return CAT_MAP_MARITIME;
-  return CAT_MAP_AIR; // Aérien ou Tous
+  return CAT_MAP_AIR;
 }
 
 function getDomaineBadgeColor(type_drone) {
