@@ -551,8 +551,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div class="card" style="margin-bottom:1rem;">
         <div class="card-header"><span class="card-title">Maintenance</span></div>
         <div class="card-body" style="padding:0.75rem 1.25rem;display:flex;gap:8px;flex-wrap:wrap;">
-          
-          
+          <button class="btn" onclick="scrapeDefenseContracts()">🔍 Scraper contrats défense</button>
+          <button class="btn" onclick="scrapeTendersFromConfig()">📡 Scraper live tenders</button>
+          <button class="btn" onclick="scrapeTethered()">🪁 Scraper tethered drones</button>
+          <button class="btn" id="btn-fetch-imgs" onclick="fetchProductImages()">🖼 Images Wikipedia</button>
+          <button class="btn" id="btn-ai-imgs" onclick="aiFetchImages()">🤖 IA — images manquantes</button>
+          <button class="btn btn-danger" onclick="cleanData()">🧹 Nettoyer données</button>
           <span id="maint-msg" style="font-size:12px;color:var(--text3);align-self:center;"></span>
         </div>
       </div>
