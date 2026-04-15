@@ -1880,7 +1880,7 @@ function filterDrones() {
 
   // Step 2: filter by cat
   if (activeCat !== 'Tous') {
-    const t_check = (p) => (p.type_drone||'').toUpperCase();
+    const t_check = (p) => (p.type_drone||'').toLowerCase().trim();
     const n_check = (p) => (p.name||'').toLowerCase();
     const d_check = (p) => (p.description||'').toLowerCase();
     list = list.filter(p => {
