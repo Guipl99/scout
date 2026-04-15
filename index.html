@@ -1830,7 +1830,7 @@ let activeDomaine = 'Tous';
 let activeSecteur = 'Tous';
 let activePays = 'Tous';
 
-const CAT_MAP_AIR = ['Tous','ISR / Reconnaissance','UCAV / Strike','Loitering Munition','VTOL','FPV / Combat','Nano / Micro ISR','Multirotor tactique','Tethered'];
+const CAT_MAP_AIR = ['Tous','ISR / Reconnaissance','UCAV / Strike','Loitering Munition','VTOL','FPV / Combat','Nano / Micro ISR','Multirotor tactique'];
 const CAT_MAP_GROUND = ['Tous','UGV Combat','UGV Logistique','UGV EOD','Robot quadrupède','Humanoïde'];
 const CAT_MAP_MARITIME = ['Tous','USV Combat','USV Patrouille','USV Frappe','UUV / AUV'];
 
@@ -1912,8 +1912,6 @@ function filterDrones() {
           return t.includes('nano') || t.includes('micro');
         case 'Multirotor tactique':
           return t.includes('multirotor');
-        case 'Tethered':
-          return t.includes('tether');
         // ── TERRESTRE ──────────────────────────────────────────
         case 'UGV Combat':
           return t.includes('ugv') && (
