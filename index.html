@@ -1749,8 +1749,16 @@ const TYPE_TO_DOMAINE = {
 };
 
 function getDomaine(p) {
-  if (p.domaine) return p.domaine;
-  if (TYPE_TO_DOMAINE[p.type_drone]) return TYPE_TO_DOMAINE[p.type_drone];
+  // Explicit domaine field takes priority
+  if (p.domaine && p.domaine !== 'Aérien') return p.domaine;
+  // Derive from type_drone
+  const t = (p.type_drone || '').toLowerCase();
+  if (t === 'ugv' || t.startsWith('ugv') || t.includes('quadrup') || t.includes('humano') || t.includes('exosq')) return 'Terrestre';
+  if (t === 'usv' || t === 'uuv' || t.includes('maritime') || t.startsWith('usv') || t.startsWith('uuv')) return 'Maritime';
+  // Derive from name keywords
+  const n = (p.name || '').toLowerCase();
+  if (['themis','type-x','vision 60','spot','atlas','digit','figure','apollo','anymal','husky','warthog','summit','packbot','maars','teodor','kaplan','rook','legion','rex mk','probot','guardian xo'].some(k => n.includes(k))) return 'Terrestre';
+  if (['sea baby','magura','protector usv','seagull usv','cusv','devil ray','wave glider','drix','alister','orca xluuv','ghost shark','remus','hugin','gavia','bluebottle','mariner usv','arcims','sm300'].some(k => n.includes(k))) return 'Maritime';
   return 'Aérien';
 }
 let activeSecteur = 'Tous';
@@ -1771,8 +1779,7 @@ function setDomaine(d) {
 function getCatsForDomaine() {
   if (activeDomaine === 'Terrestre') return CAT_MAP_GROUND;
   if (activeDomaine === 'Maritime') return CAT_MAP_MARITIME;
-  if (activeDomaine === 'Aérien') return CAT_MAP_AIR;
-  return CAT_MAP_AIR; // Tous — show air cats as default
+  return CAT_MAP_AIR; // Aérien ou Tous
 }
 
 function getDomaineBadgeColor(type_drone) {
