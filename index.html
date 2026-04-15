@@ -103,7 +103,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .alert-meta { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
 
 /* ── Entity grid (societes + produits) ── */
-.entity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.entity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .entity-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; cursor: pointer; transition: border-color 0.15s; overflow: hidden; }
 .logo-avatar { width: 36px; height: 36px; flex-shrink: 0; }
 .logo-avatar img { width: 36px; height: 36px; border-radius: 8px; object-fit: contain; background: white; padding: 2px; }
@@ -268,20 +268,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* ── Bottom nav mobile ── */
 .bottom-nav { display: none; background: var(--bg2); border-top: 1px solid var(--border); padding: 6px 0 env(safe-area-inset-bottom, 6px); flex-shrink: 0; }
 .bottom-nav-items { display: flex; justify-content: space-around; }
-
-/* ── Feed list ─────────────────────────────────────────────── */
-.feed-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border2); cursor:pointer; }
-.feed-row:last-child { border-bottom:none; }
-.feed-row:active { opacity:0.7; }
-.feed-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; }
-.fi-fabricant, .fi-societe { background:rgba(139,92,246,0.2); color:#a78bfa; }
-.fi-drone, .fi-produit { background:rgba(59,130,246,0.2); color:#60a5fa; }
-.fi-contrat, .fi-contract { background:rgba(16,185,129,0.2); color:#34d399; }
-.fi-alerte { background:rgba(245,158,11,0.2); color:#fbbf24; }
-.feed-body { flex:1; min-width:0; }
-.feed-title { font-size:13px; font-weight:600; color:var(--text); line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.feed-sub { font-size:11px; color:var(--text3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.feed-date { font-size:10px; color:var(--text3); flex-shrink:0; font-family:'DM Mono',monospace; }
 .bn-item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 10px; color: var(--text3); user-select: none; flex: 1; transition: color 0.15s; }
 .bn-item.active { color: var(--accent2); }
 .bn-icon { width: 20px; height: 20px; }
@@ -1440,37 +1426,35 @@ function renderLiveTenders() {
       <span style="font-size:12px;color:var(--text3);">Mis à jour : ${liveTenders[0]?.scraped_at ? timeAgo(liveTenders[0].scraped_at) : '—'}</span>
       <span style="font-size:12px;color:var(--text3);">· ${liveTenders.length} tenders actifs</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
+    <div class="entity-grid">
       ${liveTenders.map(t => {
         const closingSoon = t.date_cloture && (new Date(t.date_cloture) - now) / 86400000 < 14;
         const closed = t.date_cloture && new Date(t.date_cloture) < now;
         const statusColor = closed ? '#6b7280' : t.statut === 'Ouvert' ? '#22c55e' : '#f59e0b';
         const daysLeft = t.date_cloture ? Math.ceil((new Date(t.date_cloture) - now) / 86400000) : null;
-        return `<div onclick="openTenderDetail('${t.id}')" style="background:var(--bg3);border:1px solid var(--border2);border-left:3px solid #3b82f6;border-radius:12px;padding:1rem;cursor:pointer;display:flex;flex-direction:column;gap:8px;">
-          <div style="display:flex;align-items:flex-start;gap:10px;">
-            <div class="contract-icon-badge ci-tender" style="flex-shrink:0;font-size:9px;margin-top:2px;">${(t.source_name||'AO').slice(0,8)}</div>
-            <div style="min-width:0;flex:1;">
-              <div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.35;margin-bottom:2px;">${sanitize(t.titre)}</div>
-              <div style="font-size:11px;color:var(--text3);">${sanitize(t.acheteur||'—')} · ${sanitize(t.pays||'—')}</div>
+        return `<div class="entity-card tender-card" style="cursor:pointer;" onclick="openTenderDetail('${t.id}')">
+          <div class="entity-card-top">
+            <div class="contract-icon-badge ci-tender" style="font-size:9px;">${(t.source_name||'AO').slice(0,6)}</div>
+            <div style="min-width:0;">
+              <div class="entity-name" style="font-size:12px;line-height:1.3;">${sanitize(t.titre)}</div>
+              <div class="entity-sub">${sanitize(t.acheteur||'—')} · ${sanitize(t.pays||'—')}</div>
             </div>
-            ${t.valeur_estimee ? `<div style="font-size:15px;font-weight:700;color:var(--accent2);font-family:'DM Mono',monospace;flex-shrink:0;">${sanitize(t.valeur_estimee)}</div>` : ''}
           </div>
-          <p style="font-size:12px;color:var(--text2);line-height:1.5;margin:0;">${sanitize(t.description||'').slice(0,110)}${(t.description||'').length>110?'…':''}</p>
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-            <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-              <span style="font-size:10px;font-weight:600;color:${statusColor};background:${closed?'rgba(107,114,128,0.15)':t.statut==='Ouvert'?'rgba(34,197,94,0.15)':'rgba(245,158,11,0.15)'};padding:2px 7px;border-radius:4px;">● ${sanitize(t.statut||'—')}</span>
+          ${t.valeur_estimee ? `<div style="font-size:15px;font-weight:700;color:var(--accent2);margin:6px 0;font-family:'DM Mono',monospace;">${sanitize(t.valeur_estimee)}</div>` : ''}
+          <p style="font-size:11px;color:var(--text2);line-height:1.4;margin-bottom:8px;">${sanitize(t.description||'').slice(0,100)}${(t.description||'').length>100?'...':''}</p>
+          <div class="entity-footer">
+            <div class="entity-tags">
+              <span style="font-size:10px;font-weight:600;color:${statusColor};">● ${sanitize(t.statut||'—')}</span>
               ${t.type_drone ? `<span class="tag tag-accent" style="font-size:10px;">${sanitize(t.type_drone)}</span>` : ''}
               ${t.type ? `<span class="tag tag-gray" style="font-size:10px;">${sanitize(t.type)}</span>` : ''}
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              ${daysLeft !== null ? `<span style="font-size:11px;font-weight:700;color:${closingSoon&&!closed?'#f59e0b':closed?'#6b7280':'var(--text3)'};">${closed?'Clôturé':daysLeft+'j'}</span>` : ''}
-              ${t.source_url ? `<a href="${t.source_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:12px;color:var(--accent2);text-decoration:none;font-weight:700;">↗ Source</a>` : ''}
-            </div>
+            ${daysLeft !== null ? `<span style="font-size:10px;font-weight:600;color:${closingSoon&&!closed?'#f59e0b':closed?'#6b7280':'var(--text3)'};">${closed ? 'Clôturé' : daysLeft + 'j'}</span>` : ''}
           </div>
         </div>`;
       }).join('')}
     </div>`;
 }
+
 
 async function scrapeTenders() {
   const btn = document.getElementById('btn-scrape-tenders');
@@ -1560,38 +1544,40 @@ function renderContractsGrid(list) {
   const g = document.getElementById('contracts-grid');
   if (!list) list = contracts;
   if (!list.length) {
-    g.innerHTML = '<div class="empty" style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text3);">Aucun contrat défense — cliquez "Scraper contrats défense" dans Paramètres.</div>';
+    g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span style="color:var(--text3);">Aucun contrat — les fiches fabricants sont enrichies chaque semaine.</span></div>';
     return;
   }
   const isTender = c => c.statut === "Appel d\'offres ouvert";
   g.innerHTML = list.map(c => {
     const tender = isTender(c);
     const valeurStr = c.valeur && c.valeur !== '—' ? c.valeur : null;
-    const societeN = c.societe_name && c.societe_name !== '—' ? sanitize(c.societe_name) : '';
+    const societeN = sanitize(c.societe_name || '—');
     const clientN = sanitize(c.client || '—');
     const annee = c.date_signature ? new Date(c.date_signature).getFullYear() : (c.created_at ? new Date(c.created_at).getFullYear() : '');
-    const src = (c.sources&&c.sources[0]&&c.sources[0].startsWith('http')) ? c.sources[0] : (c.data?.source_url||null);
-    return `<div onclick="openContractDetail('${c.id}')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:1rem;cursor:pointer;display:flex;flex-direction:column;gap:8px;${tender?'border-left:3px solid #3b82f6;':'border-left:3px solid var(--accent);'}transition:border-color 0.15s;">
-      <div style="display:flex;align-items:flex-start;gap:10px;">
-        <div class="contract-icon-badge ${tender?'ci-tender':'ci-contract'}" style="flex-shrink:0;margin-top:2px;">${tender?'AO':'CTR'}</div>
-        <div style="min-width:0;flex:1;">
-          <div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.35;margin-bottom:2px;">${sanitize(c.titre||'—')}</div>
-          <div style="font-size:11px;color:var(--text3);">${societeN ? societeN+' · ' : ''}${clientN}${c.pays_client&&c.pays_client!=='—'?' ('+sanitize(c.pays_client)+')':''}</div>
+    const data = c.data || {};
+    const dateCloture = data.date_cloture || null;
+    return `<div class="entity-card ${tender ? 'tender-card' : ''}" onclick="openContractDetail('${c.id}')">
+      <div class="entity-card-top">
+        <div class="contract-icon-badge ${tender ? 'ci-tender' : 'ci-contract'}">${tender ? 'AO' : 'CTR'}</div>
+        <div style="min-width:0;">
+          <div class="entity-name" style="font-size:13px;line-height:1.3;">${sanitize(c.titre||'—')}</div>
+          <div class="entity-sub">${societeN !== '—' ? societeN + ' · ' : ''}${clientN}${c.pays_client ? ' (' + sanitize(c.pays_client) + ')' : ''}</div>
         </div>
-        ${valeurStr ? `<div style="font-size:15px;font-weight:700;color:var(--accent2);font-family:'DM Mono',monospace;flex-shrink:0;">${valeurStr}</div>` : ''}
       </div>
-      ${c.description ? `<p style="font-size:12px;color:var(--text2);line-height:1.5;margin:0;">${sanitize(c.description).slice(0,110)}${c.description.length>110?'…':''}</p>` : ''}
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-top:2px;">
-        <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-          <span class="${statutClass(c.statut)}" style="font-size:10px;">${sanitize(c.statut||'—')}</span>
+      ${valeurStr ? `<div style="font-size:18px;font-weight:700;color:var(--accent2);margin:8px 0 4px;font-family:'DM Mono',monospace;">${valeurStr}</div>` : '<div style="height:8px;"></div>'}
+      ${c.description ? `<p style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:8px;">${sanitize(c.description).slice(0,90)}${c.description.length>90?'...':''}</p>` : ''}
+      <div class="entity-footer" style="margin-top:auto;">
+        <div class="entity-tags">
+          <span class="${statutClass(c.statut)}">${sanitize(c.statut||'Inconnu')}</span>
           ${c.type ? `<span class="tag tag-gray" style="font-size:10px;">${sanitize(c.type)}</span>` : ''}
           ${annee ? `<span style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;">${annee}</span>` : ''}
         </div>
-        ${src ? `<a href="${src}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:11px;color:var(--accent2);text-decoration:none;font-weight:600;white-space:nowrap;">↗ Source</a>` : ''}
+        ${(() => { const s=(c.sources&&c.sources[0]&&c.sources[0].startsWith('http'))?c.sources[0]:null; return s?`<a href="${s}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:11px;color:var(--accent2);text-decoration:none;font-weight:600;">↗</a>`:''; })()}
       </div>
     </div>`;
   }).join('');
 }
+
 
 function showContractForm(editId) {
   editingContractId = editId || null;
@@ -1734,94 +1720,415 @@ function setDroneImageDetail(wrapId, url) {
 }
 
 // ── Maintenance ───────────────────────────────────────────────
-async function scrapeDefenseContracts() {
-  const btn = event.target;
-  btn.disabled = true; btn.textContent = '⏳ Scraping (2-3 min)...';
-  try {
-    // First clean civilian contracts
-    await fetch(API + '/admin/clean-defense', { method: 'POST', headers: { 'x-secret': 'drone-scout-2026' } });
-    // Then scrape defense contracts
-    const r = await fetch(API + '/admin/scrape-contracts', { method: 'POST', headers: { 'x-secret': 'drone-scout-2026' } });
-    const d = await r.json();
-    btn.textContent = `✓ ${d.added} contrats défense ajoutés`;
-    setTimeout(() => { btn.textContent = '🔍 Scraper contrats défense'; btn.disabled = false; }, 5000);
-  } catch(e) {
-    btn.textContent = 'Erreur'; btn.disabled = false;
-  }
-}
-
 function closeDetailModal() {
-  const m = document.getElementById('detail-modal');
+  const m = document.getElementById('_scout_modal');
   if (m) m.remove();
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetailModal(); });
 
 function showDetailModal(html) {
   closeDetailModal();
   const el = document.createElement('div');
-  el.id = 'detail-modal';
-  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:10000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+  el.id = '_scout_modal';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
   el.onclick = e => { if (e.target === el) closeDetailModal(); };
-  el.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;padding:1.5rem;position:relative;">
-    <button onclick="closeDetailModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1;">✕</button>
-    <div id="detail-modal-content">${html}</div>
-  </div>`;
+  el.innerHTML = '<div style="background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;padding:1.25rem;position:relative;">'
+    + '<button onclick="closeDetailModal()" style="position:absolute;top:0.75rem;right:0.75rem;background:none;border:none;color:#888;font-size:18px;cursor:pointer;line-height:1;padding:4px;">✕</button>'
+    + html + '</div>';
   document.body.appendChild(el);
 }
 
 function openContractDetail(id) {
   const c = contracts.find(x => x.id === id);
   if (!c) return;
-  const data = c.data || {};
-  const src = (c.sources&&c.sources[0]&&c.sources[0].startsWith('http')) ? c.sources[0] : (data.source_url||null);
+  const src = (c.sources&&c.sources[0]&&c.sources[0].startsWith('http')) ? c.sources[0] : null;
   const annee = c.date_signature ? new Date(c.date_signature).getFullYear() : '';
-  showDetailModal(`
-    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:1rem;">
-      <div class="contract-icon-badge ${c.statut?.includes('Appel')?'ci-tender':'ci-contract'}" style="flex-shrink:0;">${c.statut?.includes('Appel')?'AO':'CTR'}</div>
-      <div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);line-height:1.3;">${sanitize(c.titre||'—')}</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px;">${c.societe_name?sanitize(c.societe_name)+' · ':''}${sanitize(c.client||'')}${c.pays_client&&c.pays_client!=='—'?' ('+sanitize(c.pays_client)+')':''}</div>
-      </div>
-    </div>
-    ${c.valeur&&c.valeur!=='—'?`<div style="font-size:24px;font-weight:800;color:var(--accent2);font-family:'DM Mono',monospace;margin-bottom:0.75rem;">${sanitize(c.valeur)}</div>`:''}
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;">
-      <span class="${statutClass(c.statut)}">${sanitize(c.statut||'—')}</span>
-      ${c.type?`<span class="tag tag-gray">${sanitize(c.type)}</span>`:''}
-      ${annee?`<span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">${annee}</span>`:''}
-    </div>
-    ${c.description?`<p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:1rem;">${sanitize(c.description)}</p>`:''}
-    ${c.programme?`<div style="font-size:12px;color:var(--text3);margin-bottom:4px;"><b>Programme :</b> ${sanitize(c.programme)}</div>`:''}
-    ${c.duree?`<div style="font-size:12px;color:var(--text3);margin-bottom:4px;"><b>Durée :</b> ${sanitize(c.duree)}</div>`:''}
-    ${src?`<a href="${src}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:1rem;padding:8px 14px;background:var(--accent);color:white;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">↗ Voir la source</a>`:''}
-  `);
+  let html = '';
+  html += '<div style="font-size:15px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:4px;padding-right:24px;">' + sanitize(c.titre||'—') + '</div>';
+  html += '<div style="font-size:12px;color:#888;margin-bottom:12px;">' + (c.societe_name?sanitize(c.societe_name)+' · ':'') + sanitize(c.client||'') + (c.pays_client&&c.pays_client!=='—'?' ('+sanitize(c.pays_client)+')':'') + '</div>';
+  if (c.valeur && c.valeur !== '—') html += '<div style="font-size:22px;font-weight:800;color:#a78bfa;font-family:monospace;margin-bottom:12px;">' + sanitize(c.valeur) + '</div>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">';
+  html += '<span class="' + statutClass(c.statut) + '">' + sanitize(c.statut||'—') + '</span>';
+  if (c.type) html += '<span class="tag tag-gray">' + sanitize(c.type) + '</span>';
+  if (annee) html += '<span style="font-size:11px;color:#888;font-family:monospace;">' + annee + '</span>';
+  html += '</div>';
+  if (c.description) html += '<p style="font-size:13px;color:#ccc;line-height:1.6;margin-bottom:12px;">' + sanitize(c.description) + '</p>';
+  if (c.programme) html += '<div style="font-size:12px;color:#888;margin-bottom:4px;"><b>Programme :</b> ' + sanitize(c.programme) + '</div>';
+  if (c.duree) html += '<div style="font-size:12px;color:#888;margin-bottom:4px;"><b>Durée :</b> ' + sanitize(c.duree) + '</div>';
+  if (src) html += '<a href="' + src + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 14px;background:#7c3aed;color:white;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">↗ Voir la source</a>';
+  showDetailModal(html);
 }
+
 function openTenderDetail(id) {
   const t = liveTenders.find(x => x.id === id);
   if (!t) return;
   const now = new Date();
   const daysLeft = t.date_cloture ? Math.ceil((new Date(t.date_cloture)-now)/86400000) : null;
   const closed = daysLeft !== null && daysLeft < 0;
-  const urgColor = daysLeft!==null&&daysLeft<14&&!closed ? '#f59e0b' : 'var(--text3)';
+  let html = '';
+  html += '<div style="font-size:15px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:4px;padding-right:24px;">' + sanitize(t.titre) + '</div>';
+  html += '<div style="font-size:12px;color:#888;margin-bottom:12px;">' + sanitize(t.acheteur||'—') + ' · ' + sanitize(t.pays||'—') + '</div>';
+  if (t.valeur_estimee) html += '<div style="font-size:22px;font-weight:800;color:#a78bfa;font-family:monospace;margin-bottom:12px;">' + sanitize(t.valeur_estimee) + '</div>';
   const statColor = closed?'#6b7280':t.statut==='Ouvert'?'#22c55e':'#f59e0b';
-  showDetailModal(`
-    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:1rem;">
-      <div class="contract-icon-badge ci-tender" style="flex-shrink:0;font-size:9px;">${sanitize((t.source_name||'AO').slice(0,8))}</div>
-      <div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);line-height:1.3;">${sanitize(t.titre)}</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px;">${sanitize(t.acheteur||'—')} · ${sanitize(t.pays||'—')}</div>
-      </div>
-    </div>
-    ${t.valeur_estimee?`<div style="font-size:24px;font-weight:800;color:var(--accent2);font-family:'DM Mono',monospace;margin-bottom:0.75rem;">${sanitize(t.valeur_estimee)}</div>`:''}
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;">
-      <span style="font-size:11px;font-weight:600;color:${statColor};background:${closed?'rgba(107,114,128,0.1)':t.statut==='Ouvert'?'rgba(34,197,94,0.1)':'rgba(245,158,11,0.1)'};padding:2px 8px;border-radius:4px;">● ${sanitize(t.statut||'—')}</span>
-      ${t.type?`<span class="tag tag-gray">${sanitize(t.type)}</span>`:''}
-      ${t.type_drone?`<span class="tag tag-accent">${sanitize(t.type_drone)}</span>`:''}
-      ${daysLeft!==null?`<span style="font-size:11px;font-weight:700;color:${urgColor};">${closed?'Clôturé':'⏱ '+daysLeft+'j restants'}</span>`:''}
-    </div>
-    ${t.description?`<p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:1rem;">${sanitize(t.description)}</p>`:''}
-    ${t.date_publication?`<div style="font-size:12px;color:var(--text3);margin-bottom:4px;"><b>Publié :</b> ${sanitize(t.date_publication)}</div>`:''}
-    ${t.date_cloture?`<div style="font-size:12px;color:${urgColor};margin-bottom:4px;font-weight:${daysLeft<14&&!closed?'700':'400'};"><b>Clôture :</b> ${sanitize(t.date_cloture)}</div>`:''}
-    ${t.source_url?`<a href="${t.source_url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:1rem;padding:8px 14px;background:var(--accent);color:white;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">↗ Voir l'appel d'offres</a>`:''}
-  `);
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">';
+  html += '<span style="font-size:11px;font-weight:600;color:'+statColor+';">● ' + sanitize(t.statut||'—') + '</span>';
+  if (t.type) html += '<span class="tag tag-gray">' + sanitize(t.type) + '</span>';
+  if (t.type_drone) html += '<span class="tag tag-accent">' + sanitize(t.type_drone) + '</span>';
+  if (daysLeft !== null) html += '<span style="font-size:11px;font-weight:700;color:'+(daysLeft<14&&!closed?'#f59e0b':'#888')+';">' + (closed?'Clôturé':'⏱ '+daysLeft+'j') + '</span>';
+  html += '</div>';
+  if (t.description) html += '<p style="font-size:13px;color:#ccc;line-height:1.6;margin-bottom:12px;">' + sanitize(t.description) + '</p>';
+  if (t.date_publication) html += '<div style="font-size:12px;color:#888;margin-bottom:4px;"><b>Publié :</b> ' + sanitize(t.date_publication) + '</div>';
+  if (t.date_cloture) html += '<div style="font-size:12px;color:'+(daysLeft<14&&!closed?'#f59e0b':'#888')+';margin-bottom:4px;"><b>Clôture :</b> ' + sanitize(t.date_cloture) + '</div>';
+  if (t.source_url) html += '<a href="' + t.source_url + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 14px;background:#7c3aed;color:white;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">↗ Voir appel offres</a>';
+  showDetailModal(html);
 }
 
+async function cleanData() {
+  const msg = document.getElementById('maint-msg');
+  msg.textContent = 'Nettoyage en cours...';
+  try {
+    const r = await fetch(API + '/admin/clean-data', { method:'POST', headers:{'x-secret':'drone-scout-2026'} });
+    const d = await r.json();
+    msg.textContent = `✓ ${d.societes_cleaned} sociétés + ${d.produits_cleaned} drones nettoyés`;
+    setTimeout(() => msg.textContent = '', 5000);
+  } catch(e) { msg.textContent = 'Erreur: ' + e.message; }
+}
+async function clearCache() {
+  if (!confirm('Vider tout le cache ? Les fiches seront re-scrapées à la prochaine ouverture.')) return;
+  const msg = document.getElementById('maint-msg');
+  msg.textContent = 'Vidage en cours...';
+  try {
+    const r = await fetch(API + '/admin/clear-cache', { method:'POST', headers:{'x-secret':'drone-scout-2026'} });
+    const d = await r.json();
+    msg.textContent = '✓ Cache vidé — rechargement...';
+    setTimeout(() => location.reload(), 1500);
+  } catch(e) { msg.textContent = 'Erreur: ' + e.message; }
+}
+
+// ── Seed ─────────────────────────────────────────────────────
+async function initSeed() {
+  const btn = document.getElementById('btn-seed');
+  if (!confirm('Initialiser la base de référence avec 20 fabricants et 25 drones ? Les données existantes seront conservées.')) return;
+  btn.disabled = true; btn.textContent = 'Initialisation...';
+  try {
+    // Seed via API - run seed script on server
+    const r = await fetch(API + '/seed', {
+      method: 'POST',
+      headers: { 'x-seed-secret': 'drone-scout-seed-2026', 'Content-Type': 'application/json' }
+    });
+    // Wait a moment then reload
+    btn.textContent = 'Chargement...';
+    await new Promise(r => setTimeout(r, 3000));
+    await Promise.all([loadSocietes(), loadAllProduits()]);
+    renderSocietes(); renderProduits(); renderDashboard();
+    btn.textContent = 'Base initialisée ✓';
+    setTimeout(() => { btn.textContent = 'Réinitialiser la base'; btn.disabled = false; }, 3000);
+  } catch(e) {
+    btn.textContent = 'Erreur — réessayer';
+    btn.disabled = false;
+    alert('Erreur: ' + e.message);
+  }
+}
+
+// ── Filters ───────────────────────────────────────────────────
+let activeCat = 'Tous';
+let activeDomaine = 'Tous';
+let activeSecteur = 'Tous';
+let activePays = 'Tous';
+
+const CAT_MAP_AIR = ['Tous','ISR / Reconnaissance','UCAV / Strike','Loitering Munition','VTOL','FPV / Combat','Nano / Micro ISR','Multirotor tactique','Tethered'];
+const CAT_MAP_GROUND = ['Tous','UGV Combat','UGV Logistique','UGV EOD','Robot quadrupède','Humanoïde'];
+const CAT_MAP_MARITIME = ['Tous','USV Combat','USV Patrouille','USV Frappe','UUV / AUV'];
+
+function getDomaine(p) {
+  const t = (p.type_drone || '').toUpperCase();
+  if (t === 'UGV') return 'Ground';
+  if (t === 'USV' || t === 'UUV') return 'Maritime';
+  const n = (p.name || '').toLowerCase();
+  const ugvK = ['themis','type-x','vision 60','spot','atlas ugv','digit','figure 0','apollo','anymal','husky','warthog','summit xl','packbot','maars','teodor','kaplan','rook ugv','legion-x','rex mk','probot','guardian xo','ripsaw','mission master','sarcos'];
+  const usvK = ['sea baby','magura','protector mk','seagull usv','cusv','devil ray','wave glider','drix','alister','orca','ghost shark','remus','hugin','gavia','bluebottle','mariner usv','arcims','sm300','sharktech'];
+  if (ugvK.some(k => n.includes(k))) return 'Ground';
+  if (usvK.some(k => n.includes(k))) return 'Maritime';
+  return 'Air';
+}
+
+function setDomaine(d) {
+  activeDomaine = d;
+  activeCat = 'Tous';
+  ['Tous','Air','Ground','Maritime'].forEach(k => {
+    const el = document.getElementById('df-' + k);
+    if (el) el.className = 'tag ' + (k === d ? 'tag-accent' : 'tag-gray');
+  });
+  renderCatFilters();
+  filterDrones();
+}
+
+function getCatsForDomaine() {
+  if (activeDomaine === 'Ground') return CAT_MAP_GROUND;
+  if (activeDomaine === 'Maritime') return CAT_MAP_MARITIME;
+  return CAT_MAP_AIR;
+}
+
+function getDomaineBadgeColor(type_drone) {
+  if (!type_drone) return null;
+  if (['UGV'].includes(type_drone)) return 'tag-amber';
+  if (['USV','UUV'].includes(type_drone)) return 'tag-blue';
+  return null;
+}
+
+function renderCatFilters() {
+  const el = document.getElementById('cat-filters');
+  if (!el) return;
+  const cats = getCatsForDomaine();
+  el.innerHTML = cats.map(c =>
+    `<button class="tag ${c===activeCat?'tag-accent':'tag-gray'}" onclick="setCat('${c}')" style="cursor:pointer;border:none;font-size:12px;">${c}</button>`
+  ).join('');
+}
+
+function filterDrones() {
+  const searchEl = document.getElementById('drones-search');
+  const search = searchEl ? searchEl.value.toLowerCase() : '';
+  let list = produits;
+
+  // Step 1: filter by domaine
+  if (activeDomaine !== 'Tous') {
+    list = list.filter(p => getDomaine(p) === activeDomaine);
+  }
+
+  // Step 2: filter by cat
+  if (activeCat !== 'Tous') {
+    const t_check = (p) => (p.type_drone||'').toLowerCase().trim();
+    const n_check = (p) => (p.name||'').toLowerCase();
+    const d_check = (p) => (p.description||'').toLowerCase();
+    list = list.filter(p => {
+      const t = t_check(p), n = n_check(p), d = d_check(p);
+      switch(activeCat) {
+        // ── AÉRIEN ─────────────────────────────────────────────
+        case 'ISR / Reconnaissance':
+          return ['aile fixe isr','aile fixe maritime','aile fixe','micro-drone isr','nano-drone','maritime/isr'].includes(t);
+        case 'UCAV / Strike':
+          return t.includes('ucav');
+        case 'Loitering Munition':
+          return t.includes('loitering');
+        case 'VTOL':
+          return t.includes('vtol');
+        case 'FPV / Combat':
+          return t.includes('fpv');
+        case 'Nano / Micro ISR':
+          return t.includes('nano') || t.includes('micro');
+        case 'Multirotor tactique':
+          return t.includes('multirotor');
+        case 'Tethered':
+          return t.includes('tether');
+        // ── TERRESTRE ──────────────────────────────────────────
+        case 'UGV Combat':
+          return t.includes('ugv') && (
+            d.includes('combat')||d.includes('arm')||d.includes('armé')||
+            n.includes('ripsaw')||n.includes('type-x')||n.includes('kaplan')||
+            n.includes('maars')||n.includes('legion')||n.includes('rex mk')||
+            n.includes('themis')||n.includes('rook'));
+        case 'UGV Logistique':
+          return t.includes('ugv') && (
+            d.includes('logistique')||d.includes('resupply')||d.includes('logistic')||
+            n.includes('mission master')||n.includes('husky')||n.includes('warthog')||
+            n.includes('probot')||n.includes('guardian xo'));
+        case 'UGV EOD':
+          return t.includes('ugv') && (
+            d.includes('eod')||d.includes('demin')||d.includes('ied')||
+            n.includes('packbot')||n.includes('teodor')||n.includes('firstlook'));
+        case 'Robot quadrupède':
+          return t.includes('ugv') && (
+            n.includes('spot')||n.includes('anymal')||n.includes('vision 60')||
+            n.includes('summit')||d.includes('quadrup'));
+        case 'Humanoïde':
+          return t.includes('ugv') && (
+            n.includes('digit')||n.includes('figure')||n.includes('apollo')||
+            n.includes('atlas')||d.includes('humano')||d.includes('bip'));
+        // ── MARITIME ───────────────────────────────────────────
+        case 'USV Combat':
+          return t.includes('usv') && (
+            d.includes('arm')||d.includes('armé')||d.includes('combat')||d.includes('explos')||
+            n.includes('protector')||n.includes('sea baby')||n.includes('magura')||n.includes('sharktech'));
+        case 'USV Patrouille':
+          return t.includes('usv') && !(n.includes('sea baby')||n.includes('magura')||d.includes('explos'));
+        case 'USV Frappe':
+          return (t.includes('usv')||t.includes('maritime')) && (
+            d.includes('explos')||d.includes('kamikaze')||n.includes('sea baby')||n.includes('magura'));
+        case 'UUV / AUV':
+          return t.includes('uuv');
+        default: return true;
+      }
+
+    });
+  }
+
+  // Step 3: search
+  if (search) {
+    list = list.filter(p =>
+      (p.name||'').toLowerCase().includes(search) ||
+      (p.societe_name||'').toLowerCase().includes(search) ||
+      (p.description||'').toLowerCase().includes(search)
+    );
+  }
+
+  const dbg = document.getElementById('produits-debug');
+  if (dbg) dbg.textContent = list.length + ' / ' + produits.length + ' systèmes  [' + activeDomaine + ' > ' + activeCat + ']';
+
+  renderProduitsFiltered(list);
+}
+
+function setCat(cat) { activeCat = cat; renderCatFilters(); filterDrones(); }
+function renderSecteurFilters() {
+  const el = document.getElementById('secteur-filters');
+  if (!el) return;
+  el.innerHTML = FABRICANT_SECTEURS.map(s =>
+    `<button class="tag ${s===activeSecteur?'tag-accent':'tag-gray'}" onclick="setSecteur('${s}')" style="cursor:pointer;border:none;font-size:12px;">${s}</button>`
+  ).join('');
+}
+function setSecteur(s) { activeSecteur = s; renderSecteurFilters(); filterSocietes(); }
+
+
+function filterSocietes() {
+  const search = (document.getElementById('societes-search')?.value || '').toLowerCase();
+  const filtered = societes.filter(s => {
+    const matchSect = activeSecteur === 'Tous' || (s.secteur||'').includes(activeSecteur);
+    const matchSearch = !search || s.name.toLowerCase().includes(search) || (s.pays||'').toLowerCase().includes(search) || (s.secteur||'').toLowerCase().includes(search);
+    return matchSect && matchSearch;
+  });
+  renderSocietesFiltered(filtered);
+}
+
+function renderSocietesFiltered(list) {
+  const g = document.getElementById('societes-grid');
+  if (!list.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span style="color:var(--text3);">Aucun fabricant pour ce filtre</span></div>'; return; }
+  g.innerHTML = list.map((s, i) => {
+    const data = s.data || {};
+    const stale = !s.scraped_at || (Date.now() - new Date(s.scraped_at)) / 86400000 > 7;
+    const globalIdx = societes.indexOf(s);
+    return `<div class="entity-card" onclick="openSociete('${s.id}')">
+      <div class="entity-card-top">
+        <div id="logo-${s.id}" style="width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+          <div class="avatar ${avatarClass(globalIdx)}">${initials(s.name)}</div>
+        </div>
+        <div><div class="entity-name">${s.name}</div><div class="entity-sub">${s.pays||''} ${s.secteur ? '· ' + s.secteur.split('/')[0].trim() : ''}</div></div>
+      </div>
+      ${data.ca ? `<div class="entity-kpis">
+        <div class="entity-kpi"><div class="entity-kpi-label">CA</div><div class="entity-kpi-value">${data.ca}</div></div>
+        <div class="entity-kpi"><div class="entity-kpi-label">Modèles</div><div class="entity-kpi-value">${data.nb_modeles||'—'}</div></div>
+        <div class="entity-kpi"><div class="entity-kpi-label">Employés</div><div class="entity-kpi-value">${data.employes||'—'}</div></div>
+        <div class="entity-kpi"><div class="entity-kpi-label">Marché</div><div class="entity-kpi-value" style="font-size:10px;">${(data.marches||'—').slice(0,20)}</div></div>
+      </div>` : '<div style="font-size:12px;color:var(--text3);padding:10px 0;">Données en cours de collecte</div>'}
+      <div class="entity-footer">
+        <div class="entity-tags">${tagHtml(s.pays||'—','tag-gray')}</div>
+        <span class="entity-updated"><span class="upd-dot "></span>Hebdomadaire</span>
+      </div>
+    </div>`;
+  }).join('');
+  // Lazy-load logos
+  setTimeout(() => list.forEach(s => loadLogo(s.id, s.url, 'logo-' + s.id)), 100);
+}
+
+function renderProduitsFiltered(list) {
+  const g = document.getElementById('produits-grid');
+  if (!list.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span style="color:var(--text3);">Aucun drone pour ce filtre</span></div>'; return; }
+  g.innerHTML = list.map((p) => {
+    const stale = !p.scraped_at || (Date.now() - new Date(p.scraped_at)) / 86400000 > 7;
+    const badgeCls = p.badge==='Militaire'||p.badge==='Loitering Munition'||p.badge==='Intercepteur'||p.badge==='UCAV'?'tag-red':p.badge==='Industriel'||p.badge==='Maritime/ISR'?'tag-amber':p.badge==='Agriculture'?'tag-green':p.badge==='AAM'?'tag-accent':'tag-accent';
+    const logoS = produits.find ? (societes.find(sx => sx.id === p.societe_id)) : null;
+    return `<div class="entity-card" onclick="openProduit('${p.id}')">
+      <div id="img-${p.id}" style="height:110px;overflow:hidden;border-radius:var(--radius) var(--radius) 0 0;background:var(--bg3);display:flex;align-items:center;justify-content:center;margin:-1rem -1.25rem 0.75rem;position:relative;">
+        <span style="font-size:13px;font-weight:600;color:var(--border2);font-family:'DM Mono',monospace;">${(p.name||'').slice(0,3).toUpperCase()}</span>
+      </div>
+      <div class="entity-card-top">
+        <div id="logo-card-${p.id}" style="width:24px;height:24px;flex-shrink:0;"></div>
+        <div>
+          <div class="entity-name">${p.name}</div>
+          <div class="entity-sub">${p.societe_name||''} ${p.type_drone ? '· ' + p.type_drone : ''}</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;">${(p.description||'Données en cours de collecte').slice(0,100)}${p.description && p.description.length > 100 ? '...' : ''}</p>
+      <div class="entity-footer">
+        <div class="entity-tags">
+          ${['UGV','USV','UUV'].includes(p.type_drone) ? `<span class="tag ${p.type_drone==='UGV'?'tag-amber':'tag-blue'}" style="font-size:10px;">${p.type_drone==='UGV'?'🛡 Terrestre':'⚓ Maritime'}</span>` : ''}
+          ${tagHtml(p.badge||'Civil', badgeCls)}
+          ${p.prix && p.prix!=='Sur devis' && p.prix!=='Sur contrat' ? '<span class="tag tag-gray">'+p.prix+'</span>' : ''}
+        </div>
+        <span class="entity-updated"><span class="upd-dot"></span>Hebdo</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function init() {
+  // Load each independently so one failure doesn't block others
+  await Promise.allSettled([loadSocietes(), loadAllProduits(), loadContracts()]);
+  try { renderSocietes(); } catch(e) { console.error('renderSocietes:', e); }
+  try { renderProduits(); } catch(e) { console.error('renderProduits:', e); }
+  try { renderDashboard(); } catch(e) { console.error('renderDashboard:', e); }
+}
+
+init().then(() => {
+  // Handle PWA shortcuts — ?panel=xxx
+  const params = new URLSearchParams(window.location.search);
+  const panel = params.get('panel');
+  if (panel) setTimeout(() => go(panel), 500);
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/scout/sw.js', { scope: '/scout/' })
+    .then(r => console.log('[Scout PWA] SW registered', r.scope))
+    .catch(e => console.log('[Scout PWA] SW error', e));
+}
+// If already running as standalone PWA, mark button as installed
+if (window.matchMedia('(display-mode: standalone)').matches) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('btn-install-pwa');
+    if (btn) { btn.textContent = '✓ App déjà installée'; btn.disabled = true; btn.style.opacity = '0.5'; }
+  });
+}
+</script>
+<script>
+let deferredPrompt = null;
+let pwaInstalled = window.matchMedia('(display-mode: standalone)').matches;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Update install button state
+  const btn = document.getElementById('btn-install-pwa');
+  if (btn) { btn.textContent = '📲 Installer l\'app'; btn.disabled = false; btn.style.opacity = '1'; }
+});
+
+window.addEventListener('appinstalled', () => {
+  pwaInstalled = true;
+  const btn = document.getElementById('btn-install-pwa');
+  if (btn) { btn.textContent = '✓ App installée'; btn.disabled = true; btn.style.opacity = '0.5'; }
+});
+
+function installPWA() {
+  if (pwaInstalled) {
+    alert('Scout est déjà installé sur cet appareil !');
+    return;
+  }
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(choice => {
+      deferredPrompt = null;
+      const btn = document.getElementById('btn-install-pwa');
+      if (choice.outcome === 'accepted') {
+        if (btn) { btn.textContent = '✓ Installation en cours...'; btn.disabled = true; }
+      }
+    });
+  } else {
+    // Fallback: show manual instructions
+    const msg = 'Pour installer Scout :\n\n' +
+      '1. Appuyez sur ⋮ (menu Chrome, en haut à droite)\n' +
+      '2. Appuyez sur "Ajouter à l\'écran d\'accueil"\n' +
+      '3. Confirmez\n\n' +
+      'Si vous l\'avez déjà refusé, allez dans\nParamètres Chrome → Notifications\npour réinitialiser.';
+    alert(msg);
+  }
+}
+</script>
+</body>
+</html>
