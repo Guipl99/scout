@@ -2026,6 +2026,7 @@ function filterDrones() {
   if (dbg) dbg.textContent = list.length + ' / ' + produits.length + ' systèmes  [' + activeDomaine + ' > ' + activeCat + ']';
 
   renderProduitsFiltered(list);
+  loadProductImages(list);
 }
 
 function setCat(cat) { activeCat = cat; renderCatFilters(); filterDrones(); }
@@ -2113,16 +2114,27 @@ function renderProduitsFiltered(list) {
 // Load product images via Railway proxy (avoids CORS, cached server-side)
 function loadProductImages(list) {
   list.forEach(p => {
-    if (!p.image_url) return; // no image in DB yet
+    if (!p.image_url) return;
     const el = document.getElementById('img-' + p.id);
     if (!el) return;
-    // Use Railway proxy endpoint - cached in memory after first load
-    const proxyUrl = API + '/produits/' + p.id + '/image';
+    // img src CORS: <img> tags bypass CORS, direct URL works fine
+    const src = p.image_url;
     const img = new Image();
     img.onload = () => {
-      el.innerHTML = `<img src="${proxyUrl}" alt="${p.name}" style="width:100%;height:110px;object-fit:cover;display:block;border-radius:var(--radius) var(--radius) 0 0;">`;
+      el.style.background = '#000';
+      el.innerHTML = `<img src="${src}" alt="${p.name}" style="width:100%;height:110px;object-fit:cover;display:block;border-radius:var(--radius) var(--radius) 0 0;">`;
     };
-    img.src = proxyUrl;
+    img.onerror = () => {
+      // Fallback: try proxy
+      const proxyUrl = API + '/produits/' + p.id + '/image';
+      const img2 = new Image();
+      img2.onload = () => {
+        el.style.background = '#000';
+        el.innerHTML = `<img src="${proxyUrl}" alt="${p.name}" style="width:100%;height:110px;object-fit:cover;display:block;border-radius:var(--radius) var(--radius) 0 0;">`;
+      };
+      img2.src = proxyUrl;
+    };
+    img.src = src;
   });
 }
 
