@@ -371,10 +371,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
         </div>
         
-        <div style="display:flex;gap:8px;margin-bottom:0.6rem;flex-wrap:wrap;align-items:center;">
-          <span style="font-size:12px;color:var(--text3);">Secteur :</span>
-          <div id="secteur-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
-        </div>
+
         <div style="display:flex;gap:8px;margin-bottom:0.6rem;flex-wrap:wrap;align-items:center;">
           <span style="font-size:12px;color:var(--text3);">Pays :</span>
           <div id="pays-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
@@ -862,7 +859,6 @@ async function loadSocietes() {
 }
 
 function renderSocietes() {
-  if (typeof renderSecteurFilters === 'function') renderSecteurFilters();
   if (typeof renderPaysFilters === 'function') renderPaysFilters();
   filterSocietes();
 }
@@ -1931,7 +1927,6 @@ async function initSeed() {
 // ── Filters ───────────────────────────────────────────────────
 let activeCat = 'Tous';
 let activeDomaine = 'Tous';
-let activeSecteur = 'Tous';
 let activePays = 'Tous';
 
 const CAT_MAP_AIR = ['Tous','ISR / Reconnaissance','UCAV / Strike','Loitering Munition','VTOL','FPV / Combat','Nano / Micro ISR','Multirotor tactique','Tethered UAV'];
@@ -2076,14 +2071,6 @@ function filterDrones() {
 }
 
 function setCat(cat) { activeCat = cat; renderCatFilters(); filterDrones(); }
-function renderSecteurFilters() {
-  const el = document.getElementById('secteur-filters');
-  if (!el) return;
-  el.innerHTML = FABRICANT_SECTEURS.map(s =>
-    `<button class="tag ${s===activeSecteur?'tag-accent':'tag-gray'}" onclick="setSecteur('${s}')" style="cursor:pointer;border:none;font-size:12px;">${s}</button>`
-  ).join('');
-}
-function setSecteur(s) { activeSecteur = s; renderSecteurFilters(); filterSocietes(); }
 
 function renderPaysFilters() {
   const el = document.getElementById('pays-filters');
@@ -2107,10 +2094,9 @@ function setPays(p) { activePays = p; renderPaysFilters(); filterSocietes(); }
 function filterSocietes() {
   const search = (document.getElementById('societes-search')?.value || '').toLowerCase();
   const filtered = societes.filter(s => {
-    const matchSect = activeSecteur === 'Tous' || (s.secteur||'').includes(activeSecteur);
     const matchPays = activePays === 'Tous' || (s.pays||'').split('/')[0].trim() === activePays;
     const matchSearch = !search || s.name.toLowerCase().includes(search) || (s.pays||'').toLowerCase().includes(search) || (s.secteur||'').toLowerCase().includes(search);
-    return matchSect && matchPays && matchSearch;
+    returnmatchPays && matchSearch;
   });
   renderSocietesFiltered(filtered);
 }
