@@ -487,6 +487,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="tab" onclick="showPTab('specs',this)">Specs techniques</div>
           <div class="tab" onclick="showPTab('contrats_p',this)">Contrats</div>
           <div class="tab" onclick="showPTab('changelog',this)">Changelog</div>
+          <div class="tab" onclick="showPTab('operateurs',this);loadProductOperateurs(currentProduitId)" id="p-tab-operateurs">Opérateurs</div>
           <div class="tab" onclick="showPTab('analyse',this)">Analyse IA</div>
         </div>
         <div id="pt-overview" class="tabpanel active">
@@ -502,6 +503,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <div id="pt-specs" class="tabpanel"><div class="specs-grid" id="p-specs"></div></div>
         <div id="pt-contrats_p" class="tabpanel">
           <div class="card"><div class="card-header"><span class="card-title">Contrats & programmes</span></div><div class="section-body" style="padding:0.5rem 1.25rem;" id="p-contrats"></div></div>
+        </div>
+        <div id="pt-operateurs" class="tabpanel">
+          <div id="pt-operateurs-content" style="padding:8px 0;"></div>
         </div>
         <div id="pt-changelog" class="tabpanel"><div class="card"><div class="card-header"><span class="card-title">Changelog</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="p-changelog"></div></div></div>
         <div id="pt-analyse" class="tabpanel">
@@ -1169,6 +1173,9 @@ async function openProduit(id) {
   if (p.data) fillProduitDetail(p.data, p, true, p.scraped_at);
 
   showPTab('overview', document.querySelector('#produit-detail-view .tab'));
+  // Reset operateurs tab label
+  const opTab = document.getElementById('p-tab-operateurs');
+  if (opTab) opTab.textContent = 'Opérateurs';
 
   // Load from server
   const btn = document.getElementById('p-btn-refresh');
@@ -2420,6 +2427,64 @@ function backToEndUsers() {
   document.getElementById('eu-detail-view').style.display = 'none';
 }
 
+
+
+// ── Opérateurs tab dans fiche produit ─────────────────────────
+async function loadProductOperateurs(produitId) {
+  const el = document.getElementById('pt-operateurs-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text2);padding:16px;font-size:13px;">Chargement...</div>';
+  
+  try {
+    // Load all end-users and filter those using this product
+    if (!allEndUsers.length) await loadEndUsers();
+    const users = allEndUsers.filter(eu => (eu.produits_ids||[]).includes(produitId));
+    
+    if (!users.length) {
+      el.innerHTML = '<div style="color:var(--text2);padding:16px;font-size:13px;">Aucun opérateur référencé pour ce produit.</div>';
+      // Update tab label
+      const tab = document.getElementById('p-tab-operateurs');
+      if (tab) tab.textContent = 'Opérateurs (0)';
+      return;
+    }
+    
+    // Update tab label with count
+    const tab = document.getElementById('p-tab-operateurs');
+    if (tab) tab.textContent = 'Opérateurs (' + users.length + ')';
+    
+    const typeEmoji = { Militaire:'🪖', Gouvernement:'🏛️', Civil:'🏢', ONG:'🌍' };
+    const statutColor = { Opérationnel:'#4ade80', Evaluation:'#fbbf24', Commande:'var(--accent)', Retraité:'var(--text2)' };
+    
+    el.innerHTML = `
+      <div style="padding:4px 0 12px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text);">${users.length} opérateur${users.length>1?'s':''} référencé${users.length>1?'s':''}</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${users.map(eu => `
+            <div onclick="go('end-users');setTimeout(()=>openEndUser('${eu.id}'),400)"
+              style="cursor:pointer;display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--bg3);border-radius:10px;border:1px solid var(--border2);transition:border-color 0.15s;"
+              onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border2)'">
+              <div style="font-size:22px;line-height:1;">${typeEmoji[eu.type]||'📍'}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:600;margin-bottom:2px;">${eu.nom}</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+                  <span style="font-size:11px;color:var(--text2);">${eu.pays||''}</span>
+                  <span style="font-size:11px;color:var(--text2);">· ${eu.secteur||''}</span>
+                  <span style="font-size:11px;color:${statutColor[eu.statut]||'var(--text2)'};">● ${eu.statut||''}</span>
+                </div>
+                ${eu.quantite_estimee ? `<div style="font-size:11px;color:var(--text2);">📦 ${eu.quantite_estimee}</div>` : ''}
+                ${eu.description ? `<div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${eu.description}</div>` : ''}
+              </div>
+              <span style="font-size:12px;color:var(--accent);flex-shrink:0;">→</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--text2);padding:16px;font-size:13px;">Erreur chargement opérateurs.</div>';
+    console.error('loadProductOperateurs', e);
+  }
+}
 
 </script>
 </body>
