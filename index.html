@@ -371,9 +371,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
         </div>
         
-        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+        <div style="display:flex;gap:8px;margin-bottom:0.6rem;flex-wrap:wrap;align-items:center;">
           <span style="font-size:12px;color:var(--text3);">Secteur :</span>
           <div id="secteur-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:0.6rem;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:12px;color:var(--text3);">Pays :</span>
+          <div id="pays-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:1rem;align-items:center;">
           <input id="societes-search" type="text" placeholder="Rechercher un fabricant..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);width:100%;max-width:320px;" oninput="filterSocietes()">
@@ -2063,13 +2067,32 @@ function renderSecteurFilters() {
 }
 function setSecteur(s) { activeSecteur = s; renderSecteurFilters(); filterSocietes(); }
 
+function renderPaysFilters() {
+  const el = document.getElementById('pays-filters');
+  if (!el) return;
+  // Extract unique countries from loaded societes, sorted by count
+  const counts = {};
+  societes.forEach(s => { const p = (s.pays||'—').split('/')[0].trim(); counts[p] = (counts[p]||0)+1; });
+  const top = Object.entries(counts)
+    .filter(([p]) => p !== '—')
+    .sort((a,b) => b[1]-a[1])
+    .slice(0, 20)
+    .map(([p]) => p);
+  const pays = ['Tous', ...top];
+  el.innerHTML = pays.map(p =>
+    `<button class="tag ${p===activePays?'tag-accent':'tag-gray'}" onclick="setPays('${p.replace(/'/g,"\'")}')" style="cursor:pointer;border:none;font-size:12px;">${p}</button>`
+  ).join('');
+}
+function setPays(p) { activePays = p; renderPaysFilters(); filterSocietes(); }
+
 
 function filterSocietes() {
   const search = (document.getElementById('societes-search')?.value || '').toLowerCase();
   const filtered = societes.filter(s => {
     const matchSect = activeSecteur === 'Tous' || (s.secteur||'').includes(activeSecteur);
+    const matchPays = activePays === 'Tous' || (s.pays||'').split('/')[0].trim() === activePays;
     const matchSearch = !search || s.name.toLowerCase().includes(search) || (s.pays||'').toLowerCase().includes(search) || (s.secteur||'').toLowerCase().includes(search);
-    return matchSect && matchSearch;
+    return matchSect && matchPays && matchSearch;
   });
   renderSocietesFiltered(filtered);
 }
