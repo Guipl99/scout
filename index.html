@@ -2511,6 +2511,11 @@ function renderContactsGrid(list) {
         ${ct.linkedin ? `<a href="${ct.linkedin}" target="_blank" onclick="event.stopPropagation()" style="font-size:11px;color:#0077b5;text-decoration:none;background:var(--bg3);padding:3px 7px;border-radius:4px;">in</a>` : ''}
         ${nContrats ? `<span style="font-size:10px;color:var(--text3);margin-left:auto;">📋 ${nContrats}</span>` : ''}
       </div>
+      ${(() => {
+        const srcRx = /\[source\]\((https?:\/\/[^)]+)\)/g;
+        const srcs = [...(ct.notes||'').matchAll(srcRx)].map(m => m[1]);
+        return srcs.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid var(--border2);">${srcs.map((s,i) => `<a href="${s}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;color:var(--accent2);text-decoration:none;background:var(--bg3);padding:1px 5px;border-radius:3px;">🔗 source ${i+1}</a>`).join('')}</div>` : '';
+      })()}
     </div>`;
   }).join('');
 }
@@ -2903,7 +2908,15 @@ function renderContactsForAccount(endUserId) {
                 ${ct.linkedin ? `<a href="${ct.linkedin}" target="_blank" style="font-size:11px;color:#0077b5;text-decoration:none;background:var(--bg2);padding:2px 7px;border-radius:4px;">in LinkedIn</a>` : ''}
                 ${linkedContracts ? `<span style="font-size:10px;color:var(--text3);margin-left:auto;">📋 ${linkedContracts} contrat${linkedContracts>1?'s':''}</span>` : ''}
               </div>
-              ${ct.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.4;padding-top:6px;border-top:1px solid var(--border2);">${ct.notes.slice(0,180)}${ct.notes.length>180?'…':''}</div>` : ''}
+              ${ct.notes ? (() => {
+                // Extraire les sources [source](url) depuis les notes
+                const srcRx = /\[source\]\((https?:\/\/[^)]+)\)/g;
+                const srcs = [...ct.notes.matchAll(srcRx)].map(m => m[1]);
+                const cleanNotes = ct.notes.replace(/ Sources:.*$/, '').trim();
+                const truncated = cleanNotes.slice(0, 180) + (cleanNotes.length > 180 ? '…' : '');
+                const srcHtml = srcs.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${srcs.map((s,i) => `<a href="${s}" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent2);text-decoration:none;background:var(--bg2);padding:1px 5px;border-radius:3px;border:1px solid var(--border2);">🔗 source ${i+1}</a>`).join('')}</div>` : '';
+                return `<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.4;padding-top:6px;border-top:1px solid var(--border2);">${truncated}${srcHtml}</div>`;
+              })() : ''}
             </div>
           </div>
         </div>`;
