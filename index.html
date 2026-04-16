@@ -1089,16 +1089,25 @@ function streamText(elId, text, onDone) {
 let activeFeedType = 'tous';
 
 function renderDashboard() {
-  // KPIs
+  // KPIs immédiats
   document.getElementById('m-societes').textContent = societes.length || '…';
   document.getElementById('m-produits').textContent = produits.length || '…';
-  document.getElementById('m-alerts').textContent = contracts.length || '…';
 
-  // Valeur totale contrats
-  const totalM = contracts.reduce((s,c) => s + (c.valeur_max||0), 0) / 1_000_000;
-  document.getElementById('m-valeur').textContent = totalM > 1000
-    ? '$' + (totalM/1000).toFixed(1) + 'B'
-    : totalM > 0 ? '$' + totalM.toFixed(0) + 'M' : '…';
+  // Charger les contrats si pas encore chargés, puis mettre à jour
+  const updateContractKPIs = () => {
+    document.getElementById('m-alerts').textContent = contracts.length || '…';
+    const totalM = contracts.reduce((s,c) => s + (c.valeur_max||0), 0) / 1_000_000;
+    document.getElementById('m-valeur').textContent = totalM > 1000
+      ? '$' + (totalM/1000).toFixed(1) + 'B'
+      : totalM > 0 ? '$' + totalM.toFixed(0) + 'M' : '…';
+    renderDbContracts();
+  };
+
+  if (contracts.length > 0) {
+    updateContractKPIs();
+  } else {
+    loadContracts().then(() => updateContractKPIs()).catch(()=>{});
+  }
 
   // Buyers + tenders depuis API
   Promise.all([
@@ -1113,7 +1122,6 @@ function renderDashboard() {
     renderDbBuyers(endUsers);
   });
 
-  renderDbContracts();
   renderDbSignals();
   loadFeed();
 }
