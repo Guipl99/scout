@@ -1109,6 +1109,8 @@ function renderDashboard() {
     const tenders = (tdData.tenders || []).filter(t => t.statut !== 'Clôturé');
     document.getElementById('m-buyers').textContent = endUsers.length;
     document.getElementById('m-tenders').textContent = tenders.length;
+    // Stocker dans les globales pour que les clics fonctionnent
+    if (!allEndUsers.length) allEndUsers = endUsers;
     renderDbTenders(tenders);
     renderDbBuyers(endUsers);
   });
@@ -1151,7 +1153,7 @@ function renderDbContracts() {
       ? '$'+(ct.valeur_max/1e9).toFixed(1)+'B'
       : '$'+(ct.valeur_max/1e6).toFixed(0)+'M') : '—';
     const socName = ct.societe_name || ct.societe_id || '—';
-    return `<div class="db-row" onclick="go('contracts')">
+    return `<div class="db-row" onclick="go('contracts');setTimeout(()=>openContractDetail('${ct.id}'),200)">
       <div class="db-row-icon" style="background:${colors[i%colors.length]}20;color:${colors[i%colors.length]};">${sanitize(socName.slice(0,3).toUpperCase())}</div>
       <div class="db-row-body">
         <div class="db-row-title">${sanitize(ct.titre||'').slice(0,40)}${(ct.titre||'').length>40?'…':''}</div>
@@ -1173,7 +1175,7 @@ function renderDbBuyers(endUsers) {
   const flags = {USA:'🇺🇸',France:'🇫🇷',Allemagne:'🇩🇪',Ukraine:'🇺🇦',Australie:'🇦🇺',UK:'🇬🇧','Royaume-Uni':'🇬🇧',Israel:'🇮🇱',Israël:'🇮🇱',Roumanie:'🇷🇴',Espagne:'🇪🇸','Nouvelle-Zélande':'🇳🇿',Inde:'🇮🇳',Japon:'🇯🇵',Canada:'🇨🇦'};
   el.innerHTML = top.map(eu => {
     const flag = flags[eu.pays] || '🌐';
-    return `<div class="db-row" onclick="go('end-users');setTimeout(()=>openEndUser('${eu.id}'),300)">
+    return `<div class="db-row" onclick="go('end-users');setTimeout(async()=>{if(!allEndUsers.length)await loadEndUsers();openEndUser('${eu.id}');},200)">
       <div class="db-row-icon" style="background:var(--bg3);font-size:16px;">${flag}</div>
       <div class="db-row-body">
         <div class="db-row-title">${sanitize(eu.nom||'').slice(0,38)}${(eu.nom||'').length>38?'…':''}</div>
