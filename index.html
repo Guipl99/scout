@@ -1606,6 +1606,8 @@ function setContractTypeTab(tab) {
     else renderLiveTenders();
   } else {
     if (livePanel) livePanel.style.display = 'none';
+    const sb = document.getElementById('tenders-search-bar');
+    if (sb) sb.style.display = 'none';
     if (mainPanel) mainPanel.style.display = 'block';
     filterContracts();
   }
@@ -1625,9 +1627,26 @@ async function loadLiveTenders() {
   }
 }
 
+function filterTenders() {
+  const search = (document.getElementById('tenders-search')?.value || '').toLowerCase();
+  const filtered = !search ? liveTenders : liveTenders.filter(t =>
+    (t.titre||'').toLowerCase().includes(search) ||
+    (t.acheteur||'').toLowerCase().includes(search) ||
+    (t.pays||'').toLowerCase().includes(search) ||
+    (t.description||'').toLowerCase().includes(search)
+  );
+  _renderTendersList(filtered);
+}
+
 function renderLiveTenders() {
+  const searchBar = document.getElementById('tenders-search-bar');
+  if (searchBar) searchBar.style.display = liveTenders.length ? 'block' : 'none';
+  filterTenders();
+}
+
+function _renderTendersList(tenders) {
   const panel = document.getElementById('live-tenders-panel');
-  if (!liveTenders.length) {
+  if (!tenders.length) {
     panel.innerHTML = `<div style="padding:2rem;text-align:center;">
       <div style="font-size:14px;color:var(--text2);margin-bottom:8px;">Aucun tender live disponible.</div>
       <div style="font-size:12px;color:var(--text3);">Les tenders sont scrappés automatiquement chaque semaine depuis SAM.gov, TED Europa, DGA, UK MoD et autres sources.</div>
@@ -1637,7 +1656,7 @@ function renderLiveTenders() {
 
   // Group by source
   const bySource = {};
-  liveTenders.forEach(t => {
+  tenders.forEach(t => {
     const src = t.source_name || 'Autre';
     if (!bySource[src]) bySource[src] = [];
     bySource[src].push(t);
@@ -1646,8 +1665,8 @@ function renderLiveTenders() {
   const now = new Date();
   panel.innerHTML = `
     <div style="padding:0.5rem 0 1rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <span style="font-size:12px;color:var(--text3);">Mis à jour : ${liveTenders[0]?.scraped_at ? timeAgo(liveTenders[0].scraped_at) : '—'}</span>
-      <span style="font-size:12px;color:var(--text3);">· ${liveTenders.length} tenders actifs</span>
+      <span style="font-size:12px;color:var(--text3);">Mis à jour : ${tenders[0]?.scraped_at ? timeAgo(liveTenders[0].scraped_at) : '—'}</span>
+      <span style="font-size:12px;color:var(--text3);">· ${tenders.length} tenders actifs</span>
     </div>
     <div class="entity-grid">
       ${liveTenders.map(t => {
