@@ -89,6 +89,57 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
 /* ── Metrics ── */
 .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+
+/* ── DASHBOARD SALES ── */
+.db-kpi-row { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:14px; }
+.db-kpi { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:border-color .15s,background .15s; position:relative; overflow:hidden; }
+.db-kpi::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,transparent 60%,rgba(108,99,255,.04)); }
+.db-kpi:hover { border-color:var(--accent); background:var(--bg3); }
+.db-kpi-accent { border-color:rgba(108,99,255,.4); background:linear-gradient(135deg,#1a1830 0%,var(--bg2) 100%); }
+.db-kpi-accent:hover { border-color:var(--accent); }
+.db-kpi-icon { font-size:22px; flex-shrink:0; position:relative; }
+.db-kpi-val { font-size:20px; font-weight:700; font-family:'DM Mono',monospace; color:var(--text); line-height:1; }
+.db-kpi-accent .db-kpi-val { color:var(--accent2); }
+.db-kpi-label { font-size:10px; color:var(--text2); margin-top:3px; text-transform:uppercase; letter-spacing:.05em; }
+.db-pulse { position:absolute; top:-2px; right:-2px; width:8px; height:8px; border-radius:50%; background:#22c55e; animation:pulse 2s infinite; }
+
+.db-grid { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:12px; }
+.db-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); display:flex; flex-direction:column; overflow:hidden; }
+.db-card-wide { grid-column:span 2; }
+.db-card-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.db-card-title { font-size:13px; font-weight:600; color:var(--text); }
+.db-link { background:none; border:none; color:var(--accent2); font-size:12px; cursor:pointer; padding:0; }
+.db-link:hover { text-decoration:underline; }
+.db-list { overflow-y:auto; max-height:220px; }
+.db-card-wide .db-list { max-height:180px; display:grid; grid-template-columns:repeat(3,1fr); gap:0; }
+.db-row { display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .12s; }
+.db-row:last-child { border-bottom:none; }
+.db-row:hover { background:var(--bg3); }
+.db-row-icon { width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+.db-row-body { min-width:0; flex:1; }
+.db-row-title { font-size:12px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.db-row-sub { font-size:11px; color:var(--text2); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.db-row-right { flex-shrink:0; text-align:right; }
+.db-row-val { font-size:12px; font-weight:600; color:var(--accent2); font-family:'DM Mono',monospace; }
+.db-row-age { font-size:10px; color:var(--text3); margin-top:2px; }
+.db-tender-card { padding:12px 14px; border-right:1px solid var(--border); border-bottom:1px solid var(--border); cursor:pointer; transition:background .12s; display:flex; flex-direction:column; gap:6px; }
+.db-tender-card:hover { background:var(--bg3); }
+.db-tender-card:nth-child(3n) { border-right:none; }
+.db-tender-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; width:fit-content; }
+.db-empty { padding:20px; text-align:center; color:var(--text3); font-size:12px; }
+
+@media (max-width: 900px) {
+  .db-kpi-row { grid-template-columns: repeat(3,1fr); }
+  .db-grid { grid-template-columns: 1fr; }
+  .db-card-wide { grid-column: span 1; }
+  .db-card-wide .db-list { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .db-kpi-row { grid-template-columns: repeat(2,1fr); }
+}
+.db-signal { display:flex; align-items:flex-start; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border); }
+.db-signal:last-child { border-bottom:none; }
+.db-signal-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; margin-top:5px; }
 .metric { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
 .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; }
 .metric-value { font-size: 22px; font-weight: 600; font-family: 'DM Mono', monospace; }
@@ -362,24 +413,107 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <!-- DASHBOARD -->
     <div id="panel-dashboard" class="panel active">
       <div class="topbar"><h1>DefSec Robotics Intelligence</h1></div>
-      <div class="metrics">
-        <div class="metric"><div class="metric-label">Constructeurs</div><div class="metric-value" id="m-societes">0</div></div>
-        <div class="metric"><div class="metric-label">Systèmes</div><div class="metric-value" id="m-produits">0</div></div>
-        <div class="metric"><div class="metric-label">Contrats</div><div class="metric-value" id="m-alerts">0</div></div>
-        <div class="metric"><div class="metric-label">Fiches enrichies</div><div class="metric-value" id="m-fresh">0</div></div>
-      </div>
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Dernières informations</span>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <div id="feed-type-filters" style="display:flex;gap:4px;"></div>
-            
+
+      <!-- KPI ROW -->
+      <div class="db-kpi-row">
+        <div class="db-kpi db-kpi-accent" onclick="go('contracts')">
+          <div class="db-kpi-icon">💰</div>
+          <div class="db-kpi-body">
+            <div class="db-kpi-val" id="m-valeur">—</div>
+            <div class="db-kpi-label">Valeur totale contrats</div>
           </div>
         </div>
-        <div id="feed-list" style="padding:0 1.25rem;">
-          <div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Chargement...</span></div>
+        <div class="db-kpi" onclick="go('contracts')">
+          <div class="db-kpi-icon">📋</div>
+          <div class="db-kpi-body">
+            <div class="db-kpi-val" id="m-alerts">0</div>
+            <div class="db-kpi-label">Contrats attribués</div>
+          </div>
+        </div>
+        <div class="db-kpi" onclick="go('contracts');setTimeout(()=>setContractTypeTab('live'),200)">
+          <div class="db-kpi-icon" style="position:relative;">
+            🎯
+            <span class="db-pulse"></span>
+          </div>
+          <div class="db-kpi-body">
+            <div class="db-kpi-val" id="m-tenders">0</div>
+            <div class="db-kpi-label">Live tenders actifs</div>
+          </div>
+        </div>
+        <div class="db-kpi" onclick="go('end-users')">
+          <div class="db-kpi-icon">🏢</div>
+          <div class="db-kpi-body">
+            <div class="db-kpi-val" id="m-buyers">0</div>
+            <div class="db-kpi-label">Buyers identifiés</div>
+          </div>
+        </div>
+        <div class="db-kpi" onclick="go('societes')">
+          <div class="db-kpi-icon">🏭</div>
+          <div class="db-kpi-body">
+            <div class="db-kpi-val" id="m-societes">0</div>
+            <div class="db-kpi-label">Fabricants suivis</div>
+          </div>
+        </div>
+        <div class="db-kpi" onclick="go('produits-db')">
+          <div class="db-kpi-icon">🚁</div>
+          <div class="db-kpi-body">
+            <div class="db-kpi-val" id="m-produits">0</div>
+            <div class="db-kpi-label">Systèmes catalogués</div>
+          </div>
         </div>
       </div>
+
+      <!-- MAIN GRID -->
+      <div class="db-grid">
+
+        <!-- TOP OPPORTUNITIES -->
+        <div class="db-card db-card-wide">
+          <div class="db-card-header">
+            <span class="db-card-title">⚡ Top opportunités live</span>
+            <button class="db-link" onclick="go('contracts');setTimeout(()=>setContractTypeTab('live'),200)">Voir tout →</button>
+          </div>
+          <div id="db-tenders-list" class="db-list">
+            <div class="db-empty">Chargement…</div>
+          </div>
+        </div>
+
+        <!-- RECENT CONTRACTS -->
+        <div class="db-card">
+          <div class="db-card-header">
+            <span class="db-card-title">🏆 Derniers contrats</span>
+            <button class="db-link" onclick="go('contracts')">Voir tout →</button>
+          </div>
+          <div id="db-contracts-list" class="db-list">
+            <div class="db-empty">Chargement…</div>
+          </div>
+        </div>
+
+        <!-- TOP BUYERS -->
+        <div class="db-card">
+          <div class="db-card-header">
+            <span class="db-card-title">🎖️ Buyers clés</span>
+            <button class="db-link" onclick="go('end-users')">Voir tout →</button>
+          </div>
+          <div id="db-buyers-list" class="db-list">
+            <div class="db-empty">Chargement…</div>
+          </div>
+        </div>
+
+        <!-- MARKET SIGNALS -->
+        <div class="db-card">
+          <div class="db-card-header">
+            <span class="db-card-title">📡 Signaux marché</span>
+          </div>
+          <div id="db-signals-list" class="db-list">
+            <div class="db-empty">Chargement…</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- hidden feed-list for compat -->
+      <div id="feed-list" style="display:none;"></div>
+      <div id="feed-type-filters" style="display:none;"></div>
     </div>
 
     <!-- SOCIETES LIST -->
@@ -955,11 +1089,126 @@ function streamText(elId, text, onDone) {
 let activeFeedType = 'tous';
 
 function renderDashboard() {
-  document.getElementById('m-societes').textContent = societes.length;
-  document.getElementById('m-produits').textContent = produits.length;
-  document.getElementById('m-alerts').textContent = contracts.length;
-  document.getElementById('m-fresh').textContent = [...societes, ...produits].filter(s => s.scraped_at && (Date.now() - new Date(s.scraped_at)) / 86400000 < 7).length;
+  // KPIs
+  document.getElementById('m-societes').textContent = societes.length || '…';
+  document.getElementById('m-produits').textContent = produits.length || '…';
+  document.getElementById('m-alerts').textContent = contracts.length || '…';
+
+  // Valeur totale contrats
+  const totalM = contracts.reduce((s,c) => s + (c.valeur_max||0), 0) / 1_000_000;
+  document.getElementById('m-valeur').textContent = totalM > 1000
+    ? '$' + (totalM/1000).toFixed(1) + 'B'
+    : totalM > 0 ? '$' + totalM.toFixed(0) + 'M' : '…';
+
+  // Buyers + tenders depuis API
+  Promise.all([
+    fetch(API + '/end-users?limit=200').then(r=>r.json()).catch(()=>({end_users:[]})),
+    fetch(API + '/tenders').then(r=>r.json()).catch(()=>({tenders:[]})),
+  ]).then(([euData, tdData]) => {
+    const endUsers = euData.end_users || [];
+    const tenders = (tdData.tenders || []).filter(t => t.statut !== 'Clôturé');
+    document.getElementById('m-buyers').textContent = endUsers.length;
+    document.getElementById('m-tenders').textContent = tenders.length;
+    renderDbTenders(tenders);
+    renderDbBuyers(endUsers);
+  });
+
+  renderDbContracts();
+  renderDbSignals();
   loadFeed();
+}
+
+function renderDbTenders(tenders) {
+  const el = document.getElementById('db-tenders-list');
+  if (!el) return;
+  const top = tenders.slice(0, 6);
+  if (!top.length) { el.innerHTML = '<div class="db-empty">Aucun tender live</div>'; return; }
+  const now = new Date();
+  el.innerHTML = top.map(t => {
+    const days = t.date_cloture ? Math.ceil((new Date(t.date_cloture) - now) / 86400000) : null;
+    const urgentColor = days !== null && days < 14 ? '#f59e0b' : '#22c55e';
+    const statusColor = t.statut === 'Ouvert' ? '#22c55e' : '#f59e0b';
+    return `<div class="db-tender-card" onclick="go('contracts');setTimeout(()=>setContractTypeTab('live'),200)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+        <span class="db-tender-badge" style="background:${statusColor}20;color:${statusColor};">● ${sanitize(t.statut||'—')}</span>
+        ${days !== null ? `<span style="font-size:10px;font-weight:600;color:${urgentColor};">${days < 0 ? 'Clôturé' : days + 'j'}</span>` : ''}
+      </div>
+      <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.3;">${sanitize(t.titre||'').slice(0,60)}${(t.titre||'').length>60?'…':''}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:11px;color:var(--text2);">${sanitize(t.pays||'—')} · ${sanitize(t.source_name||'—')}</span>
+        ${t.valeur_estimee ? `<span style="font-size:11px;font-weight:600;color:var(--accent2);font-family:'DM Mono',monospace;">${sanitize(t.valeur_estimee)}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderDbContracts() {
+  const el = document.getElementById('db-contracts-list');
+  if (!el) return;
+  const top = [...contracts].sort((a,b) => (b.valeur_max||0)-(a.valeur_max||0)).slice(0,6);
+  if (!top.length) { el.innerHTML = '<div class="db-empty">Chargement…</div>'; return; }
+  const colors = ['#6c63ff','#14b8a6','#f59e0b','#22c55e','#ef4444','#8b84ff'];
+  el.innerHTML = top.map((ct,i) => {
+    const valM = ct.valeur_max ? (ct.valeur_max/1e6 >= 1000
+      ? '$'+(ct.valeur_max/1e9).toFixed(1)+'B'
+      : '$'+(ct.valeur_max/1e6).toFixed(0)+'M') : '—';
+    const socName = ct.societe_name || ct.societe_id || '—';
+    return `<div class="db-row" onclick="go('contracts')">
+      <div class="db-row-icon" style="background:${colors[i%colors.length]}20;color:${colors[i%colors.length]};">${sanitize(socName.slice(0,3).toUpperCase())}</div>
+      <div class="db-row-body">
+        <div class="db-row-title">${sanitize(ct.titre||'').slice(0,40)}${(ct.titre||'').length>40?'…':''}</div>
+        <div class="db-row-sub">${sanitize(ct.client||'—')} · ${sanitize(ct.pays_client||'—')}</div>
+      </div>
+      <div class="db-row-right">
+        <div class="db-row-val">${valM}</div>
+        <div class="db-row-age">${sanitize(ct.statut||'')}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderDbBuyers(endUsers) {
+  const el = document.getElementById('db-buyers-list');
+  if (!el) return;
+  const top = endUsers.slice(0, 6);
+  if (!top.length) { el.innerHTML = '<div class="db-empty">Chargement…</div>'; return; }
+  const flags = {USA:'🇺🇸',France:'🇫🇷',Allemagne:'🇩🇪',Ukraine:'🇺🇦',Australie:'🇦🇺',UK:'🇬🇧','Royaume-Uni':'🇬🇧',Israel:'🇮🇱',Israël:'🇮🇱',Roumanie:'🇷🇴',Espagne:'🇪🇸','Nouvelle-Zélande':'🇳🇿',Inde:'🇮🇳',Japon:'🇯🇵',Canada:'🇨🇦'};
+  el.innerHTML = top.map(eu => {
+    const flag = flags[eu.pays] || '🌐';
+    return `<div class="db-row" onclick="go('end-users');setTimeout(()=>openEndUser('${eu.id}'),300)">
+      <div class="db-row-icon" style="background:var(--bg3);font-size:16px;">${flag}</div>
+      <div class="db-row-body">
+        <div class="db-row-title">${sanitize(eu.nom||'').slice(0,38)}${(eu.nom||'').length>38?'…':''}</div>
+        <div class="db-row-sub">${sanitize(eu.pays||'—')} · ${sanitize(eu.type||eu.secteur||'—')}</div>
+      </div>
+      <div class="db-row-right">
+        <div class="db-row-age" style="color:${eu.statut==='Opérationnel'?'#22c55e':eu.statut==='Contractualisé'?'#f59e0b':'var(--text3)'};">${sanitize(eu.statut||'')}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderDbSignals() {
+  const el = document.getElementById('db-signals-list');
+  if (!el) return;
+  // Signaux : fabricants avec activité récente
+  const recent = societes
+    .filter(s => s.signals && s.signals.length > 0)
+    .sort((a,b) => (b.signals||[]).length - (a.signals||[]).length)
+    .slice(0, 5);
+  if (!recent.length) { el.innerHTML = '<div class="db-empty">Chargement…</div>'; return; }
+  const sigColors = {'levée':'#22c55e','contrat':'#6c63ff','partenariat':'#14b8a6','livraison':'#f59e0b','alerte':'#ef4444'};
+  el.innerHTML = recent.map(s => {
+    const sig = (s.signals||[])[0] || '';
+    const dotColor = Object.entries(sigColors).find(([k]) => sig.toLowerCase().includes(k))?.[1] || '#555';
+    return `<div class="db-signal">
+      <div class="db-signal-dot" style="background:${dotColor};"></div>
+      <div style="min-width:0;">
+        <div style="font-size:12px;font-weight:500;color:var(--text);cursor:pointer;" onclick="go('societes');setTimeout(()=>openSociete('${s.id}'),200)">${sanitize(s.name)}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sanitize(sig.slice(0,70))}${sig.length>70?'…':''}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderFeedTypeFilters(feed) {
