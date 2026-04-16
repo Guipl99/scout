@@ -579,6 +579,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <button id="eu-tab-contacts" onclick="setEuTab('contacts')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">👤 Contacts</button>
           </div>
           <span id="eu-count-badge" style="font-size:11px;color:var(--text2);background:var(--bg3);border-radius:10px;padding:2px 8px;"></span>
+          <button id="btn-my-pays" onclick="applyMyPaysFilter(euTab)" title="Filtrer sur mes pays cibles"
+            style="display:none;font-size:11px;background:var(--accent)22;color:var(--accent2);border:1px solid var(--accent)44;border-radius:6px;padding:3px 9px;cursor:pointer;">
+            🎯 Mes pays
+          </button>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;" id="eu-comptes-filters">
               <select id="eu-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
                 <option value="">🌍 Pays</option>
@@ -626,28 +630,99 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
     <div id="panel-config" class="panel">
       <div class="topbar"><h1>Paramètres</h1></div>
-      <div class="card" style="margin-bottom:1rem;">
-        <div class="card-header"><span class="card-title">Maintenance</span></div>
-        <div class="card-body" style="padding:0.75rem 1.25rem;display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn" onclick="scrapeDefenseContracts()">🔍 Scraper contrats défense</button>
-          <button class="btn" onclick="scrapeTendersFromConfig()">📡 Scraper live tenders</button>
-          <button class="btn" onclick="scrapeTethered()">🪁 Scraper tethered drones</button>
-          <button class="btn" id="btn-fetch-imgs" onclick="fetchProductImages()">🖼 Images Wikipedia</button>
-          <button class="btn" id="btn-ai-imgs" onclick="aiFetchImages()">🤖 IA — images manquantes</button>
-          <button class="btn btn-danger" onclick="cleanData()">🧹 Nettoyer données</button>
-          <span id="maint-msg" style="font-size:12px;color:var(--text3);align-self:center;"></span>
+      <div style="padding:16px;max-width:700px;display:flex;flex-direction:column;gap:16px;">
+
+        <!-- ── Mon profil commercial ─────────────────────────── -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">👤 Mon profil commercial</span></div>
+          <div class="card-body" style="padding:16px;display:flex;flex-direction:column;gap:14px;">
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Nom affiché</label>
+              <input id="cfg-name" type="text" placeholder="Votre nom ou équipe" maxlength="60"
+                style="width:100%;max-width:320px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);outline:none;"
+                oninput="saveSettings()">
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Pays cibles <span style="color:var(--text3);font-weight:400;">(filtre rapide en un clic)</span></label>
+              <div id="cfg-pays-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+              <div style="display:flex;gap:6px;">
+                <select id="cfg-pays-add" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--text2);">
+                  <option value="">Ajouter un pays…</option>
+                </select>
+                <button onclick="addTargetPays()" style="background:var(--accent);color:white;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;">+ Ajouter</button>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Secteurs prioritaires</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;" id="cfg-secteurs">
+                ${['Militaire','Sécurité','Civil','Humanitaire'].map(s =>
+                  `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                    <input type="checkbox" data-secteur="${s}" onchange="saveSettings()" style="accent-color:var(--accent);"> ${s}
+                  </label>`
+                ).join('')}
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- ── Affichage ──────────────────────────────────────── -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">🖥 Affichage</span></div>
+          <div class="card-body" style="padding:16px;display:flex;flex-direction:column;gap:14px;">
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Onglet par défaut au démarrage</label>
+              <select id="cfg-default-tab" onchange="saveSettings()"
+                style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);">
+                <option value="dashboard">🏠 Accueil</option>
+                <option value="societes">🏭 Constructeurs</option>
+                <option value="produits-db">🚁 Systèmes</option>
+                <option value="contracts">📋 Contrats & Tenders</option>
+                <option value="end-users">👥 Comptes & Contacts</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Sous-onglet par défaut dans Comptes & Contacts</label>
+              <div style="display:flex;gap:8px;">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-default-subtab" value="comptes" onchange="saveSettings()" style="accent-color:var(--accent);"> 🏢 Comptes
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-default-subtab" value="contacts" onchange="saveSettings()" style="accent-color:var(--accent);"> 👤 Contacts
+                </label>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Densité des cartes</label>
+              <div style="display:flex;gap:8px;">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-density" value="normal" onchange="applyDensity(this.value);saveSettings()" style="accent-color:var(--accent);"> Normal
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-density" value="compact" onchange="applyDensity(this.value);saveSettings()" style="accent-color:var(--accent);"> Compact
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Filtres mémorisés ──────────────────────────────── -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">🔖 Filtres mémorisés</span></div>
+          <div class="card-body" style="padding:16px;display:flex;flex-direction:column;gap:10px;">
+            <p style="font-size:13px;color:var(--text2);margin:0;">Les filtres actifs sur chaque onglet sont automatiquement sauvegardés et restaurés à chaque session.</p>
+            <div id="cfg-filters-summary" style="font-size:12px;color:var(--text3);"></div>
+            <button onclick="resetAllFilters()" style="align-self:flex-start;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 14px;font-size:12px;color:var(--text2);cursor:pointer;">
+              🗑 Réinitialiser tous les filtres
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Sauvegarde ─────────────────────────────────────── -->
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="cfg-save-msg" style="font-size:12px;color:#22c55e;opacity:0;transition:opacity 0.3s;"></span>
+        </div>
+
       </div>
-      <div class="card"><div class="card-header"><span class="card-title">Notifications</span></div><div class="card-body" style="padding:0.5rem 1.25rem;">
-        <div class="toggle-row"><div><div class="tgl-label">Email quotidien</div><div class="tgl-desc">Résumé des alertes du jour</div></div></div>
-        <div class="toggle-row"><div><div class="tgl-label">Slack temps réel</div><div class="tgl-desc">Notifications dans un canal dédié</div></div></div>
-        <div class="toggle-row"><div><div class="tgl-label">Rapport PDF hebdo</div></div></div>
-      </div></div>
-      <div class="card"><div class="card-header"><span class="card-title">Seuils d'alerte</span></div><div class="card-body" style="padding:0.5rem 1.25rem;">
-        <div class="toggle-row"><div><div class="tgl-label">Changement de prix détecté</div></div></div>
-        <div class="toggle-row"><div><div class="tgl-label">+5 recrutements par semaine</div></div></div>
-        <div class="toggle-row"><div><div class="tgl-label">Nouvelle fonctionnalité annoncée</div></div></div>
-      </div></div>
     </div>
 
   </div>
@@ -819,7 +894,16 @@ function go(id, opts) {
   if (id === 'societes') { backToSocietes(); loadSocietes().then(renderSocietes); }
   if (id === 'produits-db') { backToProduits(); loadAllProduits().then(renderProduits); }
   if (id === 'contracts') { loadContracts().then(() => { renderContractStatusFilters(); filterContracts(); loadContractStats(); }); }
-  if (id === 'end-users') { loadEndUsers().then(() => { setEuTab(opts?.tab || 'comptes'); filterEndUsers(); populateEuDroneFilters(); }); loadContacts(); }
+  if (id === 'end-users') {
+    loadEndUsers().then(() => {
+      const tab = opts?.tab || loadSettings().defaultSubtab || 'comptes';
+      setEuTab(tab);
+      restoreSavedFilters(tab === 'contacts' ? 'contacts' : 'end-users');
+      filterCurrentTab();
+      populateEuDroneFilters();
+    });
+    loadContacts();
+  }
   // Persister l'onglet dans le hash
   if (!opts?.silent) history.replaceState(null, '', '#' + id + (opts?.tab ? '/' + opts.tab : ''));
 }
@@ -2489,6 +2573,7 @@ function filterContactsGrid() {
   });
 
   renderContactsGrid(filtered);
+  saveCurrentFilters();
 }
 
 function renderContactsGrid(list) {
@@ -2605,6 +2690,7 @@ function filterEndUsers() {
     return true;
   });
   renderEndUsers(filtered);
+  saveCurrentFilters();
 }
 
 function populateEuDroneFilters() {
@@ -2948,6 +3034,232 @@ function renderContactsForAccount(endUserId) {
     </div>
   </div>`;
 }
+
+
+// ════════════════════════════════════════════════════════════════
+// ── SETTINGS ────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+
+const SETTINGS_KEY = 'scout_settings_v1';
+const FILTERS_KEY  = 'scout_filters_v1';
+
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { return {}; }
+}
+function loadSavedFilters() {
+  try { return JSON.parse(localStorage.getItem(FILTERS_KEY)) || {}; } catch { return {}; }
+}
+function saveSettings() {
+  const s = {
+    name:        document.getElementById('cfg-name')?.value || '',
+    targetPays:  (loadSettings().targetPays || []),
+    secteurs:    [...document.querySelectorAll('#cfg-secteurs input[type=checkbox]')]
+                   .filter(el => el.checked).map(el => el.dataset.secteur),
+    defaultTab:  document.getElementById('cfg-default-tab')?.value || 'dashboard',
+    defaultSubtab: document.querySelector('input[name="cfg-default-subtab"]:checked')?.value || 'comptes',
+    density:     document.querySelector('input[name="cfg-density"]:checked')?.value || 'normal',
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  showSaveMsg();
+  renderFiltersSummary();
+}
+function showSaveMsg() {
+  const el = document.getElementById('cfg-save-msg');
+  if (!el) return;
+  el.textContent = '✓ Préférences sauvegardées';
+  el.style.opacity = '1';
+  setTimeout(() => { el.style.opacity = '0'; }, 2000);
+}
+
+function applySettings() {
+  const s = loadSettings();
+  // Afficher/masquer bouton "Mes pays"
+  const btnMyPays = document.getElementById('btn-my-pays');
+  if (btnMyPays) btnMyPays.style.display = (s.targetPays?.length) ? 'block' : 'none';
+  // Nom
+  const nameEl = document.getElementById('cfg-name');
+  if (nameEl) nameEl.value = s.name || '';
+  // Pays cibles
+  if (s.targetPays) renderTargetPays(s.targetPays);
+  // Secteurs
+  document.querySelectorAll('#cfg-secteurs input[type=checkbox]').forEach(el => {
+    el.checked = (s.secteurs || []).includes(el.dataset.secteur);
+  });
+  // Onglet par défaut
+  const tabEl = document.getElementById('cfg-default-tab');
+  if (tabEl && s.defaultTab) tabEl.value = s.defaultTab;
+  // Sous-onglet
+  const sub = document.querySelector(`input[name="cfg-default-subtab"][value="${s.defaultSubtab || 'comptes'}"]`);
+  if (sub) sub.checked = true;
+  // Densité
+  const den = document.querySelector(`input[name="cfg-density"][value="${s.density || 'normal'}"]`);
+  if (den) den.checked = true;
+  applyDensity(s.density || 'normal');
+  // Résumé filtres
+  renderFiltersSummary();
+  // Peupler select pays
+  populateConfigPays();
+}
+
+function applyDensity(density) {
+  document.querySelectorAll('.entity-card').forEach(el => {
+    el.style.padding = density === 'compact' ? '8px 10px' : '';
+  });
+  document.querySelectorAll('#eu-grid, #contracts-grid, #p-grid, #s-grid').forEach(el => {
+    el.style.gap = density === 'compact' ? '6px' : '';
+  });
+}
+
+// ── Pays cibles ────────────────────────────────────────────────
+function populateConfigPays() {
+  const sel = document.getElementById('cfg-pays-add');
+  if (!sel) return;
+  const all = [...new Set([
+    ...(allEndUsers||[]).map(eu => eu.pays),
+    ...(allContacts||[]).map(ct => ct.pays)
+  ].filter(Boolean))].sort();
+  const current = loadSettings().targetPays || [];
+  sel.innerHTML = '<option value="">Ajouter un pays…</option>' +
+    all.filter(p => !current.includes(p))
+       .map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+function addTargetPays() {
+  const sel = document.getElementById('cfg-pays-add');
+  if (!sel?.value) return;
+  const s = loadSettings();
+  s.targetPays = [...new Set([...(s.targetPays||[]), sel.value])];
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  renderTargetPays(s.targetPays);
+  populateConfigPays();
+  showSaveMsg();
+}
+
+function removeTargetPays(pays) {
+  const s = loadSettings();
+  s.targetPays = (s.targetPays||[]).filter(p => p !== pays);
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  renderTargetPays(s.targetPays);
+  populateConfigPays();
+  showSaveMsg();
+}
+
+function renderTargetPays(list) {
+  const el = document.getElementById('cfg-pays-list');
+  if (!el) return;
+  if (!list?.length) {
+    el.innerHTML = '<span style="font-size:12px;color:var(--text3);">Aucun pays cible défini</span>';
+    return;
+  }
+  el.innerHTML = list.map(p =>
+    `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;background:var(--accent)22;color:var(--accent2);border:1px solid var(--accent)44;border-radius:12px;padding:3px 9px;">
+      🌍 ${p}
+      <button onclick="removeTargetPays('${p}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:0;line-height:1;">×</button>
+    </span>`
+  ).join('');
+}
+
+// ── Filtre rapide "Mes pays" ───────────────────────────────────
+function applyMyPaysFilter(tab) {
+  const pays = loadSettings().targetPays || [];
+  if (!pays.length) { alert('Définissez vos pays cibles dans Paramètres.'); return; }
+  // Pas de filtre multi-pays natif — on filtre sur le 1er pays cible
+  // et on affiche un badge
+  if (tab === 'end-users') {
+    const sel = document.getElementById('eu-pays-filter');
+    if (sel) { sel.value = pays[0]; filterEndUsers(); }
+  } else if (tab === 'contacts') {
+    const sel = document.getElementById('ct-pays-filter');
+    if (sel) { sel.value = pays[0]; filterContactsGrid(); }
+  }
+}
+
+// ── Filtres mémorisés ─────────────────────────────────────────
+function saveCurrentFilters() {
+  const f = loadSavedFilters();
+  f.endusers = {
+    pays:      document.getElementById('eu-pays-filter')?.value || '',
+    secteur:   document.getElementById('eu-secteur-filter')?.value || '',
+    drone:     document.getElementById('eu-drone-type-filter')?.value || '',
+    fabricant: document.getElementById('eu-fabricant-filter')?.value || '',
+    search:    document.getElementById('eu-contact-search')?.value || '',
+  };
+  f.contacts = {
+    pays:      document.getElementById('ct-pays-filter')?.value || '',
+    secteur:   document.getElementById('ct-secteur-filter')?.value || '',
+    drone:     document.getElementById('ct-drone-type-filter')?.value || '',
+    fabricant: document.getElementById('ct-fabricant-filter')?.value || '',
+  };
+  f.contracts = {
+    pays:      document.getElementById('contract-pays-filter')?.value || '',
+    type:      document.getElementById('contract-type-filter')?.value || '',
+    q:         document.getElementById('contracts-search')?.value || '',
+  };
+  localStorage.setItem(FILTERS_KEY, JSON.stringify(f));
+}
+
+function restoreSavedFilters(panel) {
+  const f = loadSavedFilters();
+  if (panel === 'end-users' && f.endusers) {
+    const eu = f.endusers;
+    if (eu.pays)      { const el = document.getElementById('eu-pays-filter');          if (el) el.value = eu.pays; }
+    if (eu.secteur)   { const el = document.getElementById('eu-secteur-filter');       if (el) el.value = eu.secteur; }
+    if (eu.drone)     { const el = document.getElementById('eu-drone-type-filter');    if (el) el.value = eu.drone; }
+    if (eu.fabricant) { const el = document.getElementById('eu-fabricant-filter');     if (el) el.value = eu.fabricant; }
+    if (eu.search)    { const el = document.getElementById('eu-contact-search');       if (el) el.value = eu.search; }
+  }
+  if (panel === 'contacts' && f.contacts) {
+    const ct = f.contacts;
+    if (ct.pays)      { const el = document.getElementById('ct-pays-filter');          if (el) el.value = ct.pays; }
+    if (ct.secteur)   { const el = document.getElementById('ct-secteur-filter');       if (el) el.value = ct.secteur; }
+    if (ct.drone)     { const el = document.getElementById('ct-drone-type-filter');    if (el) el.value = ct.drone; }
+    if (ct.fabricant) { const el = document.getElementById('ct-fabricant-filter');     if (el) el.value = ct.fabricant; }
+  }
+}
+
+function resetAllFilters() {
+  localStorage.removeItem(FILTERS_KEY);
+  ['eu-pays-filter','eu-secteur-filter','eu-drone-type-filter','eu-fabricant-filter',
+   'ct-pays-filter','ct-secteur-filter','ct-drone-type-filter','ct-fabricant-filter',
+   'eu-contact-search'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  filterCurrentTab();
+  renderFiltersSummary();
+  showSaveMsg();
+}
+
+function renderFiltersSummary() {
+  const el = document.getElementById('cfg-filters-summary');
+  if (!el) return;
+  const f = loadSavedFilters();
+  const lines = [];
+  const eu = f.endusers;
+  const ct = f.contacts;
+  if (eu) {
+    const active = [eu.pays, eu.secteur, eu.drone, eu.fabricant, eu.search].filter(Boolean);
+    if (active.length) lines.push(`Comptes : ${active.join(' · ')}`);
+  }
+  if (ct) {
+    const active = [ct.pays, ct.secteur, ct.drone, ct.fabricant].filter(Boolean);
+    if (active.length) lines.push(`Contacts : ${active.join(' · ')}`);
+  }
+  el.textContent = lines.length ? lines.join(' | ') : 'Aucun filtre actif mémorisé.';
+}
+
+// ── Init settings au chargement ───────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const s = loadSettings();
+  // Appliquer l'onglet par défaut si pas de hash
+  if (!window.location.hash && s.defaultTab) {
+    go(s.defaultTab, { tab: s.defaultSubtab || 'comptes', silent: true });
+  }
+  // Appliquer settings UI quand on arrive sur config
+  document.getElementById('nav-config')?.addEventListener('click', () => {
+    setTimeout(applySettings, 50);
+  });
+});
 
 </script>
 </body>
