@@ -558,10 +558,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <!-- CONFIG -->
     <div id="panel-end-users" class="panel">
       <div id="eu-list-view">
-        <div style="padding:12px 16px 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <span style="font-size:16px;font-weight:600;color:var(--accent);">Comptes</span>
+        <div style="padding:12px 16px 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border2);">
+          <!-- Toggle Comptes / Contacts -->
+          <div style="display:flex;background:var(--bg3);border-radius:8px;padding:2px;gap:2px;">
+            <button id="eu-tab-comptes" onclick="setEuTab('comptes')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--accent);color:white;font-weight:600;transition:all 0.15s;">🏢 Comptes</button>
+            <button id="eu-tab-contacts" onclick="setEuTab('contacts')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">👤 Contacts</button>
+          </div>
           <span id="eu-count-badge" style="font-size:11px;color:var(--text2);background:var(--bg3);border-radius:10px;padding:2px 8px;"></span>
-          <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+          <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;" id="eu-comptes-filters">
             <select id="eu-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
               <option value="">Tous types</option>
               <option value="Militaire">🪖 Militaire</option>
@@ -572,8 +576,30 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <select id="eu-secteur-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
               <option value="">Tous secteurs</option>
             </select>
-            <input id="eu-search" type="text" placeholder="Rechercher..." style="font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);min-width:160px;" oninput="filterEndUsers()">
+            <input id="eu-search" type="text" placeholder="Rechercher..." style="font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);min-width:160px;" oninput="filterCurrentTab()">
           </div>
+          <div style="display:none;gap:6px;flex-wrap:wrap;" id="eu-contacts-filters">
+            <select id="ct-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
+              <option value="">🌍 Tous pays</option>
+            </select>
+            <select id="ct-secteur-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
+              <option value="">Tous secteurs</option>
+              <option value="Militaire">🪖 Militaire</option>
+              <option value="Sécurité">🛡️ Sécurité</option>
+              <option value="Civil">🏢 Civil</option>
+              <option value="Humanitaire">🌐 Humanitaire</option>
+            </select>
+            <select id="ct-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
+              <option value="">Tous types</option>
+              <option value="Programme">📋 Programme</option>
+              <option value="Acquisition">💼 Acquisition</option>
+            </select>
+            <input id="eu-search" type="text" placeholder="Nom, titre, org…" style="font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);min-width:160px;" oninput="filterCurrentTab()" disabled>
+          </div>
+        </div>
+        <!-- Search bar shared (below toggle) -->
+        <div style="padding:8px 16px 4px;display:flex;gap:8px;">
+          <input id="eu-contact-search" type="text" placeholder="Rechercher…" style="font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);flex:1;outline:none;" oninput="filterCurrentTab()">
         </div>
         <div id="eu-grid" style="padding:0 12px 80px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;"></div>
       </div>
@@ -782,7 +808,7 @@ function go(id) {
   if (id === 'societes') { backToSocietes(); loadSocietes().then(renderSocietes); }
   if (id === 'produits-db') { backToProduits(); loadAllProduits().then(renderProduits); }
   if (id === 'contracts') { loadContracts().then(() => { renderContractStatusFilters(); filterContracts(); loadContractStats(); }); }
-  if (id === 'end-users') { loadEndUsers().then(() => filterEndUsers()); loadContacts(); }
+  if (id === 'end-users') { loadEndUsers().then(() => { setEuTab('comptes'); filterEndUsers(); }); loadContacts(); }
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
@@ -2365,6 +2391,123 @@ function installPWA() {
 // ══════════════════════════════════════════════════════════════
 let allEndUsers = [];
 
+let euTab = 'comptes'; // 'comptes' or 'contacts'
+
+function setEuTab(tab) {
+  euTab = tab;
+  // Toggle button styles
+  const btnC = document.getElementById('eu-tab-comptes');
+  const btnCt = document.getElementById('eu-tab-contacts');
+  const filtersC = document.getElementById('eu-comptes-filters');
+  const filtersCt = document.getElementById('eu-contacts-filters');
+  if (btnC) {
+    btnC.style.background = tab === 'comptes' ? 'var(--accent)' : 'transparent';
+    btnC.style.color = tab === 'comptes' ? 'white' : 'var(--text2)';
+    btnC.style.fontWeight = tab === 'comptes' ? '600' : '500';
+  }
+  if (btnCt) {
+    btnCt.style.background = tab === 'contacts' ? 'var(--accent)' : 'transparent';
+    btnCt.style.color = tab === 'contacts' ? 'white' : 'var(--text2)';
+    btnCt.style.fontWeight = tab === 'contacts' ? '600' : '500';
+  }
+  if (filtersC) filtersC.style.display = tab === 'comptes' ? 'flex' : 'none';
+  if (filtersCt) filtersCt.style.display = tab === 'contacts' ? 'flex' : 'none';
+  filterCurrentTab();
+}
+
+function filterCurrentTab() {
+  if (euTab === 'comptes') filterEndUsers();
+  else filterContactsGrid();
+}
+
+function filterContactsGrid() {
+  const q = (document.getElementById('eu-contact-search')?.value || '').toLowerCase();
+  const pays = document.getElementById('ct-pays-filter')?.value || '';
+  const secteur = document.getElementById('ct-secteur-filter')?.value || '';
+  const type = document.getElementById('ct-type-filter')?.value || '';
+
+  const filtered = allContacts.filter(ct => {
+    if (pays && ct.pays !== pays) return false;
+    if (secteur && ct.secteur !== secteur) return false;
+    if (type && ct.type_contact !== type) return false;
+    if (q) {
+      const hay = [ct.prenom, ct.nom, ct.titre, ct.organisation, ct.domaine, ct.notes, ct.pays].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  renderContactsGrid(filtered);
+}
+
+function renderContactsGrid(list) {
+  const grid = document.getElementById('eu-grid');
+  if (!grid) return;
+  const badge = document.getElementById('eu-count-badge');
+  if (badge) badge.textContent = list.length + ' contact' + (list.length > 1 ? 's' : '');
+
+  const SECT_COLOR = { Militaire:'#ef4444', Sécurité:'#f59e0b', Civil:'#3b82f6', Humanitaire:'#10b981' };
+  const TYPE_ICON = { Programme:'📋', Acquisition:'💼', Innovation:'🚀' };
+
+  if (!list.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:3rem;text-align:center;color:var(--text3);font-size:13px;">Aucun contact trouvé</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(ct => {
+    const color = SECT_COLOR[ct.secteur] || '#6b7280';
+    const initials = ((ct.prenom||'')[0]||'') + ((ct.nom||'')[0]||'');
+    const icon = TYPE_ICON[ct.type_contact] || '👤';
+    const nContrats = (ct.contrats_refs||[]).length;
+    const compte = allEndUsers.find(eu => eu.id === ct.end_user_id);
+
+    return `<div class="entity-card" style="cursor:pointer;padding:14px;" onclick="openContactFromGrid('${ct.id}')">
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        <div style="width:40px;height:40px;border-radius:50%;background:${color}22;border:2px solid ${color}44;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:${color};flex-shrink:0;">${initials||'?'}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:1px;">
+            <span style="font-size:13px;font-weight:600;color:var(--text);">${ct.prenom||''} ${ct.nom||''}</span>
+            <span style="font-size:10px;">${icon}</span>
+            ${ct.verified ? '<span style="font-size:10px;color:#22c55e;">✓</span>' : ''}
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.3;">${ct.titre||''}</div>
+        </div>
+      </div>
+      ${compte ? `<div style="margin-top:8px;font-size:11px;color:var(--accent2);font-weight:500;cursor:pointer;" onclick="event.stopPropagation();openEndUser('${compte.id}')"># ${compte.nom}</div>` : ''}
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;align-items:center;">
+        <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${color}22;color:${color};">${ct.secteur||''}</span>
+        <span style="font-size:10px;color:var(--text3);">🌍 ${ct.pays||''}</span>
+        ${ct.domaine ? `<span style="font-size:10px;color:var(--text3);">${ct.domaine.split('/')[0].trim()}</span>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+        ${ct.email ? `<a href="mailto:${ct.email}" onclick="event.stopPropagation()" style="font-size:11px;color:var(--accent2);text-decoration:none;background:var(--bg3);padding:3px 7px;border-radius:4px;">✉️</a>` : ''}
+        ${ct.telephone ? `<a href="tel:${ct.telephone}" onclick="event.stopPropagation()" style="font-size:11px;color:#22c55e;text-decoration:none;background:var(--bg3);padding:3px 7px;border-radius:4px;">📞</a>` : ''}
+        ${ct.linkedin ? `<a href="${ct.linkedin}" target="_blank" onclick="event.stopPropagation()" style="font-size:11px;color:#0077b5;text-decoration:none;background:var(--bg3);padding:3px 7px;border-radius:4px;">in</a>` : ''}
+        ${nContrats ? `<span style="font-size:10px;color:var(--text3);margin-left:auto;">📋 ${nContrats}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openContactFromGrid(id) {
+  const ct = allContacts.find(c => c.id === id);
+  if (!ct) return;
+  // Navigate to the account and open it
+  const eu = allEndUsers.find(e => e.id === ct.end_user_id);
+  if (eu) {
+    setEuTab('comptes');
+    openEndUser(eu.id);
+    // Scroll to contacts section after render
+    setTimeout(() => {
+      const el = document.getElementById('eu-detail-content');
+      if (el) {
+        const ctSection = [...el.querySelectorAll('div')].find(d => d.textContent.startsWith('👤 Contacts'));
+        if (ctSection) ctSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 300);
+  }
+}
+
 async function loadEndUsers() {
   if (allEndUsers.length > 0) return;
   try {
@@ -2565,6 +2708,13 @@ async function loadContacts() {
     const d = await r.json();
     allContacts = d.contacts || [];
     contactsLoaded = true;
+    // Populate pays filter
+    const pays = [...new Set(allContacts.map(c => c.pays).filter(Boolean))].sort();
+    const sel = document.getElementById('ct-pays-filter');
+    if (sel) {
+      sel.innerHTML = '<option value="">🌍 Tous pays</option>' +
+        pays.map(p => `<option value="${p}">${p}</option>`).join('');
+    }
   } catch(e) { console.error('loadContacts', e); }
 }
 
