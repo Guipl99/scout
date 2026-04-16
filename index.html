@@ -566,15 +566,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           </div>
           <span id="eu-count-badge" style="font-size:11px;color:var(--text2);background:var(--bg3);border-radius:10px;padding:2px 8px;"></span>
           <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;" id="eu-comptes-filters">
-            <select id="eu-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
-              <option value="">Tous types</option>
-              <option value="Militaire">🪖 Militaire</option>
-              <option value="Gouvernement">🏛️ Gouvernement</option>
-              <option value="Civil">🏢 Civil</option>
-              <option value="ONG">🌍 ONG</option>
+            <select id="eu-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
+              <option value="">🌍 Pays</option>
             </select>
             <select id="eu-secteur-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
-              <option value="">Tous secteurs</option>
+              <option value="">Secteur</option>
             </select>
             <select id="eu-drone-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
               <option value="">🚁 Type de drone</option>
@@ -582,25 +578,20 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <select id="eu-fabricant-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
               <option value="">🏭 Fabricant</option>
             </select>
-            <input id="eu-search" type="text" placeholder="Rechercher..." style="font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);min-width:160px;" oninput="filterCurrentTab()">
           </div>
           <div style="display:none;gap:6px;flex-wrap:wrap;" id="eu-contacts-filters">
             <select id="ct-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
-              <option value="">🌍 Tous pays</option>
+              <option value="">🌍 Pays</option>
             </select>
             <select id="ct-secteur-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
-              <option value="">Tous secteurs</option>
-              <option value="Militaire">🪖 Militaire</option>
-              <option value="Sécurité">🛡️ Sécurité</option>
-              <option value="Civil">🏢 Civil</option>
-              <option value="Humanitaire">🌐 Humanitaire</option>
+              <option value="">Secteur</option>
             </select>
-            <select id="ct-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
-              <option value="">Tous types</option>
-              <option value="Programme">📋 Programme</option>
-              <option value="Acquisition">💼 Acquisition</option>
+            <select id="ct-drone-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
+              <option value="">🚁 Type de drone</option>
             </select>
-            <input id="eu-search" type="text" placeholder="Nom, titre, org…" style="font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);min-width:160px;" oninput="filterCurrentTab()" disabled>
+            <select id="ct-fabricant-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
+              <option value="">🏭 Fabricant</option>
+            </select>
           </div>
         </div>
         <!-- Search bar shared (below toggle) -->
@@ -2418,6 +2409,9 @@ function setEuTab(tab) {
   }
   if (filtersC) filtersC.style.display = tab === 'comptes' ? 'flex' : 'none';
   if (filtersCt) filtersCt.style.display = tab === 'contacts' ? 'flex' : 'none';
+  // Réinitialiser la recherche au changement d'onglet
+  const searchEl = document.getElementById('eu-contact-search');
+  if (searchEl) searchEl.value = '';
   filterCurrentTab();
 }
 
@@ -2430,15 +2424,27 @@ function filterContactsGrid() {
   const q = (document.getElementById('eu-contact-search')?.value || '').toLowerCase();
   const pays = document.getElementById('ct-pays-filter')?.value || '';
   const secteur = document.getElementById('ct-secteur-filter')?.value || '';
-  const type = document.getElementById('ct-type-filter')?.value || '';
+  const droneType = document.getElementById('ct-drone-type-filter')?.value || '';
+  const fabricant = document.getElementById('ct-fabricant-filter')?.value || '';
 
   const filtered = allContacts.filter(ct => {
     if (pays && ct.pays !== pays) return false;
     if (secteur && ct.secteur !== secteur) return false;
-    if (type && ct.type_contact !== type) return false;
     if (q) {
       const hay = [ct.prenom, ct.nom, ct.titre, ct.organisation, ct.domaine, ct.notes, ct.pays].join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
+    }
+    // Filtres drone/fabricant via le compte associé
+    if (droneType || fabricant) {
+      const eu = allEndUsers.find(e => e.id === ct.end_user_id);
+      if (!eu) return (!droneType && !fabricant);
+      if (droneType) {
+        const match = (eu.produits_ids || []).some(pid => (window._euProdMap||{})[pid]?.type_drone === droneType);
+        if (!match) return false;
+      }
+      if (fabricant) {
+        if (!(eu.societes_ids || []).includes(fabricant)) return false;
+      }
     }
     return true;
   });
@@ -2528,14 +2534,14 @@ async function loadEndUsers() {
 }
 
 function filterEndUsers() {
-  const q = (document.getElementById('eu-contact-search')?.value || document.getElementById('eu-search')?.value || '').toLowerCase();
-  const type = document.getElementById('eu-type-filter')?.value || '';
+  const q = (document.getElementById('eu-contact-search')?.value || '').toLowerCase();
+  const pays = document.getElementById('eu-pays-filter')?.value || '';
   const secteur = document.getElementById('eu-secteur-filter')?.value || '';
   const droneType = document.getElementById('eu-drone-type-filter')?.value || '';
   const fabricant = document.getElementById('eu-fabricant-filter')?.value || '';
 
   const filtered = allEndUsers.filter(eu => {
-    if (type && eu.type !== type) return false;
+    if (pays && eu.pays !== pays) return false;
     if (secteur && eu.secteur !== secteur) return false;
     if (q && !eu.nom.toLowerCase().includes(q) && !eu.pays?.toLowerCase().includes(q) && !(eu.description||'').toLowerCase().includes(q)) return false;
 
@@ -2558,55 +2564,108 @@ function filterEndUsers() {
 }
 
 function populateEuDroneFilters() {
-  // produits et societes sont les variables globales déjà chargées par l'app
   const doPopulate = () => {
     if (!produits?.length) return;
 
-    // Map rapide id → produit
     const prodMap = {};
     produits.forEach(p => { prodMap[p.id] = p; });
-    window._euProdMap = prodMap; // used by filterEndUsers
+    window._euProdMap = prodMap;
 
-    // Map rapide id → societe
     const socMap = {};
     (societes || []).forEach(s => { socMap[s.id] = s; });
 
-    // Collecter les types de drones et fabricants effectivement utilisés
+    // ── Données issues des COMPTES (end-users) ──
     const droneTypes = new Set();
-    const fabricants = new Map(); // id → name
+    const fabricants = new Map();
+    const euPays = new Set();
 
     allEndUsers.forEach(eu => {
+      if (eu.pays) euPays.add(eu.pays);
       (eu.produits_ids || []).forEach(pid => {
         const p = prodMap[pid];
         if (p?.type_drone) droneTypes.add(p.type_drone);
       });
       (eu.societes_ids || []).forEach(sid => {
         if (!fabricants.has(sid)) {
-          const soc = socMap[sid];
-          fabricants.set(sid, soc?.name || sid);
+          fabricants.set(sid, socMap[sid]?.name || sid);
         }
       });
     });
 
-    // Peupler select type de drone
+    // ── Données issues des CONTACTS ──
+    const ctDroneTypes = new Set();
+    const ctFabricants = new Map();
+    const ctPays = new Set();
+
+    allContacts.forEach(ct => {
+      if (ct.pays) ctPays.add(ct.pays);
+      // Récupérer les produits du compte associé
+      const eu = allEndUsers.find(e => e.id === ct.end_user_id);
+      if (eu) {
+        (eu.produits_ids || []).forEach(pid => {
+          const p = prodMap[pid];
+          if (p?.type_drone) ctDroneTypes.add(p.type_drone);
+        });
+        (eu.societes_ids || []).forEach(sid => {
+          if (!ctFabricants.has(sid)) {
+            ctFabricants.set(sid, socMap[sid]?.name || sid);
+          }
+        });
+      }
+    });
+
+    const sortedFabs = [...fabricants.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+    const sortedCtFabs = [...ctFabricants.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+
+    // ── Peupler filtres COMPTES ──
+    const euPaysSel = document.getElementById('eu-pays-filter');
+    if (euPaysSel) {
+      euPaysSel.innerHTML = '<option value="">🌍 Pays</option>' +
+        [...euPays].sort().map(p => `<option value="${p}">${p}</option>`).join('');
+    }
     const dtSel = document.getElementById('eu-drone-type-filter');
     if (dtSel) {
       dtSel.innerHTML = '<option value="">🚁 Type de drone</option>' +
         [...droneTypes].sort().map(t => `<option value="${t}">${t}</option>`).join('');
     }
-
-    // Peupler select fabricant
     const fabSel = document.getElementById('eu-fabricant-filter');
     if (fabSel) {
       fabSel.innerHTML = '<option value="">🏭 Fabricant</option>' +
-        [...fabricants.entries()]
-          .sort((a, b) => a[1].localeCompare(b[1]))
-          .map(([id, name]) => `<option value="${id}">${name}</option>`)
-          .join('');
+        sortedFabs.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+    }
+
+    // ── Peupler filtres CONTACTS ──
+    const ctPaysSel = document.getElementById('ct-pays-filter');
+    if (ctPaysSel) {
+      ctPaysSel.innerHTML = '<option value="">🌍 Pays</option>' +
+        [...ctPays].sort().map(p => `<option value="${p}">${p}</option>`).join('');
+    }
+    const ctDtSel = document.getElementById('ct-drone-type-filter');
+    if (ctDtSel) {
+      ctDtSel.innerHTML = '<option value="">🚁 Type de drone</option>' +
+        [...ctDroneTypes].sort().map(t => `<option value="${t}">${t}</option>`).join('');
+    }
+    const ctFabSel = document.getElementById('ct-fabricant-filter');
+    if (ctFabSel) {
+      ctFabSel.innerHTML = '<option value="">🏭 Fabricant</option>' +
+        sortedCtFabs.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+    }
+    // Secteur contacts — peupler dynamiquement
+    const ctSecteurSel = document.getElementById('ct-secteur-filter');
+    if (ctSecteurSel) {
+      const sects = [...new Set(allContacts.map(c => c.secteur).filter(Boolean))].sort();
+      ctSecteurSel.innerHTML = '<option value="">Secteur</option>' +
+        sects.map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+    // Secteur comptes — peupler dynamiquement
+    const euSecteurSel = document.getElementById('eu-secteur-filter');
+    if (euSecteurSel) {
+      const sects = [...new Set(allEndUsers.map(e => e.secteur).filter(Boolean))].sort();
+      euSecteurSel.innerHTML = '<option value="">Secteur</option>' +
+        sects.map(s => `<option value="${s}">${s}</option>`).join('');
     }
   };
 
-  // Si les produits ne sont pas encore chargés, on les charge
   if (!produits?.length) {
     Promise.all([loadAllProduits(), loadSocietes()]).then(doPopulate).catch(() => {});
   } else {
