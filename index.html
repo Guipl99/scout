@@ -1976,7 +1976,10 @@ function openTenderDetail(id) {
 
     ${t.description ? `<div style="background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.6;">${sanitize(t.description)}</div>` : ''}
 
-    ${t.source_url ? `<a href="${sanitize(t.source_url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);text-decoration:none;padding:8px 14px;border:1px solid var(--accent);border-radius:8px;">🔗 Voir l'appel d'offres</a>` : ''}
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      ${t.source_name ? `<span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--bg3);color:var(--text2);">📌 ${sanitize(t.source_name)}</span>` : ''}
+      ${t.source_url ? `<a href="${sanitize(t.source_url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);text-decoration:none;padding:8px 14px;border:1px solid var(--accent);border-radius:8px;">🔗 Voir l'appel d'offres</a>` : ''}
+    </div>
   </div>`;
 
   document.body.appendChild(modal);
