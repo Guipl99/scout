@@ -1940,20 +1940,46 @@ function _renderTendersList(tenders) {
 function openTenderDetail(id) {
   const t = liveTenders.find(x => x.id === id);
   if (!t) return;
-  const lines = [
-    t.titre,
-    t.acheteur + (t.pays ? ' — ' + t.pays : ''),
-    t.valeur_estimee ? 'Budget estimé : ' + t.valeur_estimee : '',
-    t.type ? 'Type : ' + t.type : '',
-    t.statut ? 'Statut : ' + t.statut : '',
-    t.type_drone ? 'Catégorie drone : ' + t.type_drone : '',
-    t.date_publication ? 'Publié : ' + t.date_publication : '',
-    t.date_cloture ? 'Clôture : ' + t.date_cloture : '',
-    '',
-    t.description || '',
-    t.source_url ? '\nSource : ' + t.source_url : '',
-  ].filter(Boolean).join('\n');
-  alert(sanitize(lines));
+
+  const STATUT_COLOR = {'Ouvert':'#22c55e','En évaluation':'#f59e0b','Clôturé':'#6b7280','Annulé':'#ef4444','Planifié':'#3b82f6'};
+  const sColor = STATUT_COLOR[t.statut] || '#6b7280';
+
+  const daysLeft = t.date_cloture ? Math.ceil((new Date(t.date_cloture) - new Date()) / 86400000) : null;
+  const urgence = daysLeft !== null && daysLeft <= 30
+    ? `<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#ef444422;color:#ef4444;margin-left:8px;">⚠️ ${daysLeft}j restants</span>`
+    : daysLeft !== null ? `<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#6b728022;color:#9ca3af;margin-left:8px;">${daysLeft}j</span>` : '';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:#0009;z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.onclick = e => { if(e.target===modal) modal.remove(); };
+
+  modal.innerHTML = `<div style="background:var(--bg2);border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;border:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+      <div style="flex:1;padding-right:12px;">
+        <div style="font-size:16px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:6px;">${sanitize(t.titre||'—')}</div>
+        <div style="font-size:13px;color:var(--text2);">${sanitize(t.acheteur||'—')}${t.pays ? ' · ' + sanitize(t.pays) : ''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+        <span style="font-size:11px;padding:3px 10px;border-radius:10px;background:${sColor}22;color:${sColor};font-weight:600;">${sanitize(t.statut||'—')}</span>
+        <button onclick="this.closest('.fixed,[style*=fixed]')?.remove?.() || this.closest('div[style]').parentElement?.remove?.()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:20px;line-height:1;padding:0;">×</button>
+      </div>
+    </div>
+
+    ${t.valeur_estimee ? `<div style="font-size:20px;font-weight:700;color:var(--accent);margin-bottom:16px;">${sanitize(t.valeur_estimee)}</div>` : ''}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+      ${t.type ? `<div style="background:var(--bg3);border-radius:8px;padding:10px;"><div style="font-size:10px;color:var(--text2);margin-bottom:2px;">TYPE</div><div style="font-size:13px;font-weight:600;">${sanitize(t.type)}</div></div>` : ''}
+      ${t.type_drone ? `<div style="background:var(--bg3);border-radius:8px;padding:10px;"><div style="font-size:10px;color:var(--text2);margin-bottom:2px;">CATÉGORIE</div><div style="font-size:13px;font-weight:600;">${sanitize(t.type_drone)}</div></div>` : ''}
+      ${t.date_publication ? `<div style="background:var(--bg3);border-radius:8px;padding:10px;"><div style="font-size:10px;color:var(--text2);margin-bottom:2px;">PUBLICATION</div><div style="font-size:13px;font-weight:600;">${sanitize(t.date_publication)}</div></div>` : ''}
+      ${t.date_cloture ? `<div style="background:var(--bg3);border-radius:8px;padding:10px;"><div style="font-size:10px;color:var(--text2);margin-bottom:2px;">CLÔTURE ${urgence}</div><div style="font-size:13px;font-weight:600;">${sanitize(t.date_cloture)}</div></div>` : ''}
+    </div>
+
+    ${t.description ? `<div style="background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.6;">${sanitize(t.description)}</div>` : ''}
+
+    ${t.source_url ? `<a href="${sanitize(t.source_url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);text-decoration:none;padding:8px 14px;border:1px solid var(--accent);border-radius:8px;">🔗 Voir l'appel d'offres</a>` : ''}
+  </div>`;
+
+  document.body.appendChild(modal);
 }
 
 async function scrapeTenders() {
