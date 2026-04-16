@@ -499,15 +499,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           </div>
         </div>
 
-        <!-- MARKET SIGNALS -->
-        <div class="db-card">
-          <div class="db-card-header">
-            <span class="db-card-title">📡 Signaux marché</span>
-          </div>
-          <div id="db-signals-list" class="db-list">
-            <div class="db-empty">Chargement…</div>
-          </div>
-        </div>
 
       </div>
 
@@ -1122,7 +1113,6 @@ function renderDashboard() {
     renderDbBuyers(endUsers);
   });
 
-  renderDbSignals();
   loadFeed();
 }
 
@@ -1191,29 +1181,6 @@ function renderDbBuyers(endUsers) {
       </div>
       <div class="db-row-right">
         <div class="db-row-age" style="color:${eu.statut==='Opérationnel'?'#22c55e':eu.statut==='Contractualisé'?'#f59e0b':'var(--text3)'};">${sanitize(eu.statut||'')}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function renderDbSignals() {
-  const el = document.getElementById('db-signals-list');
-  if (!el) return;
-  // Signaux : fabricants avec activité récente
-  const recent = societes
-    .filter(s => s.signals && s.signals.length > 0)
-    .sort((a,b) => (b.signals||[]).length - (a.signals||[]).length)
-    .slice(0, 5);
-  if (!recent.length) { el.innerHTML = '<div class="db-empty">Chargement…</div>'; return; }
-  const sigColors = {'levée':'#22c55e','contrat':'#6c63ff','partenariat':'#14b8a6','livraison':'#f59e0b','alerte':'#ef4444'};
-  el.innerHTML = recent.map(s => {
-    const sig = (s.signals||[])[0] || '';
-    const dotColor = Object.entries(sigColors).find(([k]) => sig.toLowerCase().includes(k))?.[1] || '#555';
-    return `<div class="db-signal">
-      <div class="db-signal-dot" style="background:${dotColor};"></div>
-      <div style="min-width:0;">
-        <div style="font-size:12px;font-weight:500;color:var(--text);cursor:pointer;" onclick="go('societes');setTimeout(()=>openSociete('${s.id}'),200)">${sanitize(s.name)}</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sanitize(sig.slice(0,70))}${sig.length>70?'…':''}</div>
       </div>
     </div>`;
   }).join('');
