@@ -806,7 +806,7 @@ let editingSocieteId = null;
 let editingProduitId = null;
 
 // ── Navigation ────────────────────────────────────────────────
-function go(id) {
+function go(id, opts) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.bn-item').forEach(n => n.classList.remove('active'));
@@ -819,7 +819,9 @@ function go(id) {
   if (id === 'societes') { backToSocietes(); loadSocietes().then(renderSocietes); }
   if (id === 'produits-db') { backToProduits(); loadAllProduits().then(renderProduits); }
   if (id === 'contracts') { loadContracts().then(() => { renderContractStatusFilters(); filterContracts(); loadContractStats(); }); }
-  if (id === 'end-users') { loadEndUsers().then(() => { setEuTab('comptes'); filterEndUsers(); populateEuDroneFilters(); }); loadContacts(); }
+  if (id === 'end-users') { loadEndUsers().then(() => { setEuTab(opts?.tab || 'comptes'); filterEndUsers(); populateEuDroneFilters(); }); loadContacts(); }
+  // Persister l'onglet dans le hash
+  if (!opts?.silent) history.replaceState(null, '', '#' + id + (opts?.tab ? '/' + opts.tab : ''));
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
@@ -2346,6 +2348,21 @@ if ('serviceWorker' in navigator) {
     .then(r => console.log('[Scout PWA] SW registered', r.scope))
     .catch(e => console.log('[Scout PWA] SW error', e));
 }
+// ── Restaurer l'onglet depuis l'URL hash au rechargement ──────
+(function restoreFromHash() {
+  const hash = window.location.hash.slice(1); // ex: "end-users/contacts"
+  if (!hash) return;
+  const [panel, tab] = hash.split('/');
+  const validPanels = ['dashboard','societes','produits-db','contracts','end-users','config'];
+  if (!validPanels.includes(panel)) return;
+  // Attendre que le DOM soit prêt
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => go(panel, { tab, silent: true }));
+  } else {
+    go(panel, { tab, silent: true });
+  }
+})();
+
 // If already running as standalone PWA, mark button as installed
 if (window.matchMedia('(display-mode: standalone)').matches) {
   document.addEventListener('DOMContentLoaded', () => {
@@ -2426,6 +2443,8 @@ function setEuTab(tab) {
   // Réinitialiser la recherche au changement d'onglet
   const searchEl = document.getElementById('eu-contact-search');
   if (searchEl) searchEl.value = '';
+  // Persister le sous-onglet dans le hash
+  history.replaceState(null, '', '#end-users/' + tab);
   filterCurrentTab();
 }
 
