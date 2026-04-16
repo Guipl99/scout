@@ -2712,10 +2712,12 @@ function renderContacts(list) {
 
       ${ct.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.4;border-top:1px solid var(--border);padding-top:8px;">${ct.notes.slice(0,120)}${ct.notes.length>120?'…':''}</div>` : ''}
 
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        ${hasEmail ? `<a href="mailto:${ct.email}" onclick="event.stopPropagation()" style="font-size:11px;color:var(--accent2);text-decoration:none;">✉️ Email</a>` : ''}
-        ${hasLinkedIn ? `<a href="${ct.linkedin}" target="_blank" onclick="event.stopPropagation()" style="font-size:11px;color:#0077b5;text-decoration:none;">💼 LinkedIn</a>` : ''}
-        ${ct.contrats_refs?.length ? `<span style="font-size:10px;color:var(--text3);margin-left:auto;">${ct.contrats_refs.length} contrat${ct.contrats_refs.length>1?'s':''}</span>` : ''}
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+        ${ct.email ? `<a href="mailto:${ct.email}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:3px;font-size:11px;color:var(--accent2);text-decoration:none;background:var(--bg3);padding:3px 7px;border-radius:4px;">✉️ ${ct.email.split('@')[0]}@…</a>` : ''}
+        ${ct.telephone ? `<a href="tel:${ct.telephone}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:3px;font-size:11px;color:#22c55e;text-decoration:none;background:var(--bg3);padding:3px 7px;border-radius:4px;">📞</a>` : ''}
+        ${ct.linkedin ? `<a href="${ct.linkedin}" target="_blank" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:3px;font-size:11px;color:#0077b5;text-decoration:none;background:var(--bg3);padding:3px 7px;border-radius:4px;">in</a>` : ''}
+        ${ct.verified ? `<span style="font-size:10px;color:#22c55e;margin-left:auto;">✓ vérifié</span>` : ''}
+        ${ct.contrats_refs?.length ? `<span style="font-size:10px;color:var(--text3);${ct.verified?'':'margin-left:auto;'}">${ct.contrats_refs.length} contrat${ct.contrats_refs.length>1?'s':''}</span>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -2794,10 +2796,10 @@ function openContact(id) {
       </div>
     </div>` : ''}
 
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      ${ct.email ? `<a href="mailto:${ct.email}" style="display:flex;align-items:center;gap:6px;background:var(--accent);color:white;border-radius:6px;padding:8px 14px;font-size:13px;text-decoration:none;">✉️ ${ct.email}</a>` : ''}
-      ${ct.linkedin ? `<a href="${ct.linkedin}" target="_blank" style="display:flex;align-items:center;gap:6px;background:#0077b5;color:white;border-radius:6px;padding:8px 14px;font-size:13px;text-decoration:none;">💼 LinkedIn</a>` : ''}
-      ${ct.telephone ? `<a href="tel:${ct.telephone}" style="display:flex;align-items:center;gap:6px;background:var(--bg3);color:var(--text);border-radius:6px;padding:8px 14px;font-size:13px;text-decoration:none;">📞 ${ct.telephone}</a>` : ''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+      ${ct.email ? `<a href="mailto:${ct.email}" style="display:flex;align-items:center;gap:6px;background:var(--accent);color:white;border-radius:6px;padding:9px 14px;font-size:13px;text-decoration:none;font-weight:500;">✉️ ${ct.email}</a>` : '<span style="font-size:12px;color:var(--text3);padding:9px 0;">Email non vérifié publiquement</span>'}
+      ${ct.telephone ? `<a href="tel:${ct.telephone}" style="display:flex;align-items:center;gap:6px;background:#22c55e22;color:#22c55e;border:1px solid #22c55e44;border-radius:6px;padding:9px 14px;font-size:13px;text-decoration:none;font-weight:500;">📞 ${ct.telephone}</a>` : ''}
+      ${ct.linkedin ? `<a href="${ct.linkedin}" target="_blank" style="display:flex;align-items:center;gap:6px;background:#0077b5;color:white;border-radius:6px;padding:9px 14px;font-size:13px;text-decoration:none;">💼 LinkedIn</a>` : ''}
     </div>
   </div>`;
 
