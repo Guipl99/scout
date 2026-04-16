@@ -576,6 +576,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <select id="eu-secteur-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
               <option value="">Tous secteurs</option>
             </select>
+            <select id="eu-drone-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
+              <option value="">🚁 Type de drone</option>
+            </select>
+            <select id="eu-fabricant-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
+              <option value="">🏭 Fabricant</option>
+            </select>
             <input id="eu-search" type="text" placeholder="Rechercher..." style="font-size:12px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);min-width:160px;" oninput="filterCurrentTab()">
           </div>
           <div style="display:none;gap:6px;flex-wrap:wrap;" id="eu-contacts-filters">
@@ -808,7 +814,7 @@ function go(id) {
   if (id === 'societes') { backToSocietes(); loadSocietes().then(renderSocietes); }
   if (id === 'produits-db') { backToProduits(); loadAllProduits().then(renderProduits); }
   if (id === 'contracts') { loadContracts().then(() => { renderContractStatusFilters(); filterContracts(); loadContractStats(); }); }
-  if (id === 'end-users') { loadEndUsers().then(() => { setEuTab('comptes'); filterEndUsers(); }); loadContacts(); }
+  if (id === 'end-users') { loadEndUsers().then(() => { setEuTab('comptes'); filterEndUsers(); populateEuDroneFilters(); }); loadContacts(); }
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
@@ -2517,20 +2523,95 @@ async function loadEndUsers() {
     const secteurs = [...new Set(allEndUsers.map(e => e.secteur).filter(Boolean))].sort();
     const sel = document.getElementById('eu-secteur-filter');
     secteurs.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
+    populateEuDroneFilters();
   } catch(e) { console.error('loadEndUsers', e); }
 }
 
 function filterEndUsers() {
-  const q = (document.getElementById('eu-search')?.value || '').toLowerCase();
+  const q = (document.getElementById('eu-contact-search')?.value || document.getElementById('eu-search')?.value || '').toLowerCase();
   const type = document.getElementById('eu-type-filter')?.value || '';
   const secteur = document.getElementById('eu-secteur-filter')?.value || '';
+  const droneType = document.getElementById('eu-drone-type-filter')?.value || '';
+  const fabricant = document.getElementById('eu-fabricant-filter')?.value || '';
+
   const filtered = allEndUsers.filter(eu => {
     if (type && eu.type !== type) return false;
     if (secteur && eu.secteur !== secteur) return false;
-    if (q && !eu.nom.toLowerCase().includes(q) && !eu.pays?.toLowerCase().includes(q) && !eu.description?.toLowerCase().includes(q)) return false;
+    if (q && !eu.nom.toLowerCase().includes(q) && !eu.pays?.toLowerCase().includes(q) && !(eu.description||'').toLowerCase().includes(q)) return false;
+
+    // Filtre type de drone — via produits global
+    if (droneType) {
+      const prodMap = window._euProdMap || {};
+      const match = (eu.produits_ids || []).some(pid => prodMap[pid]?.type_drone === droneType);
+      if (!match) return false;
+    }
+
+    // Filtre fabricant — via societes_ids
+    if (fabricant) {
+      const socIds = eu.societes_ids || [];
+      if (!socIds.includes(fabricant)) return false;
+    }
+
     return true;
   });
   renderEndUsers(filtered);
+}
+
+function populateEuDroneFilters() {
+  // produits et societes sont les variables globales déjà chargées par l'app
+  const doPopulate = () => {
+    if (!produits?.length) return;
+
+    // Map rapide id → produit
+    const prodMap = {};
+    produits.forEach(p => { prodMap[p.id] = p; });
+    window._euProdMap = prodMap; // used by filterEndUsers
+
+    // Map rapide id → societe
+    const socMap = {};
+    (societes || []).forEach(s => { socMap[s.id] = s; });
+
+    // Collecter les types de drones et fabricants effectivement utilisés
+    const droneTypes = new Set();
+    const fabricants = new Map(); // id → name
+
+    allEndUsers.forEach(eu => {
+      (eu.produits_ids || []).forEach(pid => {
+        const p = prodMap[pid];
+        if (p?.type_drone) droneTypes.add(p.type_drone);
+      });
+      (eu.societes_ids || []).forEach(sid => {
+        if (!fabricants.has(sid)) {
+          const soc = socMap[sid];
+          fabricants.set(sid, soc?.name || sid);
+        }
+      });
+    });
+
+    // Peupler select type de drone
+    const dtSel = document.getElementById('eu-drone-type-filter');
+    if (dtSel) {
+      dtSel.innerHTML = '<option value="">🚁 Type de drone</option>' +
+        [...droneTypes].sort().map(t => `<option value="${t}">${t}</option>`).join('');
+    }
+
+    // Peupler select fabricant
+    const fabSel = document.getElementById('eu-fabricant-filter');
+    if (fabSel) {
+      fabSel.innerHTML = '<option value="">🏭 Fabricant</option>' +
+        [...fabricants.entries()]
+          .sort((a, b) => a[1].localeCompare(b[1]))
+          .map(([id, name]) => `<option value="${id}">${name}</option>`)
+          .join('');
+    }
+  };
+
+  // Si les produits ne sont pas encore chargés, on les charge
+  if (!produits?.length) {
+    Promise.all([loadAllProduits(), loadSocietes()]).then(doPopulate).catch(() => {});
+  } else {
+    doPopulate();
+  }
 }
 
 function renderEndUsers(list) {
