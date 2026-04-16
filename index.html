@@ -1111,6 +1111,7 @@ function renderDashboard() {
     document.getElementById('m-tenders').textContent = tenders.length;
     // Stocker dans les globales pour que les clics fonctionnent
     if (!allEndUsers.length) allEndUsers = endUsers;
+    if (!liveTenders.length) { liveTenders = tenders; liveTendersLoaded = true; }
     renderDbTenders(tenders);
     renderDbBuyers(endUsers);
   });
@@ -1128,7 +1129,7 @@ function renderDbTenders(tenders) {
     const days = t.date_cloture ? Math.ceil((new Date(t.date_cloture) - now) / 86400000) : null;
     const urgentColor = days !== null && days < 14 ? '#f59e0b' : '#22c55e';
     const statusColor = t.statut === 'Ouvert' ? '#22c55e' : '#f59e0b';
-    return `<div class="db-tender-card" onclick="go('contracts');setTimeout(()=>setContractTypeTab('live'),200)">
+    return `<div class="db-tender-card" onclick="go('contracts');setTimeout(()=>{setContractTypeTab('live');setTimeout(()=>openTenderDetail('${t.id}'),400);},200)">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
         <span class="db-tender-badge" style="background:${statusColor}20;color:${statusColor};">● ${sanitize(t.statut||'—')}</span>
         ${days !== null ? `<span style="font-size:10px;font-weight:600;color:${urgentColor};">${days < 0 ? 'Clôturé' : days + 'j'}</span>` : ''}
