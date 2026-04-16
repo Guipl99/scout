@@ -1670,11 +1670,11 @@ function _renderTendersList(tenders) {
   const now = new Date();
   panel.innerHTML = `
     <div style="padding:0.5rem 0 1rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-      <span style="font-size:12px;color:var(--text3);">Mis à jour : ${tenders[0]?.scraped_at ? timeAgo(liveTenders[0].scraped_at) : '—'}</span>
+      <span style="font-size:12px;color:var(--text3);">Mis à jour : ${tenders[0]?.scraped_at ? timeAgo(tenders[0].scraped_at) : '—'}</span>
       <span style="font-size:12px;color:var(--text3);">· ${tenders.length} tenders actifs</span>
     </div>
     <div class="entity-grid">
-      ${liveTenders.map(t => {
+      ${tenders.map(t => {
         const closingSoon = t.date_cloture && (new Date(t.date_cloture) - now) / 86400000 < 14;
         const closed = t.date_cloture && new Date(t.date_cloture) < now;
         const statusColor = closed ? '#6b7280' : t.statut === 'Ouvert' ? '#22c55e' : '#f59e0b';
