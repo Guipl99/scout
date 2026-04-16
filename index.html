@@ -548,6 +548,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         </div>
 
         <!-- Live tenders panel -->
+        <div id="tenders-search-bar" style="display:none;margin-bottom:0.75rem;">
+          <input id="tenders-search" type="text" placeholder="Rechercher un tender, pays, acheteur..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);width:100%;max-width:400px;" oninput="filterTenders()">
+        </div>
         <div id="live-tenders-panel" style="display:none;"></div>
 
         <!-- Contracts filters + grid -->
