@@ -715,9 +715,7 @@ Mes pays
               <select id="eu-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
                 <option value="">Pays</option>
               </select>
-              <select id="eu-secteur-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
-                <option value="">Secteur</option>
-              </select>
+              
               <select id="eu-drone-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
                 <option value="">🚁 Type de drone</option>
               </select>
@@ -729,9 +727,7 @@ Mes pays
               <select id="ct-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
                 <option value="">🌍 Pays</option>
               </select>
-              <select id="ct-secteur-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
-                <option value="">Secteur</option>
-              </select>
+              
               <select id="ct-drone-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
                 <option value="">🚁 Type de drone</option>
               </select>
@@ -1192,7 +1188,7 @@ function renderDbBuyers(endUsers) {
       <div class="db-row-icon" style="background:var(--bg3);font-size:16px;">${flag}</div>
       <div class="db-row-body">
         <div class="db-row-title">${sanitize(eu.nom||'').slice(0,38)}${(eu.nom||'').length>38?'…':''}</div>
-        <div class="db-row-sub">${sanitize(eu.pays||'—')} · ${sanitize(eu.type||eu.secteur||'—')}</div>
+        <div class="db-row-sub">${sanitize(eu.pays||'—')} · ${sanitize(eu.type||'—')}</div>
       </div>
       <div class="db-row-right">
         <div class="db-row-age" style="color:${eu.statut==='Opérationnel'?'#22c55e':eu.statut==='Contractualisé'?'#f59e0b':'var(--text3)'};">${sanitize(eu.statut||'')}</div>
@@ -2605,7 +2601,7 @@ function filterSocietes() {
   const search = (document.getElementById('societes-search')?.value || '').toLowerCase();
   const filtered = societes.filter(s => {
     const matchPays = activePays === 'Tous' || (s.pays||'').split('/')[0].trim() === activePays;
-    const matchSearch = !search || s.name.toLowerCase().includes(search) || (s.pays||'').toLowerCase().includes(search) || (s.secteur||'').toLowerCase().includes(search);
+    const matchSearch = !search || s.name.toLowerCase().includes(search) || (s.pays||'').toLowerCase().includes(search) || false;
     return matchPays && matchSearch;
   });
   renderSocietesFiltered(filtered);
@@ -2819,7 +2815,6 @@ function filterCurrentTab() {
 function filterContactsGrid() {
   const q = (document.getElementById('eu-contact-search')?.value || '').toLowerCase();
   const pays = document.getElementById('ct-pays-filter')?.value || '';
-  const secteur = document.getElementById('ct-secteur-filter')?.value || '';
   const droneType = document.getElementById('ct-drone-type-filter')?.value || '';
   const fabricant = document.getElementById('ct-fabricant-filter')?.value || '';
 
@@ -2831,7 +2826,6 @@ function filterContactsGrid() {
 
   const filtered = allContacts.filter(ct => {
     if (pays && ct.pays !== pays) return false;
-    if (secteur && ct.secteur !== secteur) return false;
     if (q) {
       const hay = [ct.prenom, ct.nom, ct.titre, ct.organisation, ct.domaine, ct.notes, ct.pays].join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
@@ -2890,7 +2884,6 @@ function renderContactsGrid(list) {
       </div>
       ${compte ? `<div style="margin-top:8px;font-size:11px;color:var(--accent2);font-weight:500;cursor:pointer;" onclick="event.stopPropagation();openEndUser('${compte.id}')"># ${compte.nom}</div>` : ''}
       <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;align-items:center;">
-        <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${color}22;color:${color};">${ct.secteur||''}</span>
         <span style="font-size:10px;color:var(--text3);">🌍 ${ct.pays||''}</span>
         ${ct.domaine ? `<span style="font-size:10px;color:var(--text3);">${ct.domaine.split('/')[0].trim()}</span>` : ''}
       </div>
@@ -2934,9 +2927,6 @@ async function loadEndUsers() {
     const r = await fetch(API + '/end-users?limit=200');
     allEndUsers = (await r.json()).end_users || [];
     // Populate secteur filter
-    const secteurs = [...new Set(allEndUsers.map(e => e.secteur).filter(Boolean))].sort();
-    const sel = document.getElementById('eu-secteur-filter');
-    secteurs.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
     populateEuDroneFilters();
   } catch(e) { console.error('loadEndUsers', e); }
 }
@@ -2944,13 +2934,11 @@ async function loadEndUsers() {
 function filterEndUsers() {
   const q = (document.getElementById('eu-contact-search')?.value || '').toLowerCase();
   const pays = document.getElementById('eu-pays-filter')?.value || '';
-  const secteur = document.getElementById('eu-secteur-filter')?.value || '';
   const droneType = document.getElementById('eu-drone-type-filter')?.value || '';
   const fabricant = document.getElementById('eu-fabricant-filter')?.value || '';
 
   const filtered = allEndUsers.filter(eu => {
     if (pays && eu.pays !== pays) return false;
-    if (secteur && eu.secteur !== secteur) return false;
     if (q && !eu.nom.toLowerCase().includes(q) && !eu.pays?.toLowerCase().includes(q) && !(eu.description||'').toLowerCase().includes(q)) return false;
 
     // Filtre type de drone — via produits global
@@ -3060,19 +3048,6 @@ function populateEuDroneFilters() {
         sortedCtFabs.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
     }
     // Secteur contacts — peupler dynamiquement
-    const ctSecteurSel = document.getElementById('ct-secteur-filter');
-    if (ctSecteurSel) {
-      const sects = [...new Set(allContacts.map(c => c.secteur).filter(Boolean))].sort();
-      ctSecteurSel.innerHTML = '<option value="">Secteur</option>' +
-        sects.map(s => `<option value="${s}">${s}</option>`).join('');
-    }
-    // Secteur comptes — peupler dynamiquement
-    const euSecteurSel = document.getElementById('eu-secteur-filter');
-    if (euSecteurSel) {
-      const sects = [...new Set(allEndUsers.map(e => e.secteur).filter(Boolean))].sort();
-      euSecteurSel.innerHTML = '<option value="">Secteur</option>' +
-        sects.map(s => `<option value="${s}">${s}</option>`).join('');
-    }
   };
 
   if (!produits?.length) {
@@ -3098,7 +3073,6 @@ function renderEndUsers(list) {
         <span style="font-size:10px;padding:2px 7px;border-radius:8px;background:var(--bg3);color:var(--text2);white-space:nowrap;">${eu.pays||''}</span>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
-        <span style="font-size:11px;padding:2px 7px;border-radius:6px;background:var(--bg3);color:var(--text2);">${eu.secteur||''}</span>
         <span style="font-size:11px;padding:2px 7px;border-radius:6px;color:${statutColor[eu.statut]||'var(--text2)'};background:var(--bg3);">● ${eu.statut||''}</span>
       </div>
       <div style="font-size:12px;color:var(--text2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${eu.description||''}</div>
@@ -3153,7 +3127,6 @@ async function openEndUser(id) {
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
       <span style="font-size:12px;padding:3px 10px;border-radius:8px;background:var(--bg3);">${typeEmoji[eu.type]||'📍'} ${eu.type||''}</span>
       <span style="font-size:12px;padding:3px 10px;border-radius:8px;background:var(--bg3);">${eu.pays||''}</span>
-      <span style="font-size:12px;padding:3px 10px;border-radius:8px;background:var(--bg3);">${eu.secteur||''}</span>
       <span style="font-size:12px;padding:3px 10px;border-radius:8px;color:${statutColor[eu.statut]||'var(--text2)'};background:var(--bg3);">● ${eu.statut||''}</span>
     </div>
     ${eu.description ? `<div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px;">${eu.description}</div>` : ''}
@@ -3453,14 +3426,12 @@ function saveCurrentFilters() {
   const f = loadSavedFilters();
   f.endusers = {
     pays:      document.getElementById('eu-pays-filter')?.value || '',
-    secteur:   document.getElementById('eu-secteur-filter')?.value || '',
     drone:     document.getElementById('eu-drone-type-filter')?.value || '',
     fabricant: document.getElementById('eu-fabricant-filter')?.value || '',
     search:    document.getElementById('eu-contact-search')?.value || '',
   };
   f.contacts = {
     pays:      document.getElementById('ct-pays-filter')?.value || '',
-    secteur:   document.getElementById('ct-secteur-filter')?.value || '',
     drone:     document.getElementById('ct-drone-type-filter')?.value || '',
     fabricant: document.getElementById('ct-fabricant-filter')?.value || '',
   };
@@ -3477,7 +3448,6 @@ function restoreSavedFilters(panel) {
   if (panel === 'end-users' && f.endusers) {
     const eu = f.endusers;
     if (eu.pays)      { const el = document.getElementById('eu-pays-filter');          if (el) el.value = eu.pays; }
-    if (eu.secteur)   { const el = document.getElementById('eu-secteur-filter');       if (el) el.value = eu.secteur; }
     if (eu.drone)     { const el = document.getElementById('eu-drone-type-filter');    if (el) el.value = eu.drone; }
     if (eu.fabricant) { const el = document.getElementById('eu-fabricant-filter');     if (el) el.value = eu.fabricant; }
     if (eu.search)    { const el = document.getElementById('eu-contact-search');       if (el) el.value = eu.search; }
@@ -3485,7 +3455,6 @@ function restoreSavedFilters(panel) {
   if (panel === 'contacts' && f.contacts) {
     const ct = f.contacts;
     if (ct.pays)      { const el = document.getElementById('ct-pays-filter');          if (el) el.value = ct.pays; }
-    if (ct.secteur)   { const el = document.getElementById('ct-secteur-filter');       if (el) el.value = ct.secteur; }
     if (ct.drone)     { const el = document.getElementById('ct-drone-type-filter');    if (el) el.value = ct.drone; }
     if (ct.fabricant) { const el = document.getElementById('ct-fabricant-filter');     if (el) el.value = ct.fabricant; }
   }
@@ -3493,8 +3462,8 @@ function restoreSavedFilters(panel) {
 
 function resetAllFilters() {
   localStorage.removeItem(FILTERS_KEY);
-  ['eu-pays-filter','eu-secteur-filter','eu-drone-type-filter','eu-fabricant-filter',
-   'ct-pays-filter','ct-secteur-filter','ct-drone-type-filter','ct-fabricant-filter',
+  ['eu-pays-filter','eu-drone-type-filter','eu-fabricant-filter',
+   'ct-pays-filter','ct-drone-type-filter','ct-fabricant-filter',
    'eu-contact-search'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -3512,11 +3481,11 @@ function renderFiltersSummary() {
   const eu = f.endusers;
   const ct = f.contacts;
   if (eu) {
-    const active = [eu.pays, eu.secteur, eu.drone, eu.fabricant, eu.search].filter(Boolean);
+    const active = [eu.pays, eu.drone, eu.fabricant, eu.search].filter(Boolean);
     if (active.length) lines.push(`Comptes : ${active.join(' · ')}`);
   }
   if (ct) {
-    const active = [ct.pays, ct.secteur, ct.drone, ct.fabricant].filter(Boolean);
+    const active = [ct.pays, ct.drone, ct.fabricant].filter(Boolean);
     if (active.length) lines.push(`Contacts : ${active.join(' · ')}`);
   }
   el.textContent = lines.length ? lines.join(' | ') : 'Aucun filtre actif mémorisé.';
