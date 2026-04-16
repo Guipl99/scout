@@ -725,6 +725,17 @@ Réinitialiser tous les filtres
           <span id="cfg-save-msg" style="font-size:12px;color:#22c55e;opacity:0;transition:opacity 0.3s;"></span>
         </div>
 
+        <!-- ── Diagnostic système ────────────────────────────── -->
+        <div class="card">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <span class="card-title">Diagnostic système</span>
+            <button onclick="runHealthCheck()" style="font-size:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--text2);">Vérifier</button>
+          </div>
+          <div class="card-body" style="padding:12px 16px;">
+            <div id="health-result" style="font-size:12px;color:var(--text3);">Cliquez sur Vérifier pour tester l'API.</div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -3260,6 +3271,34 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(applySettings, 50);
   });
 });
+
+
+// ── Health check ──────────────────────────────────────────────
+async function runHealthCheck() {
+  const el = document.getElementById('health-result');
+  if (!el) return;
+  el.innerHTML = 'Vérification en cours…';
+  try {
+    const r = await fetch(API + '/admin/health');
+    const d = await r.json();
+    const rows = d.checks.map(c => {
+      const icon = c.ok
+        ? '<span style="color:#22c55e;">&#10003;</span>'
+        : '<span style="color:#ef4444;">&#10007;</span>';
+      return '<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px solid var(--border2);">'
+        + '<span style="width:14px;flex-shrink:0;">' + icon + '</span>'
+        + '<span style="flex:1;color:var(--text);">' + c.name + '</span>'
+        + '<span style="color:var(--text3);font-family:monospace;font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (c.detail||'') + '</span>'
+        + '</div>';
+    }).join('');
+    const sumColor = d.ok ? '#22c55e' : '#ef4444';
+    el.innerHTML = '<div style="font-weight:600;color:' + sumColor + ';margin-bottom:8px;">' + d.summary + '</div>'
+      + rows
+      + (d.images ? '<div style="margin-top:8px;color:var(--text3);">Images: ' + d.images.with_data + ' base64 / ' + d.images.with_url + ' URLs / ' + d.images.total + ' produits</div>' : '');
+  } catch(e) {
+    el.innerHTML = '<span style="color:#ef4444;">Erreur: ' + e.message + '</span>';
+  }
+}
 
 </script>
 </body>
