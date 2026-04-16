@@ -1732,7 +1732,7 @@ async function loadContractStats() {
     const el = document.getElementById('contracts-stats');
     if (!el) return;
     const total = d.total || {};
-    const totalM = parseFloat(total.total_m || 0);
+    const totalM = parseFloat(total.total_m || 0) / 1_000_000; // valeur_max en DB = dollars bruts → convertir en millions
     const byStatut = d.byStatut || [];
     el.innerHTML = `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1rem;padding:0.75rem 1rem;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);">
       <div style="display:flex;flex-direction:column;">
