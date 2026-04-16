@@ -579,33 +579,33 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <button id="eu-tab-contacts" onclick="setEuTab('contacts')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">👤 Contacts</button>
           </div>
           <span id="eu-count-badge" style="font-size:11px;color:var(--text2);background:var(--bg3);border-radius:10px;padding:2px 8px;"></span>
-          <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;" id="eu-comptes-filters">
-            <select id="eu-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
-              <option value="">🌍 Pays</option>
-            </select>
-            <select id="eu-secteur-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
-              <option value="">Secteur</option>
-            </select>
-            <select id="eu-drone-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
-              <option value="">🚁 Type de drone</option>
-            </select>
-            <select id="eu-fabricant-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
-              <option value="">🏭 Fabricant</option>
-            </select>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;" id="eu-comptes-filters">
+              <select id="eu-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
+                <option value="">🌍 Pays</option>
+              </select>
+              <select id="eu-secteur-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
+                <option value="">Secteur</option>
+              </select>
+              <select id="eu-drone-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
+                <option value="">🚁 Type de drone</option>
+              </select>
+              <select id="eu-fabricant-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
+                <option value="">🏭 Fabricant</option>
+              </select>
           </div>
-          <div style="display:none;gap:6px;flex-wrap:wrap;" id="eu-contacts-filters">
-            <select id="ct-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
-              <option value="">🌍 Pays</option>
-            </select>
-            <select id="ct-secteur-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
-              <option value="">Secteur</option>
-            </select>
-            <select id="ct-drone-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
-              <option value="">🚁 Type de drone</option>
-            </select>
-            <select id="ct-fabricant-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
-              <option value="">🏭 Fabricant</option>
-            </select>
+          <div style="display:none;gap:6px;flex-wrap:wrap;margin-left:auto;" id="eu-contacts-filters">
+              <select id="ct-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
+                <option value="">🌍 Pays</option>
+              </select>
+              <select id="ct-secteur-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
+                <option value="">Secteur</option>
+              </select>
+              <select id="ct-drone-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
+                <option value="">🚁 Type de drone</option>
+              </select>
+              <select id="ct-fabricant-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
+                <option value="">🏭 Fabricant</option>
+              </select>
           </div>
         </div>
         <!-- Search bar shared (below toggle) -->
