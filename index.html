@@ -343,7 +343,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     </div>
     <div class="nav-item" id="nav-end-users" onclick="go('end-users')">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M15 13c0-1.66-1.34-3-3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Comptes & Contacts
+      Buyers
     </div>
     <div class="nav-item" id="nav-contracts" onclick="go('contracts')">
       <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -576,7 +576,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div id="panel-end-users" class="panel">
       <div id="eu-list-view">
         <div style="padding:12px 16px 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border2);">
-          <!-- Toggle Comptes / Contacts -->
+          <!-- Toggle Buyers / Contacts -->
           <div style="display:flex;background:var(--bg3);border-radius:8px;padding:2px;gap:2px;">
             <button id="eu-tab-comptes" onclick="setEuTab('comptes')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--accent);color:white;font-weight:600;transition:all 0.15s;">🏢 Comptes</button>
             <button id="eu-tab-contacts" onclick="setEuTab('contacts')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">👤 Contacts</button>
@@ -683,11 +683,11 @@ Mes pays
                 <option value="societes">Fabricants</option>
                 <option value="produits-db">Systèmes</option>
                 <option value="contracts">Contrats & Tenders</option>
-                <option value="end-users">Comptes & Contacts</option>
+                <option value="end-users">Buyers</option>
               </select>
             </div>
             <div>
-              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Sous-onglet par défaut dans Comptes & Contacts</label>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Sous-onglet par défaut dans Buyers</label>
               <div style="display:flex;gap:8px;">
                 <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
                   <input type="radio" name="cfg-default-subtab" value="comptes" onchange="saveSettings()" style="accent-color:var(--accent);"> Comptes
