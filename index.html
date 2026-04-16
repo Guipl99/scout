@@ -1106,7 +1106,17 @@ function renderDashboard() {
     fetch(API + '/tenders').then(r=>r.json()).catch(()=>({tenders:[]})),
   ]).then(([euData, tdData]) => {
     const endUsers = euData.end_users || [];
-    const tenders = (tdData.tenders || []).filter(t => t.statut !== 'Clôturé');
+    const now = new Date();
+    const tenders = (tdData.tenders || []).filter(t =>
+      t.statut !== 'Clôturé' &&
+      (!t.date_cloture || new Date(t.date_cloture) > now)
+    ).sort((a, b) => {
+      // Ouverts d'abord, puis par date de clôture croissante (urgents en premier)
+      if (a.date_cloture && b.date_cloture) return new Date(a.date_cloture) - new Date(b.date_cloture);
+      if (a.date_cloture) return -1;
+      if (b.date_cloture) return 1;
+      return 0;
+    });
     document.getElementById('m-buyers').textContent = endUsers.length;
     document.getElementById('m-tenders').textContent = tenders.length;
     // Stocker dans les globales pour que les clics fonctionnent
