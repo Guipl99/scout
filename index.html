@@ -581,11 +581,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <span id="eu-count-badge" style="font-size:11px;color:var(--text2);background:var(--bg3);border-radius:10px;padding:2px 8px;"></span>
           <button id="btn-my-pays" onclick="applyMyPaysFilter(euTab)" title="Filtrer sur mes pays cibles"
             style="display:none;font-size:11px;background:var(--accent)22;color:var(--accent2);border:1px solid var(--accent)44;border-radius:6px;padding:3px 9px;cursor:pointer;">
-            🎯 Mes pays
+Mes pays
           </button>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;" id="eu-comptes-filters">
               <select id="eu-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
-                <option value="">🌍 Pays</option>
+                <option value="">Pays</option>
               </select>
               <select id="eu-secteur-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
                 <option value="">Secteur</option>
@@ -632,9 +632,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div class="topbar"><h1>Paramètres</h1></div>
       <div style="padding:16px;max-width:700px;display:flex;flex-direction:column;gap:16px;">
 
-        <!-- ── Mon profil commercial ─────────────────────────── -->
+        <!-- ── Mon profil ─────────────────────────────────────── -->
         <div class="card">
-          <div class="card-header"><span class="card-title">👤 Mon profil commercial</span></div>
+          <div class="card-header"><span class="card-title">Mon profil</span></div>
           <div class="card-body" style="padding:16px;display:flex;flex-direction:column;gap:14px;">
             <div>
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Nom affiché</label>
@@ -667,27 +667,27 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
         <!-- ── Affichage ──────────────────────────────────────── -->
         <div class="card">
-          <div class="card-header"><span class="card-title">🖥 Affichage</span></div>
+          <div class="card-header"><span class="card-title">Affichage</span></div>
           <div class="card-body" style="padding:16px;display:flex;flex-direction:column;gap:14px;">
             <div>
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Onglet par défaut au démarrage</label>
               <select id="cfg-default-tab" onchange="saveSettings()"
                 style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);">
-                <option value="dashboard">🏠 Accueil</option>
-                <option value="societes">🏭 Constructeurs</option>
-                <option value="produits-db">🚁 Systèmes</option>
-                <option value="contracts">📋 Contrats & Tenders</option>
-                <option value="end-users">👥 Comptes & Contacts</option>
+                <option value="dashboard">Accueil</option>
+                <option value="societes">Constructeurs</option>
+                <option value="produits-db">Systèmes</option>
+                <option value="contracts">Contrats & Tenders</option>
+                <option value="end-users">Comptes & Contacts</option>
               </select>
             </div>
             <div>
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Sous-onglet par défaut dans Comptes & Contacts</label>
               <div style="display:flex;gap:8px;">
                 <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
-                  <input type="radio" name="cfg-default-subtab" value="comptes" onchange="saveSettings()" style="accent-color:var(--accent);"> 🏢 Comptes
+                  <input type="radio" name="cfg-default-subtab" value="comptes" onchange="saveSettings()" style="accent-color:var(--accent);"> Comptes
                 </label>
                 <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
-                  <input type="radio" name="cfg-default-subtab" value="contacts" onchange="saveSettings()" style="accent-color:var(--accent);"> 👤 Contacts
+                  <input type="radio" name="cfg-default-subtab" value="contacts" onchange="saveSettings()" style="accent-color:var(--accent);"> Contacts
                 </label>
               </div>
             </div>
@@ -707,12 +707,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
         <!-- ── Filtres mémorisés ──────────────────────────────── -->
         <div class="card">
-          <div class="card-header"><span class="card-title">🔖 Filtres mémorisés</span></div>
+          <div class="card-header"><span class="card-title">Filtres mémorisés</span></div>
           <div class="card-body" style="padding:16px;display:flex;flex-direction:column;gap:10px;">
             <p style="font-size:13px;color:var(--text2);margin:0;">Les filtres actifs sur chaque onglet sont automatiquement sauvegardés et restaurés à chaque session.</p>
             <div id="cfg-filters-summary" style="font-size:12px;color:var(--text3);"></div>
             <button onclick="resetAllFilters()" style="align-self:flex-start;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 14px;font-size:12px;color:var(--text2);cursor:pointer;">
-              🗑 Réinitialiser tous les filtres
+Réinitialiser tous les filtres
             </button>
           </div>
         </div>
@@ -3066,7 +3066,7 @@ function saveSettings() {
 function showSaveMsg() {
   const el = document.getElementById('cfg-save-msg');
   if (!el) return;
-  el.textContent = '✓ Préférences sauvegardées';
+  el.textContent = 'Préférences sauvegardées';
   el.style.opacity = '1';
   setTimeout(() => { el.style.opacity = '0'; }, 2000);
 }
