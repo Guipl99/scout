@@ -1634,16 +1634,12 @@ async function loadLiveTenders() {
 
 function filterTenders() {
   const search = (document.getElementById('tenders-search')?.value || '').toLowerCase();
-  if (search && liveTenders.length > 0) {
-    console.log('[filterTenders] search:', search, '| first tender keys:', Object.keys(liveTenders[0]), '| titre:', liveTenders[0].titre);
-  }
   const filtered = !search ? liveTenders : liveTenders.filter(t =>
     (t.titre||'').toLowerCase().includes(search) ||
     (t.acheteur||'').toLowerCase().includes(search) ||
     (t.pays||'').toLowerCase().includes(search) ||
     (t.description||'').toLowerCase().includes(search)
   );
-  if (search) console.log('[filterTenders] filtered:', filtered.length, '/', liveTenders.length);
   _renderTendersList(filtered);
 }
 
