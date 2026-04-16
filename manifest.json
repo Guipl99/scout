@@ -9,8 +9,17 @@
   "theme_color": "#534AB7",
   "orientation": "portrait-primary",
   "lang": "fr",
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
     {
       "src": "icon-192.png",
       "sizes": "192x192",
@@ -41,19 +50,34 @@
       "name": "Fabricants",
       "short_name": "Fabricants",
       "url": "/scout/?panel=societes",
-      "icons": [{"src": "icon-192.png", "sizes": "192x192"}]
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Drones",
       "short_name": "Drones",
       "url": "/scout/?panel=produits-db",
-      "icons": [{"src": "icon-192.png", "sizes": "192x192"}]
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Contrats",
       "short_name": "Contrats",
       "url": "/scout/?panel=contracts",
-      "icons": [{"src": "icon-192.png", "sizes": "192x192"}]
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
   "screenshots": [
