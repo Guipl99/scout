@@ -2441,6 +2441,12 @@ function filterContactsGrid() {
   const droneType = document.getElementById('ct-drone-type-filter')?.value || '';
   const fabricant = document.getElementById('ct-fabricant-filter')?.value || '';
 
+  // S'assurer que la map produits est disponible
+  if (!window._euProdMap && produits?.length) {
+    window._euProdMap = {};
+    produits.forEach(p => { window._euProdMap[p.id] = p; });
+  }
+
   const filtered = allContacts.filter(ct => {
     if (pays && ct.pays !== pays) return false;
     if (secteur && ct.secteur !== secteur) return false;
@@ -2451,7 +2457,7 @@ function filterContactsGrid() {
     // Filtres drone/fabricant via le compte associé
     if (droneType || fabricant) {
       const eu = allEndUsers.find(e => e.id === ct.end_user_id);
-      if (!eu) return (!droneType && !fabricant);
+      if (!eu) return false;
       if (droneType) {
         const match = (eu.produits_ids || []).some(pid => (window._euProdMap||{})[pid]?.type_drone === droneType);
         if (!match) return false;
@@ -2867,12 +2873,11 @@ async function loadContacts() {
     const d = await r.json();
     allContacts = d.contacts || [];
     contactsLoaded = true;
-    // Populate pays filter
-    const pays = [...new Set(allContacts.map(c => c.pays).filter(Boolean))].sort();
-    const sel = document.getElementById('ct-pays-filter');
-    if (sel) {
-      sel.innerHTML = '<option value="">🌍 Tous pays</option>' +
-        pays.map(p => `<option value="${p}">${p}</option>`).join('');
+    // Repeupler tous les filtres contacts après chargement
+    if (!produits?.length) {
+      Promise.all([loadAllProduits(), loadSocietes()]).then(() => populateEuDroneFilters()).catch(() => {});
+    } else {
+      populateEuDroneFilters();
     }
   } catch(e) { console.error('loadContacts', e); }
 }
