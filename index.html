@@ -1085,9 +1085,18 @@ function renderDashboard() {
   document.getElementById('m-produits').textContent = produits.length || '…';
 
   // Charger les contrats si pas encore chargés, puis mettre à jour
-  const updateContractKPIs = () => {
+  const updateContractKPIs = async () => {
     document.getElementById('m-alerts').textContent = contracts.length || '…';
-    const totalM = contracts.reduce((s,c) => s + (c.valeur_max||0), 0) / 1_000_000;
+    // Calculer valeur depuis les contrats locaux
+    let totalM = contracts.reduce((s, ct) => s + (ct.valeur_max||0), 0) / 1_000_000;
+    // Si 0, essayer via l'API stats (plus fiable)
+    if (totalM === 0) {
+      try {
+        const sr = await fetch(API + '/contracts/stats');
+        const sd = await sr.json();
+        totalM = parseFloat(sd?.total?.total_m || 0) / 1_000_000; // total_m = SUM(valeur_max) en dollars bruts
+      } catch(e) {}
+    }
     document.getElementById('m-valeur').textContent = totalM > 1000
       ? '$' + (totalM/1000).toFixed(1) + 'B'
       : totalM > 0 ? '$' + totalM.toFixed(0) + 'M' : '…';
