@@ -1137,6 +1137,120 @@ function streamText(elId, text, onDone) {
 // ── Dashboard ─────────────────────────────────────────────────
 let activeFeedType = 'tous';
 
+// ── INSIGHTS ACTIONNABLES ─────────────────────────────────────────────────────
+const INS_SIGNALS = [
+  { re: /contrat.*202[5-6]|award.*202[5-6]|OTA.*202[5-6]|livr[eé].*202[5-6]|signé.*202[5-6]|avr.*2026|jan.*2026|fév.*2026|mars.*2026/i, type:'hot',     label:'Récent' },
+  { re: /vient d[e']|vient de|world first|premier au monde/i,                                                                              type:'hot',     label:'Nouveauté' },
+  { re: /QUADBOX|KHRONOS.*d[ée]j[aà]|d[ée]j[aà].*KHRONOS|Arastelle|partenaire.*Elistair|Elistair.*partenaire|SMAUG/i,                    type:'partner', label:'Partenaire' },
+  { re: /payload.*ISR|ISR.*payload|architecture.*ouverte|open.*architecture|tethered.*drone|drone.*filaire/i,                              type:'prospect',label:'Prospect' },
+];
+const INS_PRIO = { hot:0, partner:1, prospect:2, tender:3, contract:4 };
+
+let _insCache = null;
+
+async function renderInsights(force) {
+  if (force) _insCache = null;
+  const feed = document.getElementById('db-ins-feed');
+  if (!feed) return;
+  if (_insCache) { _renderInsRows(_insCache); return; }
+
+  feed.innerHTML = '<div class="db-ins-empty">Analyse…</div>';
+
+  const items = [];
+
+  // Source 1 : contacts (signaux depuis notes)
+  try {
+    const r = await fetch(API + '/contacts?limit=300');
+    const d = await r.json();
+    const contacts = d.contacts || [];
+    const byOrg = {};
+    contacts.filter(c => c.notes && c.notes.length > 20).forEach(c => {
+      for (const sig of INS_SIGNALS) {
+        if (sig.re.test(c.notes)) {
+          const key = (c.organisation || c.org || '').toLowerCase().slice(0, 22);
+          if (!byOrg[key] || INS_PRIO[sig.type] < INS_PRIO[byOrg[key].type]) {
+            const sents = c.notes.split(/[.!]\s+/);
+            const hook = (sents.find(s => sig.re.test(s)) || sents[0]).trim().slice(0, 90);
+            byOrg[key] = {
+              type: sig.type, label: sig.label,
+              name: c.organisation || c.org || '—', hook,
+              action: c.societe_id ? () => { go('societes'); setTimeout(() => openSocieteDetail(c.societe_id), 300); } : () => go('contacts')
+            };
+          }
+          break;
+        }
+      }
+    });
+    Object.values(byOrg).forEach(x => items.push(x));
+  } catch(e) { /* silencieux */ }
+
+  // Source 2 : 3 tenders les plus urgents
+  try {
+    const r = await fetch(API + '/tenders');
+    const d = await r.json();
+    const now = new Date();
+    (d.tenders || [])
+      .filter(t => t.statut !== 'Clôturé' && (!t.date_cloture || new Date(t.date_cloture) > now))
+      .sort((a, b) => new Date(a.date_cloture || '9999') - new Date(b.date_cloture || '9999'))
+      .slice(0, 3)
+      .forEach(t => {
+        const days = t.date_cloture ? Math.ceil((new Date(t.date_cloture) - now) / 86400000) : null;
+        items.push({
+          type: 'tender', label: days !== null ? days + 'j' : 'AO',
+          name: t.source_name || t.pays || '—',
+          hook: (t.titre || '').slice(0, 80) + (t.valeur_estimee ? ' — ' + t.valeur_estimee : ''),
+          urgent: days !== null && days < 14,
+          action: () => { go('contracts'); setTimeout(() => { setContractTypeTab('live'); setTimeout(() => openTenderDetail(t.id), 400); }, 200); }
+        });
+      });
+  } catch(e) { /* silencieux */ }
+
+  // Source 3 : 3 contrats récents
+  try {
+    const r = await fetch(API + '/contracts?limit=200');
+    const d = await r.json();
+    (d.contracts || [])
+      .filter(c => c.date_attribution || c.date_debut)
+      .sort((a, b) => new Date(b.date_attribution || b.date_debut) - new Date(a.date_attribution || a.date_debut))
+      .slice(0, 3)
+      .forEach(c => {
+        const val = c.valeur_max ? (c.valeur_max >= 1e9 ? '$' + (c.valeur_max / 1e9).toFixed(1) + 'B' : '$' + (c.valeur_max / 1e6).toFixed(0) + 'M') : '';
+        items.push({
+          type: 'contract', label: 'Contrat',
+          name: c.societe_name || c.societe_id || '—',
+          hook: (c.titre || '').slice(0, 70) + (val ? ' — ' + val : ''),
+          action: () => { go('contracts'); setTimeout(() => openContractDetail(c.id), 200); }
+        });
+      });
+  } catch(e) { /* silencieux */ }
+
+  // Trier : hot d'abord, puis par ordre naturel
+  items.sort((a, b) => (INS_PRIO[a.type] || 9) - (INS_PRIO[b.type] || 9));
+  _insCache = items;
+  _renderInsRows(items);
+}
+
+function _renderInsRows(items) {
+  const feed = document.getElementById('db-ins-feed');
+  if (!feed) return;
+  if (!items.length) { feed.innerHTML = '<div class="db-ins-empty">Aucun insight disponible.</div>'; return; }
+  feed.innerHTML = items.map((item, i) => {
+    const urgStyle = item.urgent ? 'color:#f59e0b;' : '';
+    return `<div class="db-ins-row" data-ins="${i}">
+      <div class="db-ins-dot ${item.type}"></div>
+      <div class="db-ins-type" style="${urgStyle}">${sanitize(item.label)}</div>
+      <div class="db-ins-main">
+        <span class="db-ins-name">${sanitize(item.name)}</span>
+        ${item.hook ? '<span class="db-ins-sep">—</span><span class="db-ins-hook">' + sanitize(item.hook) + '</span>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+  // Attacher les événements clic
+  feed.querySelectorAll('.db-ins-row').forEach((el, i) => {
+    if (items[i] && items[i].action) el.addEventListener('click', items[i].action);
+  });
+}
+
 function renderDashboard() {
   // KPIs immédiats — depuis cache local si disponible
   document.getElementById('m-societes').textContent = societes.length || '…';
@@ -1193,6 +1307,7 @@ function renderDashboard() {
   });
 
   loadFeed();
+  renderInsights();
 }
 
 function renderDbTenders(tenders) {
