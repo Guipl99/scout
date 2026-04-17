@@ -2853,6 +2853,7 @@ function filterContactsGrid() {
   }
 
   const filtered = allContacts.filter(ct => {
+    if (!ct.end_user_id) return false; // exclure contacts fabricants
     if (pays && ct.pays !== pays) return false;
     if (q) {
       const hay = [ct.prenom, ct.nom, ct.titre, ct.organisation, ct.domaine, ct.notes, ct.pays].join(' ').toLowerCase();
