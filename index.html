@@ -388,6 +388,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-ins-hook { font-size:11px; color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .db-ins-urgency { font-size:9px; font-weight:700; color:#f59e0b; flex-shrink:0; margin-left:6px; }
 .db-ins-empty { padding:14px; text-align:center; font-size:11px; color:var(--text3); }
+/* Panneau modération */
+.pending-item { padding:10px 16px; border-bottom:1px solid var(--border); }
+.pending-item:last-child { border-bottom:none; }
+.pending-type { display:inline-block; font-size:9px; font-weight:700; text-transform:uppercase; padding:1px 6px; border-radius:999px; margin-bottom:4px; }
+.pending-type.tender   { background:rgba(20,184,166,.15); color:#14b8a6; }
+.pending-type.contract { background:rgba(139,132,255,.15); color:#8b84ff; }
+.pending-title { font-size:12px; font-weight:600; color:var(--text); margin-bottom:2px; }
+.pending-meta  { font-size:11px; color:var(--text3); margin-bottom:6px; }
+.pending-source { font-size:10px; color:var(--accent); text-decoration:none; display:block; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pending-actions { display:flex; gap:6px; }
+.pending-btn { flex:1; padding:5px; border-radius:6px; border:1px solid; font-size:11px; font-weight:600; cursor:pointer; text-align:center; }
+.pending-btn.approve { background:rgba(34,197,94,.12); border-color:rgba(34,197,94,.3); color:#22c55e; }
+.pending-btn.reject  { background:rgba(239,68,68,.08); border-color:rgba(239,68,68,.2); color:#ef4444; }
 </style>
 </head>
 <body>
@@ -911,6 +924,17 @@ Réinitialiser tous les filtres
         <!-- ── Sauvegarde ─────────────────────────────────────── -->
         <div style="display:flex;align-items:center;gap:10px;">
           <span id="cfg-save-msg" style="font-size:12px;color:#22c55e;opacity:0;transition:opacity 0.3s;"></span>
+        </div>
+
+        <!-- ── Modération veille web ─────────────────────────── -->
+        <div class="card" id="card-pending">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <span class="card-title">🔍 À valider <span id="pending-count" style="font-size:10px;color:var(--text3);margin-left:4px;"></span></span>
+            <button onclick="loadPending()" style="font-size:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--text2);">↻ Rafraîchir</button>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div id="pending-list" style="font-size:12px;color:var(--text3);padding:12px 16px;">Cliquez sur Rafraîchir pour charger les entrées à valider.</div>
+          </div>
         </div>
 
         <!-- ── Diagnostic système ────────────────────────────── -->
@@ -2908,6 +2932,78 @@ function renderProduitsFiltered(list) {
       </div>
     </div>`;
   }).join('');
+}
+
+// ── MODÉRATION VEILLE WEB ─────────────────────────────────────────────────────
+async function loadPending() {
+  const list = document.getElementById('pending-list');
+  const count = document.getElementById('pending-count');
+  if (!list) return;
+  list.innerHTML = '<div style="padding:12px 16px;color:var(--text3);font-size:11px;">Chargement…</div>';
+  try {
+    const r = await fetch(API + '/admin/pending');
+    const d = await r.json();
+    const all = [
+      ...(d.tenders  || []).map(t => ({ ...t, _type: 'tender' })),
+      ...(d.contracts|| []).map(c => ({ ...c, _type: 'contract' })),
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    if (count) count.textContent = all.length ? '(' + all.length + ')' : '';
+
+    if (!all.length) {
+      list.innerHTML = '<div style="padding:12px 16px;color:var(--text3);font-size:11px;">Aucune entrée en attente de validation.</div>';
+      return;
+    }
+    list.innerHTML = all.map(item => {
+      const titre = sanitize((item.titre || '').slice(0, 90));
+      const type  = item._type;
+      const meta  = [item.client || item.acheteur, item.pays || item.pays_client, item.valeur || item.valeur_estimee]
+        .filter(Boolean).join(' · ');
+      const src   = item.source_url || (item.sources && item.sources[0]) || '';
+      const date  = (item.created_at || '').slice(0, 10);
+      return `<div class="pending-item" id="pend-${item.id}">
+        <span class="pending-type ${type}">${type === 'tender' ? 'Tender' : 'Contrat'}</span>
+        <div class="pending-title">${titre}</div>
+        ${meta ? `<div class="pending-meta">${sanitize(meta)} · ${date}</div>` : ''}
+        ${src  ? `<a class="pending-source" href="${sanitize(src)}" target="_blank">${sanitize(src.slice(0,60))}…</a>` : ''}
+        <div class="pending-actions">
+          <button class="pending-btn approve" onclick="validateItem('${type}','${item.id}','approve')">✓ Valider</button>
+          <button class="pending-btn reject"  onclick="validateItem('${type}','${item.id}','reject')">✕ Rejeter</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = `<div style="padding:12px 16px;color:var(--text3);font-size:11px;">Erreur: ${e.message}</div>`;
+  }
+}
+
+async function validateItem(type, id, action) {
+  const el = document.getElementById('pend-' + id);
+  if (el) el.style.opacity = '0.4';
+  try {
+    const r = await fetch(`${API}/admin/validate/${type}/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      if (el) el.remove();
+      // Mettre à jour le compteur
+      const countEl = document.getElementById('pending-count');
+      if (countEl) {
+        const list = document.getElementById('pending-list');
+        const remaining = list ? list.querySelectorAll('.pending-item').length : 0;
+        countEl.textContent = remaining ? '(' + remaining + ')' : '';
+        if (!remaining) list.innerHTML = '<div style="padding:12px 16px;color:var(--text3);font-size:11px;">Aucune entrée en attente.</div>';
+      }
+    } else {
+      if (el) el.style.opacity = '1';
+    }
+  } catch(e) {
+    if (el) el.style.opacity = '1';
+    console.error('validateItem:', e.message);
+  }
 }
 
 async function init() {
