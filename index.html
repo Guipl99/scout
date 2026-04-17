@@ -2367,6 +2367,14 @@ function openContractDetail(id) {
   const fabs = (data.fabricants_eligibles||ct.produits||[]);
   const sources = (ct.sources||data.sources||[]);
 
+  // Trouver le end_user (buyer) lié — par end_user_id, ou par matching nom client
+  const _euPool = allEndUsers.length ? allEndUsers : [];
+  const linkedEu = _euPool.find(eu =>
+    (ct.end_user_id && eu.id === ct.end_user_id) ||
+    (!ct.end_user_id && eu.nom && ct.client &&
+      eu.nom.toLowerCase().includes(ct.client.toLowerCase().slice(0,12)))
+  ) || null;
+
   modal.innerHTML = `<div style="background:var(--bg2);border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;border:1px solid var(--border);">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
       <div style="flex:1;padding-right:12px;">
@@ -2380,9 +2388,9 @@ function openContractDetail(id) {
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-      <div style="background:var(--bg3);border-radius:8px;padding:10px;">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:3px;">Client</div>
-        <div style="font-size:13px;color:var(--text);font-weight:500;">${sanitize(ct.client||'—')}</div>
+      <div style="background:var(--bg3);border-radius:8px;padding:10px;${linkedEu ? 'cursor:pointer;' : ''}" ${linkedEu ? `onclick="this.closest('[style*=fixed]').remove();setTimeout(()=>{go('end-users');setTimeout(()=>openEndUser('${linkedEu.id}'),300)},100)"` : ''}>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:3px;">Client ${linkedEu ? '<span style=&quot;color:var(--accent2);margin-left:4px;&quot;>→</span>' : ''}</div>
+        <div style="font-size:13px;color:${linkedEu ? 'var(--accent2)' : 'var(--text)'};font-weight:500;">${sanitize(ct.client||'—')}</div>
         ${ct.pays_client ? `<div style="font-size:11px;color:var(--text3);">🌍 ${ct.pays_client}</div>` : ''}
       </div>
       <div style="background:var(--bg3);border-radius:8px;padding:10px;">
