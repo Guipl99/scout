@@ -1005,6 +1005,14 @@ Réinitialiser tous les filtres
     <div class="bn-item" id="bn-config" onclick="go('config')">
       <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       Config
+
+        <!-- ── DEBUG API ── -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Diagnostic API</div>
+          <button class="btn-secondary" onclick="runApiDiag()" style="margin-bottom:10px;width:100%;">🔍 Tester la connexion API</button>
+          <div id="api-diag-result" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text2);line-height:1.8;white-space:pre-wrap;"></div>
+        </div>
+
     </div>
   </div>
 </nav>
@@ -3699,6 +3707,44 @@ async function checkStartupStatus() {
       }
     }
   } catch(e) { /* silencieux */ }
+}
+
+
+// ── DIAGNOSTIC API ────────────────────────────────────────────────────────────
+async function runApiDiag() {
+  const el = document.getElementById('api-diag-result');
+  if (!el) return;
+  el.textContent = 'Test en cours…';
+  
+  const lines = [];
+  const t = async (label, url) => {
+    const t0 = Date.now();
+    try {
+      const r = await fetch(url);
+      const ms = Date.now() - t0;
+      const txt = await r.text();
+      let preview = txt.slice(0, 120);
+      lines.push(`✅ ${label} (${ms}ms): ${preview}`);
+    } catch(e) {
+      lines.push(`❌ ${label}: ${e.message}`);
+    }
+  };
+
+  await t('GET /',           API + '/');
+  await t('GET /admin/status', API + '/admin/status');
+  await t('GET /societes?limit=2', API + '/societes?limit=2');
+  await t('GET /contracts/stats', API + '/contracts/stats');
+  await t('GET /contacts?limit=2', API + '/contacts?limit=2');
+  await t('GET /tenders?limit=2', API + '/tenders?limit=2');
+  
+  // Résumé état global JS
+  lines.push('');
+  lines.push('📦 État mémoire JS:');
+  lines.push('  societes.length = ' + societes.length);
+  lines.push('  produits.length = ' + produits.length);
+  lines.push('  contracts.length = ' + contracts.length);
+  
+  el.textContent = lines.join('\n');
 }
 
 // ── PULL TO REFRESH ──────────────────────────────────────────────────────────
