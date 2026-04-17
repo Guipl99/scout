@@ -2369,24 +2369,73 @@ function openContractDetail(id) {
 
   // Trouver le end_user (buyer) lié
   const _euPool = allEndUsers.length ? allEndUsers : [];
-  // Table de correspondance client → end_user id (pour les libellés qui ne matchent pas automatiquement)
+  // Table de correspondance client → end_user id
   const CLIENT_EU_MAP = {
+    // US Navy
     'naval sea systems': 'us_navy', 'navsea': 'us_navy', 'us navy': 'us_navy',
-    'us marine corps': 'usmc', 'marine corps': 'usmc', 'usmc': 'usmc',
-    'us army contracting': 'us_army', 'army contracting': 'us_army', 'pm-uas': 'us_army_pm_uas',
-    'department of defense': 'replicator_us_army', 'dod / diu': 'replicator_us_army', 'diu': 'replicator_us_army',
-    'dhs': 'dhs_cbp', 'dhs / us border': 'dhs_cbp', 'dhs border': 'dhs_cbp',
-    'dga / arm': 'dga_france', 'armée française': 'dga_france', 'direction générale de l': 'dga_france',
-    'bundeswehr / baa': 'bundeswehr', 'baainbw': 'bundeswehr',
-    'british army / task': 'british_army_tf_rapstone', 'british army': 'british_army',
-    'uk ministry of defence / uk defence': 'uk_defence_innovation',
-    'european defence fund': 'european_defence_fund_imugs',
+    'marine corps systems': 'usmc',
+    // US Marine Corps
+    'us marine corps': 'usmc', 'marine corps': 'usmc',
+    // US Army
+    'us army contracting': 'us_army', 'army contracting': 'us_army',
+    'us army pm-uas': 'us_army_pm_uas', 'pm-uas': 'us_army_pm_uas',
     'us army 2nd cavalry': 'us_army_europe_2cav',
-    'ministère de la défense ukraine': 'ukraine_mod_ugv', 'ukrainian': 'ukraine_mod_ugv',
+    'us army jiatf': 'us_army', 'us army peo': 'us_army',
+    'us army ccdc': 'us_army', 'us army / ': 'us_army', 'us army': 'us_army',
+    // US Air Force
+    'us air force': 'usaf', 'afwerx': 'usaf_afwerx_evtol',
+    // US DoD / DIU / State
+    'department of defense': 'replicator_us_army', 'dod / diu': 'replicator_us_army',
+    'diu': 'replicator_us_army', 'us department of state': 'us_army',
+    // DHS
+    'dhs / us border': 'dhs_cbp', 'dhs border': 'dhs_cbp', 'dhs': 'dhs_cbp',
+    // France
+    'dga / arm': 'dga_france', 'dga france': 'dga_france',
+    'direction générale de l': 'dga_france', 'armée française': 'dga_france',
+    'armée de terre': 'french_army', 'gendarmerie nationale': 'french_army',
+    'police nationale': 'french_army', 'marine nationale': 'marine_nationale_fr',
+    'armée de l'air': 'french_aae', 'bspp': 'bspp_paris',
+    // UK
+    'british army / task': 'british_army_tf_rapstone',
+    'british army': 'british_army', 'royaume-uni': 'british_army',
+    'royal air force': 'raf_uk', 'uk mod / ukraine': 'british_army',
+    'uk ministry of defence / uk defence': 'uk_defence_innovation',
+    // Germany
+    'bundeswehr / baa': 'bundeswehr_uas', 'baainbw': 'bundeswehr_uas',
+    'bundeswehr': 'bundeswehr',
+    // Italy
+    'italian army': 'italian_army', 'armée italienne': 'italian_army',
+    'aeronautica militare': 'italian_mod_uas', 'guardia di finanza': 'italian_mod_uas',
+    // Netherlands
     'netherlands mod': 'netherlands_mod', 'pays-bas': 'netherlands_mod',
-    'indian armed forces': 'indian_army',
-    'italian': 'italian_army',
-    'polish': 'polish_army',
+    'netherlands/denmark': 'netherlands_mod',
+    // Poland
+    'polish': 'polish_army', 'pologne': 'polish_army',
+    // Ukraine
+    'ministère de la défense ukraine': 'ukraine_mod_ugv',
+    'forces armées ukrainiennes': 'uaf', 'ukrainian armed': 'uaf',
+    'ukraine government': 'ukraine_brave1_startups', 'ukraine /': 'uaf',
+    'ministry of defence + ministry of digital': 'ukraine_brave1_startups',
+    // India
+    'indian armed forces': 'indian_army', 'indian army': 'indian_army',
+    'defence acquisition council': 'indian_army', 'indian navy': 'india_navy',
+    'ministry of defence india': 'indian_army',
+    // UAE
+    'uae armed forces': 'uae_af', 'uae ministry of defence': 'uae_mod',
+    'uae + bahr': 'uae_mod',
+    // EU
+    'european defence fund': 'european_defence_fund_imugs',
+    'european maritime safety': 'emsa_eu', 'emsa /': 'emsa_eu',
+    'frontex': 'emsa_eu', 'union européenne': 'emsa_eu',
+    'commission européenne': 'emsa_eu',
+    // Other NATO
+    'norwegian': 'netherlands_mod', 'swedish': 'netherlands_mod',
+    'danish mod': 'netherlands_mod', 'nspa /': 'nato_general',
+    'client otan': 'nato_general', 'nato': 'nato_general',
+    'otan': 'nato_general',
+    // Energy / civil
+    'edf nucléaire': 'edf_nuclear', 'chevron': 'shell_inspection',
+    'shell': 'shell_inspection', 'rio tinto': 'rio_tinto_mining',
   };
   const clientLow = (ct.client||'').toLowerCase();
   const mappedId = Object.entries(CLIENT_EU_MAP).find(([k]) => clientLow.includes(k))?.[1];
