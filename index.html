@@ -1173,26 +1173,7 @@ function streamText(elId, text, onDone) {
 // ── Dashboard ─────────────────────────────────────────────────
 let activeFeedType = 'tous';
 
-// ── INSIGHTS ACTIONNABLES ──────────────────────────────────────────────────
-// Signaux extraits des notes contacts : mots-clés → type de signal
-const INSIGHT_SIGNALS = [
-  // CHAUD — action immédiate
-  { pattern: /contrat.*202[5-6]|award.*202[5-6]|OTA.*202[5-6]|livr[eé].*202[5-6]|signé.*202[5-6]|avr.*2026|jan.*2026|fév.*2026|mars.*2026/i, type:'hot', label:'🔥 Contrat récent' },
-  { pattern: /\bvient d[e']|vient de|VIENT D[E']|\bworld first\b|world's first|\bpremier au monde\b/i, type:'hot', label:'🔥 Nouveauté 2026' },
-  { pattern: /C-UAS.*202[5-6]|202[5-6].*C-UAS/i, type:'hot', label:'🔥 C-UAS actif' },
-  { pattern: /spin[-‑]off.*202[5-6]|restructur.*202[5-6]|nouveau.*CEO|new.*CEO/i, type:'hot', label:'🔥 Changement org' },
-  // PARTENAIRE — relation existante à exploiter
-  { pattern: /d[ée]j[aà] partenaire|partenaire.*Elistair|Elistair.*partenaire|int[eè]gre d[ée]j[aà]|relation.*[eé]tablie|d[eé]j[aà] dans|SMAUG|ARX|Milrem|Rheinmetall/i, type:'partner', label:'🤝 Partenaire actif' },
-  { pattern: /QUADBOX|KHRONOS.*d[ée]j[aà]|d[ée]j[aà].*KHRONOS|Arastelle/i, type:'partner', label:'🤝 Drone filaire intégré' },
-  // PROSPECT QUALIFIÉ — besoin documenté
-  { pattern: /payload.*ISR|ISR.*payload|architecture.*ouverte|open.*architecture|open payload|payload.*ouvert/i, type:'prospect', label:'🎯 Architecture ouverte' },
-  { pattern: /tethered.*drone|drone.*filaire|drone filaire|filaire/i, type:'prospect', label:'🎯 Besoin filaire doc.' },
-  { pattern: /\$[0-9]+[MB].*Navy|\bNavy\b.*\$[0-9]+|OTA.*Navy|Navy.*OTA|\$392M|\$281M|\$61M/i, type:'prospect', label:'🎯 Contrat Navy' },
-];
-
-
-
-function renderDashboard() {
+unction renderDashboard() {
   // KPIs immédiats
   document.getElementById('m-societes').textContent = societes.length || '…';
   document.getElementById('m-produits').textContent = produits.length || '…';
@@ -2857,37 +2838,9 @@ init().then(() => {
   const panel = params.get('panel');
   if (panel) setTimeout(() => go(panel), 500);
 });
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/scout/sw.js', { scope: '/scout/' })
-    .then(r => console.log('[Scout PWA] SW registered', r.scope))
-    .catch(e => console.log('[Scout PWA] SW error', e));
-}
-// ── Restaurer l'onglet depuis l'URL hash au rechargement ──────
-(function restoreFromHash() {
-  const hash = window.location.hash.slice(1); // ex: "end-users/contacts"
-  if (!hash) return;
-  const [panel, tab] = hash.split('/');
-  const validPanels = ['dashboard','societes','produits-db','contracts','end-users','config'];
-  if (!validPanels.includes(panel)) return;
-  // Attendre que le DOM soit prêt
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => go(panel, { tab, silent: true }));
-  } else {
-    go(panel, { tab, silent: true });
-  }
-})();
 
-// If already running as standalone PWA, mark button as installed
-if (window.matchMedia('(display-mode: standalone)').matches) {
-  document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('btn-install-pwa');
-    if (btn) { btn.textContent = '✓ App déjà installée'; btn.disabled = true; btn.style.opacity = '0.5'; }
-  });
-}
-</script>
-<script>
+
+
 let deferredPrompt = null;
 let pwaInstalled = window.matchMedia('(display-mode: standalone)').matches;
 
@@ -3995,6 +3948,37 @@ let insContratsCache=null, insTendersCache=null, currentInsTab='all';
 
 
 
+
 </script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/scout/sw.js', { scope: '/scout/' })
+    .then(r => console.log('[Scout PWA] SW registered', r.scope))
+    .catch(e => console.log('[Scout PWA] SW error', e));
+}
+// ── Restaurer l'onglet depuis l'URL hash au rechargement ──────
+(function restoreFromHash() {
+  const hash = window.location.hash.slice(1); // ex: "end-users/contacts"
+  if (!hash) return;
+  const [panel, tab] = hash.split('/');
+  const validPanels = ['dashboard','societes','produits-db','contracts','end-users','config'];
+  if (!validPanels.includes(panel)) return;
+  // Attendre que le DOM soit prêt
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => go(panel, { tab, silent: true }));
+  } else {
+    go(panel, { tab, silent: true });
+  }
+})();
+
+// If already running as standalone PWA, mark button as installed
+if (window.matchMedia('(display-mode: standalone)').matches) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('btn-install-pwa');
+    if (btn) { btn.textContent = '✓ App déjà installée'; btn.disabled = true; btn.style.opacity = '0.5'; }
+  });
+}
+</script>
+
 </body>
 </html>
