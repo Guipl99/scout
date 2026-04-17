@@ -103,6 +103,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-kpi-label { font-size:10px; color:var(--text2); margin-top:3px; text-transform:uppercase; letter-spacing:.05em; }
 .db-pulse { position:absolute; top:-2px; right:-2px; width:8px; height:8px; border-radius:50%; background:#22c55e; animation:pulse 2s infinite; }
 
+.db-brief { background:var(--bg2); border:1px solid var(--accent); border-radius:var(--radius); padding:14px 16px; margin-bottom:14px; display:flex; align-items:flex-start; gap:12px; position:relative; }
+.db-brief-body { flex:1; }
+.db-brief-tag { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); margin-bottom:8px; }
+.db-brief-list { margin:0 0 8px 0; padding-left:18px; list-style:disc; }
+.db-brief-list li { font-size:12px; color:var(--text2); line-height:1.6; margin-bottom:2px; }
+.db-brief-list li strong { color:var(--text); font-weight:600; }
+.db-brief-footer { font-size:11px; color:var(--text3); font-style:italic; }
+.db-brief-close { background:none; border:none; color:var(--text3); font-size:14px; cursor:pointer; padding:2px 4px; flex-shrink:0; line-height:1; margin-top:-2px; }
+.db-brief-close:hover { color:var(--text); }
 .db-grid { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:12px; }
 .db-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); display:flex; flex-direction:column; overflow:hidden; }
 .db-card-wide { grid-column:span 2; }
@@ -461,6 +470,21 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-label">Systèmes catalogués</div>
           </div>
         </div>
+      </div>
+
+      <!-- BRIEF COMMERCIAL -->
+      <div class="db-brief">
+        <div class="db-brief-body">
+          <span class="db-brief-tag">Comment utiliser Scout</span>
+          <ul class="db-brief-list">
+            <li><strong>Voir qui achète quoi chez vos concurrents</strong> — chaque contrat liste l'acheteur, le montant et le fabricant retenu. Buyer actif = budget validé.</li>
+            <li><strong>Trouver le bon interlocuteur</strong> — CTO, Head of Engineering et responsables intégration payload chez les fabricants UGV/USV. Chaque contact explique son rôle dans la chaîne de décision.</li>
+            <li><strong>Repérer les fenêtres d'achat</strong> — appels d'offres en cours, renouvellements annoncés, nouveaux programmes par pays.</li>
+            <li><strong>Préparer un salon en 10 min</strong> — filtrer par géographie ou segment, récupérer les contacts pertinents.</li>
+          </ul>
+          <span class="db-brief-footer">Données enrichies hebdomadairement par IA · Scout est un outil de préparation, pas un CRM</span>
+        </div>
+        <button class="db-brief-close" onclick="this.closest('.db-brief').style.display='none'" title="Fermer">✕</button>
       </div>
 
       <!-- MAIN GRID -->
