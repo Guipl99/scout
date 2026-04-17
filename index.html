@@ -408,6 +408,27 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   .specs-grid { grid-template-columns: 1fr; }
   .pricing-grid { grid-template-columns: 1fr; }
 }
+/* ── PULL TO REFRESH ── */
+#ptr-indicator {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  height: 0; overflow: hidden;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--text3); font-weight: 500;
+  transition: height .2s ease; pointer-events: none;
+}
+#ptr-indicator.ptr-pulling { height: 48px; }
+#ptr-indicator.ptr-ready { height: 48px; color: var(--accent2); }
+#ptr-indicator.ptr-refreshing { height: 48px; color: var(--accent); }
+.ptr-spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  animation: spin .7s linear infinite; display: none;
+}
+#ptr-indicator.ptr-refreshing .ptr-spinner { display: block; }
+#ptr-indicator.ptr-refreshing .ptr-arrow { display: none; }
+.ptr-arrow { font-size: 16px; transition: transform .2s ease; display: inline-block; }
+#ptr-indicator.ptr-ready .ptr-arrow { transform: rotate(180deg); }
 </style>
 </head>
 <body>
@@ -462,6 +483,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   <div class="main">
 
     <!-- DASHBOARD -->
+    <!-- PULL TO REFRESH INDICATOR -->
+    <div id="ptr-indicator">
+      <div class="ptr-spinner"></div>
+      <span class="ptr-arrow">↓</span>
+      <span id="ptr-label">Tirer pour rafraîchir</span>
+    </div>
+
     <div id="panel-dashboard" class="panel active">
       <div class="topbar"><h1>DefSec Robotics Intelligence</h1></div>
 
@@ -3946,6 +3974,93 @@ async function runHealthCheck() {
     el.innerHTML = '<span style="color:#ef4444;">Erreur: ' + e.message + '</span>';
   }
 }
+
+
+// ── PULL TO REFRESH ──────────────────────────────────────────────────────────
+(function() {
+  const THRESHOLD   = 72;   // px à tirer pour déclencher
+  const MAX_PULL    = 100;  // px max avant bounce
+  const RESIST      = 0.4;  // résistance du tirage
+
+  let startY = 0, currentY = 0, pulling = false, refreshing = false;
+
+  const ind   = document.getElementById('ptr-indicator');
+  const label = document.getElementById('ptr-label');
+
+  function isDashboard() {
+    return document.getElementById('panel-dashboard')?.classList.contains('active');
+  }
+
+  function atTop() {
+    // Vrai si la page ou le premier scrollable est en haut
+    const main = document.querySelector('.main') || document.body;
+    return (main.scrollTop || window.scrollY || 0) <= 0;
+  }
+
+  document.addEventListener('touchstart', e => {
+    if (!isDashboard() || refreshing) return;
+    if (!atTop()) return;
+    startY = e.touches[0].clientY;
+    pulling = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!pulling || refreshing) return;
+    currentY = e.touches[0].clientY;
+    const raw  = currentY - startY;
+    if (raw <= 0) { _reset(); return; }
+
+    const pull = Math.min(raw * RESIST, MAX_PULL);
+    ind.style.height = pull + 'px';
+
+    if (pull >= THRESHOLD) {
+      ind.className = 'ptr-ready';
+      label.textContent = 'Relâcher pour rafraîchir';
+    } else {
+      ind.className = 'ptr-pulling';
+      label.textContent = 'Tirer pour rafraîchir';
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', async () => {
+    if (!pulling || refreshing) return;
+    const raw  = currentY - startY;
+    const pull = Math.min(raw * RESIST, MAX_PULL);
+    pulling = false;
+
+    if (pull < THRESHOLD) { _reset(); return; }
+
+    // Déclencher le refresh
+    refreshing = true;
+    ind.className = 'ptr-refreshing';
+    ind.style.height = '48px';
+    label.textContent = 'Actualisation…';
+
+    try {
+      insightsCache  = null;
+      insContratsCache = null;
+      insTendersCache  = null;
+      // Rafraîchir le dashboard + l'onglet actif
+      renderDashboard();
+      if (currentInsTab === 'contacts') await renderInsights(true);
+      else if (currentInsTab === 'contrats') await renderInsContrats();
+      else if (currentInsTab === 'tenders')  await renderInsTenders();
+      else if (currentInsTab === 'web')      await renderInsWeb(true);
+    } finally {
+      // Petite pause visuelle puis masquer
+      await new Promise(r => setTimeout(r, 600));
+      refreshing = false;
+      _reset();
+    }
+  });
+
+  function _reset() {
+    pulling = false;
+    ind.className = '';
+    ind.style.height = '0';
+    label.textContent = 'Tirer pour rafraîchir';
+  }
+})();
 
 </script>
 </body>
