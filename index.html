@@ -574,6 +574,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="tab" onclick="showSTab('contrats',this)">Contrats</div>
           <div class="tab" onclick="showSTab('brevets',this)">Brevets</div>
           <div class="tab" onclick="showSTab('recrutement',this)">Recrutement</div>
+          <div class="tab" onclick="showSTab('s-contacts',this);loadSocieteContacts(currentSocieteId)">Contacts</div>
           <div class="tab" onclick="showSTab('analyse',this)">Analyse IA</div>
         </div>
         <div id="st-overview" class="tabpanel active">
@@ -595,6 +596,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <div id="st-recrutement" class="tabpanel">
           <div class="card"><div class="card-header"><span class="card-title">Recrutements actifs</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="s-recruits"></div></div>
           <div class="card"><div class="card-header"><span class="card-title">Historique</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="s-recruit-history"></div></div>
+        </div>
+        <div id="st-s-contacts" class="tabpanel">
+          <div class="card">
+            <div class="card-header"><span class="card-title">👤 Contacts</span></div>
+            <div id="s-contacts-list" style="padding:0;"></div>
+          </div>
         </div>
         <div id="st-analyse" class="tabpanel">
           <div class="card">
@@ -1305,6 +1312,39 @@ function renderSocietes() {
   filterSocietes();
 }
 
+
+async function loadSocieteContacts(societeId) {
+  const el = document.getElementById('s-contacts-list');
+  if (!el || !societeId) return;
+  el.innerHTML = '<div class="db-empty" style="padding:1rem;">Chargement…</div>';
+  try {
+    const s = societes.find(x => x.id === societeId);
+    const name = s ? s.name : societeId;
+    const r = await fetch(API + '/contacts?q=' + encodeURIComponent(name) + '&limit=50');
+    const d = await r.json();
+    // Garder seulement les contacts fabricants (sans end_user_id)
+    const list = (d.contacts || []).filter(c => !c.end_user_id);
+    if (!list.length) {
+      el.innerHTML = '<div class="db-empty" style="padding:1rem 16px;color:var(--text3);">Aucun contact enregistré pour ce fabricant.</div>';
+      return;
+    }
+    el.innerHTML = list.map(ct => `
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+          <div>
+            <span style="font-weight:600;font-size:13px;color:var(--text);">${ct.nom||'—'}</span>
+            ${ct.titre ? `<div style="font-size:11px;color:var(--accent);margin-top:2px;">${ct.titre}</div>` : ''}
+          </div>
+          ${ct.linkedin ? `<a href="${ct.linkedin}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none;white-space:nowrap;flex-shrink:0;padding:3px 8px;border:1px solid var(--accent);border-radius:4px;">LinkedIn →</a>` : ''}
+        </div>
+        ${ct.notes ? `<div style="font-size:12px;color:var(--text2);line-height:1.55;">${ct.notes}</div>` : ''}
+        ${ct.email ? `<div style="font-size:11px;color:var(--text3);">✉ ${ct.email}</div>` : ''}
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="db-empty" style="padding:1rem;color:var(--text3);">Erreur chargement.</div>';
+  }
+}
 
 async function openSociete(id) {
   currentSocieteId = id;
