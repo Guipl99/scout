@@ -1105,9 +1105,15 @@ function streamText(elId, text, onDone) {
 let activeFeedType = 'tous';
 
 function renderDashboard() {
-  // KPIs immédiats
+  // KPIs immédiats — depuis cache local si disponible
   document.getElementById('m-societes').textContent = societes.length || '…';
   document.getElementById('m-produits').textContent = produits.length || '…';
+  // Vrai count depuis la DB (indépendant du chargement local)
+  fetch(API + '/ping').then(r=>r.json()).then(d=>{
+    if (d.ok && d.produits > 0) document.getElementById('m-produits').textContent = d.produits;
+    if (d.ok && d.societes > 0) document.getElementById('m-societes').textContent = d.societes;
+    if (d.ok && d.contacts > 0) { /* disponible pour extension future */ }
+  }).catch(()=>{});
 
   // Charger les contrats si pas encore chargés, puis mettre à jour
   // Toujours charger la valeur depuis l'API stats (fiable, indépendant du cache local)
@@ -1567,7 +1573,7 @@ async function forceScrape(type) {
 // ── Produits ──────────────────────────────────────────────────
 async function loadAllProduits() {
   try {
-    const r = await fetch(API + '/produits', {signal: AbortSignal.timeout(8000)});
+    const r = await fetch(API + '/produits', {signal: AbortSignal.timeout(20000)});
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     produits = d.produits || [];
