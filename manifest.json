@@ -1,7 +1,7 @@
 {
-  "name": "Scout Drone — Veille Sectorielle",
-  "short_name": "Scout",
-  "description": "Veille concurrentielle secteur drone — fabricants, drones, contrats, tenders",
+  "name": "Defence Drone Deals",
+  "short_name": "D3",
+  "description": "Defence drone contracts, tenders & manufacturers intelligence",
   "start_url": "/scout/?utm_source=pwa",
   "scope": "/scout/",
   "display": "standalone",
