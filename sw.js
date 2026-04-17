@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scout-drone-v25';
+const CACHE_NAME = 'scout-drone-v26';
 const STATIC_ASSETS = [
   '/scout/',
   '/scout/index.html',
@@ -38,7 +38,7 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // App shell — network first, cache uniquement en fallback offline
+  // App shell — network first, cache en fallback offline uniquement
   if (url.pathname.startsWith('/scout/')) {
     e.respondWith(
       fetch(e.request).then(response => {
