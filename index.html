@@ -364,6 +364,28 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   .specs-grid { grid-template-columns: 1fr; }
   .pricing-grid { grid-template-columns: 1fr; }
 }
+/* ── INSIGHTS ACTIONNABLES ── */
+.db-ins { margin-bottom:12px; }
+.db-ins-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.db-ins-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text3); display:flex; align-items:center; gap:5px; }
+.db-ins-title::before { content:''; display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--accent2); box-shadow:0 0 5px var(--accent2); }
+.db-ins-feed { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.db-ins-row { display:flex; align-items:center; gap:8px; padding:7px 10px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .12s; }
+.db-ins-row:last-child { border-bottom:none; }
+.db-ins-row:hover { background:var(--bg3); }
+.db-ins-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.db-ins-dot.hot      { background:#f59e0b; box-shadow:0 0 4px #f59e0b; }
+.db-ins-dot.partner  { background:#22c55e; box-shadow:0 0 4px #22c55e; }
+.db-ins-dot.prospect { background:#6c63ff; box-shadow:0 0 4px #6c63ff; }
+.db-ins-dot.tender   { background:#14b8a6; box-shadow:0 0 4px #14b8a6; }
+.db-ins-dot.contract { background:#8b84ff; box-shadow:0 0 4px #8b84ff; }
+.db-ins-type { font-size:9px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; flex-shrink:0; width:52px; color:var(--text3); }
+.db-ins-main { flex:1; min-width:0; display:flex; align-items:baseline; gap:0; overflow:hidden; }
+.db-ins-name { font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; max-width:38%; }
+.db-ins-sep  { font-size:10px; color:var(--border); margin:0 5px; flex-shrink:0; }
+.db-ins-hook { font-size:11px; color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.db-ins-urgency { font-size:9px; font-weight:700; color:#f59e0b; flex-shrink:0; margin-left:6px; }
+.db-ins-empty { padding:14px; text-align:center; font-size:11px; color:var(--text3); }
 </style>
 </head>
 <body>
