@@ -2367,12 +2367,35 @@ function openContractDetail(id) {
   const fabs = (data.fabricants_eligibles||ct.produits||[]);
   const sources = (ct.sources||data.sources||[]);
 
-  // Trouver le end_user (buyer) lié — par end_user_id, ou par matching nom client
+  // Trouver le end_user (buyer) lié
   const _euPool = allEndUsers.length ? allEndUsers : [];
+  // Table de correspondance client → end_user id (pour les libellés qui ne matchent pas automatiquement)
+  const CLIENT_EU_MAP = {
+    'naval sea systems': 'us_navy', 'navsea': 'us_navy', 'us navy': 'us_navy',
+    'us marine corps': 'usmc', 'marine corps': 'usmc', 'usmc': 'usmc',
+    'us army contracting': 'us_army', 'army contracting': 'us_army', 'pm-uas': 'us_army_pm_uas',
+    'department of defense': 'replicator_us_army', 'dod / diu': 'replicator_us_army', 'diu': 'replicator_us_army',
+    'dhs': 'dhs_cbp', 'dhs / us border': 'dhs_cbp', 'dhs border': 'dhs_cbp',
+    'dga / arm': 'dga_france', 'armée française': 'dga_france', 'direction générale de l': 'dga_france',
+    'bundeswehr / baa': 'bundeswehr', 'baainbw': 'bundeswehr',
+    'british army / task': 'british_army_tf_rapstone', 'british army': 'british_army',
+    'uk ministry of defence / uk defence': 'uk_defence_innovation',
+    'european defence fund': 'european_defence_fund_imugs',
+    'us army 2nd cavalry': 'us_army_europe_2cav',
+    'ministère de la défense ukraine': 'ukraine_mod_ugv', 'ukrainian': 'ukraine_mod_ugv',
+    'netherlands mod': 'netherlands_mod', 'pays-bas': 'netherlands_mod',
+    'indian armed forces': 'indian_army',
+    'italian': 'italian_army',
+    'polish': 'polish_army',
+  };
+  const clientLow = (ct.client||'').toLowerCase();
+  const mappedId = Object.entries(CLIENT_EU_MAP).find(([k]) => clientLow.includes(k))?.[1];
   const linkedEu = _euPool.find(eu =>
     (ct.end_user_id && eu.id === ct.end_user_id) ||
-    (!ct.end_user_id && eu.nom && ct.client &&
-      eu.nom.toLowerCase().includes(ct.client.toLowerCase().slice(0,12)))
+    (mappedId && eu.id === mappedId) ||
+    (!ct.end_user_id && !mappedId && eu.nom && ct.client &&
+      eu.nom.toLowerCase().includes(clientLow.slice(0,14)) ||
+      clientLow.includes((eu.nom||'').toLowerCase().slice(0,14)))
   ) || null;
 
   modal.innerHTML = `<div style="background:var(--bg2);border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;border:1px solid var(--border);">
