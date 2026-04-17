@@ -406,6 +406,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   .specs-grid { grid-template-columns: 1fr; }
   .pricing-grid { grid-template-columns: 1fr; }
 }
+/* ── BANNER DÉMARRAGE ── */
+#startup-banner {
+  display:none; align-items:center; gap:10px;
+  background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.3);
+  border-radius:var(--radius); padding:8px 12px; margin-bottom:10px;
+  font-size:11px; color:#f59e0b;
+}
+#startup-banner.visible { display:flex; }
+.startup-spinner { width:12px; height:12px; border:2px solid rgba(245,158,11,.3); border-top-color:#f59e0b; border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
 /* ── PULL TO REFRESH ── */
 #ptr-indicator {
   position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
@@ -538,6 +547,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-label">Systèmes catalogués</div>
           </div>
         </div>
+      </div>
+
+      <!-- BANNER DÉMARRAGE -->
+      <div id="startup-banner">
+        <div class="startup-spinner"></div>
+        <span id="startup-msg">Initialisation des données… <span id="startup-eta"></span></span>
       </div>
 
       <!-- INSIGHTS ACTIONNABLES -->
@@ -1224,6 +1239,7 @@ unction renderDashboard() {
 
   loadFeed();
   renderInsights();
+  checkStartupStatus();
 }
 
 function renderDbTenders(tenders) {
@@ -3643,6 +3659,47 @@ async function runHealthCheck() {
   }
 }
 
+
+// ── STARTUP STATUS ───────────────────────────────────────────────────────────
+let startupCheckInterval = null;
+
+async function checkStartupStatus() {
+  try {
+    const r = await fetch(API + '/admin/status');
+    const d = await r.json();
+    const banner = document.getElementById('startup-banner');
+    const eta = document.getElementById('startup-eta');
+    if (!banner) return;
+
+    if (!d.seeds_complete && d.counts.societes === 0) {
+      // Données pas encore chargées
+      banner.classList.add('visible');
+      const etaS = d.seeds_eta_s || 0;
+      eta.textContent = etaS > 0 ? `(~${etaS}s)` : '';
+      // Recheck toutes les 15s
+      if (!startupCheckInterval) {
+        startupCheckInterval = setInterval(async () => {
+          await checkStartupStatus();
+          // Si données chargées, recharger le dashboard
+          if (!document.getElementById('startup-banner')?.classList.contains('visible')) {
+            clearInterval(startupCheckInterval);
+            startupCheckInterval = null;
+            renderDashboard();
+          }
+        }, 15000);
+      }
+    } else if (d.counts.societes > 0) {
+      // Données disponibles — masquer et recharger si besoin
+      banner.classList.remove('visible');
+      if (startupCheckInterval) { clearInterval(startupCheckInterval); startupCheckInterval = null; }
+      // Si les KPIs affichent 0, forcer le rechargement
+      const societeEl = document.getElementById('m-societes');
+      if (societeEl && (societeEl.textContent === '0' || societeEl.textContent === '…')) {
+        renderDashboard();
+      }
+    }
+  } catch(e) { /* silencieux */ }
+}
 
 // ── PULL TO REFRESH ──────────────────────────────────────────────────────────
 (function() {
