@@ -365,11 +365,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   .pricing-grid { grid-template-columns: 1fr; }
 }
 /* ── INSIGHTS ACTIONNABLES ── */
-.db-ins { margin-bottom:12px; }
-.db-ins-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.db-ins { position:relative; margin-bottom:12px; }
 .db-ins-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text3); display:flex; align-items:center; gap:5px; }
 .db-ins-title::before { content:''; display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--accent2); box-shadow:0 0 5px var(--accent2); }
-.db-ins-feed { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.db-ins-feed { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); overflow-y:auto; max-height:168px; scroll-behavior:smooth; }
+.db-ins-feed::-webkit-scrollbar { width:3px; }
+.db-ins-feed::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.db-ins::after { content:''; position:absolute; bottom:0; left:0; right:0; height:28px; background:linear-gradient(to bottom,transparent,var(--bg2)); border-radius:0 0 var(--radius) var(--radius); pointer-events:none; }
 .db-ins-row { display:flex; align-items:center; gap:8px; padding:7px 10px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .12s; }
 .db-ins-row:last-child { border-bottom:none; }
 .db-ins-row:hover { background:var(--bg3); }
