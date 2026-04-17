@@ -170,7 +170,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .entity-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; cursor: pointer; transition: border-color 0.15s; overflow: hidden; }
 .logo-avatar { width: 36px; height: 36px; flex-shrink: 0; }
 .logo-avatar img { width: 36px; height: 36px; border-radius: 8px; object-fit: contain; background: white; padding: 2px; }
-
+.drone-img-wrap { height: 110px; overflow: hidden; border-radius: var(--radius) var(--radius) 0 0; background: var(--bg3); display: flex; align-items: center; justify-content: center; margin: -1rem -1.25rem 0.75rem; }
+.drone-img-wrap img { width: 100%; height: 110px; object-fit: cover; }
+.drone-img-placeholder { font-size: 20px; font-weight: 700; color: var(--border2); font-family: 'DM Mono', monospace; }
 .entity-card:hover { border-color: var(--accent); }
 .entity-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .avatar { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; font-family: 'DM Mono', monospace; }
@@ -574,7 +576,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="tab" onclick="showSTab('contrats',this)">Contrats</div>
           <div class="tab" onclick="showSTab('brevets',this)">Brevets</div>
           <div class="tab" onclick="showSTab('recrutement',this)">Recrutement</div>
-          <div class="tab" onclick="showSTab('contacts',this);loadSocieteContacts(currentSocieteId)">Contacts</div>
           <div class="tab" onclick="showSTab('analyse',this)">Analyse IA</div>
         </div>
         <div id="st-overview" class="tabpanel active">
@@ -596,14 +597,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <div id="st-recrutement" class="tabpanel">
           <div class="card"><div class="card-header"><span class="card-title">Recrutements actifs</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="s-recruits"></div></div>
           <div class="card"><div class="card-header"><span class="card-title">Historique</span></div><div class="card-body" style="padding:0.5rem 1.25rem;" id="s-recruit-history"></div></div>
-        </div>
-        <div id="st-contacts" class="tabpanel">
-          <div class="card">
-            <div class="card-header"><span class="card-title">Contacts</span></div>
-            <div class="card-body" id="s-contacts-list" style="padding:0.5rem 0;">
-              <div class="db-empty">Chargement…</div>
-            </div>
-          </div>
         </div>
         <div id="st-analyse" class="tabpanel">
           <div class="card">
@@ -1315,41 +1308,7 @@ function renderSocietes() {
 }
 
 
-async function loadSocieteContacts(societeId) {
-  const el = document.getElementById('s-contacts-list');
-  if (!el || !societeId) return;
-  el.innerHTML = '<div class="db-empty">Chargement…</div>';
-  try {
-    const s = societes.find(x => x.id === societeId);
-    const name = s ? s.name : societeId;
-    const r = await fetch(API + '/contacts?q=' + encodeURIComponent(name) + '&limit=50');
-    const d = await r.json();
-    const list = d.contacts || [];
-
-    if (!list.length) {
-      el.innerHTML = '<div class="db-empty" style="padding:1rem;">Aucun contact enregistré pour ce fabricant.</div>';
-      return;
-    }
-
-    el.innerHTML = list.map(c => `
-      <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px;">
-        <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
-          <div>
-            <span style="font-weight:600;font-size:13px;color:var(--text);">${c.nom || '—'}</span>
-            ${c.role ? `<span style="font-size:11px;color:var(--text3);margin-left:6px;">${c.role}</span>` : ''}
-          </div>
-          ${c.linkedin ? `<a href="${c.linkedin}" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none;flex-shrink:0;">LinkedIn →</a>` : ''}
-        </div>
-        ${c.notes ? `<div style="font-size:12px;color:var(--text2);line-height:1.5;">${c.notes}</div>` : ''}
-        ${c.email ? `<div style="font-size:11px;color:var(--text3);">✉ ${c.email}</div>` : ''}
-      </div>
-    `).join('');
-  } catch(e) {
-    el.innerHTML = '<div class="db-empty" style="padding:1rem;color:var(--text3);">Erreur chargement contacts.</div>';
-  }
-}
-
-
+async function openSociete(id) {
   currentSocieteId = id;
   const s = societes.find(x => x.id === id);
   if (!s) return;
@@ -1605,6 +1564,7 @@ async function openProduit(id) {
   document.getElementById('produit-detail-view').style.display = 'block';
 
   document.getElementById('p-emoji').textContent = (p.name||'').slice(0,2).toUpperCase();
+  loadDroneImage(p.id, p.image_url||null, p.name, 'img-' + p.id, 'p-img-wrap');
   document.getElementById('p-name').textContent = p.name;
   document.getElementById('p-sub').textContent = (p.societe_name || '') + (p.prix ? ' · ' + p.prix : '');
   document.getElementById('p-tags').innerHTML = tagHtml(p.badge||'Core', p.badge==='Nouveau'?'tag-accent':p.badge==='Premium'?'tag-amber':'tag-gray') + (p.nouveau ? ' ' + tagHtml('Nouveau','tag-green') : '');
@@ -2666,6 +2626,7 @@ function filterDrones() {
   if (dbg) dbg.textContent = list.length + ' / ' + produits.length + ' systèmes  [' + activeDomaine + ' > ' + activeCat + ']';
 
   renderProduitsFiltered(list);
+  loadProductImages(list);
 }
 
 function setCat(cat) { activeCat = cat; renderCatFilters(); filterDrones(); }
@@ -2737,6 +2698,9 @@ function renderProduitsFiltered(list) {
     const badgeCls = p.badge==='Militaire'||p.badge==='Loitering Munition'||p.badge==='Intercepteur'||p.badge==='UCAV'?'tag-red':p.badge==='Industriel'||p.badge==='Maritime/ISR'?'tag-amber':p.badge==='Agriculture'?'tag-green':p.badge==='AAM'?'tag-accent':'tag-accent';
     const logoS = produits.find ? (societes.find(sx => sx.id === p.societe_id)) : null;
     return `<div class="entity-card" onclick="openProduit('${p.id}')">
+      <div id="img-${p.id}" style="height:110px;overflow:hidden;border-radius:var(--radius) var(--radius) 0 0;background:var(--bg3);display:flex;align-items:center;justify-content:center;margin:-1rem -1.25rem 0.75rem;position:relative;cursor:pointer;">
+        <span style="font-size:13px;font-weight:600;color:var(--border2);font-family:'DM Mono',monospace;">${(p.name||'').slice(0,3).toUpperCase()}</span>
+      </div>
       <div class="entity-card-top">
         <div id="logo-card-${p.id}" style="width:24px;height:24px;flex-shrink:0;"></div>
         <div>
@@ -2755,6 +2719,24 @@ function renderProduitsFiltered(list) {
       </div>
     </div>`;
   }).join('');
+}
+
+// Load product images via proxy (évite le blocage hotlinking Wikipedia/manufacturer sites)
+function loadProductImages(list) {
+  list.forEach(p => {
+    if (!p.image_url) return;
+    const el = document.getElementById('img-' + p.id);
+    if (!el) return;
+    // Toujours passer par le proxy Railway qui récupère l'image côté serveur
+    const proxyUrl = API + '/produits/' + p.id + '/image';
+    const img = new Image();
+    img.onload = () => {
+      el.style.background = '#000';
+      el.innerHTML = `<img src="${proxyUrl}" alt="${p.name}" style="width:100%;height:110px;object-fit:cover;display:block;border-radius:var(--radius) var(--radius) 0 0;">`;
+    };
+    img.onerror = () => { /* laisser le placeholder gris */ };
+    img.src = proxyUrl;
+  });
 }
 
 async function init() {
