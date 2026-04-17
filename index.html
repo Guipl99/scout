@@ -2849,8 +2849,48 @@ function renderProduitsFiltered(list) {
 }
 
 async function init() {
-  // Load each independently so one failure doesn't block others
+  // Diagnostic /ping — affiché dans le banner et dans la console
+  try {
+    const t0 = Date.now();
+    const r = await fetch(API + '/ping');
+    const d = await r.json();
+    const ms = Date.now() - t0;
+    console.log('[Scout] /ping', ms+'ms', d);
+
+    const banner = document.getElementById('startup-banner');
+    const msg    = document.getElementById('startup-msg');
+    const eta    = document.getElementById('startup-eta');
+
+    if (!d.ok) {
+      // DB en erreur
+      if (banner) { banner.classList.add('visible'); banner.style.borderColor='rgba(239,68,68,.4)'; banner.style.background='rgba(239,68,68,.1)'; banner.style.color='#ef4444'; }
+      if (msg) msg.textContent = 'Erreur DB : ' + (d.error||'inconnue');
+    } else if (d.societes === 0) {
+      // Données vides — seeds pas encore terminés
+      if (banner) banner.classList.add('visible');
+      const etaS = d.seeds_done ? 0 : Math.max(0, 182 - d.uptime_s);
+      if (msg) msg.textContent = 'Initialisation des données en cours…';
+      if (eta) eta.textContent = etaS > 0 ? '(~'+etaS+'s)' : '(seeds terminés, rechargement…)';
+      // Retry dans 8s
+      setTimeout(init, 8000);
+      return; // ne pas renderDashboard maintenant
+    } else {
+      // Données OK
+      if (banner) banner.classList.remove('visible');
+      console.log('[Scout] DB OK —', d.societes, 'societes,', d.contracts, 'contrats,', d.contacts, 'contacts');
+    }
+  } catch(e) {
+    console.error('[Scout] /ping ERREUR:', e.message);
+    // API injoignable
+    const banner = document.getElementById('startup-banner');
+    const msg    = document.getElementById('startup-msg');
+    if (banner) { banner.classList.add('visible'); }
+    if (msg) msg.textContent = 'API inaccessible — ' + e.message;
+  }
+
+  // Chargement normal
   await Promise.allSettled([loadSocietes(), loadAllProduits(), loadContracts()]);
+  console.log('[Scout] Chargé — societes:', societes.length, 'produits:', produits.length, 'contracts:', contracts.length);
   try { renderSocietes(); } catch(e) { console.error('renderSocietes:', e); }
   try { renderProduits(); } catch(e) { console.error('renderProduits:', e); }
   try { renderDashboard(); } catch(e) { console.error('renderDashboard:', e); }
