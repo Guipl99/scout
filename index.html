@@ -507,6 +507,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <button class="db-brief-close" onclick="this.closest('.db-brief').style.display='none'" title="Fermer">✕</button>
       </div>
 
+      <!-- INSIGHTS ACTIONNABLES -->
+      <div class="db-ins">
+        <div class="db-ins-header">
+          <span class="db-ins-title">Insights actionnables</span>
+          <button class="db-link" onclick="renderInsights(true)" style="font-size:10px;">↻</button>
+        </div>
+        <div id="db-ins-feed" class="db-ins-feed">
+          <div class="db-ins-empty">Chargement…</div>
+        </div>
+      </div>
+
       <!-- MAIN GRID -->
       <div class="db-grid">
 
