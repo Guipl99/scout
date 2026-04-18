@@ -2365,6 +2365,9 @@ function openContractDetail(id) {
   modal.onclick = e => { if(e.target===modal) modal.remove(); };
 
   const fabs = (data.fabricants_eligibles||ct.produits||[]);
+  // Fabricants multiples depuis societes_ids
+  const allSocIds = ct.societes_ids && ct.societes_ids.length > 1 ? ct.societes_ids : (ct.societe_id ? [ct.societe_id] : []);
+  const linkedSocs = allSocIds.map(sid => societes.find(s => s.id === sid)).filter(Boolean);
   const sources = (ct.sources||data.sources||[]);
 
   // Trouver le end_user (buyer) lié
@@ -2482,7 +2485,10 @@ function openContractDetail(id) {
 
     ${ct.description ? `<div style="background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px;color:var(--text2);line-height:1.5;">${sanitize(ct.description)}</div>` : ''}
 
-    ${fabs.length ? `<div style="margin-bottom:12px;">
+    ${linkedSocs.length ? `<div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px;">Fabricants</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">${linkedSocs.map(s=>`<span class="tag tag-gray" style="font-size:11px;cursor:pointer;color:var(--accent2);" onclick="this.closest('[style*=fixed]').remove();setTimeout(()=>{go('societes');setTimeout(()=>openSocieteDetail('${s.id}'),300)},100)">${sanitize(s.name)}</span>`).join('')}</div>
+    </div>` : fabs.length ? `<div style="margin-bottom:12px;">
       <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px;">Fabricants / Produits</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">${fabs.map(f=>`<span class="tag tag-gray" style="font-size:11px;">${f}</span>`).join('')}</div>
     </div>` : ''}
