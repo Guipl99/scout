@@ -1432,83 +1432,32 @@ async function renderInsights(force) {
   if (!feed) return;
   if (_insCache) { _renderInsRows(_insCache); return; }
 
-  feed.innerHTML = '<div class="db-ins-empty">Analyse…</div>';
-  const items = [];
+  feed.innerHTML = '<div class="db-ins-empty">Analyse...</div>';
 
-  // Source A : contrats récents — "X a remporté un contrat de $Y pour [client]"
   try {
-    const d = await fetch(API + '/contracts?limit=300').then(r => r.json());
-    const nowMs = Date.now();
-    const seen = {};
-    (d.contracts || [])
-      .filter(ct => {
-        const ds = ct.date_attribution || ct.date_debut || ct.date_signature || '';
-        if (!ds) return false;
-        const days = (nowMs - new Date(ds).getTime()) / 86400000;
-        return days >= 0 && days <= 90;
-      })
-      .sort((a, b) => {
-        const da = a.date_attribution || a.date_debut || a.date_signature || '';
-        const db = b.date_attribution || b.date_debut || b.date_signature || '';
-        return db.localeCompare(da);
-      })
-      .slice(0, 5)
-      .forEach(ct => {
-        const fab = ct.societe_name || ct.societe_id || '';
-        if (!fab || seen[fab]) return;
-        seen[fab] = true;
-        const val = ct.valeur_max ? (ct.valeur_max >= 1e9
-          ? '$' + (ct.valeur_max / 1e9).toFixed(1) + 'B'
-          : '$' + (ct.valeur_max / 1e6).toFixed(0) + 'M') : '';
-        const client = ct.client || ct.pays_client || '';
-        const ds = ct.date_attribution || ct.date_debut || ct.date_signature || '';
-        const daysAgo = ds ? Math.round((nowMs - new Date(ds).getTime()) / 86400000) : undefined;
-        const what = (ct.titre || '').slice(0, 60);
-        let headline = fab;
-        if (val) headline += ' remporte un contrat ' + val;
-        else headline += ' remporte un contrat';
-        if (client) headline += ' avec ' + client;
-        if (what) headline += ' — ' + what;
-        items.push({
-          type: 'contract', headline,
-          daysAgo,
-          action: ct.societe_id
-            ? () => { go('societes'); setTimeout(() => openSociete(ct.societe_id), 300); }
-            : () => { go('contracts'); setTimeout(() => openContractDetail(ct.id), 200); }
-        });
-      });
-  } catch(e) {}
+    const d = await fetch(API + '/insights/news').then(r => r.json());
+    const news = d.news || [];
 
-  // Source B : tenders urgents — "Appel d'offres drones ISR — X jours restants — [pays]"
-  try {
-    const d = await fetch(API + '/tenders').then(r => r.json());
-    const now = new Date();
-    (d.tenders || [])
-      .filter(t => t.statut !== 'Cloture' && (!t.date_cloture || new Date(t.date_cloture) > now))
-      .sort((a, b) => new Date(a.date_cloture || '9999') - new Date(b.date_cloture || '9999'))
-      .slice(0, 3)
-      .forEach(t => {
-        const days = t.date_cloture ? Math.ceil((new Date(t.date_cloture) - now) / 86400000) : null;
-        const pays = t.source_name || t.pays || '';
-        const titre = (t.titre || '').slice(0, 55);
-        const val = t.valeur_estimee ? ' — ' + t.valeur_estimee : '';
-        let headline = titre || 'Appel offres drone';
-        if (pays) headline += ' · ' + pays;
-        if (val) headline += val;
-        items.push({
-          type: 'tender',
-          urgent: days !== null && days < 14,
-          headline,
-          daysLeft: days,
-          action: () => { go('contracts'); setTimeout(() => { setContractTypeTab('live'); setTimeout(() => openTenderDetail(t.id), 400); }, 200); }
-        });
-      });
-  } catch(e) {}
+    const items = news.map(n => ({
+      type: n.type,
+      headline: n.headline,
+      urgent: n.urgent || false,
+      daysAgo: n.daysAgo,
+      daysLeft: n.daysLeft,
+      action: n.tenderId
+        ? () => { go('contracts'); setTimeout(() => { setContractTypeTab('live'); setTimeout(() => openTenderDetail(n.tenderId), 400); }, 200); }
+        : n.contractId
+          ? () => { go('contracts'); setTimeout(() => openContractDetail(n.contractId), 200); }
+          : n.societeId
+            ? () => { go('societes'); setTimeout(() => openSociete(n.societeId), 300); }
+            : null
+    }));
 
-
-
-  _insCache = items;
-  _renderInsRows(items);
+    _insCache = items;
+    _renderInsRows(items);
+  } catch(e) {
+    feed.innerHTML = '<div class="db-ins-empty">Erreur chargement</div>';
+  }
 }
 
 
