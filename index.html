@@ -1211,14 +1211,17 @@ function scoreElistair(contact) {
   else if (/manager|chef|responsable|officer|major|commandant/i.test(t)) score += 12;
 
   // Domaine pertinent dans le titre
-  if (/UAS|UAV|drone|UGV|autonome|ISR|robot|tethered/i.test(t)) score += 20;
-  else if (/acquisition|procurement|program|achat|équipement/i.test(t)) score += 10;
+  if (/UAS|UAV|drone|UGV|USV|UUV|autonome|ISR|robot|tethered|ground.*vehicle|unmanned/i.test(t)) score += 20;
+  else if (/acquisition|procurement|program|achat|equipment/i.test(t)) score += 10;
 
   // Secteur militaire
   if (contact.secteur === 'Militaire') score += 10;
 
   // Mots-clés Elistair dans notes
   if (ELISTAIR_KW.test(notes)) score += 15;
+
+  // Bonus UGV/USV
+  if (/UGV|USV|UUV|ground robot|unmanned ground|unmanned surface|robotic vehicle/i.test(all)) score += 10;
 
   return Math.min(score, 100);
 }
@@ -1246,8 +1249,8 @@ async function renderElistairProspects(force) {
     const scored = contacts
       .filter(c => (c.email || c.linkedin) && (
         c.secteur === 'Militaire' || c.secteur === 'Defense' || c.secteur === 'Sécurité' ||
-        /colonel|brigadier|general|admiral|commandant|major|captain|director|chief|head.*drone|UAS|UAV|drone|ISR|procurement|acquisition/i.test(c.titre || '') ||
-        /DoD|MoD|NATO|OTAN|DGA|EDA|DAPA|BAAINBw|ministry|defence|defense|army|navy|air force|air cmdr/i.test(c.organisation || '')
+        /colonel|brigadier|general|admiral|commandant|major|captain|director|chief|head.*drone|UAS|UAV|drone|UGV|USV|UUV|ISR|procurement|acquisition|unmanned/i.test(c.titre || '') ||
+        /DoD|MoD|NATO|OTAN|DGA|EDA|DAPA|BAAINBw|ministry|defence|defense|army|navy|marines|air force|air cmdr|ground forces/i.test(c.organisation || '')
       ))
       .map(c => ({ ...c, _score: scoreElistair(c) }))
       .filter(c => c._score >= 30)
