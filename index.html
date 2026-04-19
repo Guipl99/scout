@@ -3696,7 +3696,7 @@ async function openEndUser(id) {
         <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text);">📦 Produits utilisés (${valid.length})</div>
         <div style="display:flex;flex-direction:column;gap:6px;">
           ${valid.map(p => `
-            <div onclick="go('produits-db');setTimeout(()=>openProduitDetail('${p.id}'),400)" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border2);" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border2)'">
+            <div onclick="go('produits-db');setTimeout(()=>openProduit('${p.id}'),400)" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border2);" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border2)'">
               <div>
                 <div style="font-size:13px;font-weight:500;">${p.name}</div>
                 <div style="font-size:11px;color:var(--text2);">${p.societe||''} · ${p.type_drone||''}</div>
