@@ -2313,6 +2313,15 @@ function filterContracts() {
 function renderContractsGrid(list) {
   const g = document.getElementById('contracts-grid');
   if (!list) list = contracts;
+  // Trier du plus récent au plus ancien
+  list = [...list].sort((a, b) => {
+    const da = a.date_signature || '';
+    const db = b.date_signature || '';
+    if (!da && !db) return 0;
+    if (!da) return 1;   // sans date → en dernier
+    if (!db) return -1;
+    return db.localeCompare(da); // tri lexicographique inverse — fonctionne avec YYYY, YYYY-MM, YYYY-MM-DD
+  });
   if (!list.length) {
     g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span style="color:var(--text3);">Aucun contrat — les fiches fabricants sont enrichies chaque semaine.</span></div>';
     return;
