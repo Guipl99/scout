@@ -1229,29 +1229,29 @@ async function renderElistairProspects(force) {
   if (!feed) return;
   if (_elistairCache) { _renderProspectRows(_elistairCache); return; }
 
-  feed.innerHTML = '<div class="db-ins-empty">Analyse…</div>';
+  feed.innerHTML = '<div class="db-ins-empty">Analyse contacts…</div>';
 
   try {
-    const r = await fetch(API + '/contacts?limit=400');
-    const d = await r.json();
-    const contacts = d.contacts || [];
+    // Utiliser les contacts déjà chargés en mémoire si disponibles
+    const source = allContacts && allContacts.length > 0 ? allContacts
+      : await fetch(API + '/contacts?limit=400').then(r => r.json()).then(d => d.contacts || []);
 
-    // Filtrer : a une info de contact ET (militaire ou titre défense)
-    const hasContact = c => !!(c.email && c.email.includes('@') || c.linkedin);
-    const isDefense = c => c.secteur === 'Militaire'
-      || /UAS|UAV|drone|UGV|defense|défense|army|navy|air force|acquisition|procurement/i.test(c.titre || '')
-      || /ministry|ministère|DoD|MoD|OTAN|NATO|EDA|OCCAR|DGA|DAPA|ATLA/i.test(c.organisation || '');
+    const hasContact = ct => !!(ct.email && ct.email.includes('@') || ct.linkedin && ct.linkedin.length > 10);
+    const isDefense = ct => ct.secteur === 'Militaire' || ct.secteur === 'Défense'
+      || /UAS|UAV|drone|UGV|défense|defense|army|navy|air force|acquisition|procurement|armée|militair/i.test(ct.titre || '')
+      || /DoD|MoD|OTAN|NATO|EDA|OCCAR|DGA|DAPA|ATLA|BAAINBw|ministry|ministère|défense/i.test(ct.organisation || '');
 
-    const scored = contacts
-      .filter(c => hasContact(c) && isDefense(c))
-      .map(c => ({ ...c, _score: scoreElistair(c) }))
+    const scored = source
+      .filter(ct => hasContact(ct) && isDefense(ct))
+      .map(ct => ({ ...ct, _score: scoreElistair(ct) }))
       .sort((a, b) => b._score - a._score)
       .slice(0, 12);
 
     _elistairCache = scored;
     _renderProspectRows(scored);
   } catch(e) {
-    feed.innerHTML = '<div class="db-ins-empty">Erreur: ' + e.message + '</div>';
+    feed.innerHTML = '<div class="db-ins-empty">Erreur chargement contacts</div>';
+    console.error('Elistair prospects:', e);
   }
 }
 
@@ -1463,7 +1463,7 @@ function renderDashboard() {
 
   loadFeed();
   renderInsights();
-  renderElistairProspects();
+  setTimeout(renderElistairProspects, 2000); // Différé — attend que contacts soient dispos
 }
 
 function renderDbTenders(tenders) {
