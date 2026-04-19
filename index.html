@@ -1294,21 +1294,21 @@ function _renderProspectRows(prospects) {
   }
   feed.innerHTML = html;
 
-  // Event delegation — un seul handler pour toutes les lignes
+  // Event delegation — le bon champ est eu-contact-search (pas contacts-search)
   feed.onclick = function(e) {
     var row = e.target.closest('.elistair-prospect-row');
     if (!row) return;
-    if (e.target.closest('a')) return; // laisser Email/LinkedIn fonctionner
+    if (e.target.closest('a')) return;
     var nom = row.getAttribute('data-nom');
     go('end-users', { tab: 'contacts' });
     setTimeout(function() {
       setEuTab('contacts');
-      var s = document.getElementById('contacts-search');
+      var s = document.getElementById('eu-contact-search');
       if (s && nom) {
         s.value = nom;
-        if (typeof filterCurrentTab === 'function') filterCurrentTab();
+        if (typeof filterContactsGrid === 'function') filterContactsGrid();
       }
-    }, 500);
+    }, 600);
   };
 }
 
