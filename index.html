@@ -1186,38 +1186,26 @@ const INS_PRIO = { hot:0, partner:1, prospect:2, tender:3, contract:4 };
 let _insCache = null;
 let _elistairCache = null;
 
-// Organisations déjà clientes Elistair — à exclure
-const ELISTAIR_EXISTING = ['elistair','milrem_robotics','arquus_jc','arx_robotics','rheinmetall_ag'];
+const ELISTAIR_KW = /tethered|persistant|loitering|ISR|drone.fix|fixe.drone|surveillance.drone|captive|cable|khronos|orion|arastelle|UGV.ISR|ISR.UGV/i;
 
-// Mots-clés signalant un intérêt pour les produits Elistair
-const ELISTAIR_KW = /tethered|persistant|loitering|ISR|fixe.*drone|drone.*fix|surveillance.*drone|captive|cable|khronos|orion|arastelle|UGV.*ISR|ISR.*UGV/i;
-
-// Score de qualification Elistair (0-100)
-function scoreElistair(contact) {
+function scoreElistair(ct) {
   let score = 0;
-  const t = (contact.titre || '').toLowerCase();
-  const org = (contact.organisation || '').toLowerCase();
-  const notes = (contact.notes || '').toLowerCase();
-  const all = t + ' ' + org + ' ' + notes;
+  const t = (ct.titre || '').toLowerCase();
+  const org = (ct.organisation || '').toLowerCase();
+  const notes = (ct.notes || '').toLowerCase();
 
-  // Contact info disponible
-  if (contact.email && contact.email.includes('@') && !contact.email.startsWith('procurement@')) score += 20;
-  else if (contact.email) score += 10;
-  if (contact.linkedin && contact.linkedin.includes('linkedin.com/in/')) score += 15;
-  else if (contact.linkedin) score += 5;
+  if (ct.email && ct.email.includes('@') && ct.email.split('@')[0].length > 3) score += 20;
+  else if (ct.email) score += 8;
+  if (ct.linkedin && ct.linkedin.includes('linkedin.com/in/')) score += 15;
+  else if (ct.linkedin) score += 5;
 
-  // Titre pertinent
-  if (/chief|director|head|dg |général|brigadier|colonel|general/i.test(t)) score += 20;
+  if (/chief|director|head|dg |general|brigadier|colonel|admiral/i.test(t)) score += 20;
   else if (/manager|chef|responsable|officer|major|commandant/i.test(t)) score += 12;
 
-  // Domaine pertinent dans le titre
-  if (/UAS|UAV|drone|UGV|autonome|ISR|robot|tethered/i.test(t)) score += 20;
-  else if (/acquisition|procurement|program|achat|équipement/i.test(t)) score += 10;
+  if (/UAS|UAV|drone|UGV|ISR|robot|tethered|autonome/i.test(t)) score += 20;
+  else if (/acquisition|procurement|program|achat|equipment/i.test(t)) score += 10;
 
-  // Secteur militaire
-  if (contact.secteur === 'Militaire') score += 10;
-
-  // Mots-clés Elistair dans notes
+  if (ct.secteur === 'Militaire' || ct.secteur === 'Defense') score += 10;
   if (ELISTAIR_KW.test(notes)) score += 15;
 
   return Math.min(score, 100);
@@ -1229,17 +1217,16 @@ async function renderElistairProspects(force) {
   if (!feed) return;
   if (_elistairCache) { _renderProspectRows(_elistairCache); return; }
 
-  feed.innerHTML = '<div class="db-ins-empty">Analyse contacts…</div>';
+  feed.innerHTML = '<div class="db-ins-empty">Analyse...</div>';
 
   try {
-    // Utiliser les contacts déjà chargés en mémoire si disponibles
-    const source = allContacts && allContacts.length > 0 ? allContacts
+    const source = (allContacts && allContacts.length > 0) ? allContacts
       : await fetch(API + '/contacts?limit=400').then(r => r.json()).then(d => d.contacts || []);
 
     const hasContact = ct => !!(ct.email && ct.email.includes('@') || ct.linkedin && ct.linkedin.length > 10);
-    const isDefense = ct => ct.secteur === 'Militaire' || ct.secteur === 'Défense'
-      || /UAS|UAV|drone|UGV|défense|defense|army|navy|air force|acquisition|procurement|armée|militair/i.test(ct.titre || '')
-      || /DoD|MoD|OTAN|NATO|EDA|OCCAR|DGA|DAPA|ATLA|BAAINBw|ministry|ministère|défense/i.test(ct.organisation || '');
+    const isDefense = ct => ct.secteur === 'Militaire' || ct.secteur === 'Defense'
+      || /UAS|UAV|drone|UGV|defense|army|navy|air force|acquisition|procurement/i.test(ct.titre || '')
+      || /DoD|MoD|NATO|OTAN|EDA|OCCAR|DGA|DAPA|BAAINBw|ministry|defense/i.test(ct.organisation || '');
 
     const scored = source
       .filter(ct => hasContact(ct) && isDefense(ct))
@@ -1250,8 +1237,8 @@ async function renderElistairProspects(force) {
     _elistairCache = scored;
     _renderProspectRows(scored);
   } catch(e) {
-    feed.innerHTML = '<div class="db-ins-empty">Erreur chargement contacts</div>';
-    console.error('Elistair prospects:', e);
+    feed.innerHTML = '<div class="db-ins-empty">Erreur chargement</div>';
+    console.error('Elistair:', e);
   }
 }
 
@@ -1259,53 +1246,48 @@ function _renderProspectRows(prospects) {
   const feed = document.getElementById('db-elistair-feed');
   if (!feed) return;
   if (!prospects.length) {
-    feed.innerHTML = '<div class="db-ins-empty">Aucun prospect qualifié trouvé.</div>';
+    feed.innerHTML = '<div class="db-ins-empty">Aucun prospect trouve.</div>';
     return;
   }
+  var html = '';
+  for (var i = 0; i < prospects.length; i++) {
+    var p = prospects[i];
+    var nom = sanitize(([p.prenom, p.nom].filter(Boolean).join(' ') || p.nom || '-'));
+    var org = sanitize(p.organisation || '-');
+    var titre = sanitize((p.titre || '').slice(0, 50));
+    var score = p._score || 0;
+    var scoreColor = score >= 80 ? '#22c55e' : score >= 60 ? '#f59e0b' : '#6b7280';
 
-  let html = '';
-  prospects.forEach(function(p) {
-    const nom = [p.prenom, p.nom].filter(Boolean).join(' ') || p.nom || '—';
-    const org = sanitize(p.organisation || '—');
-    const titre = sanitize((p.titre || '').slice(0, 45));
-    const score = p._score;
-    const scoreColor = score >= 80 ? '#22c55e' : score >= 60 ? '#f59e0b' : '#6b7280';
+    var emailBadge = (p.email && p.email.includes('@'))
+      ? '<a href="mailto:' + p.email + '" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#1e40af22;color:#3b82f6;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">Email</a>'
+      : '';
+    var liLink = (p.linkedin && p.linkedin.includes('linkedin.com/in/'))
+      ? '<a href="' + p.linkedin + '" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#0a66c2;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">LinkedIn</a>'
+      : (p.linkedin ? '<span style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#0a66c2;border-radius:4px;padding:1px 6px;font-size:10px;">Org LI</span>' : '');
 
-    const hasRealEmail = p.email && p.email.includes('@') && !p.email.startsWith('info@') && !p.email.startsWith('contact@');
-    const hasLinkedin = p.linkedin && p.linkedin.includes('linkedin.com/in/');
-    const hasLinkedinOrg = p.linkedin && p.linkedin.includes('linkedin.com/');
+    var reason = (p.notes && ELISTAIR_KW.test(p.notes)) ? 'Interet tethered/ISR'
+      : /UAS|UAV|drone|UGV|ISR/i.test(p.titre || '') ? 'Role UAS/UGV'
+      : /director|general|brigadier|colonel/i.test(p.titre || '') ? 'Decideur senior'
+      : 'Acheteur defense';
 
-    const emailBadge = hasRealEmail
-      ? '<a href="mailto:' + p.email + '" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#1e40af22;color:#3b82f6;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">📧 Email</a>'
-      : (p.email ? '<span style="display:inline-flex;align-items:center;gap:3px;background:#1e40af11;color:#6b7280;border-radius:4px;padding:1px 6px;font-size:10px;">📧 Générique</span>' : '');
-
-    const liLink = hasLinkedin
-      ? '<a href="' + p.linkedin + '" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#0a66c2;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">🔗 LinkedIn</a>'
-      : (hasLinkedinOrg ? '<span style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#0a66c2;border-radius:4px;padding:1px 6px;font-size:10px;">🔗 Org</span>' : '');
-
-    const reason = (p.notes && ELISTAIR_KW.test(p.notes)) ? '💡 Intérêt tethered/ISR'
-      : /UAS|UAV|drone|UGV|ISR/i.test(p.titre || '') ? '🎯 Rôle UAS/UGV'
-      : /director|général|brigadier|colonel|general|chief/i.test(p.titre || '') ? '⭐ Décideur senior'
-      : '🏛️ Acheteur défense';
-
-    html += '<div style="padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;" onclick="go('end-users')">'
+    html += '<div style="padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;" onclick="go('contacts')">'
       + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
       + '<div style="flex:1;min-width:0;">'
-      + '<div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sanitize(nom) + '</div>'
-      + '<div style="font-size:11px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + titre + '</div>'
-      + '<div style="font-size:11px;color:var(--text3);margin-top:1px;">' + org + '</div>'
+      + '<div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + nom + '</div>'
+      + '<div style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + titre + '</div>'
+      + '<div style="font-size:11px;color:var(--text3);">' + org + '</div>'
       + '<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">'
       + emailBadge + liLink
       + '<span style="font-size:10px;color:var(--text3);padding:1px 6px;background:var(--bg3);border-radius:4px;">' + reason + '</span>'
       + '</div></div>'
       + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">'
-      + '<div style="font-size:11px;font-weight:700;color:' + scoreColor + ';">' + score + '</div>'
+      + '<div style="font-size:12px;font-weight:700;color:' + scoreColor + ';">' + score + '</div>'
       + '<div style="font-size:9px;color:var(--text3);">score</div>'
       + '</div></div></div>';
-  });
-
+  }
   feed.innerHTML = html;
 }
+
 
 function renderLiveTenders() {
   const searchBar = document.getElementById('tenders-search-bar');
