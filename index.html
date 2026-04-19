@@ -1325,31 +1325,65 @@ async function renderInsights(force) {
 
   const items = [];
 
-  // Source 1 : contacts (signaux depuis notes)
+  // Source 1 : fabricants avec contrat recent (momentum marche)
   try {
-    const r = await fetch(API + '/contacts?limit=300');
-    const d = await r.json();
-    const contacts = d.contacts || [];
-    const byOrg = {};
-    contacts.filter(c => c.notes && c.notes.length > 20).forEach(c => {
-      for (const sig of INS_SIGNALS) {
-        if (sig.re.test(c.notes)) {
-          const key = (c.organisation || c.org || '').toLowerCase().slice(0, 22);
-          if (!byOrg[key] || INS_PRIO[sig.type] < INS_PRIO[byOrg[key].type]) {
-            const sents = c.notes.split(/[.!]\s+/);
-            const hook = (sents.find(s => sig.re.test(s)) || sents[0]).trim().slice(0, 90);
-            byOrg[key] = {
-              type: sig.type, label: sig.label,
-              name: c.organisation || c.org || '—', hook,
-              action: c.societe_id ? () => { go('societes'); setTimeout(() => openSociete(c.societe_id), 300); } : () => go('end-users', { tab: 'contacts' })
-            };
-          }
-          break;
-        }
-      }
-    });
-    Object.values(byOrg).forEach(x => items.push(x));
-  } catch(e) { /* silencieux */ }
+    const rContr = await fetch(API + '/contracts?limit=200');
+    const dContr = await rContr.json();
+    const nowMs = Date.now();
+    const byFab = {};
+    (dContr.contracts || [])
+      .filter(ct => {
+        const ds = ct.date_attribution || ct.date_debut || ct.date_signature || '';
+        if (!ds) return false;
+        const days = (nowMs - new Date(ds).getTime()) / 86400000;
+        return days >= 0 && days <= 60;
+      })
+      .forEach(ct => {
+        const name = ct.societe_name || ct.societe_id || '';
+        if (!name || byFab[name]) return;
+        const val = ct.valeur_max ? (ct.valeur_max >= 1e9
+          ? '$' + (ct.valeur_max / 1e9).toFixed(1) + 'B'
+          : '$' + (ct.valeur_max / 1e6).toFixed(0) + 'M') : '';
+        byFab[name] = {
+          type: 'hot', label: 'Momentum',
+          name: name,
+          hook: 'Contrat recent : ' + (ct.titre || '').slice(0, 55) + (val ? ' ' + val : ''),
+          action: ct.societe_id
+            ? () => { go('societes'); setTimeout(() => openSociete(ct.societe_id), 300); }
+            : () => { go('contracts'); setTimeout(() => openContractDetail(ct.id), 200); }
+        };
+      });
+    Object.values(byFab).slice(0, 3).forEach(x => items.push(x));
+  } catch(e) {}
+
+  // Source 1b : pays avec le plus de tenders ouverts (marches actifs)
+  try {
+    const rTend = await fetch(API + '/tenders');
+    const dTend = await rTend.json();
+    const nowD = new Date();
+    const byPays = {};
+    (dTend.tenders || [])
+      .filter(t => t.statut !== 'Cloture' && (!t.date_cloture || new Date(t.date_cloture) > nowD))
+      .forEach(t => {
+        const pays = t.pays || t.pays_client || '';
+        if (pays) byPays[pays] = (byPays[pays] || 0) + 1;
+      });
+    Object.entries(byPays)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .forEach(([pays, nb]) => {
+        items.push({
+          type: 'tender', label: nb + ' AO',
+          name: pays,
+          hook: nb + ' appels ouverts — marche actif',
+          action: () => { go('contracts'); setTimeout(() => setContractTypeTab('live'), 200); }
+        });
+      });
+  } catch(e) {}
+
+  // Source 1_OLD_DISABLED : contacts signaux notes — remplace par High-score Prospects
+  if (false) {
+  } // end disabled
 
   // Source 2 : 3 tenders les plus urgents
   try {
