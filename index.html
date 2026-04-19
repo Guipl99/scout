@@ -1252,7 +1252,7 @@ async function renderElistairProspects(force) {
 }
 
 function _renderProspectRows(prospects) {
-  const feed = document.getElementById('db-elistair-feed');
+  var feed = document.getElementById('db-elistair-feed');
   if (!feed) return;
   if (!prospects.length) {
     feed.innerHTML = '<div class="db-ins-empty">Aucun prospect trouve.</div>';
@@ -1276,7 +1276,8 @@ function _renderProspectRows(prospects) {
       : /UAS|UAV|drone|UGV|ISR/i.test(p.titre || '') ? 'Role UAS/UGV'
       : /director|general|brigadier|colonel/i.test(p.titre || '') ? 'Decideur senior'
       : 'Acheteur defense';
-    html += '<div style="padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;" onclick="go(\'end-users\',{tab:\'contacts\'});setTimeout(function(){openContactFromGrid(\'' + p.id + '\');},400);">'
+    var safeNom = nom.replace(/"/g, '').replace(/'/g, '').slice(0, 30);
+    html += '<div class="elistair-prospect-row" data-nom="' + safeNom + '" style="padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;">'
       + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + nom + '</div>'
@@ -1292,6 +1293,23 @@ function _renderProspectRows(prospects) {
       + '</div></div></div>';
   }
   feed.innerHTML = html;
+
+  // Event delegation — un seul handler pour toutes les lignes
+  feed.onclick = function(e) {
+    var row = e.target.closest('.elistair-prospect-row');
+    if (!row) return;
+    if (e.target.closest('a')) return; // laisser Email/LinkedIn fonctionner
+    var nom = row.getAttribute('data-nom');
+    go('end-users', { tab: 'contacts' });
+    setTimeout(function() {
+      setEuTab('contacts');
+      var s = document.getElementById('contacts-search');
+      if (s && nom) {
+        s.value = nom;
+        if (typeof filterCurrentTab === 'function') filterCurrentTab();
+      }
+    }, 500);
+  };
 }
 
 
