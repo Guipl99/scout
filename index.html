@@ -1270,7 +1270,7 @@ function _renderProspectRows(prospects) {
       : /director|general|brigadier|colonel/i.test(p.titre || '') ? 'Decideur senior'
       : 'Acheteur defense';
 
-    html += '<div style="padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;" onclick="go('contacts')">'
+    html += '<div style="padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;" onclick="go(&apos;contacts&apos;)">'
       + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + nom + '</div>'
