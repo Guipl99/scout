@@ -1339,7 +1339,13 @@ function renderDashboard() {
 function renderDbTenders(tenders) {
   const el = document.getElementById('db-tenders-list');
   if (!el) return;
-  const top = tenders.slice(0, 6);
+  // Trier du plus récent au plus ancien avant d'afficher le top 6
+  const sorted = [...tenders].sort((a, b) => {
+    const da = a.date_publication || a.created_at || '';
+    const db = b.date_publication || b.created_at || '';
+    return db.localeCompare(da);
+  });
+  const top = sorted.slice(0, 6);
   if (!top.length) { el.innerHTML = '<div class="db-empty">Aucun tender live</div>'; return; }
   const now = new Date();
   el.innerHTML = top.map(t => {
@@ -2127,6 +2133,15 @@ function renderLiveTenders() {
 
 function _renderTendersList(tenders) {
   const panel = document.getElementById('live-tenders-panel');
+  // Trier du plus récent au plus ancien (date_publication DESC)
+  tenders = [...tenders].sort((a, b) => {
+    const da = a.date_publication || a.created_at || '';
+    const db = b.date_publication || b.created_at || '';
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return db.localeCompare(da);
+  });
   if (!tenders.length) {
     panel.innerHTML = `<div style="padding:2rem;text-align:center;">
       <div style="font-size:14px;color:var(--text2);margin-bottom:8px;">Aucun tender live disponible.</div>
