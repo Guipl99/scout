@@ -533,6 +533,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         </div>
       </div>
 
+      <!-- PROSPECTS ELISTAIR -->
+      <div class="db-ins" style="margin-top:12px;">
+        <div class="db-ins-header">
+          <span class="db-ins-title">🎯 Prospects qualifiés Elistair</span>
+          <button class="db-link" onclick="renderElistairProspects(true)" style="font-size:10px;">↻</button>
+        </div>
+        <div id="db-elistair-feed" class="db-ins-feed" style="max-height:220px;">
+          <div class="db-ins-empty">Chargement…</div>
+        </div>
+      </div>
+
       <!-- MAIN GRID -->
       <div class="db-grid">
 
@@ -1173,6 +1184,120 @@ const INS_SIGNALS = [
 const INS_PRIO = { hot:0, partner:1, prospect:2, tender:3, contract:4 };
 
 let _insCache = null;
+let _elistairCache = null;
+
+// Organisations déjà clientes Elistair — à exclure
+const ELISTAIR_EXISTING = ['elistair','milrem_robotics','arquus_jc','arx_robotics','rheinmetall_ag'];
+
+// Mots-clés signalant un intérêt pour les produits Elistair
+const ELISTAIR_KW = /tethered|persistant|loitering|ISR|drone.*fix|fixe.*drone|surveillance.*drone|captive|câblé|khronos|orion|arastelle|UGV.*ISR|ISR.*UGV/i;
+
+// Score de qualification Elistair (0-100)
+function scoreElistair(contact) {
+  let score = 0;
+  const t = (contact.titre || '').toLowerCase();
+  const org = (contact.organisation || '').toLowerCase();
+  const notes = (contact.notes || '').toLowerCase();
+  const all = t + ' ' + org + ' ' + notes;
+
+  // Contact info disponible
+  if (contact.email && contact.email.includes('@') && !contact.email.startsWith('procurement@')) score += 20;
+  else if (contact.email) score += 10;
+  if (contact.linkedin && contact.linkedin.includes('linkedin.com/in/')) score += 15;
+  else if (contact.linkedin) score += 5;
+
+  // Titre pertinent
+  if (/chief|director|head|dg |général|brigadier|colonel|general/i.test(t)) score += 20;
+  else if (/manager|chef|responsable|officer|major|commandant/i.test(t)) score += 12;
+
+  // Domaine pertinent dans le titre
+  if (/UAS|UAV|drone|UGV|autonome|ISR|robot|tethered/i.test(t)) score += 20;
+  else if (/acquisition|procurement|program|achat|équipement/i.test(t)) score += 10;
+
+  // Secteur militaire
+  if (contact.secteur === 'Militaire') score += 10;
+
+  // Mots-clés Elistair dans notes
+  if (ELISTAIR_KW.test(notes)) score += 15;
+
+  return Math.min(score, 100);
+}
+
+async function renderElistairProspects(force) {
+  if (force) _elistairCache = null;
+  const feed = document.getElementById('db-elistair-feed');
+  if (!feed) return;
+  if (_elistairCache) { _renderProspectRows(_elistairCache); return; }
+
+  feed.innerHTML = '<div class="db-ins-empty">Analyse…</div>';
+
+  try {
+    const r = await fetch(API + '/contacts?limit=400');
+    const d = await r.json();
+    const contacts = d.contacts || [];
+
+    // Filtrer : a une info de contact + secteur militaire ou titre pertinent
+    const scored = contacts
+      .filter(c => (c.email || c.linkedin) && c.secteur === 'Militaire')
+      .map(c => ({ ...c, _score: scoreElistair(c) }))
+      .filter(c => c._score >= 40)
+      .sort((a, b) => b._score - a._score)
+      .slice(0, 12);
+
+    _elistairCache = scored;
+    _renderProspectRows(scored);
+  } catch(e) {
+    feed.innerHTML = '<div class="db-ins-empty">Erreur chargement</div>';
+  }
+}
+
+function _renderProspectRows(prospects) {
+  const feed = document.getElementById('db-elistair-feed');
+  if (!feed) return;
+  if (!prospects.length) {
+    feed.innerHTML = '<div class="db-ins-empty">Aucun prospect qualifié trouvé.</div>';
+    return;
+  }
+
+  feed.innerHTML = prospects.map(p => {
+    const nom = [p.prenom, p.nom].filter(Boolean).join(' ') || p.nom || '—';
+    const org = sanitize(p.organisation || '—');
+    const titre = sanitize((p.titre || '').slice(0, 45));
+    const score = p._score;
+    const scoreColor = score >= 80 ? '#22c55e' : score >= 60 ? '#f59e0b' : '#6b7280';
+
+    // Badges de contact
+    const emailBadge = p.email && p.email.includes('@') ?
+      `<a href="mailto:${p.email}" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#1e40af22;color:#3b82f6;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">📧 Email</a>` : '';
+    const liLink = p.linkedin && p.linkedin.includes('linkedin.com/in/') ?
+      `<a href="${p.linkedin}" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#0a66c2;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">🔗 LinkedIn</a>` :
+      p.linkedin ? `<span style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#0a66c2;border-radius:4px;padding:1px 6px;font-size:10px;">🔗 Org</span>` : '';
+
+    // Raison Elistair
+    const reason = p.notes && ELISTAIR_KW.test(p.notes) ? '💡 Intérêt tethered/ISR détecté' :
+      /UAS|UAV|drone|UGV|ISR/i.test(p.titre) ? '🎯 Rôle acquisition UAS/UGV' :
+      /director|général|brigadier|colonel/i.test(p.titre) ? '⭐ Décideur senior défense' :
+      '🏛️ Acheteur défense qualifié';
+
+    return \`<div style="padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''" onclick="go('end-users');setTimeout(()=>{ const eu=allContacts?.find(c=>c.id==='${p.id}'); },200)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">\${sanitize(nom)}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">\${titre}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px;">\${org}</div>
+          <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">
+            \${emailBadge}\${liLink}
+            <span style="font-size:10px;color:var(--text3);padding:1px 6px;background:var(--bg3);border-radius:4px;">\${reason}</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">
+          <div style="font-size:11px;font-weight:700;color:\${scoreColor};">\${score}</div>
+          <div style="font-size:9px;color:var(--text3);">score</div>
+        </div>
+      </div>
+    </div>\`;
+  }).join('');
+}
 
 async function renderInsights(force) {
   if (force) _insCache = null;
@@ -1334,6 +1459,7 @@ function renderDashboard() {
 
   loadFeed();
   renderInsights();
+  renderElistairProspects();
 }
 
 function renderDbTenders(tenders) {
