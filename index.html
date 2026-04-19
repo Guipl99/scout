@@ -1505,28 +1505,7 @@ async function renderInsights(force) {
       });
   } catch(e) {}
 
-  // Source C : pays les plus actifs en acquisition — "Marché actif : USA — 7 AO ouverts"
-  try {
-    const d = await fetch(API + '/tenders').then(r => r.json());
-    const now = new Date();
-    const byPays = {};
-    (d.tenders || [])
-      .filter(t => t.statut !== 'Cloture' && (!t.date_cloture || new Date(t.date_cloture) > now))
-      .forEach(t => {
-        const pays = t.pays || t.pays_client || '';
-        if (pays) byPays[pays] = (byPays[pays] || 0) + 1;
-      });
-    Object.entries(byPays)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 2)
-      .forEach(([pays, nb]) => {
-        items.push({
-          type: 'tender',
-          headline: 'Marche actif : ' + pays + ' — ' + nb + ' appels ouverts en ce moment',
-          action: () => { go('contracts'); setTimeout(() => setContractTypeTab('live'), 200); }
-        });
-      });
-  } catch(e) {}
+
 
   _insCache = items;
   _renderInsRows(items);
