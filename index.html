@@ -2323,7 +2323,7 @@ function renderContractsGrid(list) {
     const valeurStr = c.valeur && c.valeur !== '—' ? c.valeur : null;
     const societeN = sanitize(c.societe_name || '—');
     const clientN = sanitize(c.client || '—');
-    const annee = c.date_signature ? new Date(c.date_signature).getFullYear() : (c.created_at ? new Date(c.created_at).getFullYear() : '');
+    const annee = c.date_signature ? c.date_signature.slice(0,4) : (c.created_at ? new Date(c.created_at).getFullYear() : '');
     const data = c.data || {};
     const dateCloture = data.date_cloture || null;
     const linkedCts = allContacts.filter(co => (co.contrats_refs||[]).includes(c.id));
@@ -2347,6 +2347,16 @@ function renderContractsGrid(list) {
       </div>
     </div>`;
   }).join('');
+}
+
+function formatContractDate(d) {
+  if (!d) return '—';
+  // Formats : '2026', '2026-04', '2026-04-09', '2026-04-09T...'
+  const moisFR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const parts = d.slice(0,10).split('-');
+  if (parts.length === 1) return parts[0]; // juste l'année
+  if (parts.length === 2) return moisFR[parseInt(parts[1])-1] + ' ' + parts[0];
+  return parts[2] + ' ' + moisFR[parseInt(parts[1])-1] + ' ' + parts[0];
 }
 
 function openContractDetail(id) {
@@ -2474,8 +2484,8 @@ function openContractDetail(id) {
         ${ct.devise && ct.devise!=='USD' ? `<div style="font-size:11px;color:var(--text3);">${ct.devise}</div>` : ''}
       </div>
       ${ct.date_signature ? `<div style="background:var(--bg3);border-radius:8px;padding:10px;">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:3px;">Date</div>
-        <div style="font-size:13px;color:var(--text);">${ct.date_signature?.slice(0,10)||'—'}</div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:3px;">Attribution</div>
+        <div style="font-size:13px;color:var(--text);font-weight:600;">${formatContractDate(ct.date_signature)}</div>
       </div>` : ''}
       ${ct.agence && ct.agence!=='—' ? `<div style="background:var(--bg3);border-radius:8px;padding:10px;">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:3px;">Agence</div>
