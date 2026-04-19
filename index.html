@@ -1341,7 +1341,7 @@ async function renderInsights(force) {
             byOrg[key] = {
               type: sig.type, label: sig.label,
               name: c.organisation || c.org || '—', hook,
-              action: c.societe_id ? () => { go('societes'); setTimeout(() => openSocieteDetail(c.societe_id), 300); } : () => go('contacts')
+              action: c.societe_id ? () => { go('societes'); setTimeout(() => openSocieteDetail(c.societe_id), 300); } : () => go('end-users', { tab: 'contacts' })
             };
           }
           break;
