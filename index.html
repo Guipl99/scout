@@ -3469,20 +3469,22 @@ function renderContactsGrid(list) {
 function openContactFromGrid(id) {
   const ct = allContacts.find(c => c.id === id);
   if (!ct) return;
-  // Navigate to the account and open it
-  const eu = allEndUsers.find(e => e.id === ct.end_user_id);
-  if (eu) {
-    setEuTab('comptes');
-    openEndUser(eu.id);
-    // Scroll to contacts section after render
-    setTimeout(() => {
-      const el = document.getElementById('eu-detail-content');
-      if (el) {
-        const ctSection = [...el.querySelectorAll('div')].find(d => d.textContent.startsWith('👤 Contacts'));
-        if (ctSection) ctSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 300);
+  if (ct.end_user_id) {
+    const eu = allEndUsers.find(e => e.id === ct.end_user_id);
+    if (eu) {
+      go('end-users', { tab: 'comptes' });
+      setTimeout(function() { setEuTab('comptes'); openEndUser(eu.id); }, 300);
+      return;
+    }
   }
+  // Contact sans compte associe — aller onglet Contacts et filtrer
+  go('end-users', { tab: 'contacts' });
+  setTimeout(function() {
+    setEuTab('contacts');
+    var search = document.getElementById('contacts-search');
+    var nom = [ct.prenom, ct.nom].filter(Boolean).join(' ');
+    if (search && nom) { search.value = nom; if (typeof filterCurrentTab === 'function') filterCurrentTab(); }
+  }, 400);
 }
 
 async function loadEndUsers() {
