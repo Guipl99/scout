@@ -1236,18 +1236,22 @@ async function renderElistairProspects(force) {
     const d = await r.json();
     const contacts = d.contacts || [];
 
-    // Filtrer : a une info de contact + secteur militaire ou titre pertinent
+    // Filtrer : a une info de contact ET (militaire ou titre défense)
+    const hasContact = c => !!(c.email && c.email.includes('@') || c.linkedin);
+    const isDefense = c => c.secteur === 'Militaire'
+      || /UAS|UAV|drone|UGV|defense|défense|army|navy|air force|acquisition|procurement/i.test(c.titre || '')
+      || /ministry|ministère|DoD|MoD|OTAN|NATO|EDA|OCCAR|DGA|DAPA|ATLA/i.test(c.organisation || '');
+
     const scored = contacts
-      .filter(c => (c.email || c.linkedin) && c.secteur === 'Militaire')
+      .filter(c => hasContact(c) && isDefense(c))
       .map(c => ({ ...c, _score: scoreElistair(c) }))
-      .filter(c => c._score >= 40)
       .sort((a, b) => b._score - a._score)
       .slice(0, 12);
 
     _elistairCache = scored;
     _renderProspectRows(scored);
   } catch(e) {
-    feed.innerHTML = '<div class="db-ins-empty">Erreur chargement</div>';
+    feed.innerHTML = '<div class="db-ins-empty">Erreur: ' + e.message + '</div>';
   }
 }
 
