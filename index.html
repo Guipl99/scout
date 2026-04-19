@@ -1294,21 +1294,23 @@ function _renderProspectRows(prospects) {
   }
   feed.innerHTML = html;
 
-  // Event delegation — le bon champ est eu-contact-search (pas contacts-search)
   feed.onclick = function(e) {
     var row = e.target.closest('.elistair-prospect-row');
     if (!row) return;
     if (e.target.closest('a')) return;
-    var nom = row.getAttribute('data-nom');
-    go('end-users', { tab: 'contacts' });
-    setTimeout(function() {
+    var searchNom = row.getAttribute('data-nom');
+    // Naviguer sans tab — puis gérer manuellement l'onglet et le filtre
+    // pour contrôler l'ordre et éviter que setEuTab vide le champ après nous
+    go('end-users');
+    loadEndUsers().then(function() {
       setEuTab('contacts');
+      // setEuTab vide le champ — on l'écrit immédiatement après dans le même tick
       var s = document.getElementById('eu-contact-search');
-      if (s && nom) {
-        s.value = nom;
-        if (typeof filterContactsGrid === 'function') filterContactsGrid();
+      if (s && searchNom) {
+        s.value = searchNom;
+        filterContactsGrid();
       }
-    }, 600);
+    });
   };
 }
 
