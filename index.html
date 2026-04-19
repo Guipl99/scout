@@ -1255,62 +1255,63 @@ function _renderProspectRows(prospects) {
   var feed = document.getElementById('db-elistair-feed');
   if (!feed) return;
   if (!prospects.length) {
-    feed.innerHTML = '<div class="db-ins-empty">Aucun prospect disponible.</div>';
+    feed.innerHTML = '<div class="db-ins-empty">Aucun prospect trouve.</div>';
     return;
   }
-
-  // Convertir en items au format Insights
-  var items = prospects.map(function(p) {
+  var html = '';
+  for (var i = 0; i < prospects.length; i++) {
+    var p = prospects[i];
     var nom = sanitize(([p.prenom, p.nom].filter(Boolean).join(' ') || p.nom || '-'));
+    var org = sanitize(p.organisation || '-');
+    var titre = sanitize((p.titre || '').slice(0, 50));
     var score = p._score || 0;
-    var label = score >= 80 ? 'Top' : score >= 60 ? 'Qualif.' : 'Prospect';
-    var channels = [];
-    if (p.email && p.email.includes('@')) channels.push('Email');
-    if (p.linkedin && p.linkedin.includes('linkedin.com/in/')) channels.push('LinkedIn');
-    var channelStr = channels.length ? channels.join('+') : '';
-    var hook = (p.titre || '').slice(0, 45)
-      + (p.organisation ? ' — ' + p.organisation.slice(0, 30) : '')
-      + (channelStr ? ' · ' + channelStr : '');
-    var searchNom = nom.replace(/['"]/g, '').slice(0, 30);
-    return {
-      type: 'prospect',
-      label: label,
-      name: nom,
-      hook: hook,
-      searchNom: searchNom,
-      email: p.email || '',
-      linkedin: p.linkedin || '',
-      score: score
-    };
-  });
+    var scoreColor = score >= 80 ? '#22c55e' : score >= 60 ? '#f59e0b' : '#6b7280';
+    var emailBadge = (p.email && p.email.includes('@'))
+      ? '<a href="mailto:' + p.email + '" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#1e40af22;color:#3b82f6;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">Email</a>'
+      : '';
+    var liLink = (p.linkedin && p.linkedin.includes('linkedin.com/in/'))
+      ? '<a href="' + p.linkedin + '" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#0a66c2;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">LinkedIn</a>'
+      : (p.linkedin ? '<span style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#0a66c2;border-radius:4px;padding:1px 6px;font-size:10px;">Org LI</span>' : '');
+    var reason = (p.notes && ELISTAIR_KW.test(p.notes)) ? 'Interet tethered/ISR'
+      : /UAS|UAV|drone|UGV|ISR/i.test(p.titre || '') ? 'Role UAS/UGV'
+      : /director|general|brigadier|colonel/i.test(p.titre || '') ? 'Decideur senior'
+      : 'Acheteur defense';
+    var safeNom = nom.replace(/"/g, '').replace(/'/g, '').slice(0, 30);
+    html += '<div class="elistair-prospect-row" data-nom="' + safeNom + '" style="padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;">'
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + nom + '</div>'
+      + '<div style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + titre + '</div>'
+      + '<div style="font-size:11px;color:var(--text3);">' + org + '</div>'
+      + '<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">'
+      + emailBadge + liLink
+      + '<span style="font-size:10px;color:var(--text3);padding:1px 6px;background:var(--bg3);border-radius:4px;">' + reason + '</span>'
+      + '</div></div>'
+      + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">'
+      + '<div style="font-size:12px;font-weight:700;color:' + scoreColor + ';">' + score + '</div>'
+      + '<div style="font-size:9px;color:var(--text3);">score</div>'
+      + '</div></div></div>';
+  }
+  feed.innerHTML = html;
 
-  feed.innerHTML = items.map(function(item, i) {
-    return '<div class="db-ins-row" data-pros="' + i + '">'
-      + '<div class="db-ins-dot prospect"></div>'
-      + '<div class="db-ins-type">' + sanitize(item.label) + '</div>'
-      + '<div class="db-ins-main">'
-      + '<span class="db-ins-name">' + sanitize(item.name) + '</span>'
-      + (item.hook ? '<span class="db-ins-sep">—</span><span class="db-ins-hook">' + sanitize(item.hook) + '</span>' : '')
-      + '</div>'
-      + '</div>';
-  }).join('');
-
-  // Event listeners — même pattern que _renderInsRows
-  feed.querySelectorAll('.db-ins-row').forEach(function(el, i) {
-    el.addEventListener('click', function() {
-      var item = items[i];
-      if (!item) return;
-      go('end-users');
-      loadEndUsers().then(function() {
-        setEuTab('contacts');
-        var s = document.getElementById('eu-contact-search');
-        if (s && item.searchNom) {
-          s.value = item.searchNom;
-          filterContactsGrid();
-        }
-      });
+  feed.onclick = function(e) {
+    var row = e.target.closest('.elistair-prospect-row');
+    if (!row) return;
+    if (e.target.closest('a')) return;
+    var searchNom = row.getAttribute('data-nom');
+    // Naviguer sans tab — puis gérer manuellement l'onglet et le filtre
+    // pour contrôler l'ordre et éviter que setEuTab vide le champ après nous
+    go('end-users');
+    loadEndUsers().then(function() {
+      setEuTab('contacts');
+      // setEuTab vide le champ — on l'écrit immédiatement après dans le même tick
+      var s = document.getElementById('eu-contact-search');
+      if (s && searchNom) {
+        s.value = searchNom;
+        filterContactsGrid();
+      }
     });
-  });
+  };
 }
 
 
