@@ -995,7 +995,30 @@ Réinitialiser tous les filtres
   </div>
 </nav>
 
-<script>
+<script>function _renderInsRows(items) {
+  const feed = document.getElementById('db-ins-feed');
+  if (!feed) return;
+  if (!items.length) { feed.innerHTML = '<div class="db-ins-empty">Aucun signal disponible.</div>'; return; }
+  feed.innerHTML = items.map((item, i) => {
+    const dot = item.urgent ? 'hot' : item.type;
+    const timeStr = item.daysAgo !== undefined
+      ? (item.daysAgo === 0 ? "Aujourd'hui" : item.daysAgo + 'j')
+      : (item.daysLeft !== undefined ? item.daysLeft + 'j' : '');
+    const timeColor = item.urgent ? '#f59e0b' : 'var(--text3)';
+    return `<div class="db-ins-row" data-ins="${i}">
+      <div class="db-ins-dot ${dot}"></div>
+      <div class="db-ins-main" style="flex:1;min-width:0;">
+        <span class="db-ins-hook" style="font-size:12px;color:var(--text);font-weight:500;white-space:normal;line-height:1.4;">${sanitize(item.headline)}</span>
+      </div>
+      ${timeStr ? `<div style="font-size:9px;color:${timeColor};flex-shrink:0;margin-left:6px;font-weight:600;">${timeStr}</div>` : ''}
+    </div>`;
+  }).join('');
+  feed.querySelectorAll('.db-ins-row').forEach((el, i) => {
+    if (items[i] && items[i].action) el.addEventListener('click', items[i].action);
+  });
+}
+
+
 
 // ── Seed data fallback (when API is unavailable) ──────────────
 const SEED_PRODUITS = [
@@ -1410,48 +1433,85 @@ async function renderInsights(force) {
   if (_insCache) { _renderInsRows(_insCache); return; }
 
   feed.innerHTML = '<div class="db-ins-empty">Analyse…</div>';
-
   const items = [];
 
-  // Source 1 : fabricants avec contrat recent (momentum marche)
+  // Source A : contrats récents — "X a remporté un contrat de $Y pour [client]"
   try {
-    const rContr = await fetch(API + '/contracts?limit=200');
-    const dContr = await rContr.json();
+    const d = await fetch(API + '/contracts?limit=300').then(r => r.json());
     const nowMs = Date.now();
-    const byFab = {};
-    (dContr.contracts || [])
+    const seen = {};
+    (d.contracts || [])
       .filter(ct => {
         const ds = ct.date_attribution || ct.date_debut || ct.date_signature || '';
         if (!ds) return false;
         const days = (nowMs - new Date(ds).getTime()) / 86400000;
-        return days >= 0 && days <= 60;
+        return days >= 0 && days <= 90;
       })
+      .sort((a, b) => {
+        const da = a.date_attribution || a.date_debut || a.date_signature || '';
+        const db = b.date_attribution || b.date_debut || b.date_signature || '';
+        return db.localeCompare(da);
+      })
+      .slice(0, 5)
       .forEach(ct => {
-        const name = ct.societe_name || ct.societe_id || '';
-        if (!name || byFab[name]) return;
+        const fab = ct.societe_name || ct.societe_id || '';
+        if (!fab || seen[fab]) return;
+        seen[fab] = true;
         const val = ct.valeur_max ? (ct.valeur_max >= 1e9
           ? '$' + (ct.valeur_max / 1e9).toFixed(1) + 'B'
           : '$' + (ct.valeur_max / 1e6).toFixed(0) + 'M') : '';
-        byFab[name] = {
-          type: 'hot', label: 'Momentum',
-          name: name,
-          hook: 'Contrat recent : ' + (ct.titre || '').slice(0, 55) + (val ? ' ' + val : ''),
+        const client = ct.client || ct.pays_client || '';
+        const ds = ct.date_attribution || ct.date_debut || ct.date_signature || '';
+        const daysAgo = ds ? Math.round((nowMs - new Date(ds).getTime()) / 86400000) : undefined;
+        const what = (ct.titre || '').slice(0, 60);
+        let headline = fab;
+        if (val) headline += ' remporte un contrat ' + val;
+        else headline += ' remporte un contrat';
+        if (client) headline += ' avec ' + client;
+        if (what) headline += ' — ' + what;
+        items.push({
+          type: 'contract', headline,
+          daysAgo,
           action: ct.societe_id
             ? () => { go('societes'); setTimeout(() => openSociete(ct.societe_id), 300); }
             : () => { go('contracts'); setTimeout(() => openContractDetail(ct.id), 200); }
-        };
+        });
       });
-    Object.values(byFab).slice(0, 3).forEach(x => items.push(x));
   } catch(e) {}
 
-  // Source 1b : pays avec le plus de tenders ouverts (marches actifs)
+  // Source B : tenders urgents — "Appel d'offres drones ISR — X jours restants — [pays]"
   try {
-    const rTend = await fetch(API + '/tenders');
-    const dTend = await rTend.json();
-    const nowD = new Date();
+    const d = await fetch(API + '/tenders').then(r => r.json());
+    const now = new Date();
+    (d.tenders || [])
+      .filter(t => t.statut !== 'Cloture' && (!t.date_cloture || new Date(t.date_cloture) > now))
+      .sort((a, b) => new Date(a.date_cloture || '9999') - new Date(b.date_cloture || '9999'))
+      .slice(0, 3)
+      .forEach(t => {
+        const days = t.date_cloture ? Math.ceil((new Date(t.date_cloture) - now) / 86400000) : null;
+        const pays = t.source_name || t.pays || '';
+        const titre = (t.titre || '').slice(0, 55);
+        const val = t.valeur_estimee ? ' — ' + t.valeur_estimee : '';
+        let headline = titre || 'Appel offres drone';
+        if (pays) headline += ' · ' + pays;
+        if (val) headline += val;
+        items.push({
+          type: 'tender',
+          urgent: days !== null && days < 14,
+          headline,
+          daysLeft: days,
+          action: () => { go('contracts'); setTimeout(() => { setContractTypeTab('live'); setTimeout(() => openTenderDetail(t.id), 400); }, 200); }
+        });
+      });
+  } catch(e) {}
+
+  // Source C : pays les plus actifs en acquisition — "Marché actif : USA — 7 AO ouverts"
+  try {
+    const d = await fetch(API + '/tenders').then(r => r.json());
+    const now = new Date();
     const byPays = {};
-    (dTend.tenders || [])
-      .filter(t => t.statut !== 'Cloture' && (!t.date_cloture || new Date(t.date_cloture) > nowD))
+    (d.tenders || [])
+      .filter(t => t.statut !== 'Cloture' && (!t.date_cloture || new Date(t.date_cloture) > now))
       .forEach(t => {
         const pays = t.pays || t.pays_client || '';
         if (pays) byPays[pays] = (byPays[pays] || 0) + 1;
@@ -1461,63 +1521,17 @@ async function renderInsights(force) {
       .slice(0, 2)
       .forEach(([pays, nb]) => {
         items.push({
-          type: 'tender', label: nb + ' AO',
-          name: pays,
-          hook: nb + ' appels ouverts — marche actif',
+          type: 'tender',
+          headline: 'Marche actif : ' + pays + ' — ' + nb + ' appels ouverts en ce moment',
           action: () => { go('contracts'); setTimeout(() => setContractTypeTab('live'), 200); }
         });
       });
   } catch(e) {}
 
-  // Source 1_OLD_DISABLED : contacts signaux notes — remplace par High-score Prospects
-  if (false) {
-  } // end disabled
-
-  // Source 2 : 3 tenders les plus urgents
-  try {
-    const r = await fetch(API + '/tenders');
-    const d = await r.json();
-    const now = new Date();
-    (d.tenders || [])
-      .filter(t => t.statut !== 'Clôturé' && (!t.date_cloture || new Date(t.date_cloture) > now))
-      .sort((a, b) => new Date(a.date_cloture || '9999') - new Date(b.date_cloture || '9999'))
-      .slice(0, 3)
-      .forEach(t => {
-        const days = t.date_cloture ? Math.ceil((new Date(t.date_cloture) - now) / 86400000) : null;
-        items.push({
-          type: 'tender', label: days !== null ? days + 'j' : 'AO',
-          name: t.source_name || t.pays || '—',
-          hook: (t.titre || '').slice(0, 80) + (t.valeur_estimee ? ' — ' + t.valeur_estimee : ''),
-          urgent: days !== null && days < 14,
-          action: () => { go('contracts'); setTimeout(() => { setContractTypeTab('live'); setTimeout(() => openTenderDetail(t.id), 400); }, 200); }
-        });
-      });
-  } catch(e) { /* silencieux */ }
-
-  // Source 3 : 3 contrats récents
-  try {
-    const r = await fetch(API + '/contracts?limit=200');
-    const d = await r.json();
-    (d.contracts || [])
-      .filter(c => c.date_attribution || c.date_debut)
-      .sort((a, b) => new Date(b.date_attribution || b.date_debut) - new Date(a.date_attribution || a.date_debut))
-      .slice(0, 3)
-      .forEach(c => {
-        const val = c.valeur_max ? (c.valeur_max >= 1e9 ? '$' + (c.valeur_max / 1e9).toFixed(1) + 'B' : '$' + (c.valeur_max / 1e6).toFixed(0) + 'M') : '';
-        items.push({
-          type: 'contract', label: 'Contrat',
-          name: c.societe_name || c.societe_id || '—',
-          hook: (c.titre || '').slice(0, 70) + (val ? ' — ' + val : ''),
-          action: () => { go('contracts'); setTimeout(() => openContractDetail(c.id), 200); }
-        });
-      });
-  } catch(e) { /* silencieux */ }
-
-  // Trier : hot d'abord, puis par ordre naturel
-  items.sort((a, b) => (INS_PRIO[a.type] || 9) - (INS_PRIO[b.type] || 9));
   _insCache = items;
   _renderInsRows(items);
 }
+
 
 function _renderInsRows(items) {
   const feed = document.getElementById('db-ins-feed');
