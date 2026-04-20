@@ -558,6 +558,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         </div>
       </div>
 
+      <!-- DERNIERS AJOUTS -->
+      <div class="db-ins" style="margin-top:12px;">
+        <div class="db-ins-header">
+          <span class="db-ins-title">🆕 Derniers ajouts <span id="db-recent-count" style="color:var(--text3);font-weight:400;margin-left:4px;"></span></span>
+          <button class="db-link" onclick="renderRecent(true)" title="Recharger" style="font-size:10px;">↻</button>
+        </div>
+        <div id="db-recent-feed" class="db-ins-feed" style="max-height:320px;">
+          <div class="db-ins-empty">Chargement…</div>
+        </div>
+      </div>
+
       <!-- MAIN GRID -->
       <div class="db-grid">
 
@@ -1626,6 +1637,86 @@ function resetInsights() {
   renderInsights(true);
 }
 
+// ─── Derniers ajouts ─────────────────────────────────────────────
+var _recentCache = null;
+
+var RECENT_TYPE_META = {
+  societe:  { emoji: '\ud83c\udfe2', label: 'Société',  dot: 'ugv_target',  nav: function(id){ go('societes'); setTimeout(function(){ openSociete(id); }, 300); } },
+  contract: { emoji: '\ud83d\udccb', label: 'Contrat',  dot: 'contract',    nav: function(id){ go('contracts'); setTimeout(function(){ openContractDetail(id); }, 200); } },
+  contact:  { emoji: '\ud83d\udc64', label: 'Contact',  dot: 'prospect',    nav: function(id){ go('end-users'); setTimeout(async function(){ if (!allEndUsers.length) await loadEndUsers(); setEuTab('contacts'); }, 300); } },
+  end_user: { emoji: '\ud83c\udfaf', label: 'End-user', dot: 'buyer',       nav: function(id){ go('end-users'); setTimeout(async function(){ if (!allEndUsers.length) await loadEndUsers(); openEndUser(id); }, 300); } },
+  tender:   { emoji: '\u23f0',        label: 'Tender',   dot: 'tender_isr',  nav: function(id){ go('contracts'); setTimeout(function(){ setContractTypeTab('live'); setTimeout(function(){ openTenderDetail(id); }, 400); }, 200); } }
+};
+
+async function renderRecent(force) {
+  if (force) _recentCache = null;
+  var feed = document.getElementById('db-recent-feed');
+  if (!feed) return;
+  if (_recentCache) { _renderRecentRows(_recentCache); return; }
+
+  feed.innerHTML = '<div class="db-ins-empty">Chargement…</div>';
+
+  try {
+    var d = await fetch(API + '/insights/recent?limit=30&days=14').then(function(r) { return r.json(); });
+    var items = d.items || [];
+    _recentCache = items;
+    _renderRecentRows(items);
+    var cEl = document.getElementById('db-recent-count');
+    if (cEl) {
+      var counts = d.counts || {};
+      var parts = [];
+      if (counts.contract)  parts.push(counts.contract + ' contrats');
+      if (counts.societe)   parts.push(counts.societe + ' sociétés');
+      if (counts.contact)   parts.push(counts.contact + ' contacts');
+      if (counts.end_user)  parts.push(counts.end_user + ' end-users');
+      if (counts.tender)    parts.push(counts.tender + ' tenders');
+      cEl.textContent = parts.length ? '(' + parts.join(' · ') + ')' : '';
+    }
+  } catch(e) {
+    feed.innerHTML = '<div class="db-ins-empty">Erreur chargement</div>';
+    console.error('renderRecent:', e);
+  }
+}
+
+function _renderRecentRows(items) {
+  var feed = document.getElementById('db-recent-feed');
+  if (!feed) return;
+  if (!items.length) {
+    feed.innerHTML = '<div class="db-ins-empty">Aucun ajout récent.</div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    var meta = RECENT_TYPE_META[it.type] || { emoji: '', label: it.type, dot: 'contract' };
+    var label = sanitize(it.label || '');
+    var subMeta = sanitize(it.meta || '');
+    var timeStr = it.daysAgo === 0 ? 'Auj.'
+                : it.daysAgo === 1 ? 'Hier'
+                : (it.daysAgo || 0) + 'j';
+    html += '<div class="db-ins-row" data-recent="' + i + '" style="display:block;padding:8px 10px;">'
+      + '<div style="display:flex;align-items:center;gap:6px;">'
+      + '<span class="db-ins-dot ' + meta.dot + '"></span>'
+      + '<span style="font-size:13px;flex-shrink:0;">' + meta.emoji + '</span>'
+      + '<span style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;">' + meta.label + '</span>'
+      + '<span style="font-size:12px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;">' + label + '</span>'
+      + '<span style="font-size:9px;color:var(--text3);flex-shrink:0;font-weight:600;">' + timeStr + '</span>'
+      + '</div>'
+      + (subMeta ? '<div style="font-size:11px;color:var(--text2);margin-top:2px;margin-left:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + subMeta + '</div>' : '')
+      + '</div>';
+  }
+  feed.innerHTML = html;
+  feed.querySelectorAll('.db-ins-row').forEach(function(el, i) {
+    var it = items[i];
+    if (!it) return;
+    var meta = RECENT_TYPE_META[it.type];
+    if (meta && meta.nav) {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', function() { meta.nav(it.id); });
+    }
+  });
+}
+
 
 
 
@@ -1687,6 +1778,7 @@ function renderDashboard() {
   loadFeed();
   renderInsights();
   renderElistairProspects();
+  renderRecent();
 }
 
 function renderDbTenders(tenders) {
