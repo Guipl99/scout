@@ -370,7 +370,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-ins { position:relative; margin-bottom:12px; }
 .db-ins-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text3); display:flex; align-items:center; gap:5px; }
 .db-ins-title::before { content:''; display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--accent2); box-shadow:0 0 5px var(--accent2); }
-.db-ins-feed { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); overflow-y:auto; max-height:320px; scroll-behavior:smooth; }
+.db-ins-feed { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); overflow-y:auto; max-height:480px; scroll-behavior:smooth; }
 .db-ins-feed::-webkit-scrollbar { width:3px; }
 .db-ins-feed::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 .db-ins::after { content:''; position:absolute; bottom:0; left:0; right:0; height:28px; background:linear-gradient(to bottom,transparent,var(--bg2)); border-radius:0 0 var(--radius) var(--radius); pointer-events:none; }
@@ -1040,6 +1040,7 @@ function _renderInsRows(items) {
     var dot = item.urgent ? 'hot' : (item.type || 'contract');
     var meta = INS_TYPE_META[item.type] || { emoji: '', label: '' };
     var headline = sanitize(item.headline || '');
+    var whyText = sanitize(item.why || '');
     var timeStr = '';
     if (item.daysAgo !== undefined && item.daysAgo !== null) {
       timeStr = item.daysAgo === 0 ? 'Auj.' : item.daysAgo + 'j';
@@ -1048,22 +1049,26 @@ function _renderInsRows(items) {
     }
     var timeColor = item.urgent ? '#f59e0b' : 'var(--text3)';
     var timeHtml = timeStr
-      ? '<div style="font-size:9px;color:' + timeColor + ';flex-shrink:0;margin-left:6px;font-weight:600;">' + timeStr + '</div>'
+      ? '<span style="font-size:9px;color:' + timeColor + ';flex-shrink:0;margin-left:6px;font-weight:600;">' + timeStr + '</span>'
       : '';
     var reasonHtml = item.reason
       ? '<span class="db-ins-badge' + (item.urgent ? ' hot' : '') + '">' + sanitize(item.reason) + '</span>'
       : '';
     var emojiHtml = meta.emoji
-      ? '<span style="font-size:12px;flex-shrink:0;margin-right:2px;">' + meta.emoji + '</span>'
+      ? '<span style="font-size:13px;flex-shrink:0;">' + meta.emoji + '</span>'
       : '';
-    html += '<div class="db-ins-row" data-ins="' + i + '">'
-      + '<div class="db-ins-dot ' + dot + '"></div>'
+    var whyHtml = whyText
+      ? '<div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:3px;margin-left:14px;">' + whyText + '</div>'
+      : '';
+    html += '<div class="db-ins-row" data-ins="' + i + '" style="display:block;padding:9px 10px;">'
+      + '<div style="display:flex;align-items:center;gap:6px;">'
+      + '<span class="db-ins-dot ' + dot + '"></span>'
       + emojiHtml
-      + '<div class="db-ins-main" style="flex:1;min-width:0;display:flex;align-items:center;gap:4px;">'
-      + '<span class="db-ins-hook" style="font-size:12px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;line-height:1.4;">' + headline + '</span>'
+      + '<span class="db-ins-hook" style="font-size:12px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;line-height:1.35;">' + headline + '</span>'
       + reasonHtml
-      + '</div>'
       + timeHtml
+      + '</div>'
+      + whyHtml
       + '</div>';
   }
   feed.innerHTML = html;
@@ -1583,6 +1588,7 @@ async function renderInsights(force, opts) {
       return {
         type: n.type,
         headline: n.headline,
+        why: n.why,
         reason: n.reason,
         urgent: n.urgent || false,
         daysAgo: n.daysAgo,
