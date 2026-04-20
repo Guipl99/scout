@@ -370,7 +370,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-ins { position:relative; margin-bottom:12px; }
 .db-ins-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text3); display:flex; align-items:center; gap:5px; }
 .db-ins-title::before { content:''; display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--accent2); box-shadow:0 0 5px var(--accent2); }
-.db-ins-feed { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); overflow-y:auto; max-height:168px; scroll-behavior:smooth; }
+.db-ins-feed { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); overflow-y:auto; max-height:320px; scroll-behavior:smooth; }
 .db-ins-feed::-webkit-scrollbar { width:3px; }
 .db-ins-feed::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 .db-ins::after { content:''; position:absolute; bottom:0; left:0; right:0; height:28px; background:linear-gradient(to bottom,transparent,var(--bg2)); border-radius:0 0 var(--radius) var(--radius); pointer-events:none; }
@@ -383,6 +383,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-ins-dot.prospect { background:#6c63ff; box-shadow:0 0 4px #6c63ff; }
 .db-ins-dot.tender   { background:#14b8a6; box-shadow:0 0 4px #14b8a6; }
 .db-ins-dot.contract { background:#8b84ff; box-shadow:0 0 4px #8b84ff; }
+/* v2 : 5 catégories BD Elistair */
+.db-ins-dot.buyer       { background:#3b82f6; box-shadow:0 0 4px #3b82f6; }
+.db-ins-dot.ugv_target  { background:#8b84ff; box-shadow:0 0 4px #8b84ff; }
+.db-ins-dot.isr_program { background:#14b8a6; box-shadow:0 0 4px #14b8a6; }
+.db-ins-dot.switch      { background:#ef4444; box-shadow:0 0 4px #ef4444; }
+.db-ins-dot.tender_isr  { background:#f59e0b; box-shadow:0 0 4px #f59e0b; }
+.db-ins-badge { font-size:9px; font-weight:700; color:var(--text3); background:var(--bg3); padding:1px 5px; border-radius:3px; flex-shrink:0; margin-left:4px; letter-spacing:.04em; text-transform:uppercase; }
+.db-ins-badge.hot { color:#f59e0b; background:rgba(245,158,11,0.1); }
 .db-ins-type { font-size:9px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; flex-shrink:0; width:52px; color:var(--text3); }
 .db-ins-main { flex:1; min-width:0; display:flex; align-items:baseline; gap:0; overflow:hidden; }
 .db-ins-name { font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; max-width:38%; }
@@ -997,7 +1005,25 @@ Réinitialiser tous les filtres
   </div>
 </nav>
 
-<script>function _renderInsRows(items) {
+<script>
+// Map des types BD Elistair → emoji + label court
+var INS_TYPE_META = {
+  buyer:       { emoji: '\ud83c\udfaf', label: 'BUYER' },
+  ugv_target:  { emoji: '\ud83d\ude97', label: 'UGV'   },
+  isr_program: { emoji: '\ud83d\udce1', label: 'ISR'   },
+  'switch':    { emoji: '\ud83d\udd01', label: 'SWITCH'},
+  tender_isr:  { emoji: '\u23f0',        label: 'TENDER'},
+  // fallback legacy
+  contract:    { emoji: '\ud83d\udccb', label: 'CONTRAT'},
+  tender:      { emoji: '\u23f0',        label: 'TENDER'},
+  launch:      { emoji: '\ud83d\ude80', label: 'LAUNCH'},
+  partner:     { emoji: '\ud83e\udd1d', label: 'PARTNER'},
+  integration: { emoji: '\ud83d\udd17', label: 'INTEG' },
+  cert:        { emoji: '\u2705',        label: 'CERT'  },
+  tech:        { emoji: '\u2699\ufe0f',   label: 'TECH' }
+};
+
+function _renderInsRows(items) {
   var feed = document.getElementById('db-ins-feed');
   if (!feed) return;
   if (!items.length) {
@@ -1008,6 +1034,7 @@ Réinitialiser tous les filtres
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
     var dot = item.urgent ? 'hot' : (item.type || 'contract');
+    var meta = INS_TYPE_META[item.type] || { emoji: '', label: '' };
     var headline = sanitize(item.headline || '');
     var timeStr = '';
     if (item.daysAgo !== undefined && item.daysAgo !== null) {
@@ -1019,10 +1046,18 @@ Réinitialiser tous les filtres
     var timeHtml = timeStr
       ? '<div style="font-size:9px;color:' + timeColor + ';flex-shrink:0;margin-left:6px;font-weight:600;">' + timeStr + '</div>'
       : '';
+    var reasonHtml = item.reason
+      ? '<span class="db-ins-badge' + (item.urgent ? ' hot' : '') + '">' + sanitize(item.reason) + '</span>'
+      : '';
+    var emojiHtml = meta.emoji
+      ? '<span style="font-size:12px;flex-shrink:0;margin-right:2px;">' + meta.emoji + '</span>'
+      : '';
     html += '<div class="db-ins-row" data-ins="' + i + '">'
       + '<div class="db-ins-dot ' + dot + '"></div>'
-      + '<div class="db-ins-main" style="flex:1;min-width:0;">'
-      + '<span class="db-ins-hook" style="font-size:12px;color:var(--text);font-weight:500;white-space:normal;line-height:1.4;">' + headline + '</span>'
+      + emojiHtml
+      + '<div class="db-ins-main" style="flex:1;min-width:0;display:flex;align-items:center;gap:4px;">'
+      + '<span class="db-ins-hook" style="font-size:12px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;line-height:1.4;">' + headline + '</span>'
+      + reasonHtml
       + '</div>'
       + timeHtml
       + '</div>';
@@ -1498,6 +1533,7 @@ async function renderInsights(force) {
       return {
         type: n.type,
         headline: n.headline,
+        reason: n.reason,
         urgent: n.urgent || false,
         daysAgo: n.daysAgo,
         daysLeft: n.daysLeft,
@@ -1505,9 +1541,11 @@ async function renderInsights(force) {
           ? function() { go('contracts'); setTimeout(function() { setContractTypeTab('live'); setTimeout(function() { openTenderDetail(n.tenderId); }, 400); }, 200); }
           : n.contractId
             ? function() { go('contracts'); setTimeout(function() { openContractDetail(n.contractId); }, 200); }
-            : n.societeId
-              ? function() { go('societes'); setTimeout(function() { openSociete(n.societeId); }, 300); }
-              : null
+            : n.endUserId
+              ? function() { go('end-users'); setTimeout(async function() { if (!allEndUsers.length) await loadEndUsers(); openEndUser(n.endUserId); }, 300); }
+              : n.societeId
+                ? function() { go('societes'); setTimeout(function() { openSociete(n.societeId); }, 300); }
+                : null
       };
     });
 
