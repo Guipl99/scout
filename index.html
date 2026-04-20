@@ -535,8 +535,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <!-- INSIGHTS ACTIONNABLES -->
       <div class="db-ins">
         <div class="db-ins-header">
-          <span class="db-ins-title">Insight</span>
-          <button class="db-link" onclick="renderInsights(true)" style="font-size:10px;">↻</button>
+          <span class="db-ins-title">Insight <span id="db-ins-count" style="color:var(--text3);font-weight:400;margin-left:4px;"></span></span>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <button class="db-link" onclick="renewInsights()" title="Renouveler — afficher d'autres insights" style="font-size:11px;">🔄 Renouveler</button>
+            <button class="db-link" onclick="resetInsights()" title="Reset — repartir des insights initiaux" style="font-size:10px;">↺</button>
+            <button class="db-link" onclick="renderInsights(true)" title="Recharger" style="font-size:10px;">↻</button>
+          </div>
         </div>
         <div id="db-ins-feed" class="db-ins-feed">
           <div class="db-ins-empty">Chargement…</div>
@@ -1478,20 +1482,55 @@ function _renderMoreButton(all) {
 }
 
 
-async function renderInsights(force) {
+// Keys des insights déjà vus (persisté localStorage) — pour "Renouveler"
+var _insSeenKeys = (function() {
+  try {
+    var raw = localStorage.getItem('insights_seen_keys_v1');
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch(e) { return new Set(); }
+})();
+
+function _insSaveSeen() {
+  try { localStorage.setItem('insights_seen_keys_v1', JSON.stringify(Array.from(_insSeenKeys))); }
+  catch(e) {}
+}
+
+function _updateInsCountBadge(lastResp) {
+  var el = document.getElementById('db-ins-count');
+  if (!el) return;
+  if (!lastResp) { el.textContent = ''; return; }
+  var total = lastResp.totalAvailable || 0;
+  var seen = _insSeenKeys.size;
+  if (seen > 0 && total > 0) {
+    el.textContent = '(' + Math.min(seen, total) + '/' + total + ' vus)';
+  } else {
+    el.textContent = total > 0 ? '(' + total + ')' : '';
+  }
+}
+
+async function renderInsights(force, opts) {
+  opts = opts || {};
   if (force) _insCache = null;
   const feed = document.getElementById('db-ins-feed');
   if (!feed) return;
-  if (_insCache) { _renderInsRows(_insCache); return; }
+  if (_insCache && !opts.renew) { _renderInsRows(_insCache); return; }
 
   feed.innerHTML = '<div class="db-ins-empty">Analyse...</div>';
 
   try {
-    const d = await fetch(API + '/insights/news').then(r => r.json());
+    // Construire l'URL avec ?exclude=... si renouvellement
+    var url = API + '/insights/news';
+    if (opts.renew && _insSeenKeys.size > 0) {
+      var keys = Array.from(_insSeenKeys).join(',');
+      // GET URL limite ~8k chars ; on tronque proprement si trop long
+      if (keys.length > 6000) keys = keys.slice(-6000).split(',').slice(1).join(',');
+      url += '?exclude=' + encodeURIComponent(keys);
+    }
+    const d = await fetch(url).then(r => r.json());
     var news = d.news || [];
 
-    // Fallback si insights/news vide : contrats + tenders directs
-    if (!news.length) {
+    // Fallback si insights/news vide (hors renouvellement) : contrats + tenders directs
+    if (!news.length && !opts.renew) {
       const nowD = new Date();
       const [dC, dT] = await Promise.all([
         fetch(API + '/contracts?limit=100').then(r => r.json()).catch(() => ({ contracts: [] })),
@@ -1529,6 +1568,17 @@ async function renderInsights(force) {
       news = fallback;
     }
 
+    // Message spécifique si renouvellement sans rien de neuf
+    if (!news.length && opts.renew) {
+      feed.innerHTML = '<div class="db-ins-empty">Plus d\'insights nouveaux. Clique ↺ pour repartir des initiaux.</div>';
+      _updateInsCountBadge(d);
+      return;
+    }
+
+    // Tracker les keys vues
+    news.forEach(function(n) { if (n.key) _insSeenKeys.add(n.key); });
+    _insSaveSeen();
+
     var items = news.map(function(n) {
       return {
         type: n.type,
@@ -1551,10 +1601,23 @@ async function renderInsights(force) {
 
     _insCache = items;
     _renderInsRows(items);
+    _updateInsCountBadge(d);
   } catch(e) {
     feed.innerHTML = '<div class="db-ins-empty">Erreur chargement</div>';
     console.error('renderInsights:', e);
   }
+}
+
+function renewInsights() {
+  _insCache = null;
+  renderInsights(true, { renew: true });
+}
+
+function resetInsights() {
+  _insSeenKeys = new Set();
+  _insSaveSeen();
+  _insCache = null;
+  renderInsights(true);
 }
 
 
