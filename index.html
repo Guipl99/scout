@@ -138,12 +138,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-tender-card:nth-child(3n) { border-right:none; }
 .db-tender-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; width:fit-content; }
 .db-empty { padding:20px; text-align:center; color:var(--text3); font-size:12px; }
+.db-ins-2col { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
 
 @media (max-width: 900px) {
   .db-kpi-row { grid-template-columns: repeat(3,1fr); }
   .db-grid { grid-template-columns: 1fr; }
   .db-card-wide { grid-column: span 1; }
   .db-card-wide .db-list { grid-template-columns: 1fr; }
+  .db-ins-2col { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .db-kpi-row { grid-template-columns: repeat(2,1fr); }
@@ -370,7 +372,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-ins { position:relative; margin-bottom:12px; }
 .db-ins-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text3); display:flex; align-items:center; gap:5px; }
 .db-ins-title::before { content:''; display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--accent2); box-shadow:0 0 5px var(--accent2); }
-.db-ins-feed { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); overflow-y:auto; max-height:480px; scroll-behavior:smooth; }
+.db-ins-feed { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); overflow-y:auto; max-height:380px; scroll-behavior:smooth; }
 .db-ins-feed::-webkit-scrollbar { width:3px; }
 .db-ins-feed::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 .db-ins::after { content:''; position:absolute; bottom:0; left:0; right:0; height:28px; background:linear-gradient(to bottom,transparent,var(--bg2)); border-radius:0 0 var(--radius) var(--radius); pointer-events:none; }
@@ -547,26 +549,31 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         </div>
       </div>
 
-      <!-- PROSPECTS ELISTAIR -->
-      <div class="db-ins" style="margin-top:12px;">
-        <div class="db-ins-header">
-          <span class="db-ins-title">🎯 High-score Prospects</span>
-          <button class="db-link" onclick="renderElistairProspects(true)" style="font-size:10px;">↻</button>
-        </div>
-        <div id="db-elistair-feed" class="db-ins-feed" style="max-height:220px;">
-          <div class="db-ins-empty">Chargement…</div>
-        </div>
-      </div>
+      <!-- PROSPECTS + DERNIERS AJOUTS (2 colonnes sur desktop) -->
+      <div class="db-ins-2col">
 
-      <!-- DERNIERS AJOUTS -->
-      <div class="db-ins" style="margin-top:12px;">
-        <div class="db-ins-header">
-          <span class="db-ins-title">🆕 Derniers ajouts <span id="db-recent-count" style="color:var(--text3);font-weight:400;margin-left:4px;"></span></span>
-          <button class="db-link" onclick="renderRecent(true)" title="Recharger" style="font-size:10px;">↻</button>
+        <!-- PROSPECTS ELISTAIR -->
+        <div class="db-ins">
+          <div class="db-ins-header">
+            <span class="db-ins-title">🎯 High-score Prospects</span>
+            <button class="db-link" onclick="renderElistairProspects(true)" style="font-size:10px;">↻</button>
+          </div>
+          <div id="db-elistair-feed" class="db-ins-feed" style="max-height:320px;">
+            <div class="db-ins-empty">Chargement…</div>
+          </div>
         </div>
-        <div id="db-recent-feed" class="db-ins-feed" style="max-height:320px;">
-          <div class="db-ins-empty">Chargement…</div>
+
+        <!-- DERNIERS AJOUTS -->
+        <div class="db-ins">
+          <div class="db-ins-header">
+            <span class="db-ins-title">🆕 Derniers ajouts <span id="db-recent-count" style="color:var(--text3);font-weight:400;margin-left:4px;"></span></span>
+            <button class="db-link" onclick="renderRecent(true)" title="Recharger" style="font-size:10px;">↻</button>
+          </div>
+          <div id="db-recent-feed" class="db-ins-feed" style="max-height:320px;">
+            <div class="db-ins-empty">Chargement…</div>
+          </div>
         </div>
+
       </div>
 
       <!-- MAIN GRID -->
