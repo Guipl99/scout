@@ -996,27 +996,42 @@ Réinitialiser tous les filtres
 </nav>
 
 <script>function _renderInsRows(items) {
-  const feed = document.getElementById('db-ins-feed');
+  var feed = document.getElementById('db-ins-feed');
   if (!feed) return;
-  if (!items.length) { feed.innerHTML = '<div class="db-ins-empty">Aucun signal disponible.</div>'; return; }
-  feed.innerHTML = items.map((item, i) => {
-    const dot = item.urgent ? 'hot' : item.type;
-    const timeStr = item.daysAgo !== undefined
-      ? (item.daysAgo === 0 ? "Aujourd'hui" : item.daysAgo + 'j')
-      : (item.daysLeft !== undefined ? item.daysLeft + 'j' : '');
-    const timeColor = item.urgent ? '#f59e0b' : 'var(--text3)';
-    return `<div class="db-ins-row" data-ins="${i}">
-      <div class="db-ins-dot ${dot}"></div>
-      <div class="db-ins-main" style="flex:1;min-width:0;">
-        <span class="db-ins-hook" style="font-size:12px;color:var(--text);font-weight:500;white-space:normal;line-height:1.4;">${sanitize(item.headline)}</span>
-      </div>
-      ${timeStr ? `<div style="font-size:9px;color:${timeColor};flex-shrink:0;margin-left:6px;font-weight:600;">${timeStr}</div>` : ''}
-    </div>`;
-  }).join('');
-  feed.querySelectorAll('.db-ins-row').forEach((el, i) => {
+  if (!items.length) {
+    feed.innerHTML = '<div class="db-ins-empty">Aucun signal disponible.</div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var dot = item.urgent ? 'hot' : (item.type || 'contract');
+    var headline = sanitize(item.headline || '');
+    var timeStr = '';
+    if (item.daysAgo !== undefined && item.daysAgo !== null) {
+      timeStr = item.daysAgo === 0 ? 'Auj.' : item.daysAgo + 'j';
+    } else if (item.daysLeft !== undefined && item.daysLeft !== null) {
+      timeStr = item.daysLeft + 'j';
+    }
+    var timeColor = item.urgent ? '#f59e0b' : 'var(--text3)';
+    var timeHtml = timeStr
+      ? '<div style="font-size:9px;color:' + timeColor + ';flex-shrink:0;margin-left:6px;font-weight:600;">' + timeStr + '</div>'
+      : '';
+    html += '<div class="db-ins-row" data-ins="' + i + '">'
+      + '<div class="db-ins-dot ' + dot + '"></div>'
+      + '<div class="db-ins-main" style="flex:1;min-width:0;">'
+      + '<span class="db-ins-hook" style="font-size:12px;color:var(--text);font-weight:500;white-space:normal;line-height:1.4;">' + headline + '</span>'
+      + '</div>'
+      + timeHtml
+      + '</div>';
+  }
+  feed.innerHTML = html;
+  feed.querySelectorAll('.db-ins-row').forEach(function(el, i) {
     if (items[i] && items[i].action) el.addEventListener('click', items[i].action);
   });
 }
+
+
 
 
 
