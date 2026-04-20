@@ -1520,26 +1520,7 @@ async function renderInsights(force) {
 }
 
 
-function _renderInsRows(items) {
-  const feed = document.getElementById('db-ins-feed');
-  if (!feed) return;
-  if (!items.length) { feed.innerHTML = '<div class="db-ins-empty">Aucun insight disponible.</div>'; return; }
-  feed.innerHTML = items.map((item, i) => {
-    const urgStyle = item.urgent ? 'color:#f59e0b;' : '';
-    return `<div class="db-ins-row" data-ins="${i}">
-      <div class="db-ins-dot ${item.type}"></div>
-      <div class="db-ins-type" style="${urgStyle}">${sanitize(item.label)}</div>
-      <div class="db-ins-main">
-        <span class="db-ins-name">${sanitize(item.name)}</span>
-        ${item.hook ? '<span class="db-ins-sep">—</span><span class="db-ins-hook">' + sanitize(item.hook) + '</span>' : ''}
-      </div>
-    </div>`;
-  }).join('');
-  // Attacher les événements clic
-  feed.querySelectorAll('.db-ins-row').forEach((el, i) => {
-    if (items[i] && items[i].action) el.addEventListener('click', items[i].action);
-  });
-}
+
 
 function renderDashboard() {
   // KPIs immédiats — depuis cache local si disponible
