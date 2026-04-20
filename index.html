@@ -1280,7 +1280,7 @@ async function renderElistairProspects(force) {
       .map(c => ({ ...c, _score: scoreElistair(c) }))
       .filter(c => c._score >= 30)
       .sort((a, b) => b._score - a._score)
-      .slice(0, 12);
+      .slice(0, 30);
 
     _elistairCache = scored;
     _elistairPage = 0;
