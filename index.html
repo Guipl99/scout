@@ -1436,73 +1436,69 @@ async function renderInsights(force) {
 
   try {
     const d = await fetch(API + '/insights/news').then(r => r.json());
-    const news = d.news || [];
+    var news = d.news || [];
 
-    if (news.length > 0) {
-      const items = news.map(n => ({
+    // Fallback si insights/news vide : contrats + tenders directs
+    if (!news.length) {
+      const nowD = new Date();
+      const [dC, dT] = await Promise.all([
+        fetch(API + '/contracts?limit=100').then(r => r.json()).catch(() => ({ contracts: [] })),
+        fetch(API + '/tenders').then(r => r.json()).catch(() => ({ tenders: [] }))
+      ]);
+      var fallback = [];
+      (dC.contracts || [])
+        .filter(function(ct) { return ct.date_attribution || ct.date_signature || ct.date_debut; })
+        .sort(function(a, b) {
+          var da = a.date_attribution || a.date_signature || a.date_debut || '';
+          var db2 = b.date_attribution || b.date_signature || b.date_debut || '';
+          return db2.localeCompare(da);
+        })
+        .slice(0, 5)
+        .forEach(function(ct) {
+          var fab = ct.societe_name || '';
+          var val = ct.valeur_max ? (ct.valeur_max >= 1e9 ? '$'+(ct.valeur_max/1e9).toFixed(1)+'B' : '$'+(ct.valeur_max/1e6).toFixed(0)+'M') : '';
+          var client = ct.client || ct.pays_client || '';
+          var h = fab ? fab + ' remporte' : 'Contrat';
+          if (val) h += ' un contrat ' + val;
+          if (client) h += ' avec ' + client;
+          if (ct.titre) h += ' — ' + ct.titre.slice(0, 45);
+          fallback.push({ type: 'contract', headline: h, contractId: ct.id, societeId: ct.societe_id });
+        });
+      (dT.tenders || [])
+        .filter(function(t) { return !t.date_cloture || new Date(t.date_cloture) > nowD; })
+        .sort(function(a, b) { return new Date(a.date_cloture || '9999') - new Date(b.date_cloture || '9999'); })
+        .slice(0, 3)
+        .forEach(function(t) {
+          var days = t.date_cloture ? Math.ceil((new Date(t.date_cloture) - nowD) / 86400000) : null;
+          var pays = t.source_name || t.pays || '';
+          var h = (t.titre || 'Appel offres').slice(0, 65) + (pays ? ' · ' + pays : '');
+          fallback.push({ type: 'tender', headline: h, tenderId: t.id, daysLeft: days, urgent: days !== null && days < 14 });
+        });
+      news = fallback;
+    }
+
+    var items = news.map(function(n) {
+      return {
         type: n.type,
         headline: n.headline,
         urgent: n.urgent || false,
         daysAgo: n.daysAgo,
         daysLeft: n.daysLeft,
         action: n.tenderId
-          ? () => { go('contracts'); setTimeout(() => { setContractTypeTab('live'); setTimeout(() => openTenderDetail(n.tenderId), 400); }, 200); }
+          ? function() { go('contracts'); setTimeout(function() { setContractTypeTab('live'); setTimeout(function() { openTenderDetail(n.tenderId); }, 400); }, 200); }
           : n.contractId
-            ? () => { go('contracts'); setTimeout(() => openContractDetail(n.contractId), 200); }
+            ? function() { go('contracts'); setTimeout(function() { openContractDetail(n.contractId); }, 200); }
             : n.societeId
-              ? () => { go('societes'); setTimeout(() => openSociete(n.societeId), 300); }
+              ? function() { go('societes'); setTimeout(function() { openSociete(n.societeId); }, 300); }
               : null
-      }));
-      _insCache = items;
-      _renderInsRows(items);
-      return;
-    }
+      };
+    });
 
-    // Fallback : tenders urgents + contrats récents si /insights/news vide
-    const items = [];
-    const [td, cd] = await Promise.all([
-      fetch(API + '/tenders').then(r => r.json()).catch(() => ({tenders:[]})),
-      fetch(API + '/contracts?limit=100').then(r => r.json()).catch(() => ({contracts:[]}))
-    ]);
-    const now = new Date();
-    (td.tenders || [])
-      .filter(t => t.statut !== 'Cloture' && (!t.date_cloture || new Date(t.date_cloture) > now))
-      .sort((a, b) => new Date(a.date_cloture||'9999') - new Date(b.date_cloture||'9999'))
-      .slice(0, 5)
-      .forEach(t => {
-        const days = t.date_cloture ? Math.ceil((new Date(t.date_cloture) - now) / 86400000) : null;
-        const pays = t.source_name || t.pays || '';
-        items.push({
-          type: 'tender', urgent: days !== null && days < 14,
-          headline: (t.titre || 'Appel offres').slice(0, 65) + (pays ? ' · ' + pays : '') + (t.valeur_estimee ? ' — ' + t.valeur_estimee : ''),
-          daysLeft: days,
-          action: () => { go('contracts'); setTimeout(() => { setContractTypeTab('live'); setTimeout(() => openTenderDetail(t.id), 400); }, 200); }
-        });
-      });
-    (cd.contracts || [])
-      .filter(c => c.date_attribution || c.date_signature)
-      .sort((a, b) => new Date(b.date_attribution||b.date_signature) - new Date(a.date_attribution||a.date_signature))
-      .slice(0, 4)
-      .forEach(ct => {
-        const ds = ct.date_attribution || ct.date_signature;
-        const daysAgo = ds ? Math.round((now - new Date(ds)) / 86400000) : null;
-        const fab = ct.societe_name || '';
-        const val = ct.valeur_max ? (ct.valeur_max >= 1e9 ? '$'+(ct.valeur_max/1e9).toFixed(1)+'B' : '$'+(ct.valeur_max/1e6).toFixed(0)+'M') : '';
-        const client = ct.client || ct.pays_client || '';
-        let h = (fab ? fab + ' remporte' : 'Contrat') + (val ? ' un contrat ' + val : ' un contrat');
-        if (client) h += ' avec ' + client;
-        if (ct.titre) h += ' — ' + ct.titre.slice(0, 45);
-        items.push({
-          type: 'contract', headline: h, daysAgo,
-          action: ct.societe_id
-            ? () => { go('societes'); setTimeout(() => openSociete(ct.societe_id), 300); }
-            : () => { go('contracts'); setTimeout(() => openContractDetail(ct.id), 200); }
-        });
-      });
     _insCache = items;
     _renderInsRows(items);
   } catch(e) {
     feed.innerHTML = '<div class="db-ins-empty">Erreur chargement</div>';
+    console.error('renderInsights:', e);
   }
 }
 
