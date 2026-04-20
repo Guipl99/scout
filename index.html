@@ -1255,7 +1255,7 @@ async function renderElistairProspects(force) {
   if (force) _elistairCache = null;
   const feed = document.getElementById('db-elistair-feed');
   if (!feed) return;
-  if (_elistairCache) { _renderProspectRows(_elistairCache); return; }
+  if (_elistairCache) { _elistairPage = 0; _renderProspectRows(_elistairCache.slice(0, ELISTAIR_PAGE_SIZE)); _renderMoreButton(_elistairCache); return; }
 
   feed.innerHTML = '<div class="db-ins-empty">Analyse…</div>';
 
