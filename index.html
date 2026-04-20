@@ -1296,6 +1296,31 @@ const ELISTAIR_EXISTING = ['elistair','milrem_robotics','arquus_jc','arx_robotic
 // Mots-clés signalant un intérêt pour les produits Elistair
 const ELISTAIR_KW = /tethered|persistant|loitering|ISR|fixe.drone|drone.fix|surveillance.drone|captive|cable|khronos|orion|arastelle|UGV.ISR|ISR.UGV/i;
 
+// Détecte un email peu actionnable (service générique, pas un décideur direct)
+const GENERIC_EMAIL_LOCAL = /^(info|contact|press|sales|media|support|hello|admin|office|enquiries|procurement|achat|achats|marches|hankinta|relatii|service|communications|comm|pr|investor|careers|hr|jobs|recruit|accueil|webmaster|mail|general|secretariat|secretary|secretaire|directeur|director|dg|dpt|dept|department|team|bureau|cabinet|pma|afhq|des-protector|drones|ministry|ministere|gouv|org|mil|hq|unit|commander|officer|liaison|desk)@/i;
+const GENERIC_EMAIL_SERVICE = /^(baainbw|mapn|dpsu|dginfantry|sail|stsi|gra|afhq|dga|dapa|mod|nic|pma\d+|des-)[a-z0-9_-]*@/i;
+function isGenericEmail(email) {
+  if (!email || !email.includes('@')) return false;
+  const e = email.toLowerCase().trim();
+  if (GENERIC_EMAIL_LOCAL.test(e) || GENERIC_EMAIL_SERVICE.test(e)) return true;
+  // Pattern "prenom.nom@" ou "p.nom@" = personnel
+  const local = e.split('@')[0];
+  if (/^[a-z]+[._-][a-z]+$/.test(local)) return false;        // prenom.nom
+  if (/^[a-z]\.[a-z]+$/.test(local)) return false;            // p.nom
+  if (/^[a-z]+[._-][a-z]+[._-][a-z]+$/.test(local)) return false; // prenom.nom.x
+  // Sinon : single word local = suspect (probable alias service)
+  if (/^[a-z]+$/.test(local) && local.length < 4) return true;
+  return false;
+}
+
+// Détecte un LinkedIn personnel (/in/) vs org (/company/) vs absent
+function linkedinQuality(linkedin) {
+  if (!linkedin) return 'none';
+  if (/linkedin\.com\/in\//i.test(linkedin)) return 'personal';
+  if (/linkedin\.com\/company\//i.test(linkedin)) return 'company';
+  return 'unknown';
+}
+
 // Score de qualification Elistair (0-100)
 function scoreElistair(contact) {
   let score = 0;
@@ -1385,12 +1410,17 @@ function _renderProspectRows(prospects) {
     var titre = sanitize((p.titre || '').slice(0, 50));
     var score = p._score || 0;
     var scoreColor = score >= 80 ? '#22c55e' : score >= 60 ? '#f59e0b' : '#6b7280';
-    var emailBadge = (p.email && p.email.includes('@'))
-      ? '<a href="mailto:' + p.email + '" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#1e40af22;color:#3b82f6;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">Email</a>'
-      : '';
-    var liLink = (p.linkedin && p.linkedin.includes('linkedin.com/in/'))
+    var emailBadge = '';
+    if (p.email && p.email.includes('@')) {
+      var isGen = isGenericEmail(p.email);
+      emailBadge = '<a href="mailto:' + p.email + '" onclick="event.stopPropagation()" title="' + (isGen ? 'Email générique du service — pas un contact direct' : p.email) + '" style="display:inline-flex;align-items:center;gap:3px;background:' + (isGen ? '#78716c22' : '#1e40af22') + ';color:' + (isGen ? '#a8a29e' : '#3b82f6') + ';border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">' + (isGen ? 'Email svc' : 'Email') + '</a>';
+    }
+    var liQual = linkedinQuality(p.linkedin);
+    var liLink = liQual === 'personal'
       ? '<a href="' + p.linkedin + '" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#0a66c2;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">LinkedIn</a>'
-      : (p.linkedin ? '<span style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#0a66c2;border-radius:4px;padding:1px 6px;font-size:10px;">Org LI</span>' : '');
+      : liQual === 'company'
+        ? '<span title="Seulement la page entreprise — pas le profil perso" style="display:inline-flex;align-items:center;gap:3px;background:#78716c22;color:#a8a29e;border-radius:4px;padding:1px 6px;font-size:10px;">Org LI</span>'
+        : '';
     var reason = (p.notes && ELISTAIR_KW.test(p.notes)) ? 'Interet tethered/ISR'
       : /UAS|UAV|drone|UGV|ISR/i.test(p.titre || '') ? 'Role UAS/UGV'
       : /director|general|brigadier|colonel/i.test(p.titre || '') ? 'Decideur senior'
@@ -1460,12 +1490,17 @@ function _renderMoreButton(all) {
       var titre = sanitize((p.titre || '').slice(0, 50));
       var score = p._score || 0;
       var scoreColor = score >= 80 ? '#22c55e' : score >= 60 ? '#f59e0b' : '#6b7280';
-      var emailBadge = (p.email && p.email.includes('@'))
-        ? '<a href="mailto:' + p.email + '" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#1e40af22;color:#3b82f6;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">Email</a>'
-        : '';
-      var liLink = (p.linkedin && p.linkedin.includes('linkedin.com/in/'))
+      var emailBadge = '';
+      if (p.email && p.email.includes('@')) {
+        var isGen = isGenericEmail(p.email);
+        emailBadge = '<a href="mailto:' + p.email + '" onclick="event.stopPropagation()" title="' + (isGen ? 'Email générique du service — pas un contact direct' : p.email) + '" style="display:inline-flex;align-items:center;gap:3px;background:' + (isGen ? '#78716c22' : '#1e40af22') + ';color:' + (isGen ? '#a8a29e' : '#3b82f6') + ';border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">' + (isGen ? 'Email svc' : 'Email') + '</a>';
+      }
+      var liQual = linkedinQuality(p.linkedin);
+      var liLink = liQual === 'personal'
         ? '<a href="' + p.linkedin + '" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#0a66c2;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">LinkedIn</a>'
-        : (p.linkedin ? '<span style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#0a66c2;border-radius:4px;padding:1px 6px;font-size:10px;">Org LI</span>' : '');
+        : liQual === 'company'
+          ? '<span title="Seulement la page entreprise — pas le profil perso" style="display:inline-flex;align-items:center;gap:3px;background:#78716c22;color:#a8a29e;border-radius:4px;padding:1px 6px;font-size:10px;">Org LI</span>'
+          : '';
       var reason = (p.notes && ELISTAIR_KW.test(p.notes)) ? 'Interet tethered/ISR'
         : /UAS|UAV|drone|UGV|USV|ISR/i.test(p.titre || '') ? 'Role UAS/UGV/USV'
         : /director|general|brigadier|colonel/i.test(p.titre || '') ? 'Decideur senior'
