@@ -5407,5 +5407,557 @@ async function runHealthCheck() {
 })();
 </script>
 
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCOUT CONTACT STATUS WIDGET
+     Config panel + manual contact log + action history + auto badges
+     ═══════════════════════════════════════════════════════════════════ -->
+<style>
+  /* Config button (gear) */
+  #scout-config-btn {
+    position: fixed; bottom: 24px; right: 320px; z-index: 9996;
+    background: #374151; color: white; border: none; border-radius: 30px;
+    padding: 14px 20px; font-size: 14px; font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+  #scout-config-btn:hover { background: #1f2937; transform: translateY(-2px); }
+  #scout-config-btn.hidden { display: none; }
+
+  /* Shared modal overlay */
+  .scout-cs-overlay {
+    position: fixed; top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,.65); z-index: 99998;
+    display: none; align-items: center; justify-content: center;
+    padding: 20px; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  .scout-cs-overlay.open { display: flex; }
+  .scout-cs-modal {
+    background: white; border-radius: 14px; width: 640px; max-width: 100%;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  }
+  .scout-cs-header {
+    padding: 18px 22px; border-bottom: 1px solid #e5e7eb;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .scout-cs-header h3 { margin:0; color:#111827; font-size: 17px; }
+  .scout-cs-close {
+    background: transparent; border: none; font-size: 24px; cursor: pointer;
+    color: #6b7280; line-height: 1; padding: 4px;
+  }
+  .scout-cs-body { padding: 22px; color:#111827; }
+
+  .scout-cs-row {
+    display: flex; align-items: center; gap: 12px; padding: 10px 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .scout-cs-row:last-child { border-bottom: none; }
+  .scout-cs-row-label { flex: 1; font-size: 14px; color: #374151; }
+  .scout-cs-row-desc { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .scout-cs-row-input {
+    width: 90px; padding: 7px 10px; border: 1px solid #d1d5db;
+    border-radius: 6px; font-size: 14px; text-align: right; font-family: inherit;
+  }
+  .scout-cs-row-unit { font-size: 12px; color: #6b7280; width: 50px; }
+  .scout-cs-save {
+    padding: 4px 10px; background: #10b981; color: white; border: none;
+    border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 500;
+    font-family: inherit;
+  }
+  .scout-cs-save:hover { background: #059669; }
+  .scout-cs-save.saved { background: #6b7280; }
+
+  /* Log modal */
+  .scout-cs-field { margin-bottom: 14px; }
+  .scout-cs-field label { display:block; font-size: 13px; color:#374151; font-weight: 500; margin-bottom: 5px; }
+  .scout-cs-field input, .scout-cs-field select, .scout-cs-field textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 6px;
+    font-size: 14px; font-family: inherit; box-sizing: border-box;
+  }
+  .scout-cs-field textarea { resize: vertical; min-height: 60px; }
+  .scout-cs-actions {
+    display: flex; gap: 10px; justify-content: flex-end;
+    padding-top: 14px; border-top: 1px solid #f3f4f6; margin-top: 16px;
+  }
+  .scout-cs-btn {
+    padding: 9px 18px; border-radius: 6px; font-size: 14px; font-weight: 500;
+    cursor: pointer; font-family: inherit; border: 1px solid transparent;
+  }
+  .scout-cs-btn-primary { background: #1e40af; color: white; border-color: #1e40af; }
+  .scout-cs-btn-primary:hover { background: #1e3a8a; }
+  .scout-cs-btn-secondary { background: white; color: #374151; border-color: #d1d5db; }
+  .scout-cs-btn-secondary:hover { background: #f9fafb; }
+  .scout-cs-btn-danger { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+  .scout-cs-btn-danger:hover { background: #fee2e2; }
+
+  /* History section */
+  .scout-cs-history-item {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px;
+    background: #f9fafb; border-radius: 8px; margin-bottom: 8px;
+    border: 1px solid #e5e7eb;
+  }
+  .scout-cs-history-active { border-left: 3px solid #f59e0b; background: #fffbeb; }
+  .scout-cs-history-inactive { opacity: 0.7; }
+  .scout-cs-history-main { flex: 1; min-width: 0; }
+  .scout-cs-history-type { font-weight: 600; color: #111827; font-size: 13px; }
+  .scout-cs-history-meta { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .scout-cs-history-notes { font-size: 12px; color:#4b5563; margin-top: 6px; font-style: italic; }
+  .scout-cs-history-actions { display: flex; gap: 4px; }
+  .scout-cs-icon-btn {
+    background: transparent; border: 1px solid #d1d5db; border-radius: 4px;
+    padding: 4px 8px; font-size: 11px; cursor: pointer; color: #374151;
+    font-family: inherit;
+  }
+  .scout-cs-icon-btn:hover { background: #f3f4f6; }
+  .scout-cs-icon-btn.danger { color: #991b1b; border-color: #fecaca; }
+  .scout-cs-icon-btn.danger:hover { background: #fef2f2; }
+
+  /* Auto-injected badge on contact cards/rows */
+  .scout-cs-badge {
+    display: inline-block; padding: 2px 7px; border-radius: 10px;
+    font-size: 10px; font-weight: 600; background: #fef2f2; color: #991b1b;
+    border: 1px solid #fecaca; margin-left: 6px; cursor: help;
+    font-family: -apple-system, sans-serif;
+  }
+
+  /* "Mark as contacted" button shown in contact detail */
+  #scout-mark-contacted-section {
+    margin-top: 16px; padding: 14px; border: 1px solid #e5e7eb;
+    border-radius: 10px; background: #f9fafb;
+  }
+  #scout-mark-contacted-section h4 {
+    margin: 0 0 10px 0; font-size: 14px; color: #111827; font-weight: 600;
+  }
+  .scout-cs-mark-btn {
+    padding: 10px 16px; background: #1e40af; color: white; border: none;
+    border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;
+    font-family: inherit;
+  }
+  .scout-cs-mark-btn:hover { background: #1e3a8a; }
+</style>
+
+<!-- Config button -->
+<button id="scout-config-btn" class="hidden" title="Paramètres">
+  <span>⚙️</span><span>Config</span>
+</button>
+
+<!-- Config modal -->
+<div id="scout-config-modal" class="scout-cs-overlay">
+  <div class="scout-cs-modal">
+    <div class="scout-cs-header">
+      <h3>⚙️ Paramètres</h3>
+      <button class="scout-cs-close" onclick="scoutContactStatus.closeConfig()">×</button>
+    </div>
+    <div class="scout-cs-body" id="scout-config-body">Chargement…</div>
+  </div>
+</div>
+
+<!-- Mark as contacted modal -->
+<div id="scout-log-modal" class="scout-cs-overlay">
+  <div class="scout-cs-modal">
+    <div class="scout-cs-header">
+      <h3 id="scout-log-title">Marquer comme contacté</h3>
+      <button class="scout-cs-close" onclick="scoutContactStatus.closeLogModal()">×</button>
+    </div>
+    <div class="scout-cs-body" id="scout-log-body">Chargement…</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const API = (typeof window !== 'undefined' && window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
+  const LS_SESSION = 'scout_chat_session';
+
+  function getSession() {
+    if (window.scoutSession?.token) return window.scoutSession;
+    try {
+      const raw = localStorage.getItem(LS_SESSION);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return null;
+  }
+
+  function authHeaders() {
+    const s = getSession();
+    return s?.token ? {'Authorization': 'Bearer ' + s.token} : {};
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function formatDate(d) {
+    if (!d) return '—';
+    const dt = new Date(d);
+    return isNaN(dt) ? '—' : dt.toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'});
+  }
+
+  // Human-readable labels for action types
+  const ACTION_LABELS = {
+    email:              { label: 'Email',                    icon: '✉️' },
+    linkedin_message:   { label: 'Message LinkedIn',         icon: '📋' },
+    linkedin_connect:   { label: 'Connexion LinkedIn',       icon: '💼' },
+    phone:              { label: 'Appel téléphonique',       icon: '📞' },
+    in_person:          { label: 'Rencontre / salon',        icon: '🤝' },
+    third_party:        { label: 'Via un tiers (intro)',     icon: '🔗' },
+    other:              { label: 'Autre',                    icon: '📌' },
+  };
+
+  // Show/hide config button based on auth state
+  const configBtn = document.getElementById('scout-config-btn');
+  function updateButtonVisibility() {
+    const authed = !!getSession();
+    if (authed) configBtn.classList.remove('hidden');
+    else configBtn.classList.add('hidden');
+  }
+  setInterval(updateButtonVisibility, 1000);
+  updateButtonVisibility();
+
+  // ─── CONFIG PANEL ─────────────────────────────────────────────────
+  async function openConfig() {
+    const modal = document.getElementById('scout-config-modal');
+    modal.classList.add('open');
+    const body = document.getElementById('scout-config-body');
+    body.innerHTML = 'Chargement…';
+    try {
+      const r = await fetch(API + '/config', { headers: authHeaders() });
+      if (r.status === 401) { body.innerHTML = '<div style="color:#991b1b;">Session expirée. Actualise la page.</div>'; return; }
+      const data = await r.json();
+      renderConfig(data.config || []);
+    } catch (e) {
+      body.innerHTML = '<div style="color:#991b1b;">Erreur: ' + escapeHtml(e.message) + '</div>';
+    }
+  }
+
+  function renderConfig(list) {
+    const body = document.getElementById('scout-config-body');
+    const cooldowns = list.filter(r => r.key.startsWith('cooldown_'));
+    const others = list.filter(r => !r.key.startsWith('cooldown_'));
+
+    const rowHtml = (r) => {
+      const v = r.value || {};
+      const unit = v.minutes !== undefined ? 'minutes' : 'jours';
+      const val = v.minutes !== undefined ? v.minutes : v.days;
+      const desc = r.description || v.label || r.key;
+      return `
+        <div class="scout-cs-row">
+          <div class="scout-cs-row-label">
+            <div>${escapeHtml(desc)}</div>
+            <div class="scout-cs-row-desc">Clé: ${escapeHtml(r.key)}${r.updated_by ? ' • modifié par ' + escapeHtml(r.updated_by) + ' le ' + formatDate(r.updated_at) : ''}</div>
+          </div>
+          <input type="number" class="scout-cs-row-input" id="cfg-${r.key}" value="${val || 0}" min="0" />
+          <span class="scout-cs-row-unit">${unit}</span>
+          <button class="scout-cs-save" onclick="scoutContactStatus.saveConfig('${r.key}', '${unit}')">Enregistrer</button>
+        </div>
+      `;
+    };
+
+    body.innerHTML = `
+      <div style="margin-bottom:8px; font-size:13px; color:#6b7280;">Cooldowns par type d'action (jours pendant lesquels un contact est masqué dans "Prochaine action" après qu'on l'a touché)</div>
+      <div>${cooldowns.map(rowHtml).join('')}</div>
+      <div style="margin:22px 0 8px 0; font-size:13px; color:#6b7280;">Autres paramètres</div>
+      <div>${others.map(rowHtml).join('')}</div>
+      <div style="margin-top:18px; padding-top:14px; border-top:1px solid #e5e7eb; font-size:12px; color:#9ca3af;">
+        Modifications prises en compte sous 60 secondes (cache serveur).
+      </div>
+    `;
+  }
+
+  async function saveConfig(key, unit) {
+    const input = document.getElementById('cfg-' + key);
+    const btn = input.parentElement.querySelector('.scout-cs-save');
+    const val = parseInt(input.value, 10);
+    if (isNaN(val) || val < 0) { alert('Valeur invalide'); return; }
+    const newValue = unit === 'minutes' ? { minutes: val } : { days: val };
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      const r = await fetch(API + '/config', {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json', ...authHeaders()},
+        body: JSON.stringify({ key, value: newValue })
+      });
+      if (r.ok) {
+        btn.textContent = '✓'; btn.classList.add('saved');
+        setTimeout(() => { btn.textContent = 'Enregistrer'; btn.classList.remove('saved'); btn.disabled = false; }, 1200);
+      } else {
+        const d = await r.json();
+        alert('Erreur: ' + (d.error || 'inconnue'));
+        btn.textContent = 'Enregistrer'; btn.disabled = false;
+      }
+    } catch (e) {
+      alert('Erreur réseau: ' + e.message);
+      btn.textContent = 'Enregistrer'; btn.disabled = false;
+    }
+  }
+
+  function closeConfig() {
+    document.getElementById('scout-config-modal').classList.remove('open');
+  }
+
+  configBtn.addEventListener('click', openConfig);
+
+  // ─── LOG MODAL (mark as contacted + history) ──────────────────────
+  let currentContactForLog = null;
+
+  async function openLogModal(contactId, contactName) {
+    currentContactForLog = contactId;
+    const modal = document.getElementById('scout-log-modal');
+    modal.classList.add('open');
+    document.getElementById('scout-log-title').textContent = 'Contact — ' + (contactName || contactId);
+    const body = document.getElementById('scout-log-body');
+    body.innerHTML = 'Chargement…';
+    try {
+      const r = await fetch(API + '/action/history?contact_id=' + encodeURIComponent(contactId), { headers: authHeaders() });
+      const data = await r.json();
+      renderLogModal(data.actions || []);
+    } catch (e) {
+      body.innerHTML = '<div style="color:#991b1b;">Erreur: ' + escapeHtml(e.message) + '</div>';
+    }
+  }
+
+  function renderLogModal(actions) {
+    const body = document.getElementById('scout-log-body');
+    const today = new Date().toISOString().slice(0, 10);
+
+    const optionsHtml = Object.entries(ACTION_LABELS).map(([type, def]) =>
+      `<option value="${type}">${def.icon} ${escapeHtml(def.label)}</option>`
+    ).join('');
+
+    const historyHtml = actions.length === 0
+      ? '<div style="font-size:13px; color:#6b7280; padding:10px 0;">Aucune action enregistrée pour ce contact.</div>'
+      : actions.map(a => {
+          const def = ACTION_LABELS[a.action_type] || { label: a.action_type, icon: '•' };
+          const cls = a.active ? 'scout-cs-history-active' : 'scout-cs-history-inactive';
+          return `
+            <div class="scout-cs-history-item ${cls}">
+              <div class="scout-cs-history-main">
+                <div class="scout-cs-history-type">${def.icon} ${escapeHtml(def.label)}${a.active ? ' <span style="font-size:10px;color:#92400e;">(cooldown actif jusqu\'au ' + formatDate(a.cooldown_until) + ')</span>' : ''}</div>
+                <div class="scout-cs-history-meta">Par ${escapeHtml(a.performed_by || '?')} le ${formatDate(a.performed_at)}</div>
+                ${a.notes ? `<div class="scout-cs-history-notes">"${escapeHtml(a.notes)}"</div>` : ''}
+              </div>
+              <div class="scout-cs-history-actions">
+                <button class="scout-cs-icon-btn" onclick="scoutContactStatus.editAction(${a.id}, '${a.action_type}', '${a.performed_at}', ${JSON.stringify(a.notes||'').replace(/'/g,'&#39;')})">✏️</button>
+                <button class="scout-cs-icon-btn danger" onclick="scoutContactStatus.deleteAction(${a.id})">🗑</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+    body.innerHTML = `
+      <div style="margin-bottom: 20px;">
+        <h4 style="margin:0 0 10px 0; font-size:14px; color:#111827;">Marquer comme contacté</h4>
+        <div class="scout-cs-field">
+          <label>Moyen de contact</label>
+          <select id="scout-log-type">${optionsHtml}</select>
+        </div>
+        <div class="scout-cs-field">
+          <label>Date du contact</label>
+          <input type="date" id="scout-log-date" value="${today}" max="${today}" />
+        </div>
+        <div class="scout-cs-field">
+          <label>Note (optionnel)</label>
+          <textarea id="scout-log-notes" placeholder="Ex: Rencontré à DSEI, carte échangée"></textarea>
+        </div>
+        <button class="scout-cs-btn scout-cs-btn-primary" onclick="scoutContactStatus.submitLog()">
+          ✅ Enregistrer le contact
+        </button>
+      </div>
+      <div style="border-top:1px solid #e5e7eb; padding-top:16px;">
+        <h4 style="margin:0 0 10px 0; font-size:14px; color:#111827;">Historique (${actions.length})</h4>
+        ${historyHtml}
+      </div>
+    `;
+  }
+
+  async function submitLog() {
+    const type = document.getElementById('scout-log-type').value;
+    const date = document.getElementById('scout-log-date').value;
+    const notes = document.getElementById('scout-log-notes').value.trim();
+    if (!type) { alert('Sélectionne un moyen de contact'); return; }
+    if (!date) { alert('Sélectionne une date'); return; }
+
+    try {
+      const r = await fetch(API + '/action/log-manual', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', ...authHeaders()},
+        body: JSON.stringify({
+          contact_id: currentContactForLog,
+          action_type: type,
+          performed_at: date,
+          notes: notes || null,
+        })
+      });
+      const data = await r.json();
+      if (r.ok) {
+        // Refresh modal content
+        openLogModal(currentContactForLog, document.getElementById('scout-log-title').textContent.replace('Contact — ',''));
+        // Invalidate cached status so badge updates
+        contactStatusCache.clear();
+        scanAndBadge();
+      } else {
+        alert('Erreur: ' + (data.error || 'inconnue'));
+      }
+    } catch (e) {
+      alert('Erreur réseau: ' + e.message);
+    }
+  }
+
+  async function editAction(id, currentType, currentDate, currentNotes) {
+    const newType = prompt('Type d\'action:\n' + Object.entries(ACTION_LABELS).map(([k,v]) => `  ${k} = ${v.label}`).join('\n') + '\n\n(tape la clé)', currentType);
+    if (!newType || !ACTION_LABELS[newType]) return;
+    const dateStr = new Date(currentDate).toISOString().slice(0,10);
+    const newDate = prompt('Date (YYYY-MM-DD)', dateStr);
+    if (!newDate) return;
+    const newNotes = prompt('Note', currentNotes || '');
+    try {
+      const r = await fetch(API + '/action/edit', {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json', ...authHeaders()},
+        body: JSON.stringify({ id, action_type: newType, performed_at: newDate, notes: newNotes })
+      });
+      if (r.ok) {
+        openLogModal(currentContactForLog, document.getElementById('scout-log-title').textContent.replace('Contact — ',''));
+        contactStatusCache.clear();
+        scanAndBadge();
+      } else {
+        const d = await r.json();
+        alert('Erreur: ' + (d.error || 'inconnue'));
+      }
+    } catch (e) {
+      alert('Erreur: ' + e.message);
+    }
+  }
+
+  async function deleteAction(id) {
+    if (!confirm('Supprimer définitivement ce log d\'action ?')) return;
+    try {
+      const r = await fetch(API + '/action/delete', {
+        method: 'DELETE',
+        headers: {'Content-Type':'application/json', ...authHeaders()},
+        body: JSON.stringify({ id })
+      });
+      if (r.ok) {
+        openLogModal(currentContactForLog, document.getElementById('scout-log-title').textContent.replace('Contact — ',''));
+        contactStatusCache.clear();
+        scanAndBadge();
+      } else {
+        alert('Erreur de suppression');
+      }
+    } catch (e) {
+      alert('Erreur: ' + e.message);
+    }
+  }
+
+  function closeLogModal() {
+    document.getElementById('scout-log-modal').classList.remove('open');
+    currentContactForLog = null;
+  }
+
+  // ─── AUTO-BADGE ON CONTACT CARDS ──────────────────────────────────
+  // Status is fetched in batches and cached.
+  const contactStatusCache = new Map(); // contact_id -> status object | null
+
+  async function fetchStatusBatch(ids) {
+    const unknown = ids.filter(id => !contactStatusCache.has(id));
+    if (!unknown.length) return;
+    try {
+      const r = await fetch(API + '/contacts-status?ids=' + encodeURIComponent(unknown.join(',')), {
+        headers: authHeaders()
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      // Mark all unknown as null (no status), then override with actual statuses
+      for (const id of unknown) contactStatusCache.set(id, null);
+      for (const [id, s] of Object.entries(data.status || {})) contactStatusCache.set(id, s);
+    } catch {}
+  }
+
+  function ensureBadge(el, contactId) {
+    const status = contactStatusCache.get(contactId);
+    // Remove existing badge if any
+    const existing = el.querySelector(':scope > .scout-cs-badge, .scout-cs-badge-wrapper');
+    if (existing) existing.remove();
+    if (!status || !status.active) return;
+    const def = ACTION_LABELS[status.action_type] || { label: status.action_type, icon: '•' };
+    const tooltip = `Contacté par ${status.performed_by || '?'} le ${formatDate(status.performed_at)} • ${def.label} • cooldown jusqu'au ${formatDate(status.cooldown_until)}`;
+    const badge = document.createElement('span');
+    badge.className = 'scout-cs-badge scout-cs-badge-wrapper';
+    badge.textContent = '🔒 Contacté';
+    badge.title = tooltip;
+    // Try to insert into a good spot: the first header/name div
+    const nameEl = el.querySelector('[style*="font-weight:600"], [style*="font-weight: 600"], .name, h3, h4') || el;
+    nameEl.appendChild(badge);
+  }
+
+  function scanAndBadge() {
+    // Find all entity-card elements with onclick="openContactFromGrid('...')" 
+    const cards = document.querySelectorAll('[onclick*="openContactFromGrid"]');
+    const ids = [];
+    cards.forEach(card => {
+      const m = card.getAttribute('onclick').match(/openContactFromGrid\('([^']+)'\)/);
+      if (m) ids.push(m[1]);
+    });
+    if (!ids.length) return;
+    fetchStatusBatch(ids).then(() => {
+      cards.forEach(card => {
+        const m = card.getAttribute('onclick').match(/openContactFromGrid\('([^']+)'\)/);
+        if (m) ensureBadge(card, m[1]);
+      });
+    });
+  }
+
+  // Watch for DOM changes (contacts list re-rendered) and re-scan
+  let scanTimeout = null;
+  const observer = new MutationObserver(() => {
+    if (scanTimeout) clearTimeout(scanTimeout);
+    scanTimeout = setTimeout(scanAndBadge, 300);
+  });
+  // Start observing once body is ready
+  setTimeout(() => {
+    if (document.body) observer.observe(document.body, { childList: true, subtree: true });
+    scanAndBadge();
+  }, 1000);
+
+  // ─── INJECT "MARK AS CONTACTED" BUTTON IN CONTACT DETAIL ──────────
+  // Detail view: since this site reuses complex existing rendering, we 
+  // add a small floating "🔒 Log" button on every contact card that opens 
+  // the log modal directly. Also add to the next-action modal contact card.
+  function injectMarkButtonOnCards() {
+    const cards = document.querySelectorAll('[onclick*="openContactFromGrid"]:not([data-cs-btn])');
+    cards.forEach(card => {
+      card.setAttribute('data-cs-btn', '1');
+      const m = card.getAttribute('onclick').match(/openContactFromGrid\('([^']+)'\)/);
+      if (!m) return;
+      const contactId = m[1];
+      const btn = document.createElement('button');
+      btn.textContent = '🔒 Log';
+      btn.title = 'Marquer comme contacté';
+      btn.style.cssText = 'position:absolute; top:6px; right:6px; background:rgba(0,0,0,.04); border:1px solid rgba(0,0,0,.08); border-radius:4px; padding:2px 6px; font-size:10px; cursor:pointer; color:#374151; z-index:2;';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Find name via card
+        const nameEl = card.querySelector('[style*="font-weight:600"], [style*="font-weight: 600"]');
+        const name = nameEl ? nameEl.textContent.trim() : contactId;
+        openLogModal(contactId, name);
+      });
+      // Ensure card is positioned relatively
+      const computed = window.getComputedStyle(card);
+      if (computed.position === 'static') card.style.position = 'relative';
+      card.appendChild(btn);
+    });
+  }
+
+  // Scan periodically for new cards (lists re-render)
+  setInterval(injectMarkButtonOnCards, 1500);
+
+  window.scoutContactStatus = {
+    openConfig, closeConfig, saveConfig,
+    openLogModal, closeLogModal, submitLog, editAction, deleteAction,
+    rescan: scanAndBadge, invalidateCache: () => contactStatusCache.clear(),
+  };
+})();
+</script>
+
 </body>
 </html>
