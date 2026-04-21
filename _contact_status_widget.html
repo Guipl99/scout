@@ -465,20 +465,10 @@
   }
 
   function ensureBadge(el, contactId) {
-    const status = contactStatusCache.get(contactId);
-    // Remove existing badge if any
+    // Badge is now redundant with the card button (which changes color/label)
+    // but we keep the logic for possible future detail views.
     const existing = el.querySelector(':scope > .scout-cs-badge, .scout-cs-badge-wrapper');
     if (existing) existing.remove();
-    if (!status || !status.active) return;
-    const def = ACTION_LABELS[status.action_type] || { label: status.action_type, icon: '•' };
-    const tooltip = `Contacté par ${status.performed_by || '?'} le ${formatDate(status.performed_at)} • ${def.label} • cooldown jusqu'au ${formatDate(status.cooldown_until)}`;
-    const badge = document.createElement('span');
-    badge.className = 'scout-cs-badge scout-cs-badge-wrapper';
-    badge.textContent = '🔒 Contacté';
-    badge.title = tooltip;
-    // Try to insert into a good spot: the first header/name div
-    const nameEl = el.querySelector('[style*="font-weight:600"], [style*="font-weight: 600"], .name, h3, h4') || el;
-    nameEl.appendChild(badge);
   }
 
   function scanAndBadge() {
@@ -495,6 +485,7 @@
         const m = card.getAttribute('onclick').match(/openContactFromGrid\('([^']+)'\)/);
         if (m) ensureBadge(card, m[1]);
       });
+      refreshAllCardButtons();
     });
   }
 
@@ -511,9 +502,9 @@
   }, 1000);
 
   // ─── INJECT "MARK AS CONTACTED" BUTTON IN CONTACT DETAIL ──────────
-  // Detail view: since this site reuses complex existing rendering, we 
-  // add a small floating "🔒 Log" button on every contact card that opens 
-  // the log modal directly. Also add to the next-action modal contact card.
+  // We add a small button on every contact card. Icon + color adapt to status:
+  //   - Never contacted: grey outline "+ Contact"
+  //   - Active cooldown: red "🔒 Contacté"
   function injectMarkButtonOnCards() {
     const cards = document.querySelectorAll('[onclick*="openContactFromGrid"]:not([data-cs-btn])');
     cards.forEach(card => {
@@ -522,20 +513,56 @@
       if (!m) return;
       const contactId = m[1];
       const btn = document.createElement('button');
-      btn.textContent = '🔒 Log';
-      btn.title = 'Marquer comme contacté';
-      btn.style.cssText = 'position:absolute; top:6px; right:6px; background:rgba(0,0,0,.04); border:1px solid rgba(0,0,0,.08); border-radius:4px; padding:2px 6px; font-size:10px; cursor:pointer; color:#374151; z-index:2;';
+      btn.className = 'scout-cs-card-btn';
+      btn.dataset.contactId = contactId;
+      btn.title = 'Ajouter une action sur ce contact (email, appel, rencontre…)';
+      btn.style.cssText = 'position:absolute; top:6px; right:6px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:6px; padding:3px 8px; font-size:10px; cursor:pointer; color:#9ca3af; z-index:2; font-family:inherit; transition: all 0.15s;';
+      btn.innerHTML = '<span style="margin-right:3px;">+</span>Action';
+      btn.addEventListener('mouseenter', () => {
+        btn.style.background = 'rgba(255,255,255,.12)';
+        btn.style.color = '#fff';
+      });
+      btn.addEventListener('mouseleave', () => {
+        applyCardBtnStyle(btn, contactId);
+      });
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        // Find name via card
         const nameEl = card.querySelector('[style*="font-weight:600"], [style*="font-weight: 600"]');
-        const name = nameEl ? nameEl.textContent.trim() : contactId;
+        const name = nameEl ? nameEl.textContent.trim().replace(/[👤📋💼🚀✓]/g, '').trim() : contactId;
         openLogModal(contactId, name);
       });
-      // Ensure card is positioned relatively
       const computed = window.getComputedStyle(card);
       if (computed.position === 'static') card.style.position = 'relative';
       card.appendChild(btn);
+      applyCardBtnStyle(btn, contactId);
+    });
+  }
+
+  // Update button appearance based on contact's active cooldown status
+  function applyCardBtnStyle(btn, contactId) {
+    const status = contactStatusCache.get(contactId);
+    if (status && status.active) {
+      // Contact has active cooldown -> show locked state
+      const def = ACTION_LABELS[status.action_type] || { label: status.action_type, icon: '•' };
+      btn.style.background = 'rgba(239,68,68,.15)';
+      btn.style.border = '1px solid rgba(239,68,68,.4)';
+      btn.style.color = '#fca5a5';
+      btn.innerHTML = '🔒 <span style="margin-left:2px;">Contacté</span>';
+      btn.title = `Contacté par ${status.performed_by || '?'} le ${formatDate(status.performed_at)} via ${def.label}. Cooldown jusqu'au ${formatDate(status.cooldown_until)}. Clic pour voir l'historique / modifier.`;
+    } else {
+      // Never contacted or cooldown expired
+      btn.style.background = 'rgba(255,255,255,.06)';
+      btn.style.border = '1px solid rgba(255,255,255,.12)';
+      btn.style.color = '#9ca3af';
+      btn.innerHTML = '<span style="margin-right:3px;">+</span>Action';
+      btn.title = 'Ajouter une action sur ce contact (email, appel, rencontre…)';
+    }
+  }
+
+  // Update all existing buttons when status cache changes
+  function refreshAllCardButtons() {
+    document.querySelectorAll('.scout-cs-card-btn').forEach(btn => {
+      applyCardBtnStyle(btn, btn.dataset.contactId);
     });
   }
 
