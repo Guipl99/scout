@@ -4464,5 +4464,403 @@ async function runHealthCheck() {
 }
 
 </script>
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SCOUT CHAT WIDGET — Bouton flottant + panneau chat sécurisé -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<style>
+  #scout-chat-btn {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9998;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: #1e40af; color: white; border: none;
+    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.35);
+    cursor: pointer; font-size: 26px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  #scout-chat-btn:hover { transform: scale(1.08); box-shadow: 0 12px 32px rgba(30, 64, 175, 0.5); }
+  #scout-chat-btn svg { width: 28px; height: 28px; }
+
+  #scout-chat-panel {
+    position: fixed; bottom: 96px; right: 24px; z-index: 9999;
+    width: 400px; max-width: calc(100vw - 32px);
+    height: 600px; max-height: calc(100vh - 120px);
+    background: white; border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    display: none; flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+  }
+  #scout-chat-panel.open { display: flex; }
+
+  #scout-chat-header {
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    color: white; padding: 16px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  #scout-chat-header .title { font-weight: 600; font-size: 16px; }
+  #scout-chat-header .subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+  #scout-chat-header .close-btn {
+    background: transparent; border: none; color: white;
+    cursor: pointer; font-size: 24px; padding: 0; line-height: 1;
+  }
+
+  #scout-chat-body {
+    flex: 1; overflow-y: auto; padding: 16px;
+    background: #f8fafc; display: flex; flex-direction: column; gap: 12px;
+  }
+  .scout-msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; font-size: 14px; line-height: 1.5; word-wrap: break-word; }
+  .scout-msg.user { background: #1e40af; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .scout-msg.bot  { background: white; color: #1f2937; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #e5e7eb; }
+  .scout-msg.bot p { margin: 0 0 8px 0; }
+  .scout-msg.bot p:last-child { margin-bottom: 0; }
+  .scout-msg.bot ul, .scout-msg.bot ol { margin: 4px 0 8px 0; padding-left: 20px; }
+  .scout-msg.bot strong { font-weight: 600; }
+  .scout-msg.bot code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  .scout-msg.bot .tool-note { font-size: 11px; color: #9ca3af; margin-top: 6px; font-style: italic; }
+  .scout-msg.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; align-self: flex-start; }
+  .scout-msg.typing { color: #6b7280; font-style: italic; }
+
+  #scout-chat-footer {
+    padding: 12px 16px; border-top: 1px solid #e5e7eb; background: white;
+  }
+  #scout-chat-form {
+    display: flex; gap: 8px;
+  }
+  #scout-chat-input {
+    flex: 1; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 24px;
+    font-size: 14px; outline: none; font-family: inherit;
+  }
+  #scout-chat-input:focus { border-color: #1e40af; box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.15); }
+  #scout-chat-input:disabled { background: #f3f4f6; cursor: not-allowed; }
+  #scout-chat-send {
+    background: #1e40af; color: white; border: none; width: 40px; height: 40px;
+    border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  #scout-chat-send:hover { background: #1e3a8a; }
+  #scout-chat-send:disabled { background: #9ca3af; cursor: not-allowed; }
+  #scout-chat-send svg { width: 18px; height: 18px; }
+
+  /* Login view */
+  .scout-login-container {
+    padding: 24px; display: flex; flex-direction: column; gap: 16px;
+    height: 100%; justify-content: center;
+  }
+  .scout-login-container h3 { margin: 0; color: #1f2937; font-size: 18px; }
+  .scout-login-container p { margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5; }
+  .scout-login-container input {
+    width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 14px; outline: none; box-sizing: border-box; font-family: inherit;
+  }
+  .scout-login-container input:focus { border-color: #1e40af; box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.15); }
+  .scout-login-container button {
+    background: #1e40af; color: white; border: none; padding: 12px 20px;
+    border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;
+  }
+  .scout-login-container button:hover { background: #1e3a8a; }
+  .scout-login-container button:disabled { background: #9ca3af; cursor: not-allowed; }
+  .scout-login-msg { font-size: 13px; padding: 10px 12px; border-radius: 8px; }
+  .scout-login-msg.ok { background: #d1fae5; color: #065f46; }
+  .scout-login-msg.err { background: #fef2f2; color: #991b1b; }
+
+  .scout-suggestion { 
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 20px;
+    padding: 6px 12px; font-size: 12px; color: #1e40af; cursor: pointer;
+    display: inline-block; margin: 2px;
+  }
+  .scout-suggestion:hover { background: #dbeafe; }
+</style>
+
+<button id="scout-chat-btn" aria-label="Ouvrir le chat Scout" title="Poser une question à Scout">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+</button>
+
+<div id="scout-chat-panel" role="dialog" aria-label="Chat Scout">
+  <div id="scout-chat-header">
+    <div>
+      <div class="title">💬 Scout — Chat commercial</div>
+      <div class="subtitle" id="scout-chat-status">Assistant Elistair BD</div>
+    </div>
+    <button class="close-btn" onclick="scoutChat.close()" aria-label="Fermer">×</button>
+  </div>
+  <div id="scout-chat-content-wrapper" style="flex:1;overflow:hidden;display:flex;flex-direction:column;"></div>
+</div>
+
+<script>
+(function(){
+  const API = (typeof window !== 'undefined' && window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
+  const LS_SESSION = 'scout_chat_session';
+  const LS_EMAIL   = 'scout_chat_email';
+
+  const SUGGESTIONS = [
+    "Combien de contacts UK avec email valide ?",
+    "Quels sont les contrats français signés en 2026 ?",
+    "Liste les décideurs seniors en Allemagne",
+    "Top 10 contacts Project Corvus UK",
+    "Contrats Anduril récents",
+  ];
+
+  let session = null;
+  let conversation = []; // {role, text}
+
+  const state = {
+    open: false,
+    loading: false,
+  };
+
+  const panel = document.getElementById('scout-chat-panel');
+  const btn   = document.getElementById('scout-chat-btn');
+  const wrapper = document.getElementById('scout-chat-content-wrapper');
+  const status = document.getElementById('scout-chat-status');
+
+  function render() {
+    if (!session) {
+      wrapper.innerHTML = renderLogin();
+      attachLoginHandlers();
+    } else {
+      status.textContent = session.email;
+      wrapper.innerHTML = renderChat();
+      attachChatHandlers();
+      scrollToBottom();
+    }
+  }
+
+  function renderLogin() {
+    return `
+      <div class="scout-login-container">
+        <h3>Connexion Scout</h3>
+        <p>Pour poser des questions à l'assistant, identifie-toi avec ton adresse <strong>@elistair.com</strong>. Tu vas recevoir un lien de connexion valable 24h.</p>
+        <input id="scout-login-email" type="email" placeholder="pierre@elistair.com" autocomplete="email" />
+        <button id="scout-login-btn">Recevoir le lien</button>
+        <div id="scout-login-msg" style="display:none;"></div>
+      </div>
+    `;
+  }
+
+  function renderChat() {
+    const msgs = conversation.length === 0
+      ? `<div class="scout-msg bot">
+           <p>Bonjour ! 👋 Je suis Scout, ton assistant commercial. Je peux interroger la base de données (contacts, contrats, end-users) en lecture seule.</p>
+           <p style="margin-top:8px;font-size:12px;color:#6b7280;">Quelques idées :</p>
+           <div style="margin-top:4px;">
+             ${SUGGESTIONS.map(s => `<span class="scout-suggestion" onclick="scoutChat.useSuggestion('${s.replace(/'/g,"\\'")}')">${s}</span>`).join('')}
+           </div>
+         </div>`
+      : conversation.map(m => {
+          if (m.role === 'user') return `<div class="scout-msg user">${escapeHtml(m.text)}</div>`;
+          if (m.role === 'error') return `<div class="scout-msg error">${escapeHtml(m.text)}</div>`;
+          return `<div class="scout-msg bot">${markdownToHtml(m.text || '')}${m.toolNote ? `<div class="tool-note">${escapeHtml(m.toolNote)}</div>` : ''}</div>`;
+        }).join('');
+    const typing = state.loading ? '<div class="scout-msg bot typing">Scout réfléchit…</div>' : '';
+    return `
+      <div id="scout-chat-body">${msgs}${typing}</div>
+      <div id="scout-chat-footer">
+        <form id="scout-chat-form">
+          <input id="scout-chat-input" type="text" placeholder="Pose ta question…" ${state.loading ? 'disabled' : ''} autocomplete="off" />
+          <button id="scout-chat-send" type="submit" ${state.loading ? 'disabled' : ''} aria-label="Envoyer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </form>
+      </div>
+    `;
+  }
+
+  function attachLoginHandlers() {
+    const input = document.getElementById('scout-login-email');
+    const button = document.getElementById('scout-login-btn');
+    const msg = document.getElementById('scout-login-msg');
+    const submit = async () => {
+      const email = (input.value || '').trim().toLowerCase();
+      if (!email) { input.focus(); return; }
+      if (!email.endsWith('@elistair.com')) {
+        msg.style.display = 'block';
+        msg.className = 'scout-login-msg err';
+        msg.textContent = 'Adresse @elistair.com requise.';
+        return;
+      }
+      button.disabled = true; button.textContent = 'Envoi…';
+      try {
+        const r = await fetch(API + '/chat/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email}),
+        });
+        const data = await r.json();
+        if (r.ok) {
+          msg.style.display = 'block';
+          msg.className = 'scout-login-msg ok';
+          msg.textContent = 'Email envoyé ! Regarde ta boîte mail et clique sur le lien. Tu peux fermer cette fenêtre.';
+          localStorage.setItem(LS_EMAIL, email);
+        } else {
+          msg.style.display = 'block';
+          msg.className = 'scout-login-msg err';
+          msg.textContent = data.error || 'Erreur envoi';
+        }
+      } catch (e) {
+        msg.style.display = 'block';
+        msg.className = 'scout-login-msg err';
+        msg.textContent = 'Erreur réseau : ' + e.message;
+      } finally {
+        button.disabled = false; button.textContent = 'Recevoir le lien';
+      }
+    };
+    button.addEventListener('click', submit);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+    const savedEmail = localStorage.getItem(LS_EMAIL);
+    if (savedEmail) input.value = savedEmail;
+    setTimeout(() => input.focus(), 100);
+  }
+
+  function attachChatHandlers() {
+    const form = document.getElementById('scout-chat-form');
+    const input = document.getElementById('scout-chat-input');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const q = (input.value || '').trim();
+      if (!q || state.loading) return;
+      input.value = '';
+      await askQuestion(q);
+    });
+    setTimeout(() => input.focus(), 50);
+  }
+
+  async function askQuestion(question) {
+    conversation.push({role: 'user', text: question});
+    state.loading = true;
+    render();
+    try {
+      const r = await fetch(API + '/chat/ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + session.token,
+        },
+        body: JSON.stringify({question}),
+      });
+      const data = await r.json();
+      if (r.ok) {
+        const nTools = (data.tool_calls || []).filter(t => t.ok).length;
+        const toolNote = nTools > 0 ? `${nTools} requête${nTools > 1 ? 's' : ''} BD exécutée${nTools > 1 ? 's' : ''} · ${data.duration_ms}ms` : '';
+        conversation.push({role: 'bot', text: data.answer || '(pas de réponse)', toolNote});
+      } else if (r.status === 401) {
+        // Session expired
+        clearSession();
+        conversation = [];
+        conversation.push({role: 'error', text: 'Session expirée. Reconnecte-toi.'});
+      } else {
+        conversation.push({role: 'error', text: data.error || 'Erreur inconnue'});
+      }
+    } catch (e) {
+      conversation.push({role: 'error', text: 'Erreur réseau : ' + e.message});
+    } finally {
+      state.loading = false;
+      render();
+    }
+  }
+
+  function scrollToBottom() {
+    const body = document.getElementById('scout-chat-body');
+    if (body) body.scrollTop = body.scrollHeight;
+  }
+
+  function clearSession() {
+    session = null;
+    localStorage.removeItem(LS_SESSION);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+  }
+
+  function markdownToHtml(s) {
+    // Minimal markdown (bold, line breaks, bullets)
+    let html = escapeHtml(s);
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Bullet lists
+    html = html.replace(/(?:^|\n)([-•*]) (.+)/g, '\n<li>$2</li>');
+    html = html.replace(/(<li>.+?<\/li>\n?)+/gs, m => '<ul>' + m + '</ul>');
+    // Paragraph breaks
+    html = html.split(/\n\n+/).map(p => p.trim() ? `<p>${p.replace(/\n/g,'<br>')}</p>` : '').join('');
+    return html;
+  }
+
+  // Check for magic_token in URL
+  async function checkMagicLink() {
+    const params = new URLSearchParams(window.location.search);
+    const k = params.get('scout_k');
+    if (!k) return false;
+    try {
+      const r = await fetch(API + '/chat/verify', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({magic_token: k}),
+      });
+      const data = await r.json();
+      if (r.ok && data.session_token) {
+        session = {token: data.session_token, email: data.email};
+        localStorage.setItem(LS_SESSION, JSON.stringify(session));
+        // Clean URL
+        params.delete('scout_k');
+        const newUrl = window.location.pathname + (params.toString() ? '?' + params : '') + window.location.hash;
+        window.history.replaceState({}, document.title, newUrl);
+        // Auto-open chat
+        open();
+        return true;
+      }
+    } catch {}
+    return false;
+  }
+
+  async function restoreSession() {
+    const raw = localStorage.getItem(LS_SESSION);
+    if (!raw) return false;
+    try {
+      const s = JSON.parse(raw);
+      // Validate with /chat/me
+      const r = await fetch(API + '/chat/me', {
+        headers: {'Authorization': 'Bearer ' + s.token},
+      });
+      if (r.ok) {
+        session = s;
+        return true;
+      } else {
+        localStorage.removeItem(LS_SESSION);
+      }
+    } catch {
+      localStorage.removeItem(LS_SESSION);
+    }
+    return false;
+  }
+
+  function open() {
+    state.open = true;
+    panel.classList.add('open');
+    render();
+  }
+  function close() {
+    state.open = false;
+    panel.classList.remove('open');
+  }
+  function toggle() { state.open ? close() : open(); }
+
+  btn.addEventListener('click', toggle);
+
+  // Init
+  window.scoutChat = {
+    open, close, toggle,
+    useSuggestion: (s) => askQuestion(s),
+    logout: () => { clearSession(); conversation = []; render(); },
+  };
+
+  // Auto-verify magic link if present in URL, then restore session
+  (async () => {
+    const verified = await checkMagicLink();
+    if (!verified) await restoreSession();
+  })();
+})();
+</script>
+
 </body>
 </html>
