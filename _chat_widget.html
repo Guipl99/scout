@@ -161,13 +161,11 @@
   }
 
   function renderLogin() {
+    // Delegate to site-wide auth gate if available
     return `
       <div class="scout-login-container">
-        <h3>Connexion Scout</h3>
-        <p>Entre le mot de passe équipe pour accéder à l'assistant. Ta session sera valide 7 jours.</p>
-        <input id="scout-login-password" type="password" placeholder="Mot de passe équipe" autocomplete="current-password" />
-        <button id="scout-login-btn">Se connecter</button>
-        <div id="scout-login-msg" style="display:none;"></div>
+        <h3>Session non active</h3>
+        <p>Tu dois te connecter au site Scout pour utiliser le chat. Actualise la page ou contacte l'administrateur.</p>
       </div>
     `;
   }
@@ -201,42 +199,7 @@
   }
 
   function attachLoginHandlers() {
-    const input = document.getElementById('scout-login-password');
-    const button = document.getElementById('scout-login-btn');
-    const msg = document.getElementById('scout-login-msg');
-    const submit = async () => {
-      const password = input.value || '';
-      if (!password) { input.focus(); return; }
-      button.disabled = true; button.textContent = 'Connexion…';
-      try {
-        const r = await fetch(API + '/chat/authenticate', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({password}),
-        });
-        const data = await r.json();
-        if (r.ok && data.session_token) {
-          session = {token: data.session_token};
-          localStorage.setItem(LS_SESSION, JSON.stringify(session));
-          render();
-        } else {
-          msg.style.display = 'block';
-          msg.className = 'scout-login-msg err';
-          msg.textContent = data.error || 'Erreur de connexion';
-          input.value = '';
-          input.focus();
-        }
-      } catch (e) {
-        msg.style.display = 'block';
-        msg.className = 'scout-login-msg err';
-        msg.textContent = 'Erreur réseau : ' + e.message;
-      } finally {
-        button.disabled = false; button.textContent = 'Se connecter';
-      }
-    };
-    button.addEventListener('click', submit);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
-    setTimeout(() => input.focus(), 100);
+    // no-op: site-wide auth gate handles login
   }
 
   function attachChatHandlers() {
@@ -314,16 +277,23 @@
   }
 
   async function restoreSession() {
+    // Priority 1: use session set by site-wide auth gate
+    if (window.scoutSession && window.scoutSession.token) {
+      session = window.scoutSession;
+      return true;
+    }
+    // Priority 2: fallback to localStorage (for backwards compatibility)
     const raw = localStorage.getItem(LS_SESSION);
     if (!raw) return false;
     try {
       const s = JSON.parse(raw);
-      // Validate with /chat/me
       const r = await fetch(API + '/chat/me', {
         headers: {'Authorization': 'Bearer ' + s.token},
       });
       if (r.ok) {
-        session = s;
+        const data = await r.json();
+        session = {token: s.token, first_name: data.first_name};
+        window.scoutSession = session;
         return true;
       } else {
         localStorage.removeItem(LS_SESSION);

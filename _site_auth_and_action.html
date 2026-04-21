@@ -1,0 +1,524 @@
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCOUT SITE AUTH GATE + NEXT ACTION BUTTON
+     Global login (password + first name) + floating "Prochaine action" button
+     Must be placed right after <body> opening tag
+     ═══════════════════════════════════════════════════════════════════ -->
+<style>
+  /* Login gate overlay */
+  #scout-auth-gate {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, #0f172a, #1e3a8a);
+    z-index: 100000;
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  #scout-auth-gate.hidden { display: none !important; }
+  .scout-auth-card {
+    background: white; border-radius: 16px;
+    padding: 40px; width: 400px; max-width: calc(100vw - 32px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  }
+  .scout-auth-card h1 {
+    margin: 0 0 8px 0; color: #1e40af; font-size: 28px;
+  }
+  .scout-auth-card .scout-auth-subtitle {
+    margin: 0 0 24px 0; color: #6b7280; font-size: 14px;
+  }
+  .scout-auth-card .scout-field {
+    margin-bottom: 16px;
+  }
+  .scout-auth-card label {
+    display: block; font-size: 13px; color: #374151; font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .scout-auth-card input {
+    width: 100%; padding: 12px 14px; border: 1px solid #d1d5db;
+    border-radius: 8px; font-size: 15px; box-sizing: border-box;
+    font-family: inherit; outline: none;
+  }
+  .scout-auth-card input:focus {
+    border-color: #1e40af;
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.15);
+  }
+  .scout-auth-card button {
+    background: #1e40af; color: white; border: none; padding: 13px 20px;
+    border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px;
+    width: 100%; margin-top: 8px;
+  }
+  .scout-auth-card button:hover { background: #1e3a8a; }
+  .scout-auth-card button:disabled { background: #9ca3af; cursor: not-allowed; }
+  .scout-auth-err {
+    padding: 10px 12px; background: #fef2f2; color: #991b1b;
+    border-radius: 8px; font-size: 13px; margin-top: 12px;
+  }
+  .scout-auth-hint {
+    margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;
+    font-size: 12px; color: #9ca3af; text-align: center;
+  }
+
+  /* Next action button */
+  #scout-action-btn {
+    position: fixed; bottom: 24px; right: 100px; z-index: 9997;
+    background: linear-gradient(135deg, #dc2626, #ea580c);
+    color: white; border: none; border-radius: 30px;
+    padding: 14px 22px; font-size: 15px; font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 8px 24px rgba(220, 38, 38, 0.35);
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+  #scout-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(220, 38, 38, 0.5);
+  }
+  #scout-action-btn.hidden { display: none; }
+
+  /* Action modal */
+  #scout-action-modal {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 99999;
+    display: none; align-items: center; justify-content: center;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  #scout-action-modal.open { display: flex; }
+  .scout-action-content {
+    background: white; border-radius: 16px;
+    width: 560px; max-width: 100%; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+  .scout-action-header {
+    background: linear-gradient(135deg, #dc2626, #ea580c);
+    color: white; padding: 18px 24px; border-radius: 16px 16px 0 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .scout-action-header .title { font-weight: 600; font-size: 17px; }
+  .scout-action-header .close-btn {
+    background: transparent; border: none; color: white;
+    cursor: pointer; font-size: 26px; padding: 0; line-height: 1;
+  }
+  .scout-action-body { padding: 24px; }
+  .scout-contact-card {
+    border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 16px; margin-bottom: 16px; background: #f8fafc;
+  }
+  .scout-contact-card .name {
+    font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 4px;
+  }
+  .scout-contact-card .title {
+    color: #4b5563; font-size: 14px; margin-bottom: 10px;
+  }
+  .scout-contact-card .meta {
+    display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: #6b7280;
+  }
+  .scout-contact-card .meta span {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .scout-priority-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 600; margin-left: 8px;
+  }
+  .scout-priority-high { background: #fef3c7; color: #92400e; }
+  .scout-priority-medium { background: #dbeafe; color: #1e40af; }
+  .scout-priority-low { background: #f3f4f6; color: #6b7280; }
+  .scout-past-action-note {
+    padding: 10px 14px; background: #fef3c7; border-left: 3px solid #f59e0b;
+    border-radius: 4px; font-size: 13px; color: #78350f; margin-bottom: 12px;
+  }
+  .scout-actions-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-top: 16px;
+  }
+  .scout-action-btn-item {
+    padding: 14px 12px; border: 1.5px solid #e5e7eb; background: white;
+    border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500;
+    color: #111827; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    transition: all 0.15s; font-family: inherit;
+  }
+  .scout-action-btn-item:hover {
+    border-color: #1e40af; background: #eff6ff; transform: translateY(-1px);
+  }
+  .scout-action-btn-item .icon { font-size: 20px; }
+  .scout-action-btn-item:disabled {
+    opacity: 0.5; cursor: not-allowed; transform: none;
+  }
+  .scout-skip-btn {
+    margin-top: 12px; padding: 10px; background: transparent; border: none;
+    color: #6b7280; font-size: 13px; cursor: pointer; width: 100%;
+    text-align: center; font-family: inherit;
+  }
+  .scout-skip-btn:hover { color: #1e40af; text-decoration: underline; }
+  .scout-draft-preview {
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 14px; margin-top: 14px; white-space: pre-wrap; font-size: 13px;
+    color: #374151; line-height: 1.6; max-height: 300px; overflow-y: auto;
+  }
+  .scout-draft-preview .subject {
+    font-weight: 600; border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 8px; margin-bottom: 10px;
+  }
+  .scout-loading {
+    text-align: center; padding: 40px; color: #6b7280;
+  }
+</style>
+
+<!-- AUTH GATE -->
+<div id="scout-auth-gate" class="hidden">
+  <div class="scout-auth-card">
+    <h1>Scout</h1>
+    <div class="scout-auth-subtitle">BD Défense Drones Elistair — accès équipe</div>
+    <form id="scout-auth-form">
+      <div class="scout-field">
+        <label for="scout-auth-firstname">Ton prénom</label>
+        <input id="scout-auth-firstname" type="text" placeholder="Guillaume" autocomplete="given-name" required />
+      </div>
+      <div class="scout-field">
+        <label for="scout-auth-password">Mot de passe équipe</label>
+        <input id="scout-auth-password" type="password" placeholder="••••••••••••" autocomplete="current-password" required />
+      </div>
+      <button type="submit" id="scout-auth-submit">Se connecter</button>
+      <div id="scout-auth-err" class="scout-auth-err" style="display:none;"></div>
+    </form>
+    <div class="scout-auth-hint">Session valide 7 jours • Accès réservé équipe Elistair</div>
+  </div>
+</div>
+
+<!-- NEXT ACTION BUTTON -->
+<button id="scout-action-btn" class="hidden" aria-label="Prochaine action" title="Prochaine action suggérée">
+  <span>🎯</span><span>Prochaine action</span>
+</button>
+
+<!-- ACTION MODAL -->
+<div id="scout-action-modal" role="dialog" aria-label="Prochaine action">
+  <div class="scout-action-content">
+    <div class="scout-action-header">
+      <div class="title">🎯 Prochaine action suggérée</div>
+      <button class="close-btn" onclick="scoutAction.close()" aria-label="Fermer">×</button>
+    </div>
+    <div class="scout-action-body" id="scout-action-body">
+      <div class="scout-loading">Chargement…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const API = (typeof window !== 'undefined' && window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
+  const LS_SESSION = 'scout_chat_session';
+  const LS_NAME = 'scout_user_firstname';
+
+  let session = null; // { token, first_name }
+  let currentContact = null;
+
+  // ─── AUTH GATE ──────────────────────────────────────────────────────
+  const authGate = document.getElementById('scout-auth-gate');
+  const authForm = document.getElementById('scout-auth-form');
+  const authFirstname = document.getElementById('scout-auth-firstname');
+  const authPassword = document.getElementById('scout-auth-password');
+  const authSubmit = document.getElementById('scout-auth-submit');
+  const authErr = document.getElementById('scout-auth-err');
+  const actionBtn = document.getElementById('scout-action-btn');
+
+  function showAuthGate() {
+    authGate.classList.remove('hidden');
+    authErr.style.display = 'none';
+    // Prefill firstname if known
+    const savedName = localStorage.getItem(LS_NAME);
+    if (savedName) authFirstname.value = savedName;
+    setTimeout(() => {
+      if (authFirstname.value) authPassword.focus();
+      else authFirstname.focus();
+    }, 100);
+  }
+
+  function hideAuthGate() {
+    authGate.classList.add('hidden');
+    actionBtn.classList.remove('hidden');
+  }
+
+  authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const firstName = authFirstname.value.trim();
+    const password = authPassword.value;
+    if (!firstName || !password) return;
+    authSubmit.disabled = true;
+    authSubmit.textContent = 'Connexion…';
+    authErr.style.display = 'none';
+    try {
+      const r = await fetch(API + '/chat/authenticate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({password, first_name: firstName}),
+      });
+      const data = await r.json();
+      if (r.ok && data.session_token) {
+        session = {token: data.session_token, first_name: data.first_name || firstName};
+        localStorage.setItem(LS_SESSION, JSON.stringify(session));
+        localStorage.setItem(LS_NAME, firstName);
+        // Let other widgets (like chat) pick up the session
+        window.scoutSession = session;
+        hideAuthGate();
+      } else {
+        authErr.style.display = 'block';
+        authErr.textContent = data.error || 'Erreur de connexion';
+        authPassword.value = '';
+        authPassword.focus();
+      }
+    } catch (e) {
+      authErr.style.display = 'block';
+      authErr.textContent = 'Erreur réseau : ' + e.message;
+    } finally {
+      authSubmit.disabled = false;
+      authSubmit.textContent = 'Se connecter';
+    }
+  });
+
+  async function restoreSessionOrShowGate() {
+    const raw = localStorage.getItem(LS_SESSION);
+    if (!raw) { showAuthGate(); return; }
+    try {
+      const s = JSON.parse(raw);
+      const r = await fetch(API + '/chat/me', {
+        headers: {'Authorization': 'Bearer ' + s.token},
+      });
+      if (r.ok) {
+        const data = await r.json();
+        session = {token: s.token, first_name: data.first_name || s.first_name || 'Anonyme'};
+        window.scoutSession = session;
+        hideAuthGate();
+        return;
+      }
+    } catch {}
+    localStorage.removeItem(LS_SESSION);
+    showAuthGate();
+  }
+
+  // ─── NEXT ACTION MODAL ──────────────────────────────────────────────
+  const actionModal = document.getElementById('scout-action-modal');
+  const actionBody = document.getElementById('scout-action-body');
+
+  function priorityLabel(score) {
+    if (score >= 90) return { cls: 'scout-priority-high', label: '⭐⭐⭐ VIP' };
+    if (score >= 60) return { cls: 'scout-priority-medium', label: '⭐⭐ Priorité' };
+    return { cls: 'scout-priority-low', label: 'Standard' };
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+  }
+
+  async function fetchNextContact() {
+    actionBody.innerHTML = '<div class="scout-loading">Recherche du meilleur contact…</div>';
+    try {
+      const r = await fetch(API + '/action/next-contact', {
+        headers: {'Authorization': 'Bearer ' + session.token}
+      });
+      const data = await r.json();
+      if (r.status === 401) {
+        localStorage.removeItem(LS_SESSION);
+        actionModal.classList.remove('open');
+        showAuthGate();
+        return;
+      }
+      if (!r.ok || !data.contact) {
+        actionBody.innerHTML = `<div class="scout-loading">${escapeHtml(data.message || 'Aucun contact disponible.')}</div>`;
+        return;
+      }
+      currentContact = data.contact;
+      renderContact(data);
+    } catch (e) {
+      actionBody.innerHTML = `<div class="scout-loading">Erreur : ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function renderContact(data) {
+    const c = data.contact;
+    const pri = priorityLabel(data.priority_score);
+    const pastAction = (data.past_actions || []).filter(a => a.action_type !== 'skip')[0];
+    const pastNote = pastAction
+      ? `<div class="scout-past-action-note">⚠️ Contact déjà approché : ${escapeHtml(pastAction.action_type)} par ${escapeHtml(pastAction.performed_by || '?')} le ${new Date(pastAction.performed_at).toLocaleDateString('fr-FR')}</div>`
+      : '';
+    const hasLinkedin = c.linkedin && c.linkedin.trim();
+    const hasEmail = c.email && c.email.trim();
+
+    actionBody.innerHTML = `
+      ${pastNote}
+      <div class="scout-contact-card">
+        <div class="name">
+          ${escapeHtml(c.prenom || '')} ${escapeHtml(c.nom || '')}
+          <span class="scout-priority-badge ${pri.cls}">${pri.label}</span>
+        </div>
+        <div class="title">${escapeHtml(c.titre || '')} ${c.organisation ? ' — ' + escapeHtml(c.organisation) : ''}</div>
+        <div class="meta">
+          ${c.pays ? `<span>📍 ${escapeHtml(c.pays)}</span>` : ''}
+          ${hasEmail ? `<span>✉️ ${escapeHtml(c.email)}</span>` : ''}
+          ${hasLinkedin ? `<span>💼 LinkedIn OK</span>` : ''}
+        </div>
+      </div>
+      <div class="scout-actions-grid">
+        <button class="scout-action-btn-item" onclick="scoutAction.openLinkedIn()" ${!hasLinkedin ? 'disabled' : ''}>
+          <span class="icon">💼</span><span>Se connecter sur LinkedIn</span>
+        </button>
+        <button class="scout-action-btn-item" onclick="scoutAction.draftEmail()" ${!hasEmail ? 'disabled' : ''}>
+          <span class="icon">✉️</span><span>Email de prospection</span>
+        </button>
+        <button class="scout-action-btn-item" onclick="scoutAction.draftLinkedInMsg()" ${!hasLinkedin ? 'disabled' : ''}>
+          <span class="icon">📋</span><span>Message LinkedIn (copie)</span>
+        </button>
+        <button class="scout-action-btn-item" onclick="scoutAction.close()">
+          <span class="icon">↩️</span><span>Fermer</span>
+        </button>
+      </div>
+      <button class="scout-skip-btn" onclick="scoutAction.skip()">⏭️ Passer ce contact et voir le suivant</button>
+      <div id="scout-action-result"></div>
+    `;
+  }
+
+  async function logAction(actionType, details) {
+    if (!currentContact) return;
+    try {
+      await fetch(API + '/action/log', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token},
+        body: JSON.stringify({
+          contact_id: currentContact.id,
+          action_type: actionType,
+          details,
+        })
+      });
+    } catch {}
+  }
+
+  window.scoutAction = {
+    open: () => {
+      actionModal.classList.add('open');
+      fetchNextContact();
+    },
+    close: () => {
+      actionModal.classList.remove('open');
+      currentContact = null;
+    },
+    openLinkedIn: () => {
+      if (!currentContact?.linkedin) return;
+      window.open(currentContact.linkedin, '_blank', 'noopener');
+      logAction('linkedin_connect');
+      setTimeout(() => scoutAction.close(), 300);
+    },
+    draftEmail: async () => {
+      if (!currentContact?.email) return;
+      const resultDiv = document.getElementById('scout-action-result');
+      resultDiv.innerHTML = '<div class="scout-loading">Génération de l\'email par Claude…</div>';
+      try {
+        const r = await fetch(API + '/action/draft-email', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token},
+          body: JSON.stringify({contact_id: currentContact.id})
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          resultDiv.innerHTML = `<div class="scout-past-action-note">${escapeHtml(data.error || 'Erreur génération email')}</div>`;
+          return;
+        }
+        // Show preview + send button
+        resultDiv.innerHTML = `
+          <div class="scout-draft-preview">
+            <div class="subject">Objet : ${escapeHtml(data.subject)}</div>
+            ${escapeHtml(data.body)}
+          </div>
+          <div class="scout-actions-grid" style="margin-top:12px;">
+            <button class="scout-action-btn-item" onclick="scoutAction.sendEmail()">
+              <span class="icon">📮</span><span>Ouvrir dans Outlook / mail</span>
+            </button>
+            <button class="scout-action-btn-item" onclick="scoutAction.regenerateEmail()">
+              <span class="icon">🔄</span><span>Régénérer</span>
+            </button>
+          </div>
+        `;
+        window._scoutCurrentDraft = {
+          subject: data.subject, body: data.body, to: data.to
+        };
+      } catch (e) {
+        resultDiv.innerHTML = `<div class="scout-past-action-note">Erreur : ${escapeHtml(e.message)}</div>`;
+      }
+    },
+    regenerateEmail: () => scoutAction.draftEmail(),
+    sendEmail: () => {
+      const d = window._scoutCurrentDraft;
+      if (!d) return;
+      const url = `mailto:${encodeURIComponent(d.to)}?subject=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.body)}`;
+      window.location.href = url;
+      logAction('email', {subject: d.subject, to: d.to});
+      setTimeout(() => scoutAction.close(), 500);
+    },
+    draftLinkedInMsg: async () => {
+      if (!currentContact?.linkedin) return;
+      const resultDiv = document.getElementById('scout-action-result');
+      resultDiv.innerHTML = '<div class="scout-loading">Génération du message LinkedIn…</div>';
+      try {
+        const r = await fetch(API + '/action/draft-linkedin-message', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token},
+          body: JSON.stringify({contact_id: currentContact.id})
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          resultDiv.innerHTML = `<div class="scout-past-action-note">${escapeHtml(data.error || 'Erreur')}</div>`;
+          return;
+        }
+        // Auto-copy to clipboard
+        let copied = false;
+        try {
+          await navigator.clipboard.writeText(data.message);
+          copied = true;
+        } catch {}
+        resultDiv.innerHTML = `
+          <div class="scout-draft-preview">${escapeHtml(data.message)}</div>
+          <div style="margin-top:10px; font-size:13px; color:#059669;">
+            ${copied ? '✅ Message copié dans le presse-papier' : '⚠️ Copie auto impossible, copie manuelle'}
+          </div>
+          <div class="scout-actions-grid" style="margin-top:12px;">
+            <button class="scout-action-btn-item" onclick="scoutAction.openLinkedInAndLogMsg()">
+              <span class="icon">💼</span><span>Ouvrir LinkedIn & envoyer</span>
+            </button>
+            <button class="scout-action-btn-item" onclick="scoutAction.draftLinkedInMsg()">
+              <span class="icon">🔄</span><span>Régénérer</span>
+            </button>
+          </div>
+        `;
+      } catch (e) {
+        resultDiv.innerHTML = `<div class="scout-past-action-note">Erreur : ${escapeHtml(e.message)}</div>`;
+      }
+    },
+    openLinkedInAndLogMsg: () => {
+      if (!currentContact?.linkedin) return;
+      window.open(currentContact.linkedin, '_blank', 'noopener');
+      logAction('linkedin_message');
+      setTimeout(() => scoutAction.close(), 300);
+    },
+    skip: async () => {
+      if (!currentContact) return;
+      try {
+        await fetch(API + '/action/skip', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token},
+          body: JSON.stringify({contact_id: currentContact.id})
+        });
+      } catch {}
+      fetchNextContact();
+    },
+    logout: () => {
+      localStorage.removeItem(LS_SESSION);
+      session = null;
+      window.scoutSession = null;
+      location.reload();
+    }
+  };
+
+  actionBtn.addEventListener('click', scoutAction.open);
+
+  // Init
+  restoreSessionOrShowGate();
+})();
+</script>
