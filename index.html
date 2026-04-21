@@ -794,10 +794,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     `;
   }
 
-  async function logAction(actionType, details) {
+  async function logIntent(actionType, details) {
     if (!currentContact) return;
     try {
-      await fetch(API + '/action/log', {
+      await fetch(API + '/action/log-intent', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token},
         body: JSON.stringify({
@@ -807,6 +807,58 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         })
       });
     } catch {}
+  }
+
+  async function confirmAction(actionType, details) {
+    if (!currentContact) return null;
+    try {
+      const r = await fetch(API + '/action/confirm', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token},
+        body: JSON.stringify({
+          contact_id: currentContact.id,
+          action_type: actionType,
+          details,
+        })
+      });
+      return await r.json();
+    } catch { return null; }
+  }
+
+  async function cancelAction() {
+    if (!currentContact) return;
+    try {
+      await fetch(API + '/action/cancel', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token},
+        body: JSON.stringify({contact_id: currentContact.id})
+      });
+    } catch {}
+  }
+
+  // Appends a confirmation prompt after the current content
+  function renderConfirmation(actionType, humanLabel) {
+    const bodyEl = document.getElementById('scout-action-body');
+    bodyEl.innerHTML = bodyEl.innerHTML + `
+      <div id="scout-confirm-box" style="margin-top:18px; padding:18px; background:#fffbeb; border:2px solid #f59e0b; border-radius:12px;">
+        <div style="font-weight:600; color:#78350f; margin-bottom:10px;">
+          ⏳ ${humanLabel} — confirme l'envoi
+        </div>
+        <div style="font-size:13px; color:#78350f; margin-bottom:14px;">
+          Une fois l'envoi effectivement fait, clique sur "C'est envoyé". Si tu annules, le contact redevient disponible pour l'équipe.
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="scout-action-btn-item" style="flex:1; border-color:#10b981; color:#065f46;"
+                  onclick="scoutAction.confirmSent('${actionType}')">
+            <span class="icon">✅</span><span>C'est envoyé</span>
+          </button>
+          <button class="scout-action-btn-item" style="flex:1; border-color:#dc2626; color:#991b1b;"
+                  onclick="scoutAction.cancelSent()">
+            <span class="icon">❌</span><span>Annuler</span>
+          </button>
+        </div>
+      </div>
+    `;
   }
 
   window.scoutAction = {
@@ -821,8 +873,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     openLinkedIn: () => {
       if (!currentContact?.linkedin) return;
       window.open(currentContact.linkedin, '_blank', 'noopener');
-      logAction('linkedin_connect');
-      setTimeout(() => scoutAction.close(), 300);
+      logIntent('linkedin_connect');
+      renderConfirmation('linkedin_connect', 'LinkedIn ouvert');
     },
     draftEmail: async () => {
       if (!currentContact?.email) return;
@@ -867,8 +919,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       if (!d) return;
       const url = `mailto:${encodeURIComponent(d.to)}?subject=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.body)}`;
       window.location.href = url;
-      logAction('email', {subject: d.subject, to: d.to});
-      setTimeout(() => scoutAction.close(), 500);
+      logIntent('email', {subject: d.subject, to: d.to});
+      renderConfirmation('email', 'Email ouvert dans le client mail');
     },
     draftLinkedInMsg: async () => {
       if (!currentContact?.linkedin) return;
@@ -912,8 +964,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     openLinkedInAndLogMsg: () => {
       if (!currentContact?.linkedin) return;
       window.open(currentContact.linkedin, '_blank', 'noopener');
-      logAction('linkedin_message');
-      setTimeout(() => scoutAction.close(), 300);
+      logIntent('linkedin_message');
+      renderConfirmation('linkedin_message', 'LinkedIn ouvert pour envoi du message');
     },
     skip: async () => {
       if (!currentContact) return;
@@ -925,6 +977,40 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         });
       } catch {}
       fetchNextContact();
+    },
+    confirmSent: async (actionType) => {
+      const result = await confirmAction(actionType);
+      const body = document.getElementById('scout-action-body');
+      if (result?.ok) {
+        body.innerHTML = `
+          <div style="text-align:center; padding:40px 20px;">
+            <div style="font-size:48px; margin-bottom:12px;">✅</div>
+            <div style="font-weight:600; color:#065f46; margin-bottom:8px;">Action confirmée</div>
+            <div style="color:#6b7280; font-size:14px; margin-bottom:20px;">Contact verrouillé pour l'équipe pendant ${result.cooldown_days || '?'} jours.</div>
+            <button class="scout-action-btn-item" style="margin:0 auto; max-width:280px;" onclick="scoutAction.open()">
+              <span class="icon">🎯</span><span>Voir la prochaine action</span>
+            </button>
+          </div>
+        `;
+      } else {
+        const box = document.getElementById('scout-confirm-box');
+        if (box) {
+          box.innerHTML = '<div style="color:#991b1b;">Erreur lors de la confirmation. Réessaie.</div>';
+        }
+      }
+    },
+    cancelSent: async () => {
+      await cancelAction();
+      const body = document.getElementById('scout-action-body');
+      body.innerHTML = `
+        <div style="text-align:center; padding:40px 20px;">
+          <div style="font-size:48px; margin-bottom:12px;">↩️</div>
+          <div style="color:#6b7280; margin-bottom:20px;">Action annulée. Le contact redevient disponible pour l'équipe.</div>
+          <button class="scout-action-btn-item" style="margin:0 auto; max-width:280px;" onclick="scoutAction.open()">
+            <span class="icon">🎯</span><span>Voir la prochaine action</span>
+          </button>
+        </div>
+      `;
     },
     logout: () => {
       localStorage.removeItem(LS_SESSION);
