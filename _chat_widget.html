@@ -125,7 +125,7 @@
 (function(){
   const API = (typeof window !== 'undefined' && window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
   const LS_SESSION = 'scout_chat_session';
-  const LS_EMAIL   = 'scout_chat_email';
+  
 
   const SUGGESTIONS = [
     "Combien de contacts UK avec email valide ?",
@@ -153,7 +153,7 @@
       wrapper.innerHTML = renderLogin();
       attachLoginHandlers();
     } else {
-      status.textContent = session.email;
+      status.textContent = 'Connecté (7j)';
       wrapper.innerHTML = renderChat();
       attachChatHandlers();
       scrollToBottom();
@@ -164,9 +164,9 @@
     return `
       <div class="scout-login-container">
         <h3>Connexion Scout</h3>
-        <p>Pour poser des questions à l'assistant, identifie-toi avec ton adresse <strong>@elistair.com</strong>. Tu vas recevoir un lien de connexion valable 24h.</p>
-        <input id="scout-login-email" type="email" placeholder="pierre@elistair.com" autocomplete="email" />
-        <button id="scout-login-btn">Recevoir le lien</button>
+        <p>Entre le mot de passe équipe pour accéder à l'assistant. Ta session sera valide 7 jours.</p>
+        <input id="scout-login-password" type="password" placeholder="Mot de passe équipe" autocomplete="current-password" />
+        <button id="scout-login-btn">Se connecter</button>
         <div id="scout-login-msg" style="display:none;"></div>
       </div>
     `;
@@ -201,48 +201,41 @@
   }
 
   function attachLoginHandlers() {
-    const input = document.getElementById('scout-login-email');
+    const input = document.getElementById('scout-login-password');
     const button = document.getElementById('scout-login-btn');
     const msg = document.getElementById('scout-login-msg');
     const submit = async () => {
-      const email = (input.value || '').trim().toLowerCase();
-      if (!email) { input.focus(); return; }
-      if (!email.endsWith('@elistair.com')) {
-        msg.style.display = 'block';
-        msg.className = 'scout-login-msg err';
-        msg.textContent = 'Adresse @elistair.com requise.';
-        return;
-      }
-      button.disabled = true; button.textContent = 'Envoi…';
+      const password = input.value || '';
+      if (!password) { input.focus(); return; }
+      button.disabled = true; button.textContent = 'Connexion…';
       try {
-        const r = await fetch(API + '/chat/login', {
+        const r = await fetch(API + '/chat/authenticate', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({email}),
+          body: JSON.stringify({password}),
         });
         const data = await r.json();
-        if (r.ok) {
-          msg.style.display = 'block';
-          msg.className = 'scout-login-msg ok';
-          msg.textContent = 'Email envoyé ! Regarde ta boîte mail et clique sur le lien. Tu peux fermer cette fenêtre.';
-          localStorage.setItem(LS_EMAIL, email);
+        if (r.ok && data.session_token) {
+          session = {token: data.session_token};
+          localStorage.setItem(LS_SESSION, JSON.stringify(session));
+          render();
         } else {
           msg.style.display = 'block';
           msg.className = 'scout-login-msg err';
-          msg.textContent = data.error || 'Erreur envoi';
+          msg.textContent = data.error || 'Erreur de connexion';
+          input.value = '';
+          input.focus();
         }
       } catch (e) {
         msg.style.display = 'block';
         msg.className = 'scout-login-msg err';
         msg.textContent = 'Erreur réseau : ' + e.message;
       } finally {
-        button.disabled = false; button.textContent = 'Recevoir le lien';
+        button.disabled = false; button.textContent = 'Se connecter';
       }
     };
     button.addEventListener('click', submit);
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
-    const savedEmail = localStorage.getItem(LS_EMAIL);
-    if (savedEmail) input.value = savedEmail;
     setTimeout(() => input.focus(), 100);
   }
 
@@ -320,33 +313,6 @@
     return html;
   }
 
-  // Check for magic_token in URL
-  async function checkMagicLink() {
-    const params = new URLSearchParams(window.location.search);
-    const k = params.get('scout_k');
-    if (!k) return false;
-    try {
-      const r = await fetch(API + '/chat/verify', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({magic_token: k}),
-      });
-      const data = await r.json();
-      if (r.ok && data.session_token) {
-        session = {token: data.session_token, email: data.email};
-        localStorage.setItem(LS_SESSION, JSON.stringify(session));
-        // Clean URL
-        params.delete('scout_k');
-        const newUrl = window.location.pathname + (params.toString() ? '?' + params : '') + window.location.hash;
-        window.history.replaceState({}, document.title, newUrl);
-        // Auto-open chat
-        open();
-        return true;
-      }
-    } catch {}
-    return false;
-  }
-
   async function restoreSession() {
     const raw = localStorage.getItem(LS_SESSION);
     if (!raw) return false;
@@ -388,10 +354,7 @@
     logout: () => { clearSession(); conversation = []; render(); },
   };
 
-  // Auto-verify magic link if present in URL, then restore session
-  (async () => {
-    const verified = await checkMagicLink();
-    if (!verified) await restoreSession();
-  })();
+  // Restore session from localStorage
+  restoreSession();
 })();
 </script>
