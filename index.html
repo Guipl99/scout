@@ -4412,7 +4412,7 @@ function renderContactsGrid(list) {
     const compte = allEndUsers.find(eu => eu.id === ct.end_user_id);
 
     return `<div class="entity-card" data-contact-id="${ct.id}" style="cursor:pointer;padding:14px;position:relative;" onclick="openContactFromGrid('${ct.id}')">
-      <button class="scout-cs-inline-btn" data-contact-id="${ct.id}" onclick="event.stopPropagation(); event.preventDefault(); scoutContactStatus && scoutContactStatus.openDrawer('${ct.id}', '${((ct.prenom||'')+' '+(ct.nom||'')).replace(/'/g,'&#39;').trim()}');" style="position:absolute;top:8px;right:8px;padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--accent);background:var(--bg3);color:var(--accent);cursor:pointer;z-index:10;font-weight:600;">+ Action</button>
+      <button class="scout-cs-inline-btn" data-contact-id="${ct.id}" type="button" style="position:absolute;top:8px;right:8px;padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--accent);background:var(--bg3);color:var(--accent);cursor:pointer;z-index:10;font-weight:600;">+ Action</button>
       <div style="display:flex;gap:10px;align-items:flex-start;padding-right:60px;">
         <div style="width:40px;height:40px;border-radius:50%;background:${color}22;border:2px solid ${color}44;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:${color};flex-shrink:0;">${initials||'?'}</div>
         <div style="flex:1;min-width:0;">
@@ -6050,6 +6050,25 @@ async function runHealthCheck() {
       for (const [id, s] of Object.entries(data.status || {})) contactStatusCache.set(id, s);
     } catch {}
   }
+
+  // Global click delegation — catches clicks on ANY .scout-cs-inline-btn
+  // regardless of when it was rendered. Avoids inline onclick escape issues.
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.scout-cs-inline-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const contactId = btn.dataset.contactId;
+    if (!contactId) return;
+    // Try to find name from the card
+    const card = btn.closest('.entity-card');
+    let name = contactId;
+    if (card) {
+      const nameEl = card.querySelector('[style*="font-weight:600"], [style*="font-weight: 600"]');
+      if (nameEl) name = nameEl.textContent.replace(/[👤📋💼🚀✓🔒]/g,'').trim();
+    }
+    openDrawer(contactId, name);
+  }, true); // capture phase to beat the parent card's onclick
 
   function applyCardBtnStyle(btn, contactId) {
     const status = contactStatusCache.get(contactId);
