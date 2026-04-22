@@ -2623,10 +2623,27 @@ async function loadSocieteContacts(societeId) {
   try {
     const s = societes.find(x => x.id === societeId);
     const name = s ? s.name : societeId;
-    const r = await fetch(API + '/contacts?q=' + encodeURIComponent(name) + '&limit=50');
-    const d = await r.json();
-    // Garder seulement les contacts fabricants (sans end_user_id)
-    const list = (d.contacts || []).filter(c => !c.end_user_id);
+    // Use contacts cache (load if empty) and filter strictly by organisation
+    if (!allContacts.length && typeof loadContacts === 'function') await loadContacts();
+    // Also fetch freshly in case cache is stale
+    let source = allContacts;
+    if (!source || !source.length) {
+      const r = await fetch(API + '/contacts?limit=1000');
+      const d = await r.json();
+      source = d.contacts || [];
+    }
+    // Strict filter: organisation matches the fabricant name (case-insensitive exact or close match)
+    const nameLower = (name || '').toLowerCase().trim();
+    const list = (source || []).filter(c => {
+      if (c.end_user_id) return false; // exclude end-user contacts
+      const org = (c.organisation || '').toLowerCase().trim();
+      if (!org) return false;
+      // Exact match, or org starts with the name + space (e.g., "DJI Enterprise"), or name is a distinct word
+      return org === nameLower
+          || org.startsWith(nameLower + ' ')
+          || org.startsWith(nameLower + ',')
+          || org === nameLower.replace(/\s+(inc|corp|sa|gmbh|ltd|llc)\.?$/i, '').trim();
+    });
     if (!list.length) {
       el.innerHTML = '<div class="db-empty" style="padding:1rem 16px;color:var(--text3);">Aucun contact enregistré pour ce fabricant.</div>';
       return;
@@ -4264,7 +4281,15 @@ function openSocContactCard(id) {
   // Navigate to the fabricant fiche with the contacts sub-tab auto-opened
   const ct = (allSocContacts || []).find(c => c.id === id);
   if (!ct) return;
-  const soc = (societes || []).find(s => s.name === ct.organisation);
+  const orgLower = (ct.organisation || '').toLowerCase().trim();
+  // Try exact match first, then fuzzy: name must be a word prefix of org (or vice versa)
+  let soc = (societes || []).find(s => (s.name || '').toLowerCase().trim() === orgLower);
+  if (!soc) {
+    soc = (societes || []).find(s => {
+      const n = (s.name || '').toLowerCase().trim();
+      return n && orgLower && (orgLower.startsWith(n + ' ') || orgLower.startsWith(n + ',') || orgLower.startsWith(n + '('));
+    });
+  }
   if (soc) {
     openSociete(soc.id);
     setTimeout(() => { if (typeof showSTab === 'function') { const tabEl = document.querySelector('[onclick*=\"s-contacts\"]'); if (tabEl) showSTab('s-contacts', tabEl); loadSocieteContacts(soc.id); } }, 200);
