@@ -1237,18 +1237,36 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div id="societes-list-view">
         <div class="topbar">
           <h1>Fabricants</h1>
+        </div>
 
+        <!-- Sub-tab switcher -->
+        <div style="display:flex;gap:8px;margin-bottom:1rem;align-items:center;border-bottom:1px solid var(--border2);padding-bottom:10px;">
+          <button id="soc-tab-comptes" onclick="setSocTab('comptes')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--accent);color:white;font-weight:600;transition:all 0.15s;">🏢 Fabricants</button>
+          <button id="soc-tab-contacts" onclick="setSocTab('contacts')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">👤 Contacts</button>
+          <span id="soc-count-badge" style="font-size:11px;color:var(--text2);background:var(--bg3);border-radius:10px;padding:2px 8px;margin-left:auto;"></span>
         </div>
-        
 
-        <div style="display:flex;gap:8px;margin-bottom:0.6rem;flex-wrap:wrap;align-items:center;">
-          <span style="font-size:12px;color:var(--text3);">Pays :</span>
-          <div id="pays-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        <!-- Fabricants (Comptes) view -->
+        <div id="soc-comptes-view">
+          <div style="display:flex;gap:8px;margin-bottom:0.6rem;flex-wrap:wrap;align-items:center;">
+            <span style="font-size:12px;color:var(--text3);">Pays :</span>
+            <div id="pays-filters" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:1rem;align-items:center;">
+            <input id="societes-search" type="text" placeholder="Rechercher un fabricant..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);width:100%;max-width:320px;" oninput="filterSocietes()">
+          </div>
+          <div class="entity-grid" id="societes-grid"></div>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:1rem;align-items:center;">
-          <input id="societes-search" type="text" placeholder="Rechercher un fabricant..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);width:100%;max-width:320px;" oninput="filterSocietes()">
+
+        <!-- Contacts view -->
+        <div id="soc-contacts-view" style="display:none;">
+          <div style="display:flex;gap:8px;margin-bottom:1rem;align-items:center;flex-wrap:wrap;">
+            <input id="soc-contacts-search" type="text" placeholder="Rechercher un contact (nom, titre, fabricant)..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);width:100%;max-width:400px;" oninput="filterSocContactsGrid()">
+            <select id="soc-contacts-pays-filter" onchange="filterSocContactsGrid()" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);"><option value="">🌍 Pays</option></select>
+            <select id="soc-contacts-fab-filter" onchange="filterSocContactsGrid()" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);"><option value="">🏭 Fabricant</option></select>
+          </div>
+          <div class="entity-grid" id="soc-contacts-grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;"></div>
         </div>
-        <div class="entity-grid" id="societes-grid"></div>
       </div>
       <div id="societe-detail-view" style="display:none;">
         <div class="topbar">
@@ -2614,8 +2632,9 @@ async function loadSocieteContacts(societeId) {
       return;
     }
     el.innerHTML = list.map(ct => `
-      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px;">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px;position:relative;">
+        <button class="scout-cs-inline-btn" data-contact-id="${ct.id}" type="button" style="position:absolute;top:8px;right:8px;padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--accent);background:var(--bg3);color:var(--accent);cursor:pointer;z-index:10;font-weight:600;">+ Action</button>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding-right:80px;">
           <div>
             <span style="font-weight:600;font-size:13px;color:var(--text);">${ct.nom||'—'}</span>
             ${ct.titre ? `<div style="font-size:11px;color:var(--accent);margin-top:2px;">${ct.titre}</div>` : ''}
@@ -4125,6 +4144,133 @@ function renderSocietesFiltered(list) {
   setTimeout(() => list.forEach(s => loadLogo(s.id, s.url, 'logo-' + s.id)), 100);
 }
 
+// ══════════ Sub-tabs Fabricants: Comptes / Contacts ══════════
+let socTab = 'comptes'; // 'comptes' | 'contacts'
+let allSocContacts = []; // cached list of contacts that are NOT linked to an end_user (= fabricant contacts)
+
+function setSocTab(tab) {
+  socTab = tab;
+  const btnC = document.getElementById('soc-tab-comptes');
+  const btnCt = document.getElementById('soc-tab-contacts');
+  if (btnC) {
+    btnC.style.background = tab === 'comptes' ? 'var(--accent)' : 'transparent';
+    btnC.style.color = tab === 'comptes' ? 'white' : 'var(--text2)';
+    btnC.style.fontWeight = tab === 'comptes' ? '600' : '500';
+  }
+  if (btnCt) {
+    btnCt.style.background = tab === 'contacts' ? 'var(--accent)' : 'transparent';
+    btnCt.style.color = tab === 'contacts' ? 'white' : 'var(--text2)';
+    btnCt.style.fontWeight = tab === 'contacts' ? '600' : '500';
+  }
+  const vC = document.getElementById('soc-comptes-view');
+  const vCt = document.getElementById('soc-contacts-view');
+  if (vC) vC.style.display = tab === 'comptes' ? '' : 'none';
+  if (vCt) vCt.style.display = tab === 'contacts' ? '' : 'none';
+  history.replaceState(null, '', '#societes/' + tab);
+  if (tab === 'contacts') loadAndRenderSocContacts();
+  else {
+    // Refresh count badge
+    const badge = document.getElementById('soc-count-badge');
+    if (badge) badge.textContent = societes.length + ' fabricant' + (societes.length > 1 ? 's' : '');
+  }
+}
+
+async function loadAndRenderSocContacts() {
+  const grid = document.getElementById('soc-contacts-grid');
+  if (!grid) return;
+  // Load once into cache
+  if (!allSocContacts.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text3);font-size:13px;">Chargement des contacts…</div>';
+    try {
+      // Ensure societes are loaded (needed to filter "fabricant" contacts)
+      if (!societes.length && typeof loadSocietes === 'function') await loadSocietes();
+      // Fetch contacts without end_user (= fabricant contacts)
+      // We use /contacts?limit=500 and filter client-side
+      if (!allContacts.length && typeof loadContacts === 'function') await loadContacts();
+      allSocContacts = (allContacts || []).filter(c => !c.end_user_id);
+    } catch (e) {
+      grid.innerHTML = '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text3);font-size:13px;">Erreur: ' + e.message + '</div>';
+      return;
+    }
+  }
+  // Populate filters dynamically
+  const paysSel = document.getElementById('soc-contacts-pays-filter');
+  const fabSel = document.getElementById('soc-contacts-fab-filter');
+  if (paysSel && paysSel.options.length <= 1) {
+    const countries = [...new Set(allSocContacts.map(c => c.pays).filter(Boolean))].sort();
+    paysSel.innerHTML = '<option value="">🌍 Tous pays</option>' + countries.map(p => `<option value="${p}">${p}</option>`).join('');
+  }
+  if (fabSel && fabSel.options.length <= 1) {
+    const fabs = [...new Set(allSocContacts.map(c => c.organisation).filter(Boolean))].sort();
+    fabSel.innerHTML = '<option value="">🏭 Tous fabricants</option>' + fabs.map(f => `<option value="${f}">${f}</option>`).join('');
+  }
+  filterSocContactsGrid();
+}
+
+function filterSocContactsGrid() {
+  const q = (document.getElementById('soc-contacts-search')?.value || '').toLowerCase();
+  const pays = document.getElementById('soc-contacts-pays-filter')?.value || '';
+  const fab = document.getElementById('soc-contacts-fab-filter')?.value || '';
+  const filtered = allSocContacts.filter(ct => {
+    if (pays && ct.pays !== pays) return false;
+    if (fab && ct.organisation !== fab) return false;
+    if (q) {
+      const hay = [ct.prenom, ct.nom, ct.titre, ct.organisation, ct.pays, ct.notes].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  renderSocContactsGrid(filtered);
+}
+
+function renderSocContactsGrid(list) {
+  const grid = document.getElementById('soc-contacts-grid');
+  if (!grid) return;
+  const badge = document.getElementById('soc-count-badge');
+  if (badge && socTab === 'contacts') badge.textContent = list.length + ' contact' + (list.length > 1 ? 's' : '');
+  if (!list.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:3rem;text-align:center;color:var(--text3);font-size:13px;">Aucun contact trouvé</div>';
+    return;
+  }
+  grid.innerHTML = list.map(ct => {
+    const initials = ((ct.prenom||'')[0]||'') + ((ct.nom||'')[0]||'');
+    const soc = (societes || []).find(s => s.name === ct.organisation);
+    return `<div class="entity-card" data-contact-id="${ct.id}" style="cursor:pointer;padding:14px;position:relative;" onclick="openSocContactCard('${ct.id}')">
+      <button class="scout-cs-inline-btn" data-contact-id="${ct.id}" type="button" style="position:absolute;top:8px;right:8px;padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--accent);background:var(--bg3);color:var(--accent);cursor:pointer;z-index:10;font-weight:600;">+ Action</button>
+      <div style="display:flex;gap:10px;align-items:flex-start;padding-right:70px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:#3b82f622;border:2px solid #3b82f644;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#3b82f6;flex-shrink:0;">${initials||'?'}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:1px;">
+            <span style="font-size:13px;font-weight:600;color:var(--text);">${ct.prenom||''} ${ct.nom||''}</span>
+            ${ct.verified ? '<span style="font-size:10px;color:#22c55e;">✓</span>' : ''}
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.3;">${ct.titre||''}</div>
+        </div>
+      </div>
+      ${ct.organisation ? `<div style="margin-top:8px;font-size:11px;color:var(--accent);font-weight:500;cursor:pointer;" onclick="event.stopPropagation();${soc ? `openSociete('${soc.id}')` : 'void 0'}">🏭 ${ct.organisation}</div>` : ''}
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;align-items:center;">
+        ${ct.pays ? `<span style="font-size:10px;color:var(--text3);">🌍 ${ct.pays}</span>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+        ${ct.email ? `<a href="mailto:${ct.email}" onclick="event.stopPropagation()" style="font-size:11px;color:var(--accent2);text-decoration:none;background:var(--bg3);padding:3px 7px;border-radius:4px;">✉️</a>` : ''}
+        ${ct.telephone ? `<a href="tel:${ct.telephone}" onclick="event.stopPropagation()" style="font-size:11px;color:#22c55e;text-decoration:none;background:var(--bg3);padding:3px 7px;border-radius:4px;">📞</a>` : ''}
+        ${ct.linkedin ? `<a href="${ct.linkedin}" target="_blank" onclick="event.stopPropagation()" style="font-size:11px;color:#0077b5;text-decoration:none;background:var(--bg3);padding:3px 7px;border-radius:4px;">in</a>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openSocContactCard(id) {
+  // Navigate to the fabricant fiche with the contacts sub-tab auto-opened
+  const ct = (allSocContacts || []).find(c => c.id === id);
+  if (!ct) return;
+  const soc = (societes || []).find(s => s.name === ct.organisation);
+  if (soc) {
+    openSociete(soc.id);
+    setTimeout(() => { if (typeof showSTab === 'function') { const tabEl = document.querySelector('[onclick*=\"s-contacts\"]'); if (tabEl) showSTab('s-contacts', tabEl); loadSocieteContacts(soc.id); } }, 200);
+  }
+}
+
 function renderProduitsFiltered(list) {
   const g = document.getElementById('produits-grid');
   if (!list.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span style="color:var(--text3);">Aucun drone pour ce filtre</span></div>'; return; }
@@ -4798,8 +4944,9 @@ function renderContactsForAccount(endUserId) {
         const initials = ((ct.prenom||'')[0]||'') + ((ct.nom||'')[0]||'');
         const icon = TYPE_ICON[ct.type_contact] || '👤';
         const linkedContracts = allContacts.find(x=>x.id===ct.id)?.contrats_refs?.length || ct.contrats_refs?.length || 0;
-        return `<div style="background:var(--bg3);border-radius:8px;padding:12px;border:1px solid var(--border2);">
-          <div style="display:flex;gap:10px;align-items:flex-start;">
+        return `<div style="background:var(--bg3);border-radius:8px;padding:12px;border:1px solid var(--border2);position:relative;">
+          <button class="scout-cs-inline-btn" data-contact-id="${ct.id}" type="button" style="position:absolute;top:8px;right:8px;padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--accent);background:var(--bg3);color:var(--accent);cursor:pointer;z-index:10;font-weight:600;">+ Action</button>
+          <div style="display:flex;gap:10px;align-items:flex-start;padding-right:70px;">
             <div style="width:36px;height:36px;border-radius:50%;background:${color}22;border:2px solid ${color}44;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${color};flex-shrink:0;">${initials||'?'}</div>
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
