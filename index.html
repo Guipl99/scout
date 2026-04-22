@@ -2030,7 +2030,7 @@ async function renderElistairProspects(force) {
   feed.innerHTML = '<div class="db-ins-empty">Analyse…</div>';
 
   try {
-    const r = await fetch(API + '/contacts?limit=500');
+    const r = await fetch(API + '/contacts?limit=2000');
     const d = await r.json();
     const contacts = d.contacts || [];
 
@@ -4251,7 +4251,7 @@ async function loadAndRenderSocContacts() {
       // Ensure societes are loaded (needed to filter "fabricant" contacts)
       if (!societes.length && typeof loadSocietes === 'function') await loadSocietes();
       // Fetch contacts without end_user (= fabricant contacts)
-      // We use /contacts?limit=500 and filter client-side
+      // We use /contacts?limit=2000 and filter client-side
       if (!allContacts.length && typeof loadContacts === 'function') await loadContacts();
       allSocContacts = (allContacts || []).filter(c => !c.end_user_id);
     } catch (e) {
@@ -4990,7 +4990,7 @@ let contactsLoaded = false;
 async function loadContacts() {
   if (contactsLoaded) return;
   try {
-    const r = await fetch(API + '/contacts?limit=500');
+    const r = await fetch(API + '/contacts?limit=2000');
     const d = await r.json();
     allContacts = d.contacts || [];
     contactsLoaded = true;
