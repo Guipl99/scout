@@ -603,6 +603,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   </div>
 </div>
 
+<!-- Floating global search button -->
+<button id="scout-gs-fab" class="hidden" onclick="if(window.scoutGlobalSearch) window.scoutGlobalSearch.open();" aria-label="Recherche globale" title="Recherche globale (Cmd/Ctrl+K)">
+  <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.8"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+  <span class="label">Rechercher</span>
+  <kbd>⌘K</kbd>
+</button>
+
 <!-- NEXT ACTION BUTTON -->
 <button id="scout-action-btn" class="hidden" aria-label="Prochaine action" title="Prochaine action suggérée">
   <span>🎯</span><span>Prochaine action</span>
@@ -654,6 +661,31 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   function hideAuthGate() {
     authGate.classList.add('hidden');
     actionBtn.classList.remove('hidden');
+    const searchFab = document.getElementById('scout-gs-fab');
+    if (searchFab) {
+      searchFab.classList.remove('hidden');
+      // Pulse the FAB for new users (first 3 sessions where they haven't used search yet)
+      try {
+        const usedSearch = localStorage.getItem('scout-gs-used') === '1';
+        const shownCount = parseInt(localStorage.getItem('scout-gs-shown') || '0', 10);
+        if (!usedSearch && shownCount < 3) {
+          searchFab.classList.add('pulse');
+          localStorage.setItem('scout-gs-shown', String(shownCount + 1));
+          // Stop pulsing once user clicks the FAB or uses Cmd+K
+          const stopPulse = () => {
+            searchFab.classList.remove('pulse');
+            localStorage.setItem('scout-gs-used', '1');
+          };
+          searchFab.addEventListener('click', stopPulse, { once: true });
+          document.addEventListener('keydown', function kHandler(e) {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+              stopPulse();
+              document.removeEventListener('keydown', kHandler);
+            }
+          });
+        }
+      } catch {}
+    }
   }
 
   authForm.addEventListener('submit', async (e) => {
@@ -1630,6 +1662,10 @@ Réinitialiser tous les filtres
 <!-- BOTTOM NAV MOBILE -->
 <nav class="bottom-nav">
   <div class="bottom-nav-items">
+    <div class="bn-item" id="bn-search" onclick="if(window.scoutGlobalSearch) window.scoutGlobalSearch.open();">
+      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Rechercher
+    </div>
     <div class="bn-item active" id="bn-dashboard" onclick="go('dashboard')">
       <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
       Accueil
@@ -5263,7 +5299,69 @@ async function runHealthCheck() {
     transition: transform 0.2s, box-shadow 0.2s;
   }
   #scout-chat-btn:hover { transform: scale(1.08); box-shadow: 0 12px 32px rgba(30, 64, 175, 0.5); }
+  /* Floating search button (global Cmd+K) — desktop only; mobile has it in bottom nav */
+  #scout-gs-fab {
+    position: fixed; top: 16px; right: 16px; z-index: 9996;
+    background: var(--accent, #6366f1); color: white;
+    border: 1px solid var(--accent, #6366f1);
+    border-radius: 10px;
+    padding: 9px 14px; font-size: 13px; font-weight: 500;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+    transition: all 0.15s;
+  }
+  #scout-gs-fab:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+  }
+  #scout-gs-fab.hidden { display: none; }
+  #scout-gs-fab svg { width: 14px; height: 14px; }
+  #scout-gs-fab kbd {
+    font-family: monospace; font-size: 10px;
+    background: rgba(255,255,255,.22); padding: 2px 6px;
+    border-radius: 4px; font-weight: 600;
+  }
+  /* Pulsing hint for new users (first 3 visits) */
+  #scout-gs-fab.pulse::after {
+    content: ''; position: absolute; inset: -4px;
+    border-radius: 12px; border: 2px solid var(--accent, #6366f1);
+    animation: scoutGsPulse 1.6s ease-out infinite;
+    pointer-events: none;
+  }
+  @keyframes scoutGsPulse {
+    0%   { opacity: 0.8; transform: scale(1); }
+    80%  { opacity: 0; transform: scale(1.3); }
+    100% { opacity: 0; transform: scale(1.3); }
+  }
+  @media (max-width: 768px) {
+    #scout-gs-fab { display: none !important; }  /* Mobile uses bottom-nav button */
+  }
+
   #scout-chat-btn svg { width: 28px; height: 28px; }
+
+  /* Mobile: raise floating buttons above bottom nav bar (~55-65px tall) */
+  @media (max-width: 768px) {
+    #scout-chat-btn {
+      bottom: 78px !important;
+      right: 16px !important;
+      width: 52px !important; height: 52px !important;
+    }
+    #scout-chat-btn svg { width: 24px; height: 24px; }
+    #scout-action-btn {
+      bottom: 78px !important;
+      right: 78px !important;
+      padding: 11px 16px !important;
+      font-size: 13px !important;
+    }
+    /* On very small screens, Prochaine action can be icon-only to avoid overlap */
+    @media (max-width: 380px) {
+      #scout-action-btn span:last-child {
+        display: none;
+      }
+      #scout-action-btn { right: 76px !important; padding: 11px 13px !important; }
+    }
+  }
 
   #scout-chat-panel {
     position: fixed; bottom: 96px; right: 24px; z-index: 9999;
@@ -6324,6 +6422,430 @@ async function runHealthCheck() {
     saveCooldown,
     rescan: scanAndUpdate, invalidateCache: () => contactStatusCache.clear(),
   };
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCOUT GLOBAL SEARCH (Command Palette)
+     Cmd+K / Ctrl+K / '/' to open — searches contacts, fabricants,
+     produits, contrats, buyers all at once.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style>
+  #scout-gs-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 100001;
+    display: none; align-items: flex-start; justify-content: center;
+    padding-top: 12vh;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  #scout-gs-overlay.open { display: flex; }
+  #scout-gs-palette {
+    background: var(--bg2, #1e293b);
+    color: var(--text, #f1f5f9);
+    border: 1px solid var(--border, #334155);
+    border-radius: 12px;
+    width: 640px; max-width: calc(100vw - 32px);
+    max-height: 70vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+  }
+  #scout-gs-input-wrap {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border2, #1e293b);
+  }
+  #scout-gs-input-wrap .icon { font-size: 16px; opacity: 0.7; }
+  #scout-gs-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text, #f1f5f9); font-size: 15px; font-family: inherit;
+  }
+  #scout-gs-input::placeholder { color: var(--text3, #64748b); }
+  #scout-gs-kbd {
+    display: inline-block;
+    padding: 2px 6px; font-size: 10px; font-family: monospace;
+    background: var(--bg3, #0f172a); color: var(--text3, #64748b);
+    border-radius: 4px; border: 1px solid var(--border2, #1e293b);
+  }
+  #scout-gs-results {
+    flex: 1; overflow-y: auto; padding: 6px 0;
+  }
+  .scout-gs-group-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--text3, #64748b);
+    padding: 10px 18px 4px 18px;
+  }
+  .scout-gs-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 18px; cursor: pointer;
+    transition: background 0.05s;
+  }
+  .scout-gs-item:hover, .scout-gs-item.selected {
+    background: var(--bg3, #0f172a);
+  }
+  .scout-gs-item .type-icon {
+    width: 28px; height: 28px;
+    background: var(--bg3, #0f172a);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 14px;
+  }
+  .scout-gs-item .content { flex: 1; min-width: 0; }
+  .scout-gs-item .name {
+    font-size: 13px; color: var(--text, #f1f5f9); font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .scout-gs-item .meta {
+    font-size: 11px; color: var(--text3, #64748b); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .scout-gs-item mark {
+    background: rgba(99, 102, 241, 0.25); color: inherit;
+    border-radius: 2px; padding: 0 2px;
+  }
+  #scout-gs-footer {
+    padding: 8px 18px; font-size: 11px; color: var(--text3, #64748b);
+    border-top: 1px solid var(--border2, #1e293b);
+    display: flex; gap: 16px; align-items: center;
+  }
+  #scout-gs-footer .sep { opacity: 0.5; }
+  .scout-gs-empty {
+    padding: 32px 18px; text-align: center; color: var(--text3, #64748b);
+    font-size: 13px;
+  }
+
+  /* Mobile tweaks */
+  @media (max-width: 480px) {
+    #scout-gs-overlay { padding-top: 8vh; }
+    #scout-gs-palette { width: calc(100vw - 24px); max-height: 80vh; }
+    #scout-gs-kbd, #scout-gs-footer { display: none; }
+  }
+</style>
+
+<div id="scout-gs-overlay" role="dialog" aria-label="Recherche globale">
+  <div id="scout-gs-palette">
+    <div id="scout-gs-input-wrap">
+      <span class="icon">🔍</span>
+      <input id="scout-gs-input" type="text" placeholder="Rechercher contact, fabricant, produit, contrat..."
+             autocomplete="off" spellcheck="false" />
+      <span id="scout-gs-kbd">Esc</span>
+    </div>
+    <div id="scout-gs-results">
+      <div class="scout-gs-empty">Tape pour chercher dans toute la base…</div>
+    </div>
+    <div id="scout-gs-footer">
+      <span><kbd>↑↓</kbd> naviguer</span>
+      <span class="sep">•</span>
+      <span><kbd>↵</kbd> ouvrir</span>
+      <span class="sep">•</span>
+      <span><kbd>Esc</kbd> fermer</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const overlay = document.getElementById('scout-gs-overlay');
+  const input = document.getElementById('scout-gs-input');
+  const results = document.getElementById('scout-gs-results');
+
+  let currentResults = [];
+  let selectedIdx = 0;
+
+  function open() {
+    overlay.classList.add('open');
+    input.value = '';
+    input.focus();
+    renderResults('');
+  }
+  function close() {
+    overlay.classList.remove('open');
+    input.value = '';
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Cmd+K / Ctrl+K → open
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      open();
+      return;
+    }
+    // '/' → open (but only when not in an input)
+    if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)
+        && !document.activeElement.isContentEditable) {
+      e.preventDefault();
+      open();
+      return;
+    }
+    // Handle navigation when palette is open
+    if (overlay.classList.contains('open')) {
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIdx = Math.min(currentResults.length - 1, selectedIdx + 1);
+        updateSelection();
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIdx = Math.max(0, selectedIdx - 1);
+        updateSelection();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (currentResults[selectedIdx]) {
+          openItem(currentResults[selectedIdx]);
+        }
+        return;
+      }
+    }
+  });
+
+  // Click outside to close
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
+
+  // Input typing
+  input.addEventListener('input', () => {
+    selectedIdx = 0;
+    renderResults(input.value);
+  });
+
+  function updateSelection() {
+    document.querySelectorAll('.scout-gs-item').forEach((el, i) => {
+      el.classList.toggle('selected', i === selectedIdx);
+      if (i === selectedIdx) el.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function highlight(text, query) {
+    if (!query || !text) return escapeHtml(text);
+    const escaped = escapeHtml(text);
+    const qEscaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(' + qEscaped + ')', 'gi');
+    return escaped.replace(re, '<mark>$1</mark>');
+  }
+
+  function fuzzy(text, q) {
+    if (!text || !q) return false;
+    return text.toLowerCase().includes(q.toLowerCase());
+  }
+
+  // Safe accessor: avoid ReferenceError when a dataset var hasn't been declared yet
+  function safeArr(name) {
+    try {
+      // eslint-disable-next-line no-eval
+      const v = eval(name);
+      return Array.isArray(v) ? v : [];
+    } catch { return []; }
+  }
+
+  // Builds the list of candidate items from the global datasets
+  function collectItems(q) {
+    const out = [];
+    const qLower = q.toLowerCase();
+
+    // CONTACTS
+    for (const c of safeArr('allContacts')) {
+      const name = [c.prenom, c.nom].filter(Boolean).join(' ');
+      const hay = [name, c.titre, c.organisation, c.pays, c.email].filter(Boolean).join(' ').toLowerCase();
+      if (!q || hay.includes(qLower)) {
+        out.push({
+          type: 'contact',
+          icon: c.end_user_id ? '👤' : '🧑‍💼',
+          name: name || c.email || c.id,
+          meta: [c.titre, c.organisation, c.pays].filter(Boolean).join(' • '),
+          data: c,
+          score: computeScore(name, qLower),
+        });
+      }
+    }
+
+    // FABRICANTS (sociétés)
+    for (const s of safeArr('societes')) {
+      const hay = [s.name, s.pays, s.secteur, s.description].filter(Boolean).join(' ').toLowerCase();
+      if (!q || hay.includes(qLower)) {
+        out.push({
+          type: 'fabricant',
+          icon: '🏭',
+          name: s.name,
+          meta: [s.pays, s.secteur].filter(Boolean).join(' • '),
+          data: s,
+          score: computeScore(s.name, qLower),
+        });
+      }
+    }
+
+    // PRODUITS (systèmes)
+    for (const p of safeArr('produits')) {
+      const hay = [p.name, p.societe_name, p.type_drone, p.badge, p.description].filter(Boolean).join(' ').toLowerCase();
+      if (!q || hay.includes(qLower)) {
+        out.push({
+          type: 'produit',
+          icon: p.emoji || '🛩️',
+          name: p.name,
+          meta: [p.societe_name, p.type_drone || p.badge].filter(Boolean).join(' • '),
+          data: p,
+          score: computeScore(p.name, qLower),
+        });
+      }
+    }
+
+    // CONTRATS
+    for (const co of safeArr('contracts')) {
+      const hay = [co.programme, co.pays_client, co.fabricant, co.nom_client].filter(Boolean).join(' ').toLowerCase();
+      if (!q || hay.includes(qLower)) {
+        out.push({
+          type: 'contrat',
+          icon: '📋',
+          name: co.programme || '(contrat)',
+          meta: [co.pays_client, co.fabricant, co.nom_client].filter(Boolean).join(' • '),
+          data: co,
+          score: computeScore(co.programme || '', qLower),
+        });
+      }
+    }
+
+    // END-USERS (buyers)
+    for (const eu of safeArr('allEndUsers')) {
+      const hay = [eu.nom, eu.pays, eu.description].filter(Boolean).join(' ').toLowerCase();
+      if (!q || hay.includes(qLower)) {
+        out.push({
+          type: 'buyer',
+          icon: '🎯',
+          name: eu.nom,
+          meta: [eu.pays, eu.secteur].filter(Boolean).join(' • '),
+          data: eu,
+          score: computeScore(eu.nom, qLower),
+        });
+      }
+    }
+
+    // Sort by score (higher = better)
+    out.sort((a, b) => b.score - a.score);
+    return out.slice(0, 50);
+  }
+
+  // Scoring heuristic: prefix match > word start > contains > long text
+  function computeScore(text, qLower) {
+    if (!text || !qLower) return 1;
+    const t = text.toLowerCase();
+    if (t === qLower) return 1000;
+    if (t.startsWith(qLower)) return 500;
+    // Any word in text starts with query?
+    const words = t.split(/\s+/);
+    if (words.some(w => w.startsWith(qLower))) return 200;
+    if (t.includes(qLower)) return 100 - Math.min(50, t.length);
+    return 1;
+  }
+
+  function renderResults(q) {
+    const items = collectItems(q);
+    currentResults = items;
+    selectedIdx = 0;
+
+    if (!items.length) {
+      results.innerHTML = `<div class="scout-gs-empty">${q ? 'Aucun résultat' : 'Tape pour chercher dans toute la base…'}</div>`;
+      return;
+    }
+
+    // Group by type
+    const groups = {};
+    const labels = {
+      contact: 'Contacts', fabricant: 'Fabricants',
+      produit: 'Produits', contrat: 'Contrats', buyer: 'Buyers'
+    };
+    const order = ['contact', 'fabricant', 'produit', 'contrat', 'buyer'];
+    for (const item of items) {
+      if (!groups[item.type]) groups[item.type] = [];
+      groups[item.type].push(item);
+    }
+
+    let html = '';
+    let globalIdx = 0;
+    for (const key of order) {
+      if (!groups[key] || !groups[key].length) continue;
+      html += `<div class="scout-gs-group-label">${labels[key]} (${groups[key].length})</div>`;
+      for (const item of groups[key].slice(0, 10)) {
+        const selCls = globalIdx === selectedIdx ? ' selected' : '';
+        html += `
+          <div class="scout-gs-item${selCls}" data-idx="${globalIdx}">
+            <div class="type-icon">${item.icon}</div>
+            <div class="content">
+              <div class="name">${highlight(item.name, q)}</div>
+              ${item.meta ? `<div class="meta">${highlight(item.meta, q)}</div>` : ''}
+            </div>
+          </div>
+        `;
+        globalIdx++;
+      }
+    }
+    results.innerHTML = html;
+
+    // Attach click handlers
+    // Rebuild flat list of visible items in render order
+    const flat = [];
+    for (const key of order) {
+      if (groups[key]) flat.push(...groups[key].slice(0, 10));
+    }
+    currentResults = flat;
+
+    document.querySelectorAll('.scout-gs-item').forEach(el => {
+      const idx = parseInt(el.dataset.idx, 10);
+      el.addEventListener('click', () => {
+        selectedIdx = idx;
+        openItem(currentResults[idx]);
+      });
+      el.addEventListener('mouseenter', () => {
+        selectedIdx = idx;
+        updateSelection();
+      });
+    });
+  }
+
+  function openItem(item) {
+    close();
+    if (!item) return;
+    const d = item.data;
+    try {
+      switch (item.type) {
+        case 'contact':
+          if (typeof openContactFromGrid === 'function') {
+            openContactFromGrid(d.id);
+          }
+          break;
+        case 'fabricant':
+          if (typeof go === 'function') go('societes');
+          setTimeout(() => { if (typeof openSociete === 'function') openSociete(d.id); }, 150);
+          break;
+        case 'produit':
+          if (typeof go === 'function') go('produits-db');
+          setTimeout(() => { if (typeof openProduit === 'function') openProduit(d.id); }, 150);
+          break;
+        case 'contrat':
+          if (typeof go === 'function') go('contracts');
+          setTimeout(() => { if (typeof openContractDetail === 'function') openContractDetail(d.id); }, 200);
+          break;
+        case 'buyer':
+          if (typeof go === 'function') go('end-users');
+          setTimeout(() => { if (typeof openEndUser === 'function') openEndUser(d.id); }, 150);
+          break;
+      }
+    } catch (e) {
+      console.error('[global-search] navigation error:', e);
+    }
+  }
+
+  // Expose for external use (add a search button in header, etc.)
+  window.scoutGlobalSearch = { open, close };
 })();
 </script>
 
