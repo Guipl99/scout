@@ -1592,22 +1592,6 @@ Réinitialiser tous les filtres
           </div>
         </div>
 
-        <!-- ── Cooldowns & prospection commerciale ─────────────── -->
-        <div class="card">
-          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
-            <span class="card-title">🎯 Cooldowns & prospection</span>
-            <span id="scout-cooldowns-saved-ind" style="font-size:10px;color:#10b981;opacity:0;transition:opacity 0.2s;">✓ Enregistré</span>
-          </div>
-          <div class="card-body" style="padding:12px 16px;">
-            <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">
-              Durée pendant laquelle un contact est masqué de "Prochaine action" après qu'un commercial l'a touché, selon le moyen utilisé.
-            </div>
-            <div id="scout-cooldowns-container" style="display:flex;flex-direction:column;gap:8px;">
-              <div style="font-size:12px;color:var(--text3);">Chargement…</div>
-            </div>
-          </div>
-        </div>
-
         <!-- ── Diagnostic système ────────────────────────────── -->
         <div class="card">
           <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
@@ -5727,17 +5711,17 @@ async function runHealthCheck() {
           <button class="scout-cs-action-card" onclick="scoutContactStatus.openLinkedIn()" ${!hasLinkedin ? 'disabled' : ''}>
             <span class="icon">💼</span>
             <span class="label">Se connecter sur LinkedIn</span>
-            <span class="hint">${hasLinkedin ? 'Non loggué' : 'Pas de profil'}</span>
+            <span class="hint">${hasLinkedin ? 'Ajout simple' : 'Pas de profil'}</span>
           </button>
           <button class="scout-cs-action-card" onclick="scoutContactStatus.draftEmail()" ${!hasEmail ? 'disabled' : ''}>
             <span class="icon">✉️</span>
             <span class="label">Email de prospection</span>
-            <span class="hint">${hasEmail ? 'Cooldown après envoi' : 'Pas d\\'email'}</span>
+            <span class="hint">${hasEmail ? 'Prend le contact en main' : 'Pas d\\'email'}</span>
           </button>
           <button class="scout-cs-action-card" onclick="scoutContactStatus.draftLinkedInMsg()" ${!hasLinkedin ? 'disabled' : ''}>
             <span class="icon">📋</span>
             <span class="label">Message LinkedIn</span>
-            <span class="hint">${hasLinkedin ? 'Cooldown après envoi' : 'Pas de profil'}</span>
+            <span class="hint">${hasLinkedin ? 'Prend le contact en main' : 'Pas de profil'}</span>
           </button>
           <button class="scout-cs-action-card" onclick="scoutContactStatus.toggleManualForm()">
             <span class="icon">🔒</span>
@@ -5783,7 +5767,7 @@ async function runHealthCheck() {
           return `
             <div class="scout-cs-history-item ${cls}">
               <div class="scout-cs-history-main">
-                <div class="scout-cs-history-type">${def.icon} ${escapeHtml(def.label)}${a.active ? ' <span style="font-size:10px;color:#92400e;">(actif jusqu\\'au ' + formatDate(a.cooldown_until) + ')</span>' : ''}</div>
+                <div class="scout-cs-history-type">${def.icon} ${escapeHtml(def.label)}</div>
                 <div class="scout-cs-history-meta">Par ${escapeHtml(a.performed_by || '?')} le ${formatDate(a.performed_at)}</div>
                 ${a.notes ? `<div class="scout-cs-history-notes">"${escapeHtml(a.notes)}"</div>` : ''}
               </div>
@@ -5835,14 +5819,13 @@ async function runHealthCheck() {
         headers: {'Content-Type':'application/json', ...authHeaders()},
         body: JSON.stringify({ contact_id: currentContact.id, action_type: actionType })
       });
-      const data = await r.json();
       if (r.ok) {
         const result = document.getElementById('scout-drawer-result');
         result.innerHTML = `
           <div class="scout-cs-confirm-box" style="background:#ecfdf5; border-color:#10b981;">
             <div class="scout-cs-confirm-title" style="color:#065f46;">✅ Envoi confirmé</div>
             <div class="scout-cs-confirm-desc" style="color:#065f46;">
-              Contact verrouillé pour ${data.cooldown_days || '?'} jours.
+              Ce contact est désormais sous ta responsabilité — l'équipe verra que c'est toi qui gères la suite.
             </div>
           </div>
         `;
@@ -6062,13 +6045,14 @@ async function runHealthCheck() {
 
   function applyCardBtnStyle(btn, contactId) {
     const status = contactStatusCache.get(contactId);
-    if (status && status.active) {
+    if (status && status.owned) {
       const def = ACTION_LABELS[status.action_type] || { label: status.action_type, icon: '•' };
+      const owner = status.owner || '?';
       btn.style.background = 'rgba(239,68,68,.15)';
       btn.style.border = '1px solid rgba(239,68,68,.4)';
       btn.style.color = '#fca5a5';
-      btn.innerHTML = '🔒 Contacté';
-      btn.title = `Contacté par ${status.performed_by || '?'} le ${formatDate(status.performed_at)} via ${def.label}. Cooldown jusqu'au ${formatDate(status.cooldown_until)}.`;
+      btn.innerHTML = `🔒 ${escapeHtml(owner)}`;
+      btn.title = `Pris en main par ${owner} le ${formatDate(status.performed_at)} via ${def.label}. C'est lui qui gère la suite — clic pour voir l'historique.`;
     } else {
       btn.style.background = 'rgba(255,255,255,.06)';
       btn.style.border = '1px solid rgba(255,255,255,.12)';
