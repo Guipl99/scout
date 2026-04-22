@@ -6072,15 +6072,21 @@ async function runHealthCheck() {
       const btn = document.createElement('button');
       btn.className = 'scout-cs-card-btn';
       btn.dataset.contactId = contactId;
-      btn.style.cssText = 'position:absolute; top:6px; right:6px; border-radius:6px; padding:3px 8px; font-size:10px; cursor:pointer; z-index:2; font-family:inherit; transition: all 0.15s; font-weight:500;';
+      // Positioned inside card (not absolute) so it's never clipped by overflow:hidden
+      btn.style.cssText = 'position:absolute; top:8px; right:8px; border-radius:5px; padding:3px 8px; font-size:10px; cursor:pointer; z-index:5; font-family:inherit; transition: all 0.15s; font-weight:500; line-height:1.4;';
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const nameEl = card.querySelector('[style*="font-weight:600"], [style*="font-weight: 600"]');
         const name = nameEl ? nameEl.textContent.replace(/[👤📋💼🚀✓🔒]/g,'').trim() : contactId;
         openDrawer(contactId, name);
       });
+      // Ensure card can hold absolute positioned children WITHOUT clipping them
       const computed = window.getComputedStyle(card);
       if (computed.position === 'static') card.style.position = 'relative';
+      // Critical: override any overflow:hidden so the button stays visible
+      if (computed.overflow === 'hidden' || computed.overflowX === 'hidden' || computed.overflowY === 'hidden') {
+        card.style.overflow = 'visible';
+      }
       card.appendChild(btn);
       applyCardBtnStyle(btn, contactId);
     });
