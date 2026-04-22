@@ -6052,15 +6052,19 @@ async function runHealthCheck() {
   }
 
   // Global click delegation — catches clicks on ANY .scout-cs-inline-btn
-  // regardless of when it was rendered. Avoids inline onclick escape issues.
-  document.addEventListener('click', (e) => {
+  // Two-layer defense against parent card's onclick="openContactFromGrid(...)":
+  //  1. Capture on document (runs before any bubble handler)
+  //  2. stopImmediatePropagation (prevents ALL other handlers at ALL phases)
+  //  3. Handle on window too (some mobile browsers fire events from window first)
+  function handleInlineBtnClick(e) {
     const btn = e.target.closest('.scout-cs-inline-btn');
     if (!btn) return;
+    // Max stop. Prevent the parent card's onclick inline handler from firing.
     e.stopPropagation();
+    e.stopImmediatePropagation();
     e.preventDefault();
     const contactId = btn.dataset.contactId;
     if (!contactId) return;
-    // Try to find name from the card
     const card = btn.closest('.entity-card');
     let name = contactId;
     if (card) {
@@ -6068,7 +6072,18 @@ async function runHealthCheck() {
       if (nameEl) name = nameEl.textContent.replace(/[👤📋💼🚀✓🔒]/g,'').trim();
     }
     openDrawer(contactId, name);
-  }, true); // capture phase to beat the parent card's onclick
+    return false;
+  }
+  document.addEventListener('click', handleInlineBtnClick, true);
+  document.addEventListener('mousedown', (e) => {
+    // Some mobile browsers send mousedown that might trigger parent handlers
+    const btn = e.target.closest('.scout-cs-inline-btn');
+    if (btn) { e.stopPropagation(); }
+  }, true);
+  document.addEventListener('touchstart', (e) => {
+    const btn = e.target.closest('.scout-cs-inline-btn');
+    if (btn) { e.stopPropagation(); }
+  }, true);
 
   function applyCardBtnStyle(btn, contactId) {
     const status = contactStatusCache.get(contactId);
