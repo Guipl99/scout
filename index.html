@@ -637,6 +637,22 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   let session = null; // { token, first_name }
   let currentContact = null;
 
+  // Global auth headers helper — used by all API fetches so the backend
+  // can recognise authenticated callers and return un-masked PII.
+  // Falls back to localStorage if `session` hasn't been hydrated yet.
+  window.getAuthHeaders = function getAuthHeaders() {
+    try {
+      if (session && session.token) return {'Authorization': 'Bearer ' + session.token};
+      if (window.scoutSession && window.scoutSession.token) return {'Authorization': 'Bearer ' + window.scoutSession.token};
+      const raw = localStorage.getItem('scout_chat_session');
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && s.token) return {'Authorization': 'Bearer ' + s.token};
+      }
+    } catch {}
+    return {};
+  };
+
   // ─── AUTH GATE ──────────────────────────────────────────────────────
   const authGate = document.getElementById('scout-auth-gate');
   const authForm = document.getElementById('scout-auth-form');
@@ -2030,7 +2046,7 @@ async function renderElistairProspects(force) {
   feed.innerHTML = '<div class="db-ins-empty">Analyse…</div>';
 
   try {
-    const r = await fetch(API + '/contacts?limit=2000');
+    const r = await fetch(API + '/contacts?limit=2000', { headers: window.getAuthHeaders() });
     const d = await r.json();
     const contacts = d.contacts || [];
 
@@ -2459,7 +2475,7 @@ function renderDashboard() {
 
   // Buyers + tenders depuis API
   Promise.all([
-    fetch(API + '/end-users?limit=3000').then(r=>r.json()).catch(()=>({end_users:[]})),
+    fetch(API + '/end-users?limit=3000', { headers: window.getAuthHeaders() }).then(r=>r.json()).catch(()=>({end_users:[]})),
     fetch(API + '/tenders').then(r=>r.json()).catch(()=>({tenders:[]})),
   ]).then(([euData, tdData]) => {
     const endUsers = euData.end_users || [];
@@ -2664,7 +2680,7 @@ async function loadSocieteContacts(societeId) {
     // Also fetch freshly in case cache is stale
     let source = allContacts;
     if (!source || !source.length) {
-      const r = await fetch(API + '/contacts?limit=1000');
+      const r = await fetch(API + '/contacts?limit=1000', { headers: window.getAuthHeaders() });
       const d = await r.json();
       source = d.contacts || [];
     }
@@ -4688,7 +4704,7 @@ function openContactFromGrid(id) {
 async function loadEndUsers() {
   if (allEndUsers.length > 0) return;
   try {
-    const r = await fetch(API + '/end-users?limit=3000');
+    const r = await fetch(API + '/end-users?limit=3000', { headers: window.getAuthHeaders() });
     allEndUsers = (await r.json()).end_users || [];
     // Populate secteur filter
     populateEuDroneFilters();
@@ -4993,7 +5009,7 @@ let contactsLoaded = false;
 async function loadContacts() {
   if (contactsLoaded) return;
   try {
-    const r = await fetch(API + '/contacts?limit=2000');
+    const r = await fetch(API + '/contacts?limit=2000', { headers: window.getAuthHeaders() });
     const d = await r.json();
     allContacts = d.contacts || [];
     contactsLoaded = true;
@@ -5960,7 +5976,7 @@ async function runHealthCheck() {
     currentDraft = null;
     try {
       const [contactR, historyR] = await Promise.all([
-        fetch(API + '/contacts/' + encodeURIComponent(contactId)).catch(() => null),
+        fetch(API + '/contacts/' + encodeURIComponent(contactId), { headers: window.getAuthHeaders() }).catch(() => null),
         fetch(API + '/action/history?contact_id=' + encodeURIComponent(contactId), { headers: authHeaders() }),
       ]);
       let contact = null;
