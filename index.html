@@ -2459,7 +2459,7 @@ function renderDashboard() {
 
   // Buyers + tenders depuis API
   Promise.all([
-    fetch(API + '/end-users?limit=200').then(r=>r.json()).catch(()=>({end_users:[]})),
+    fetch(API + '/end-users?limit=3000').then(r=>r.json()).catch(()=>({end_users:[]})),
     fetch(API + '/tenders').then(r=>r.json()).catch(()=>({tenders:[]})),
   ]).then(([euData, tdData]) => {
     const endUsers = euData.end_users || [];
@@ -4688,7 +4688,7 @@ function openContactFromGrid(id) {
 async function loadEndUsers() {
   if (allEndUsers.length > 0) return;
   try {
-    const r = await fetch(API + '/end-users?limit=200');
+    const r = await fetch(API + '/end-users?limit=3000');
     allEndUsers = (await r.json()).end_users || [];
     // Populate secteur filter
     populateEuDroneFilters();
@@ -4712,10 +4712,13 @@ function filterEndUsers() {
       if (!match) return false;
     }
 
-    // Filtre fabricant — via societes_ids
+    // Filtre fabricant — via societes_ids OU via produits (chaque produit a un societe_id)
     if (fabricant) {
       const socIds = eu.societes_ids || [];
-      if (!socIds.includes(fabricant)) return false;
+      const prodMap = window._euProdMap || {};
+      const matchViaSocietes = socIds.includes(fabricant);
+      const matchViaProduits = (eu.produits_ids || []).some(pid => prodMap[pid]?.societe_id === fabricant);
+      if (!matchViaSocietes && !matchViaProduits) return false;
     }
 
     return true;
