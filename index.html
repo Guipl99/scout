@@ -1711,6 +1711,10 @@ Réinitialiser tous les filtres
             style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f39c12;margin-right:4px;"></span>Quantum
           </button>
+          <button id="rs-filter-teledyne_flir" onclick="filterResellers('teledyne_flir')" data-rs-filter="teledyne_flir"
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#9b59b6;margin-right:4px;"></span>Teledyne FLIR
+          </button>
         </div>
         <div id="rs-count" style="font-size:12px;color:var(--text3);margin-left:auto;">Chargement...</div>
       </div>
@@ -6975,7 +6979,8 @@ async function runHealthCheck() {
     dji: '#e74c3c',       // red
     fotokite: '#27ae60',  // green
     parrot: '#3498db',    // blue (in case we extend)
-    quantum_systems: '#f39c12'  // orange
+    quantum_systems: '#f39c12',  // orange
+    teledyne_flir: '#9b59b6'  // purple
   };
 
   function makeIcon(societeId) {
