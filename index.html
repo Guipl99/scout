@@ -65,6 +65,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* ── Panels ── */
 .panel { display: none; }
 .panel.active { display: block; }
+#panel-resellers.active { display: flex !important; }
 
 /* ── Topbar ── */
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 8px; flex-wrap: wrap; }
@@ -1685,9 +1686,9 @@ Réinitialiser tous les filtres
 </div>
 
 <!-- RESELLERS PANEL -->
-    <div id="panel-resellers" class="panel">
-      <div class="topbar"><h1>Resellers · Distributeurs officiels</h1></div>
-      <div style="padding:12px 16px 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border2);background:var(--bg2);">
+    <div id="panel-resellers" class="panel" style="display:none;flex-direction:column;height:100%;overflow:hidden;">
+      <div class="topbar" style="margin-bottom:0;padding-bottom:12px;flex-shrink:0;"><h1>Resellers · Distributeurs officiels</h1></div>
+      <div style="padding:10px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border2);flex-shrink:0;">
         <div style="font-size:12px;color:var(--text3);font-weight:500;">Fabricant :</div>
         <div style="display:flex;background:var(--bg3);border-radius:8px;padding:2px;gap:2px;">
           <button id="rs-filter-all" onclick="filterResellers('all')" data-rs-filter="all"
@@ -1705,7 +1706,7 @@ Réinitialiser tous les filtres
         </div>
         <div id="rs-count" style="font-size:12px;color:var(--text3);margin-left:auto;">Chargement...</div>
       </div>
-      <div id="resellers-map" style="height:calc(100vh - 180px);min-height:500px;width:100%;background:#0f1319;"></div>
+      <div id="resellers-map" style="flex:1;min-height:400px;width:100%;background:#0f1319;margin-top:12px;border-radius:8px;overflow:hidden;"></div>
       <style>
         /* Dark popup styling — overrides Leaflet defaults */
         #panel-resellers .leaflet-popup-content-wrapper {
