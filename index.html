@@ -414,6 +414,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .pending-btn.approve { background:rgba(34,197,94,.12); border-color:rgba(34,197,94,.3); color:#22c55e; }
 .pending-btn.reject  { background:rgba(239,68,68,.08); border-color:rgba(239,68,68,.2); color:#ef4444; }
 </style>
+<!-- Leaflet for Resellers map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 <body>
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -1675,6 +1680,30 @@ Réinitialiser tous les filtres
   </div>
 </div>
 
+<!-- RESELLERS PANEL -->
+    <div id="panel-resellers" class="panel">
+      <div class="topbar"><h1>Resellers · Distributeurs officiels</h1></div>
+      <div style="padding:12px 16px 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border2);background:var(--bg2);">
+        <div style="font-size:12px;color:var(--text3);font-weight:500;">Fabricant :</div>
+        <div style="display:flex;background:var(--bg3);border-radius:8px;padding:2px;gap:2px;">
+          <button id="rs-filter-all" onclick="filterResellers('all')" data-rs-filter="all"
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--accent);color:white;font-weight:600;transition:all 0.15s;">
+            🌐 Tous
+          </button>
+          <button id="rs-filter-dji" onclick="filterResellers('dji')" data-rs-filter="dji"
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#e74c3c;margin-right:4px;"></span>DJI
+          </button>
+          <button id="rs-filter-fotokite" onclick="filterResellers('fotokite')" data-rs-filter="fotokite"
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#27ae60;margin-right:4px;"></span>Fotokite
+          </button>
+        </div>
+        <div id="rs-count" style="font-size:12px;color:var(--text3);margin-left:auto;">Chargement...</div>
+      </div>
+      <div id="resellers-map" style="height:calc(100vh - 180px);min-height:500px;width:100%;background:var(--bg2);"></div>
+    </div>
+
 <!-- BOTTOM NAV MOBILE -->
 <nav class="bottom-nav">
   <div class="bottom-nav-items">
@@ -1697,6 +1726,10 @@ Réinitialiser tous les filtres
     <div class="bn-item" id="bn-contracts" onclick="go('contracts')">
       <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       Contrats
+    </div>
+    <div class="bn-item" id="bn-resellers" onclick="go('resellers')">
+      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6.5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 2C5 2 3 4 3 6.5c0 3.5 5 7.5 5 7.5s5-4 5-7.5C13 4 11 2 8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/></svg>
+      Resellers
     </div>
     <div class="bn-item" id="bn-end-users" onclick="go('end-users')">
       <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M15 13c0-1.66-1.34-3-3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
@@ -1915,6 +1948,7 @@ function go(id, opts) {
   if (id === 'societes') { backToSocietes(); loadSocietes().then(renderSocietes); }
   if (id === 'produits-db') { backToProduits(); loadAllProduits().then(renderProduits); }
   if (id === 'contracts') { loadContracts().then(() => { renderContractStatusFilters(); filterContracts(); loadContractStats(); }); }
+  if (id === 'resellers') { loadResellersMap(); }
   if (id === 'end-users') {
     loadEndUsers().then(() => {
       const tab = opts?.tab || loadSettings().defaultSubtab || 'comptes';
@@ -6881,5 +6915,130 @@ async function runHealthCheck() {
 })();
 </script>
 
+
+<script>
+// ── RESELLERS MAP (Leaflet + OpenStreetMap) ─────────────────────────────────
+(function() {
+  const API_RS = 'https://scout-api-production-fa8d.up.railway.app';
+  let _rsMap = null;
+  let _rsMarkers = [];
+  let _rsData = null;  // cached full list
+  let _rsCurrentFilter = 'all';
+
+  const COLORS = {
+    dji: '#e74c3c',       // red
+    fotokite: '#27ae60',  // green
+    parrot: '#3498db',    // blue (in case we extend)
+    quantum_systems: '#f39c12'  // orange
+  };
+
+  function makeIcon(societeId) {
+    const color = COLORS[societeId] || '#7f8c8d';
+    return L.divIcon({
+      className: 'rs-marker',
+      html: `<div style="background:${color};width:18px;height:18px;border-radius:50%;border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35);"></div>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
+      popupAnchor: [0, -9]
+    });
+  }
+
+  function popupHtml(r) {
+    const soc = (r.societe_name || r.societe_id || '').replace(/</g,'&lt;');
+    const name = (r.name || '').replace(/</g,'&lt;');
+    const tier = r.tier ? `<div style="font-size:11px;color:#7f8c8d;margin-top:2px;">${r.tier.replace(/</g,'&lt;')}</div>` : '';
+    const spec = r.specialisation ? `<div style="font-size:12px;color:#555;margin-top:4px;">${r.specialisation.replace(/</g,'&lt;')}</div>` : '';
+    const loc = [r.city, r.region, r.pays].filter(Boolean).join(', ').replace(/</g,'&lt;');
+    const web = r.website ? `<div style="margin-top:6px;"><a href="${r.website.replace(/"/g,'')}" target="_blank" rel="noopener" style="color:#2563eb;font-size:12px;text-decoration:none;">🔗 Visiter le site →</a></div>` : '';
+    return `
+      <div style="min-width:200px;max-width:280px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+        <div style="font-weight:600;font-size:14px;color:#1a202c;">${name}</div>
+        <div style="font-size:11px;color:${COLORS[r.societe_id]||'#888'};font-weight:600;margin-top:2px;text-transform:uppercase;letter-spacing:0.3px;">${soc}</div>
+        ${tier}
+        ${loc ? `<div style="font-size:12px;color:#4a5568;margin-top:6px;">📍 ${loc}</div>` : ''}
+        ${spec}
+        ${web}
+      </div>
+    `;
+  }
+
+  function clearMarkers() {
+    _rsMarkers.forEach(m => _rsMap.removeLayer(m));
+    _rsMarkers = [];
+  }
+
+  function drawMarkers(list) {
+    clearMarkers();
+    let bounds = [];
+    list.forEach(r => {
+      if (r.latitude == null || r.longitude == null) return;
+      const lat = parseFloat(r.latitude);
+      const lng = parseFloat(r.longitude);
+      if (isNaN(lat) || isNaN(lng)) return;
+      const marker = L.marker([lat, lng], { icon: makeIcon(r.societe_id) })
+        .addTo(_rsMap)
+        .bindPopup(popupHtml(r));
+      _rsMarkers.push(marker);
+      bounds.push([lat, lng]);
+    });
+    // Update count
+    const countEl = document.getElementById('rs-count');
+    if (countEl) countEl.textContent = `${list.length} distributeur${list.length > 1 ? 's' : ''} affiché${list.length > 1 ? 's' : ''}`;
+  }
+
+  window.filterResellers = function(filter) {
+    _rsCurrentFilter = filter;
+    // Update button UI
+    document.querySelectorAll('[data-rs-filter]').forEach(btn => {
+      const isActive = btn.getAttribute('data-rs-filter') === filter;
+      btn.style.background = isActive ? 'var(--accent)' : 'transparent';
+      btn.style.color = isActive ? 'white' : 'var(--text2)';
+      btn.style.fontWeight = isActive ? '600' : '500';
+    });
+    // Filter + redraw
+    if (!_rsData) return;
+    const filtered = filter === 'all' ? _rsData : _rsData.filter(r => r.societe_id === filter);
+    drawMarkers(filtered);
+  };
+
+  window.loadResellersMap = async function() {
+    // Initialize map once
+    if (!_rsMap) {
+      // Wait for Leaflet + DOM to be ready
+      if (typeof L === 'undefined') {
+        setTimeout(() => window.loadResellersMap(), 150);
+        return;
+      }
+      const mapDiv = document.getElementById('resellers-map');
+      if (!mapDiv) return;
+      _rsMap = L.map('resellers-map', {
+        center: [30, 0],
+        zoom: 2,
+        minZoom: 2,
+        worldCopyJump: true,
+        scrollWheelZoom: true
+      });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+      }).addTo(_rsMap);
+    }
+    // Ensure map renders correctly (sometimes Leaflet needs a refresh when panel becomes active)
+    setTimeout(() => { if (_rsMap) _rsMap.invalidateSize(); }, 50);
+
+    // Fetch resellers data
+    try {
+      const r = await fetch(`${API_RS}/resellers`);
+      const data = await r.json();
+      _rsData = (data.resellers || []).filter(r => r.societe_id === 'dji' || r.societe_id === 'fotokite');
+      window.filterResellers(_rsCurrentFilter);
+    } catch (e) {
+      console.error('loadResellersMap error:', e);
+      const countEl = document.getElementById('rs-count');
+      if (countEl) countEl.textContent = 'Erreur de chargement';
+    }
+  };
+})();
+</script>
 </body>
 </html>
