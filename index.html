@@ -1703,6 +1703,14 @@ Réinitialiser tous les filtres
             style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#27ae60;margin-right:4px;"></span>Fotokite
           </button>
+          <button id="rs-filter-parrot" onclick="filterResellers('parrot')" data-rs-filter="parrot"
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3498db;margin-right:4px;"></span>Parrot
+          </button>
+          <button id="rs-filter-quantum_systems" onclick="filterResellers('quantum_systems')" data-rs-filter="quantum_systems"
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f39c12;margin-right:4px;"></span>Quantum
+          </button>
         </div>
         <div id="rs-count" style="font-size:12px;color:var(--text3);margin-left:auto;">Chargement...</div>
       </div>
@@ -7074,7 +7082,7 @@ async function runHealthCheck() {
     try {
       const r = await fetch(`${API_RS}/resellers`);
       const data = await r.json();
-      _rsData = (data.resellers || []).filter(r => r.societe_id === 'dji' || r.societe_id === 'fotokite');
+      _rsData = data.resellers || [];
       window.filterResellers(_rsCurrentFilter);
     } catch (e) {
       console.error('loadResellersMap error:', e);
