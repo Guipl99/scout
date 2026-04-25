@@ -7011,14 +7011,46 @@ async function runHealthCheck() {
     const spec = r.specialisation ? `<div style="font-size:12px;color:#cbd5e0;margin-top:4px;">${r.specialisation.replace(/</g,'&lt;')}</div>` : '';
     const loc = [r.city, r.region, r.pays].filter(Boolean).join(', ').replace(/</g,'&lt;');
     const web = r.website ? `<div style="margin-top:6px;"><a href="${r.website.replace(/"/g,'')}" target="_blank" rel="noopener" style="color:#63b3ed;font-size:12px;text-decoration:none;">🔗 Visiter le site →</a></div>` : '';
+
+    // Contact BD bloc
+    let contactBlock = '';
+    if (r.contact_name || r.contact_email) {
+      const cName = (r.contact_name || '').replace(/</g,'&lt;');
+      const cRole = (r.contact_role || '').replace(/</g,'&lt;');
+      const cEmail = (r.contact_email || '').replace(/"/g,'');
+      const cLink = (r.contact_linkedin || '').replace(/"/g,'');
+      const status = r.contact_email_status;
+      const score = r.contact_email_score;
+      // Badge selon status
+      let badge = '';
+      if (status === 'valid') badge = `<span style="background:#22c55e;color:white;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600;margin-left:4px;">✓ ${score||''}</span>`;
+      else if (status === 'accept_all') badge = `<span style="background:#eab308;color:white;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600;margin-left:4px;">⚠ ${score||''}</span>`;
+      else if (status === 'webmail') badge = `<span style="background:#3b82f6;color:white;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600;margin-left:4px;">webmail</span>`;
+      else if (status === 'unverified') badge = `<span style="background:#6b7280;color:white;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600;margin-left:4px;">non vérifié</span>`;
+
+      const emailLine = cEmail ? `<div style="margin-top:3px;"><a href="mailto:${cEmail}" style="color:#63b3ed;font-size:12px;text-decoration:none;">✉ ${cEmail}</a>${badge}</div>` : '';
+      const linkedinLine = cLink ? `<div style="margin-top:3px;"><a href="${cLink}" target="_blank" rel="noopener" style="color:#63b3ed;font-size:11px;text-decoration:none;">in LinkedIn →</a></div>` : '';
+
+      contactBlock = `
+        <div style="margin-top:10px;padding:8px;background:rgba(99,179,237,0.08);border-left:3px solid #63b3ed;border-radius:4px;">
+          <div style="font-size:10px;color:#63b3ed;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Contact BD</div>
+          ${cName ? `<div style="font-size:13px;color:#f7fafc;font-weight:600;">${cName}</div>` : ''}
+          ${cRole ? `<div style="font-size:11px;color:#a0aec0;margin-top:1px;">${cRole}</div>` : ''}
+          ${emailLine}
+          ${linkedinLine}
+        </div>
+      `;
+    }
+
     return `
-      <div style="min-width:200px;max-width:280px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+      <div style="min-width:240px;max-width:320px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
         <div style="font-weight:600;font-size:14px;color:#f7fafc;">${name}</div>
         <div style="font-size:11px;color:${COLORS[r.societe_id]||'#a0aec0'};font-weight:600;margin-top:2px;text-transform:uppercase;letter-spacing:0.3px;">${soc}</div>
         ${tier}
         ${loc ? `<div style="font-size:12px;color:#cbd5e0;margin-top:6px;">📍 ${loc}</div>` : ''}
         ${spec}
         ${web}
+        ${contactBlock}
       </div>
     `;
   }
