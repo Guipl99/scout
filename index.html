@@ -402,6 +402,29 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   .bn-item { font-size: 8px; padding: 6px 2px; }
   .bn-secondary { display: none; }
 }
+
+/* Scrollable resellers filters with visible indicator */
+.rs-filters-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+}
+.rs-filters-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.rs-filters-scroll::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 2px;
+}
+.rs-filters-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+@media (max-width: 640px) {
+  .rs-filters-container { flex-wrap: nowrap !important; }
+  .rs-filters-scroll {
+    -webkit-mask-image: linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%);
+    mask-image: linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%);
+  }
+}
 /* ── INSIGHTS ACTIONNABLES ── */
 .db-ins { position:relative; margin-bottom:12px; }
 .db-ins-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text3); display:flex; align-items:center; gap:5px; }
@@ -1729,47 +1752,47 @@ Réinitialiser tous les filtres
             🌐 Tous
           </button>
           <button id="rs-filter-dji" onclick="filterResellers('dji')" data-rs-filter="dji"
-            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;flex-shrink:0;white-space:nowrap;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#e74c3c;margin-right:4px;"></span>DJI
           </button>
           <button id="rs-filter-fotokite" onclick="filterResellers('fotokite')" data-rs-filter="fotokite"
-            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;flex-shrink:0;white-space:nowrap;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#27ae60;margin-right:4px;"></span>Fotokite
           </button>
           <button id="rs-filter-parrot" onclick="filterResellers('parrot')" data-rs-filter="parrot"
-            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;flex-shrink:0;white-space:nowrap;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3498db;margin-right:4px;"></span>Parrot
           </button>
           <button id="rs-filter-quantum_systems" onclick="filterResellers('quantum_systems')" data-rs-filter="quantum_systems"
-            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;flex-shrink:0;white-space:nowrap;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f39c12;margin-right:4px;"></span>Quantum
           </button>
           <button id="rs-filter-teledyne_flir" onclick="filterResellers('teledyne_flir')" data-rs-filter="teledyne_flir"
-            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;flex-shrink:0;white-space:nowrap;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#9b59b6;margin-right:4px;"></span>Teledyne FLIR
           </button>
           <button id="rs-filter-delair" onclick="filterResellers('delair')" data-rs-filter="delair"
-            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;flex-shrink:0;white-space:nowrap;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#e91e63;margin-right:4px;"></span>Delair
           </button>
           <button id="rs-filter-skydio" onclick="filterResellers('skydio')" data-rs-filter="skydio"
-            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;flex-shrink:0;white-space:nowrap;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#00d4aa;margin-right:4px;"></span>Skydio
           </button>
           <button id="rs-filter-silvus" onclick="filterResellers('silvus')" data-rs-filter="silvus"
-            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;flex-shrink:0;white-space:nowrap;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#fbbf24;margin-right:4px;"></span>Silvus
           </button>
           <button id="rs-filter-persistent_systems" onclick="filterResellers('persistent_systems')" data-rs-filter="persistent_systems"
-            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;flex-shrink:0;white-space:nowrap;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#06b6d4;margin-right:4px;"></span>Persistent
           </button>
           <button id="rs-filter-schiebel" onclick="filterResellers('schiebel')" data-rs-filter="schiebel"
-            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;flex-shrink:0;white-space:nowrap;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#a855f7;margin-right:4px;"></span>Schiebel
           </button>
           <button id="rs-filter-ghost_robotics" onclick="filterResellers('ghost_robotics')" data-rs-filter="ghost_robotics"
-            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;flex-shrink:0;white-space:nowrap;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:4px;"></span>Ghost
           </button>
         </div>
@@ -2051,6 +2074,8 @@ function go(id, opts) {
   if (nav) nav.classList.add('active');
   const bn = document.getElementById('bn-' + id);
   if (bn) bn.classList.add('active');
+  // Toggle body class for panel-specific styling (e.g. hide floating buttons over map)
+  document.body.classList.toggle('on-resellers-panel', id === 'resellers');
   if (id === 'dashboard') renderDashboard();
   if (id === 'societes') { backToSocietes(); loadSocietes().then(renderSocietes); }
   if (id === 'produits-db') { backToProduits(); loadAllProduits().then(renderProduits); }
@@ -5534,6 +5559,12 @@ async function runHealthCheck() {
       }
       #scout-action-btn { right: 76px !important; padding: 11px 13px !important; }
     }
+  }
+
+  /* Hide floating chat + action buttons when viewing the resellers map (they obscure markers) */
+  body.on-resellers-panel #scout-chat-btn,
+  body.on-resellers-panel #scout-action-btn {
+    display: none !important;
   }
 
   #scout-chat-panel {
