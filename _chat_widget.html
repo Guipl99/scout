@@ -11,6 +11,13 @@
     display: flex; align-items: center; justify-content: center;
     transition: transform 0.2s, box-shadow 0.2s;
   }
+  @media (max-width: 640px) {
+    #scout-chat-btn {
+      bottom: 76px; right: 16px;
+      width: 48px; height: 48px; font-size: 22px;
+    }
+    #scout-chat-btn svg { width: 22px; height: 22px; }
+  }
   #scout-chat-btn:hover { transform: scale(1.08); box-shadow: 0 12px 32px rgba(30, 64, 175, 0.5); }
   #scout-chat-btn svg { width: 28px; height: 28px; }
 
@@ -23,6 +30,13 @@
     display: none; flex-direction: column;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow: hidden;
+  }
+  @media (max-width: 640px) {
+    #scout-chat-panel {
+      bottom: 132px; right: 8px; left: 8px;
+      width: auto; max-width: none;
+      height: auto; max-height: calc(100dvh - 200px);
+    }
   }
   #scout-chat-panel.open { display: flex; }
 
