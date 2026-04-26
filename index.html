@@ -1751,6 +1751,22 @@ Réinitialiser tous les filtres
             style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#00d4aa;margin-right:4px;"></span>Skydio
           </button>
+          <button id="rs-filter-silvus" onclick="filterResellers('silvus')" data-rs-filter="silvus"
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#fbbf24;margin-right:4px;"></span>Silvus
+          </button>
+          <button id="rs-filter-persistent_systems" onclick="filterResellers('persistent_systems')" data-rs-filter="persistent_systems"
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#06b6d4;margin-right:4px;"></span>Persistent
+          </button>
+          <button id="rs-filter-schiebel" onclick="filterResellers('schiebel')" data-rs-filter="schiebel"
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#a855f7;margin-right:4px;"></span>Schiebel
+          </button>
+          <button id="rs-filter-ghost_robotics" onclick="filterResellers('ghost_robotics')" data-rs-filter="ghost_robotics"
+            style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:4px;"></span>Ghost
+          </button>
         </div>
         <div id="rs-count" style="font-size:12px;color:var(--text3);margin-left:auto;">Chargement...</div>
       </div>
@@ -7018,7 +7034,11 @@ async function runHealthCheck() {
     quantum_systems: '#f39c12',  // orange
     teledyne_flir: '#9b59b6',    // purple
     delair: '#e91e63',           // pink/magenta
-    skydio: '#00d4aa'            // cyan/teal
+    skydio: '#00d4aa',           // cyan/teal
+    silvus: '#fbbf24',           // amber
+    persistent_systems: '#06b6d4', // sky cyan
+    schiebel: '#a855f7',         // violet
+    ghost_robotics: '#ef4444'    // red-500
   };
 
   function makeIcon(societeId) {
