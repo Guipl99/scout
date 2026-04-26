@@ -7012,9 +7012,15 @@ async function runHealthCheck() {
     const loc = [r.city, r.region, r.pays].filter(Boolean).join(', ').replace(/</g,'&lt;');
     const web = r.website ? `<div style="margin-top:6px;"><a href="${r.website.replace(/"/g,'')}" target="_blank" rel="noopener" style="color:#63b3ed;font-size:12px;text-decoration:none;">🔗 Visiter le site →</a></div>` : '';
 
+    // Corporate filiale badge (pas un prospect BD)
+    const corporateBadge = r.is_internal_subsidiary ? `
+      <div style="margin-top:8px;padding:6px 8px;background:rgba(156,163,175,0.12);border-left:3px solid #9ca3af;border-radius:4px;font-size:11px;color:#9ca3af;">
+        <strong>⚠ Filiale corporate</strong> — pas un prospect BD<br><span style="font-size:10px;">Intel concurrentielle uniquement</span>
+      </div>` : '';
+
     // Contact BD bloc
     let contactBlock = '';
-    if (r.contact_name || r.contact_email) {
+    if (!r.is_internal_subsidiary && (r.contact_name || r.contact_email)) {
       const cName = (r.contact_name || '').replace(/</g,'&lt;');
       const cRole = (r.contact_role || '').replace(/</g,'&lt;');
       const cEmail = (r.contact_email || '').replace(/"/g,'');
@@ -7050,6 +7056,7 @@ async function runHealthCheck() {
         ${loc ? `<div style="font-size:12px;color:#cbd5e0;margin-top:6px;">📍 ${loc}</div>` : ''}
         ${spec}
         ${web}
+        ${corporateBadge}
         ${contactBlock}
       </div>
     `;
