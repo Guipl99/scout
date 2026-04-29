@@ -864,7 +864,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   function renderContact(data) {
     const c = data.contact;
     const pri = priorityLabel(data.priority_score);
-    const pastAction = (data.past_actions || []).filter(a => a.action_type !== 'skip')[0];
+    // Filter out actions that don't count as "real outreach" (mirror of backend /action/next-contact rule):
+    // - 'skip' = user passed this contact, no actual contact was made
+    // - 'intent_*' = user clicked "Email/LinkedIn" but didn't confirm the send
+    // - 'linkedin_connect' = simple LinkedIn invite, not a claim
+    // This is a defensive duplicate of the backend filter — the warning must NOT show until
+    // a real action ('email','linkedin_message','call','meeting','via_third_party','other') was logged.
+    const pastAction = (data.past_actions || []).filter(a =>
+      a.action_type !== 'skip' &&
+      !String(a.action_type || '').startsWith('intent_') &&
+      a.action_type !== 'linkedin_connect'
+    )[0];
     const pastNote = pastAction
       ? `<div class="scout-past-action-note">⚠️ Contact déjà approché : ${escapeHtml(pastAction.action_type)} par ${escapeHtml(pastAction.performed_by || '?')} le ${new Date(pastAction.performed_at).toLocaleDateString('fr-FR')}</div>`
       : '';
