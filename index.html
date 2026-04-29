@@ -4332,6 +4332,11 @@ function filterSocietes() {
 
 function renderSocietesFiltered(list) {
   const g = document.getElementById('societes-grid');
+  // Update count badge to reflect the filtered list (mirror of renderEndUsers behavior on Buyers)
+  const badge = document.getElementById('soc-count-badge');
+  if (badge && socTab === 'comptes') {
+    badge.textContent = list.length + ' fabricant' + (list.length > 1 ? 's' : '');
+  }
   if (!list.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1;"><span style="color:var(--text3);">Aucun fabricant pour ce filtre</span></div>'; return; }
   g.innerHTML = list.map((s, i) => {
     const data = s.data || {};
