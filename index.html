@@ -70,6 +70,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* ── Topbar ── */
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 8px; flex-wrap: wrap; }
 .topbar h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.5px; }
+/* Back-to-home button reused on every panel header. Lives next to the H1 (or next to
+   subtab toggles on panels without a topbar). 36px touch target works on mobile + desktop. */
+.btn-back-home {
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text2);
+  width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0; transition: all 0.15s; padding: 0;
+}
+.btn-back-home:hover { background: var(--bg2); border-color: var(--accent); color: var(--accent); }
 .topbar-actions { display: flex; gap: 8px; }
 
 /* ── Buttons ── */
@@ -1359,8 +1368,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <!-- SOCIETES LIST -->
     <div id="panel-societes" class="panel">
       <div id="societes-list-view">
-        <div class="topbar">
-          <h1>Fabricants</h1>
+        <div class="topbar" style="display:flex;align-items:center;gap:12px;">
+          <button class="btn-back-home" onclick="go('dashboard')" title="Retour à l'accueil">←</button>
+          <h1 style="margin:0;">Fabricants</h1>
         </div>
 
         <!-- Sub-tab switcher -->
@@ -1461,8 +1471,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <!-- PRODUITS DB -->
     <div id="panel-produits-db" class="panel">
       <div id="produits-list-view">
-        <div class="topbar">
-          <h1>Systèmes</h1>
+        <div class="topbar" style="display:flex;align-items:center;gap:12px;">
+          <button class="btn-back-home" onclick="go('dashboard')" title="Retour à l'accueil">←</button>
+          <h1 style="margin:0;">Systèmes</h1>
 
         </div>
         
@@ -1535,7 +1546,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <!-- CONTRACTS -->
     <div id="panel-contracts" class="panel">
       <div id="contracts-list-view">
-        <div class="topbar"><h1>Contrats & Tenders</h1></div>
+        <div class="topbar" style="display:flex;align-items:center;gap:12px;">
+          <button class="btn-back-home" onclick="go('dashboard')" title="Retour à l'accueil">←</button>
+          <h1 style="margin:0;">Contrats & Tenders</h1>
+        </div>
 
         <!-- KPI bar compact -->
         <div id="contracts-stats"></div>
@@ -1575,6 +1589,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div id="panel-end-users" class="panel">
       <div id="eu-list-view">
         <div style="padding:12px 16px 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border2);">
+          <button class="btn-back-home" onclick="go('dashboard')" title="Retour à l'accueil" style="width:32px;height:32px;font-size:16px;">←</button>
           <!-- Toggle Buyers / Contacts -->
           <div style="display:flex;background:var(--bg3);border-radius:8px;padding:2px;gap:2px;">
             <button id="eu-tab-comptes" onclick="setEuTab('comptes')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--accent);color:white;font-weight:600;transition:all 0.15s;">🏢 Comptes</button>
@@ -1627,7 +1642,10 @@ Mes pays
 
 
     <div id="panel-config" class="panel">
-      <div class="topbar"><h1>Paramètres</h1></div>
+      <div class="topbar" style="display:flex;align-items:center;gap:12px;">
+        <button class="btn-back-home" onclick="go('dashboard')" title="Retour à l'accueil">←</button>
+        <h1 style="margin:0;">Paramètres</h1>
+      </div>
       <div style="padding:16px;max-width:700px;display:flex;flex-direction:column;gap:16px;">
 
         <!-- ── Mon profil ─────────────────────────────────────── -->
@@ -1754,10 +1772,7 @@ Réinitialiser tous les filtres
 <!-- RESELLERS PANEL -->
     <div id="panel-resellers" class="panel" style="display:none;flex-direction:column;height:100%;overflow:hidden;">
       <div class="topbar" style="margin-bottom:0;padding-bottom:12px;flex-shrink:0;display:flex;align-items:center;gap:12px;">
-        <button onclick="go('dashboard')" title="Retour à l'accueil"
-          style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2);width:36px;height:36px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:all 0.15s;"
-          onmouseover="this.style.background='var(--bg2)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)';"
-          onmouseout="this.style.background='var(--bg3)';this.style.borderColor='var(--border2)';this.style.color='var(--text2)';">←</button>
+        <button class="btn-back-home" onclick="go('dashboard')" title="Retour à l'accueil">←</button>
         <h1 style="margin:0;">Resellers · Distributeurs officiels</h1>
       </div>
       <div class="rs-filters-container" style="padding:10px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border2);flex-shrink:0;">
