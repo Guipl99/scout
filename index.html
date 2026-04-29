@@ -2113,14 +2113,19 @@ function go(id, opts) {
   if (id === 'contracts') { loadContracts().then(() => { renderContractStatusFilters(); filterContracts(); loadContractStats(); }); }
   if (id === 'resellers') { loadResellersMap(); }
   if (id === 'end-users') {
-    loadEndUsers().then(() => {
+    // When user clicks "Comptes" in the nav, force a fresh fetch — the in-memory cache
+    // can be stale by hours after DB changes (new EU/contacts inserted from another session).
+    // Skip force when we're restoring from URL hash on initial load (silent), so the page
+    // boot stays fast and a deep-link doesn't trigger an unneeded refetch.
+    const forceReload = !opts?.silent;
+    loadEndUsers(forceReload).then(() => {
       const tab = opts?.tab || loadSettings().defaultSubtab || 'comptes';
       setEuTab(tab);
       restoreSavedFilters(tab === 'contacts' ? 'contacts' : 'end-users');
       filterCurrentTab();
       populateEuDroneFilters();
     });
-    loadContacts();
+    loadContacts(forceReload);
   }
   // Persister l'onglet dans le hash
   if (!opts?.silent) history.replaceState(null, '', '#' + id + (opts?.tab ? '/' + opts.tab : ''));
@@ -4830,8 +4835,8 @@ function openContactFromGrid(id) {
   }, 400);
 }
 
-async function loadEndUsers() {
-  if (allEndUsers.length > 0) return;
+async function loadEndUsers(force) {
+  if (!force && allEndUsers.length > 0) return;
   try {
     const r = await fetch(API + '/end-users?limit=3000', { headers: window.getAuthHeaders() });
     allEndUsers = (await r.json()).end_users || [];
@@ -5135,8 +5140,8 @@ async function loadProductOperateurs(produitId) {
 let allContacts = [];
 let contactsLoaded = false;
 
-async function loadContacts() {
-  if (contactsLoaded) return;
+async function loadContacts(force) {
+  if (!force && contactsLoaded) return;
   try {
     const r = await fetch(API + '/contacts?limit=2000', { headers: window.getAuthHeaders() });
     const d = await r.json();
