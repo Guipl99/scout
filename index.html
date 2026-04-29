@@ -2927,32 +2927,12 @@ async function openSociete(id) {
   // Load produits for this societe
   loadSocieteProduits(id);
 
-  // Load fiche from server
-  loadSocieteFiche(id, s);
+  // Note: there used to be a `loadSocieteFiche(id, s)` call here that triggered a GET
+  // /societes/:id/fiche to refresh from cache. Removed 2026-04-29 — the function was
+  // crashing silently on a missing #s-btn-refresh element (orphan from old UI), the
+  // GET endpoint only returned cached data anyway, and `s.data` from the local
+  // `societes` list is the same payload. Kept code = dead weight + console errors.
   showSTab('overview', document.querySelector('#societe-detail-view .tab'));
-}
-
-async function loadSocieteFiche(id, s) {
-  const btn = document.getElementById('s-btn-refresh');
-  const dot = document.getElementById('s-dot');
-  btn.disabled = true; btn.textContent = 'Chargement...';
-  dot.classList.add('loading');
-  document.getElementById('s-info').textContent = 'Chargement...';
-
-  try {
-    const url = API + '/societes/' + id + '/fiche?name=' + encodeURIComponent(s.name) + '&url=' + encodeURIComponent(s.url) + '&pays=' + encodeURIComponent(s.pays||'') + '&secteur=' + encodeURIComponent(s.secteur||'') + '&signals=' + encodeURIComponent((s.signals||[]).join(','));
-    const r = await fetch(url);
-    const d = await r.json();
-    if (d.profile) {
-      fillSocieteDetail(d.profile, d.fromCache, d.scrapedAt);
-      // Update local cache
-      const idx = societes.findIndex(x => x.id === id);
-      if (idx !== -1) { societes[idx].data = d.profile; societes[idx].scraped_at = d.scrapedAt; }
-      // Auto-load produits after scrape
-      loadSocieteProduits(id);
-    }
-  } catch(e) { document.getElementById('s-info').textContent = 'Erreur: ' + e.message; }
-  finally { dot.classList.remove('loading'); }
 }
 
 function fillSocieteDetail(p, fromCache, scrapedAt) {
@@ -3076,43 +3056,6 @@ async function deleteSociete(id) {
   renderDashboard();
 }
 
-// ── Force scrape ──────────────────────────────────────────────
-async function forceScrape(type) {
-  if (type === 'societe' && currentSocieteId) {
-    const s = societes.find(x => x.id === currentSocieteId);
-    if (!s) return;
-    const btn = document.getElementById('s-btn-refresh');
-    const dot = document.getElementById('s-dot');
-    btn.disabled = true; btn.textContent = 'Mise à jour...';
-    dot.classList.add('loading');
-    document.getElementById('s-info').textContent = 'Scraping en cours...';
-    try {
-      const r = await fetch(API + '/societes/' + currentSocieteId + '/fiche', { method: 'POST', headers: window.getAuthHeaders() });
-      const d = await r.json();
-      if (d.profile) {
-        fillSocieteDetail(d.profile, false, d.scrapedAt);
-        const idx = societes.findIndex(x => x.id === currentSocieteId);
-        if (idx !== -1) { societes[idx].data = d.profile; societes[idx].scraped_at = d.scrapedAt; }
-        loadSocieteProduits(currentSocieteId);
-      }
-    } catch(e) { alert('Erreur: ' + e.message); }
-    finally { dot.classList.remove('loading'); }
-  }
-  if (type === 'produit' && currentProduitId) {
-    const btn = document.getElementById('p-btn-refresh');
-    const dot = document.getElementById('p-dot');
-    btn.disabled = true; btn.textContent = 'Mise à jour...';
-    dot.classList.add('loading');
-    document.getElementById('p-info').textContent = 'Scraping en cours...';
-    try {
-      const r = await fetch(API + '/produits/' + currentProduitId + '/fiche', { method: 'POST', headers: window.getAuthHeaders() });
-      const d = await r.json();
-      if (d.profile) fillProduitDetail(d.profile, d.produit, false, d.scrapedAt);
-    } catch(e) { alert('Erreur: ' + e.message); }
-    finally { dot.classList.remove('loading'); }
-  }
-}
-
 // ── Produits ──────────────────────────────────────────────────
 async function loadAllProduits() {
   const tryFetch = async (attempt) => {
@@ -3177,21 +3120,10 @@ async function openProduit(id) {
   const opTab = document.getElementById('p-tab-operateurs');
   if (opTab) opTab.textContent = 'Opérateurs';
 
-  // Load from server
-  const btn = document.getElementById('p-btn-refresh');
-  const dot = document.getElementById('p-dot');
-  btn.disabled = true; btn.textContent = 'Chargement...';
-  dot.classList.add('loading');
-  try {
-    const r = await fetch(API + '/produits/' + id + '/fiche');
-    const d = await r.json();
-    if (d.profile) {
-      fillProduitDetail(d.profile, d.produit || p, d.fromCache, d.scrapedAt);
-      const idx = produits.findIndex(x => x.id === id);
-      if (idx !== -1) { produits[idx].data = d.profile; produits[idx].scraped_at = d.scrapedAt; }
-    }
-  } catch(e) { document.getElementById('p-info').textContent = 'Erreur: ' + e.message; }
-  finally { dot.classList.remove('loading'); }
+  // Note: there used to be a fetch to GET /produits/:id/fiche here. Removed 2026-04-29
+  // — same situation as openSociete: code crashed silently on missing #p-btn-refresh
+  // (orphan from old UI), and the local `produits` cache already has p.data which is
+  // the same payload. Kept code = console errors + dead network calls.
 }
 
 function clearProduitDetail() {
