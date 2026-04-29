@@ -3087,7 +3087,7 @@ async function forceScrape(type) {
     dot.classList.add('loading');
     document.getElementById('s-info').textContent = 'Scraping en cours...';
     try {
-      const r = await fetch(API + '/societes/' + currentSocieteId + '/fiche', { method: 'POST' });
+      const r = await fetch(API + '/societes/' + currentSocieteId + '/fiche', { method: 'POST', headers: window.getAuthHeaders() });
       const d = await r.json();
       if (d.profile) {
         fillSocieteDetail(d.profile, false, d.scrapedAt);
@@ -3105,7 +3105,7 @@ async function forceScrape(type) {
     dot.classList.add('loading');
     document.getElementById('p-info').textContent = 'Scraping en cours...';
     try {
-      const r = await fetch(API + '/produits/' + currentProduitId + '/fiche', { method: 'POST' });
+      const r = await fetch(API + '/produits/' + currentProduitId + '/fiche', { method: 'POST', headers: window.getAuthHeaders() });
       const d = await r.json();
       if (d.profile) fillProduitDetail(d.profile, d.produit, false, d.scrapedAt);
     } catch(e) { alert('Erreur: ' + e.message); }
