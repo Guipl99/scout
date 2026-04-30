@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- build:1777534144 -->
+<!-- build:1777536358 -->
 <head>
 <meta charset="UTF-8">
-  <meta name="build" content="1777534144">
+  <meta name="build" content="1777536358">
 <!-- build: 2026-04-30 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.svg">
@@ -1234,29 +1234,31 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-label">Contrats attribués</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('contracts');setTimeout(()=>setContractTypeTab('live'),200)">
+        <div class="db-kpi" onclick="go('contracts');setTimeout(()=>setContractTypeTab('live'),200)" title="Tenders qui ferment dans les 30 prochains jours. Sub-label = total tenders ouverts.">
           <div class="db-kpi-icon" style="position:relative;">
-            🎯
-            <span class="db-pulse"></span>
+            🔥
+            <span class="db-pulse" id="m-tenders-pulse" style="display:none;"></span>
           </div>
           <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-tenders">0</div>
-            <div class="db-kpi-label">Live tenders actifs</div>
-          </div>
-        </div>
-        <div class="db-kpi" onclick="go('end-users')">
-          <div class="db-kpi-icon">🏢</div>
-          <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-buyers">0</div>
-            <div class="db-kpi-label">Buyers identifiés</div>
+            <div class="db-kpi-val" id="m-tenders-30d">—</div>
+            <div class="db-kpi-label">Tenders &lt; 30j</div>
+            <div class="db-kpi-sub db-kpi-sub-muted" id="m-tenders-total">—</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('contacts')" title="Contacts avec un email valide (format a@b). Le ratio compte ceux déjà approchés (email, téléphone, etc — exclut les clics intent_* et les skip)." id="m-engagement-tile">
-          <div class="db-kpi-icon">📧</div>
+        <div class="db-kpi" onclick="go('end-users')" title="Buyers qui ont au moins 1 contact email en base mais aucun outreach réel. Ce sont les prospects prêts à être attaqués.">
+          <div class="db-kpi-icon">🎯</div>
           <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-engagement">—</div>
-            <div class="db-kpi-label">Contacts approchés</div>
-            <div class="db-kpi-sub db-kpi-sub-muted" id="m-engagement-7d">—</div>
+            <div class="db-kpi-val" id="m-buyers-ready">—</div>
+            <div class="db-kpi-label">Buyers prêts</div>
+            <div class="db-kpi-sub db-kpi-sub-muted" id="m-buyers-total">—</div>
+          </div>
+        </div>
+        <div class="db-kpi" onclick="go('contacts')" title="Buyers déjà approchés / Buyers avec au moins 1 contact email (= adressables). Mesure le % de couverture commerciale réelle." id="m-engagement-tile">
+          <div class="db-kpi-icon">✉️</div>
+          <div class="db-kpi-body">
+            <div class="db-kpi-val" id="m-coverage">—</div>
+            <div class="db-kpi-label">Couverture buyers</div>
+            <div class="db-kpi-sub db-kpi-sub-muted" id="m-coverage-7d">—</div>
           </div>
         </div>
         <div class="db-kpi" onclick="go('societes')">
@@ -2679,23 +2681,38 @@ function renderDashboard() {
       : '$' + totalM.toFixed(0) + 'M';
   }).catch(()=>{});
 
-  // Engagement KPI: contacted / qualified-with-email + new in last 7 days
-  // Source: /contacts/stats-engagement (server-side aggregation, no auth required).
+  // Action-oriented dashboard KPIs from /contacts/stats-engagement:
+  //   - 🎯 Buyers prêts: end-users with ≥1 email AND 0 outreach (sub: total adressables)
+  //   - ✉️ Couverture buyers: eu_with_outreach / eu_with_email (sub: +N qualifs cette semaine)
+  // Source: server-side aggregation, no auth required.
   fetch(API + '/contacts/stats-engagement').then(r => r.json()).then(d => {
     if (!d || !d.ok) return;
-    const total = d.total_qualified || 0;
-    const contacted = d.contacted || 0;
+    const ready = d.eu_ready_to_attack || 0;
+    const total_addressable = d.eu_with_email || 0;
+    const covered = d.eu_with_outreach || 0;
     const last7 = d.added_last_7d || 0;
-    const valEl = document.getElementById('m-engagement');
-    const subEl = document.getElementById('m-engagement-7d');
-    if (valEl) valEl.textContent = total > 0 ? `${contacted}/${total}` : '0';
-    if (subEl) {
+
+    // Buyers prêts à attaquer (1+ email, 0 outreach)
+    const readyEl = document.getElementById('m-buyers-ready');
+    const readySubEl = document.getElementById('m-buyers-total');
+    if (readyEl) readyEl.textContent = ready;
+    if (readySubEl) readySubEl.textContent = total_addressable > 0
+      ? `/ ${total_addressable} adressables`
+      : '—';
+
+    // Couverture buyers = covered / addressable
+    const covEl = document.getElementById('m-coverage');
+    const covSubEl = document.getElementById('m-coverage-7d');
+    if (covEl) covEl.textContent = total_addressable > 0
+      ? `${covered}/${total_addressable}`
+      : '0';
+    if (covSubEl) {
       if (last7 > 0) {
-        subEl.textContent = `+${last7} cette semaine`;
-        subEl.classList.remove('db-kpi-sub-muted');
+        covSubEl.textContent = `+${last7} qualifs cette semaine`;
+        covSubEl.classList.remove('db-kpi-sub-muted');
       } else {
-        subEl.textContent = '— cette semaine';
-        subEl.classList.add('db-kpi-sub-muted');
+        covSubEl.textContent = '— cette semaine';
+        covSubEl.classList.add('db-kpi-sub-muted');
       }
     }
   }).catch(()=>{});
@@ -2714,6 +2731,7 @@ function renderDashboard() {
   ]).then(([euData, tdData]) => {
     const endUsers = euData.end_users || [];
     const now = new Date();
+    const in30d = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
     const tenders = (tdData.tenders || []).filter(t =>
       t.statut !== 'Clôturé' &&
       (!t.date_cloture || new Date(t.date_cloture) > now)
@@ -2724,8 +2742,18 @@ function renderDashboard() {
       if (b.date_cloture) return 1;
       return 0;
     });
-    document.getElementById('m-buyers').textContent = endUsers.length;
-    document.getElementById('m-tenders').textContent = tenders.length;
+
+    // Tenders closing in next 30 days = urgent
+    const tenders30d = tenders.filter(t => t.date_cloture && new Date(t.date_cloture) <= in30d).length;
+    const totalOpen = tenders.length;
+    const tenders30dEl = document.getElementById('m-tenders-30d');
+    const totalOpenEl = document.getElementById('m-tenders-total');
+    const pulseEl = document.getElementById('m-tenders-pulse');
+    if (tenders30dEl) tenders30dEl.textContent = tenders30d;
+    if (totalOpenEl) totalOpenEl.textContent = totalOpen > 0 ? `/ ${totalOpen} ouverts` : '—';
+    // Show the green pulse when at least one tender is closing soon
+    if (pulseEl) pulseEl.style.display = tenders30d > 0 ? '' : 'none';
+
     // Stocker dans les globales pour que les clics fonctionnent
     if (!allEndUsers.length) allEndUsers = endUsers;
     if (!liveTenders.length) { liveTenders = tenders; liveTendersLoaded = true; }
