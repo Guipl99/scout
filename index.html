@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- build:1777536358 -->
+<!-- build:1777537958 -->
 <head>
 <meta charset="UTF-8">
-  <meta name="build" content="1777536358">
+  <meta name="build" content="1777537958">
 <!-- build: 2026-04-30 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.svg">
@@ -1234,7 +1234,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-label">Contrats attribués</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('contracts');setTimeout(()=>setContractTypeTab('live'),200)" title="Tenders qui ferment dans les 30 prochains jours. Sub-label = total tenders ouverts.">
+        <div class="db-kpi" onclick="go('contracts', { filter: 'closing30d' })" title="Tenders qui ferment dans les 30 prochains jours. Sub-label = total tenders ouverts.">
           <div class="db-kpi-icon" style="position:relative;">
             🔥
             <span class="db-pulse" id="m-tenders-pulse" style="display:none;"></span>
@@ -1245,7 +1245,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-sub db-kpi-sub-muted" id="m-tenders-total">—</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('end-users')" title="Buyers qui ont au moins 1 contact email en base mais aucun outreach réel. Ce sont les prospects prêts à être attaqués.">
+        <div class="db-kpi" onclick="go('end-users', { tab: 'comptes', filter: 'ready' })" title="Buyers qui ont au moins 1 contact email en base mais aucun outreach réel. Ce sont les prospects prêts à être attaqués.">
           <div class="db-kpi-icon">🎯</div>
           <div class="db-kpi-body">
             <div class="db-kpi-val" id="m-buyers-ready">—</div>
@@ -1253,7 +1253,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-sub db-kpi-sub-muted" id="m-buyers-total">—</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('contacts')" title="Buyers déjà approchés / Buyers avec au moins 1 contact email (= adressables). Mesure le % de couverture commerciale réelle." id="m-engagement-tile">
+        <div class="db-kpi" onclick="go('end-users', { tab: 'comptes', filter: 'covered' })" title="Buyers déjà approchés / Buyers avec au moins 1 contact email (= adressables). Mesure le % de couverture commerciale réelle." id="m-engagement-tile">
           <div class="db-kpi-icon">✉️</div>
           <div class="db-kpi-body">
             <div class="db-kpi-val" id="m-coverage">—</div>
@@ -1581,6 +1581,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
         <!-- Contracts filters + grid -->
         <div id="contracts-main-panel">
+          <div id="contracts-dashboard-filter-badge-row" style="margin-bottom:0.5rem;"></div>
           <div style="display:flex;gap:8px;margin-bottom:0.75rem;flex-wrap:wrap;">
             <input id="contracts-search" type="text" placeholder="Rechercher un contrat, client, programme..." style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);flex:1;min-width:180px;" oninput="filterContracts()">
             <select id="contracts-type-filter" style="font-size:13px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterContracts()">
@@ -2120,10 +2121,33 @@ function go(id, opts) {
   if (bn) bn.classList.add('active');
   // Toggle body class for panel-specific styling (e.g. hide floating buttons over map)
   document.body.classList.toggle('on-resellers-panel', id === 'resellers');
+
+  // Dashboard filter — set/clear before panel renders so the filter is applied immediately.
+  // Used by the home dashboard KPI tiles to deep-link into pre-filtered views:
+  //   - 'ready'      → Buyers prêts (end-users with ≥1 email + 0 outreach)
+  //   - 'covered'    → Couverture buyers (end-users with ≥1 outreach)
+  //   - 'closing30d' → Tenders fermant dans les 30 jours
+  if (opts?.filter) {
+    window._dashboardFilter = opts.filter;
+  } else if (id === 'dashboard') {
+    window._dashboardFilter = null;  // clear when going home
+  }
+
   if (id === 'dashboard') renderDashboard();
   if (id === 'societes') { backToSocietes(); loadSocietes().then(renderSocietes); }
   if (id === 'produits-db') { backToProduits(); loadAllProduits().then(renderProduits); }
-  if (id === 'contracts') { loadContracts().then(() => { renderContractStatusFilters(); filterContracts(); loadContractStats(); }); }
+  if (id === 'contracts') {
+    loadContracts().then(() => {
+      renderContractStatusFilters();
+      // If we deep-linked from a dashboard tile (e.g. closing30d), jump straight to the live tab.
+      if (window._dashboardFilter === 'closing30d') {
+        setContractTypeTab('live');
+      }
+      filterContracts();
+      loadContractStats();
+      renderDashboardFilterBadge();
+    });
+  }
   if (id === 'resellers') { loadResellersMap(); }
   if (id === 'end-users') {
     // When user clicks "Comptes" in the nav, force a fresh fetch — the in-memory cache
@@ -2131,17 +2155,89 @@ function go(id, opts) {
     // Skip force when we're restoring from URL hash on initial load (silent), so the page
     // boot stays fast and a deep-link doesn't trigger an unneeded refetch.
     const forceReload = !opts?.silent;
-    loadEndUsers(forceReload).then(() => {
+    // If we deep-linked from a dashboard tile (ready/covered), make sure the buyer-segments
+    // cache is loaded BEFORE applying filters — otherwise the filter no-ops on first render.
+    const needSegments = window._dashboardFilter === 'ready' || window._dashboardFilter === 'covered';
+    const segPromise = needSegments ? loadBuyerSegments() : Promise.resolve();
+    Promise.all([loadEndUsers(forceReload), segPromise]).then(() => {
       const tab = opts?.tab || loadSettings().defaultSubtab || 'comptes';
       setEuTab(tab);
       restoreSavedFilters(tab === 'contacts' ? 'contacts' : 'end-users');
       filterCurrentTab();
       populateEuDroneFilters();
+      // Render the dashboard-filter badge if any
+      renderDashboardFilterBadge();
     });
     loadContacts(forceReload);
   }
   // Persister l'onglet dans le hash
   if (!opts?.silent) history.replaceState(null, '', '#' + id + (opts?.tab ? '/' + opts.tab : ''));
+}
+
+// ── Dashboard deep-link filter helpers ─────────────────────────
+// Fetches /contacts/buyer-segments once and caches the result in window._buyerSegments.
+// Called at first dashboard render and refreshed when navigating to end-users with an active filter.
+async function loadBuyerSegments(force) {
+  if (!force && window._buyerSegments) return window._buyerSegments;
+  try {
+    const r = await fetch(API + '/contacts/buyer-segments');
+    const d = await r.json();
+    if (d && d.ok) {
+      window._buyerSegments = {
+        readySet: new Set(d.ready_ids || []),
+        coveredSet: new Set(d.covered_ids || []),
+      };
+    }
+  } catch (e) { /* offline — keep previous cache if any */ }
+  return window._buyerSegments;
+}
+
+// Renders an inline badge above the buyers grid showing the active dashboard filter,
+// with a clear-button that resets the filter and reapplies the grid.
+function renderDashboardFilterBadge() {
+  // Place the badge inside the relevant filters container so it appears alongside the dropdowns.
+  // Buyers panel: 'eu-comptes-filters' / 'eu-contacts-filters'
+  // Contracts panel: 'contracts-dashboard-filter-badge-row'
+  const filter = window._dashboardFilter;
+  // Remove any existing badge from all known containers first
+  document.querySelectorAll('.eu-dashboard-filter-badge').forEach(el => el.remove());
+  const contractsRow = document.getElementById('contracts-dashboard-filter-badge-row');
+  if (contractsRow) contractsRow.innerHTML = '';
+  if (!filter) return;
+  const labels = {
+    ready:      { txt: '🎯 Buyers prêts (≥1 email, 0 outreach)', bg: 'rgba(108,99,255,.15)', col: 'var(--accent2)', borderCol: 'rgba(108,99,255,.4)' },
+    covered:    { txt: '✉️ Couverture (≥1 outreach)',           bg: 'rgba(34,197,94,.15)',  col: '#22c55e',         borderCol: 'rgba(34,197,94,.4)' },
+    closing30d: { txt: '🔥 Tenders fermant < 30j',              bg: 'rgba(245,158,11,.15)', col: '#f59e0b',         borderCol: 'rgba(245,158,11,.4)' },
+  };
+  const cfg = labels[filter];
+  if (!cfg) return;
+  const buildBadge = () => {
+    const badge = document.createElement('div');
+    badge.className = 'eu-dashboard-filter-badge';
+    badge.style.cssText = `display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:14px;background:${cfg.bg};color:${cfg.col};font-size:11px;font-weight:600;border:1px solid ${cfg.borderCol};`;
+    badge.innerHTML = `<span>${cfg.txt}</span><button onclick="clearDashboardFilter()" title="Effacer le filtre" style="background:none;border:none;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0;">×</button>`;
+    return badge;
+  };
+  // Buyers/contacts filters: only show ready/covered there
+  if (filter === 'ready' || filter === 'covered') {
+    [document.getElementById('eu-comptes-filters'), document.getElementById('eu-contacts-filters')]
+      .filter(Boolean)
+      .forEach(container => container.insertBefore(buildBadge(), container.firstChild));
+  }
+  // Contracts panel: only show closing30d there
+  if (filter === 'closing30d' && contractsRow) {
+    contractsRow.appendChild(buildBadge());
+  }
+}
+
+function clearDashboardFilter() {
+  window._dashboardFilter = null;
+  renderDashboardFilterBadge();
+  // Re-apply (no filter now)
+  if (typeof filterCurrentTab === 'function') filterCurrentTab();
+  if (typeof filterContracts === 'function' && document.getElementById('panel-contracts')?.classList.contains('active')) {
+    filterContracts();
+  }
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
@@ -2685,6 +2781,8 @@ function renderDashboard() {
   //   - 🎯 Buyers prêts: end-users with ≥1 email AND 0 outreach (sub: total adressables)
   //   - ✉️ Couverture buyers: eu_with_outreach / eu_with_email (sub: +N qualifs cette semaine)
   // Source: server-side aggregation, no auth required.
+  // Pre-warm the buyer-segments cache so deep-link clicks ('ready' / 'covered') filter instantly.
+  loadBuyerSegments();
   fetch(API + '/contacts/stats-engagement').then(r => r.json()).then(d => {
     if (!d || !d.ok) return;
     const ready = d.eu_ready_to_attack || 0;
@@ -3705,6 +3803,10 @@ function setContractStatut(s) { activeContractStatut = s; renderContractStatusFi
 function filterContracts() {
   const search = (document.getElementById('contracts-search')?.value||'').toLowerCase();
   const type = document.getElementById('contracts-type-filter')?.value || '';
+  // Dashboard deep-link: 'closing30d' keeps only tenders closing within 30 days
+  const dashFilter = window._dashboardFilter;
+  const now = new Date();
+  const in30d = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
   const filtered = contracts.filter(c => {
     const matchStatut = activeContractStatut === 'Tous' || c.statut === activeContractStatut;
     const matchType = !type || c.type === type;
@@ -3714,6 +3816,13 @@ function filterContracts() {
       (c.programme||'').toLowerCase().includes(search) ||
       (c.societe_name||'').toLowerCase().includes(search) ||
       (c.pays_client||'').toLowerCase().includes(search);
+    if (dashFilter === 'closing30d') {
+      const isTender = c.statut === "Appel d'offres ouvert";
+      const dc = c.data?.date_cloture;
+      if (!isTender || !dc) return false;
+      const d = new Date(dc);
+      if (!(d > now && d <= in30d)) return false;
+    }
     return matchStatut && matchType && matchSearch;
   });
   renderContractsGrid(filtered);
@@ -4915,6 +5024,10 @@ function filterEndUsers() {
   const pays = document.getElementById('eu-pays-filter')?.value || '';
   const droneType = document.getElementById('eu-drone-type-filter')?.value || '';
   const fabricant = document.getElementById('eu-fabricant-filter')?.value || '';
+  // Dashboard deep-link filter: 'ready' (≥1 email + 0 outreach) or 'covered' (≥1 outreach)
+  // Lookup tables are populated by loadBuyerSegments() (cached on window._buyerSegments).
+  const dashFilter = window._dashboardFilter;
+  const segs = window._buyerSegments;
 
   const filtered = allEndUsers.filter(eu => {
     if (pays && eu.pays !== pays) return false;
@@ -4935,6 +5048,10 @@ function filterEndUsers() {
       const matchViaProduits = (eu.produits_ids || []).some(pid => prodMap[pid]?.societe_id === fabricant);
       if (!matchViaSocietes && !matchViaProduits) return false;
     }
+
+    // Dashboard tile filter
+    if (dashFilter === 'ready' && segs && !segs.readySet.has(eu.id)) return false;
+    if (dashFilter === 'covered' && segs && !segs.coveredSet.has(eu.id)) return false;
 
     return true;
   });
