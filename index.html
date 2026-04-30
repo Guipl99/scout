@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- build:1777537958 -->
+<!-- build:1777541911 -->
 <head>
 <meta charset="UTF-8">
-  <meta name="build" content="1777537958">
+  <meta name="build" content="1777541911">
 <!-- build: 2026-04-30 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.svg">
@@ -1253,7 +1253,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-sub db-kpi-sub-muted" id="m-buyers-total">—</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('end-users', { tab: 'comptes', filter: 'covered' })" title="Buyers déjà approchés / Buyers avec au moins 1 contact email (= adressables). Mesure le % de couverture commerciale réelle." id="m-engagement-tile">
+        <div class="db-kpi" onclick="go('end-users', { tab: 'comptes', filter: 'covered' })" title="Buyers déjà approchés / Buyers avec au moins 1 contact email (= adressables). Mesure le % de couverture commerciale réelle. Le sub-label compte le total d'emails envoyés — peut être supérieur au nb de buyers couverts si plusieurs contacts ont été touchés au sein du même buyer ou si certains contacts n'ont pas de buyer associé." id="m-engagement-tile">
           <div class="db-kpi-icon">✉️</div>
           <div class="db-kpi-body">
             <div class="db-kpi-val" id="m-coverage">—</div>
@@ -2779,7 +2779,7 @@ function renderDashboard() {
 
   // Action-oriented dashboard KPIs from /contacts/stats-engagement:
   //   - 🎯 Buyers prêts: end-users with ≥1 email AND 0 outreach (sub: total adressables)
-  //   - ✉️ Couverture buyers: eu_with_outreach / eu_with_email (sub: +N qualifs cette semaine)
+  //   - ✉️ Couverture buyers: eu_with_outreach / eu_with_email (sub: total emails sent)
   // Source: server-side aggregation, no auth required.
   // Pre-warm the buyer-segments cache so deep-link clicks ('ready' / 'covered') filter instantly.
   loadBuyerSegments();
@@ -2788,7 +2788,7 @@ function renderDashboard() {
     const ready = d.eu_ready_to_attack || 0;
     const total_addressable = d.eu_with_email || 0;
     const covered = d.eu_with_outreach || 0;
-    const last7 = d.added_last_7d || 0;
+    const emailsSent = d.emails_sent || 0;
 
     // Buyers prêts à attaquer (1+ email, 0 outreach)
     const readyEl = document.getElementById('m-buyers-ready');
@@ -2799,17 +2799,18 @@ function renderDashboard() {
       : '—';
 
     // Couverture buyers = covered / addressable
+    // Sub-label: total emails sent (raw count, includes contacts without end_user_id)
     const covEl = document.getElementById('m-coverage');
     const covSubEl = document.getElementById('m-coverage-7d');
     if (covEl) covEl.textContent = total_addressable > 0
       ? `${covered}/${total_addressable}`
       : '0';
     if (covSubEl) {
-      if (last7 > 0) {
-        covSubEl.textContent = `+${last7} qualifs cette semaine`;
+      if (emailsSent > 0) {
+        covSubEl.textContent = `📨 ${emailsSent} email${emailsSent > 1 ? 's' : ''} envoyé${emailsSent > 1 ? 's' : ''}`;
         covSubEl.classList.remove('db-kpi-sub-muted');
       } else {
-        covSubEl.textContent = '— cette semaine';
+        covSubEl.textContent = '📨 0 email envoyé';
         covSubEl.classList.add('db-kpi-sub-muted');
       }
     }
