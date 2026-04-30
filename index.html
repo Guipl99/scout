@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- build:1777541911 -->
+<!-- build:1777543171 -->
 <head>
 <meta charset="UTF-8">
-  <meta name="build" content="1777541911">
+  <meta name="build" content="1777543171">
 <!-- build: 2026-04-30 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.svg">
@@ -1625,6 +1625,11 @@ Mes pays
               <select id="eu-fabricant-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()">
                 <option value="">🏭 Fabricant</option>
               </select>
+              <select id="eu-outreach-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterEndUsers()" title="Filtre par statut d'outreach (au moins un email/téléphone/in-person envoyé sur l'un des contacts du compte)">
+                <option value="">📨 Outreach (tous)</option>
+                <option value="contacted">✅ Contactés</option>
+                <option value="not_contacted">⏳ Non contactés</option>
+              </select>
           </div>
           <div style="display:none;gap:6px;flex-wrap:wrap;margin-left:auto;" id="eu-contacts-filters">
               <select id="ct-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
@@ -1636,6 +1641,11 @@ Mes pays
               </select>
               <select id="ct-fabricant-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
                 <option value="">🏭 Fabricant</option>
+              </select>
+              <select id="ct-outreach-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()" title="Filtre par statut d'outreach (au moins un email/téléphone/in-person envoyé)">
+                <option value="">📨 Outreach (tous)</option>
+                <option value="contacted">✅ Contactés</option>
+                <option value="not_contacted">⏳ Non contactés</option>
               </select>
           </div>
         </div>
@@ -2155,10 +2165,11 @@ function go(id, opts) {
     // Skip force when we're restoring from URL hash on initial load (silent), so the page
     // boot stays fast and a deep-link doesn't trigger an unneeded refetch.
     const forceReload = !opts?.silent;
-    // If we deep-linked from a dashboard tile (ready/covered), make sure the buyer-segments
-    // cache is loaded BEFORE applying filters — otherwise the filter no-ops on first render.
-    const needSegments = window._dashboardFilter === 'ready' || window._dashboardFilter === 'covered';
-    const segPromise = needSegments ? loadBuyerSegments() : Promise.resolve();
+    // Pre-load buyer-segments unconditionally — needed by:
+    //   - dashboard tile filters (ready / covered)
+    //   - toolbar outreach filter (contacted / not_contacted)
+    // The fetch is cheap (cached after first call) and runs in parallel with loadEndUsers.
+    const segPromise = loadBuyerSegments();
     Promise.all([loadEndUsers(forceReload), segPromise]).then(() => {
       const tab = opts?.tab || loadSettings().defaultSubtab || 'comptes';
       setEuTab(tab);
@@ -2186,6 +2197,7 @@ async function loadBuyerSegments(force) {
       window._buyerSegments = {
         readySet: new Set(d.ready_ids || []),
         coveredSet: new Set(d.covered_ids || []),
+        contactedContactSet: new Set(d.contacted_contact_ids || []),
       };
     }
   } catch (e) { /* offline — keep previous cache if any */ }
@@ -4902,6 +4914,14 @@ function filterContactsGrid() {
   const pays = document.getElementById('ct-pays-filter')?.value || '';
   const droneType = document.getElementById('ct-drone-type-filter')?.value || '';
   const fabricant = document.getElementById('ct-fabricant-filter')?.value || '';
+  // Toolbar outreach filter: 'contacted' / 'not_contacted' / '' (all)
+  const outreach = document.getElementById('ct-outreach-filter')?.value || '';
+  const segs = window._buyerSegments;
+
+  // If user picked an outreach toolbar filter and the cache isn't ready, fetch it then refilter.
+  if (outreach && !segs) {
+    loadBuyerSegments().then(() => filterContactsGrid());
+  }
 
   // S'assurer que la map produits est disponible
   if (!window._euProdMap && produits?.length) {
@@ -4927,6 +4947,12 @@ function filterContactsGrid() {
       if (fabricant) {
         if (!(eu.societes_ids || []).includes(fabricant)) return false;
       }
+    }
+    // Toolbar outreach filter (contact-level)
+    if (outreach && segs) {
+      const isContacted = segs.contactedContactSet.has(ct.id);
+      if (outreach === 'contacted' && !isContacted) return false;
+      if (outreach === 'not_contacted' && isContacted) return false;
     }
     return true;
   });
@@ -5025,10 +5051,18 @@ function filterEndUsers() {
   const pays = document.getElementById('eu-pays-filter')?.value || '';
   const droneType = document.getElementById('eu-drone-type-filter')?.value || '';
   const fabricant = document.getElementById('eu-fabricant-filter')?.value || '';
+  // Toolbar outreach filter: 'contacted' / 'not_contacted' / '' (all)
+  const outreach = document.getElementById('eu-outreach-filter')?.value || '';
   // Dashboard deep-link filter: 'ready' (≥1 email + 0 outreach) or 'covered' (≥1 outreach)
   // Lookup tables are populated by loadBuyerSegments() (cached on window._buyerSegments).
   const dashFilter = window._dashboardFilter;
   const segs = window._buyerSegments;
+
+  // If user picked an outreach toolbar filter, ensure the segments cache is loaded.
+  // Async fire-and-refilter so the user doesn't see a blank grid the first time.
+  if (outreach && !segs) {
+    loadBuyerSegments().then(() => filterEndUsers());
+  }
 
   const filtered = allEndUsers.filter(eu => {
     if (pays && eu.pays !== pays) return false;
@@ -5048,6 +5082,13 @@ function filterEndUsers() {
       const matchViaSocietes = socIds.includes(fabricant);
       const matchViaProduits = (eu.produits_ids || []).some(pid => prodMap[pid]?.societe_id === fabricant);
       if (!matchViaSocietes && !matchViaProduits) return false;
+    }
+
+    // Toolbar outreach filter (works on EU id via covered set)
+    if (outreach && segs) {
+      const isCovered = segs.coveredSet.has(eu.id);
+      if (outreach === 'contacted' && !isCovered) return false;
+      if (outreach === 'not_contacted' && isCovered) return false;
     }
 
     // Dashboard tile filter
