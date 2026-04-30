@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="fr">
-<!-- build:1776684527 -->
+<!-- build:1777533220 -->
 <head>
 <meta charset="UTF-8">
-  <meta name="build" content="1776684419">
-<!-- build: 2026-04-16 -->
+  <meta name="build" content="1777533220">
+<!-- build: 2026-04-30 -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.svg">
 <link rel="apple-touch-icon" href="favicon.svg">
@@ -103,7 +103,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
 
 /* ── DASHBOARD SALES ── */
-.db-kpi-row { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:14px; }
+.db-kpi-row { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; margin-bottom:14px; }
 .db-kpi { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:border-color .15s,background .15s; position:relative; overflow:hidden; }
 .db-kpi::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,transparent 60%,rgba(108,99,255,.04)); }
 .db-kpi:hover { border-color:var(--accent); background:var(--bg3); }
@@ -113,6 +113,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-kpi-val { font-size:20px; font-weight:700; font-family:'DM Mono',monospace; color:var(--text); line-height:1; }
 .db-kpi-accent .db-kpi-val { color:var(--accent2); }
 .db-kpi-label { font-size:10px; color:var(--text2); margin-top:3px; text-transform:uppercase; letter-spacing:.05em; }
+/* Sub-label shown under the label (e.g. "+11 cette semaine"). Smaller, accent color when delta > 0. */
+.db-kpi-sub { font-size:10px; color:var(--green); margin-top:2px; font-family:'DM Mono',monospace; line-height:1; }
+.db-kpi-sub-muted { color:var(--text3); }
 .db-pulse { position:absolute; top:-2px; right:-2px; width:8px; height:8px; border-radius:50%; background:#22c55e; animation:pulse 2s infinite; }
 
 .db-brief { background:var(--bg2); border:1px solid var(--accent); border-radius:var(--radius); padding:14px 16px; margin-bottom:14px; display:flex; align-items:flex-start; gap:12px; position:relative; }
@@ -386,7 +389,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   .specs-grid { grid-template-columns: 1fr; }
   .pricing-grid { grid-template-columns: 1fr; }
 
-  /* Dashboard KPI: 6 cols → 2 cols mobile */
+  /* Dashboard KPI: 7 cols → 2 cols mobile */
   .db-kpi-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .db-kpi { padding: 10px 12px; gap: 8px; min-width: 0; }
   .db-kpi-icon { font-size: 18px; }
@@ -1246,6 +1249,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="db-kpi-body">
             <div class="db-kpi-val" id="m-buyers">0</div>
             <div class="db-kpi-label">Buyers identifiés</div>
+          </div>
+        </div>
+        <div class="db-kpi" onclick="go('contacts')" title="Contacts avec un email Hunter-vérifié (valid / accept_all). Le ratio compte ceux déjà approchés (email, téléphone, etc — exclut les clics intent_* et les skip)." id="m-engagement-tile">
+          <div class="db-kpi-icon">📧</div>
+          <div class="db-kpi-body">
+            <div class="db-kpi-val" id="m-engagement">—</div>
+            <div class="db-kpi-label">Contacts approchés</div>
+            <div class="db-kpi-sub db-kpi-sub-muted" id="m-engagement-7d">—</div>
           </div>
         </div>
         <div class="db-kpi" onclick="go('societes')">
@@ -2666,6 +2677,27 @@ function renderDashboard() {
     if (totalM > 0) document.getElementById('m-valeur').textContent = totalM > 1000
       ? '$' + (totalM/1000).toFixed(1) + 'B'
       : '$' + totalM.toFixed(0) + 'M';
+  }).catch(()=>{});
+
+  // Engagement KPI: contacted / qualified-with-email + new in last 7 days
+  // Source: /contacts/stats-engagement (server-side aggregation, no auth required).
+  fetch(API + '/contacts/stats-engagement').then(r => r.json()).then(d => {
+    if (!d || !d.ok) return;
+    const total = d.total_qualified || 0;
+    const contacted = d.contacted || 0;
+    const last7 = d.added_last_7d || 0;
+    const valEl = document.getElementById('m-engagement');
+    const subEl = document.getElementById('m-engagement-7d');
+    if (valEl) valEl.textContent = total > 0 ? `${contacted}/${total}` : '0';
+    if (subEl) {
+      if (last7 > 0) {
+        subEl.textContent = `+${last7} cette semaine`;
+        subEl.classList.remove('db-kpi-sub-muted');
+      } else {
+        subEl.textContent = '— cette semaine';
+        subEl.classList.add('db-kpi-sub-muted');
+      }
+    }
   }).catch(()=>{});
   // Charger contrats pour le widget liste
   if (contracts.length > 0) {
