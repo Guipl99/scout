@@ -2169,6 +2169,11 @@ function go(id, opts) {
     });
   }
   if (id === 'resellers') { loadResellersMap(); }
+  if (id === 'config') {
+    // Settings panel — peupler la liste des pays exclus et tous les champs.
+    // applySettings() s'occupe de loadEndUsers/loadContacts si besoin.
+    if (typeof applySettings === 'function') applySettings();
+  }
   if (id === 'end-users') {
     // When user clicks "Comptes" in the nav, force a fresh fetch — the in-memory cache
     // can be stale by hours after DB changes (new EU/contacts inserted from another session).
@@ -5547,20 +5552,34 @@ function populateConfigPays() {
 
     const current = loadSettings().excludedPays || [];
 
-    container.innerHTML = all.length ? all.map(p => `
+    if (!all.length) {
+      // Pas encore de data — afficher un message + bouton retry au lieu de rester bloqué
+      container.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--text3);">
+        <span>Pas de pays disponibles. Chargez les données d'abord en visitant l'onglet Buyers.</span>
+        <button onclick="populateConfigPays()" style="align-self:flex-start;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text2);cursor:pointer;">↻ Réessayer</button>
+      </div>`;
+      return;
+    }
+
+    container.innerHTML = all.map(p => `
       <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;min-width:130px;">
         <input type="checkbox" data-pays="${p}" ${current.includes(p) ? 'checked' : ''}
           onchange="saveExcludedPays()" style="accent-color:var(--accent);">
         ${p}
-      </label>`).join('') : '<span style="font-size:12px;color:var(--text3);">Aucune donnée disponible</span>';
+      </label>`).join('');
   };
 
   if (allEndUsers?.length || allContacts?.length) {
     doRender();
-  } else {
-    container.innerHTML = '<span style="font-size:12px;color:var(--text3);">Chargement…</span>';
-    Promise.allSettled([loadEndUsers(), loadContacts()]).then(doRender);
+    return;
   }
+
+  // Pas de cache — déclencher le chargement et re-render à la fin (succès ou échec)
+  container.innerHTML = '<span style="font-size:12px;color:var(--text3);">Chargement des pays…</span>';
+  Promise.allSettled([
+    typeof loadEndUsers === 'function' ? loadEndUsers() : Promise.resolve(),
+    typeof loadContacts === 'function' ? loadContacts() : Promise.resolve(),
+  ]).then(doRender).catch(doRender);
 }
 
 function saveExcludedPays() {
