@@ -852,7 +852,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   async function fetchNextContact() {
     actionBody.innerHTML = '<div class="scout-loading">Recherche du meilleur contact…</div>';
     try {
-      const r = await fetch(API + '/action/next-contact', {
+      // Exclude pays from Settings (Paramètres → Pays à exclure)
+      let excludeQS = '';
+      try {
+        if (typeof window.getExcludedPays === 'function') {
+          const excluded = window.getExcludedPays();
+          if (excluded && excluded.length) {
+            excludeQS = '?exclude_pays=' + encodeURIComponent(excluded.join(','));
+          }
+        }
+      } catch {}
+      const r = await fetch(API + '/action/next-contact' + excludeQS, {
         headers: {'Authorization': 'Bearer ' + session.token}
       });
       const data = await r.json();
@@ -1683,7 +1693,7 @@ Mes pays
                 oninput="saveSettings()">
             </div>
             <div>
-              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Pays cibles <span style="color:var(--text3);font-weight:400;">(filtre rapide en un clic)</span></label>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Pays à exclure <span style="color:var(--text3);font-weight:400;">(les contacts de ces pays seront masqués partout : grille, actions suggérées)</span></label>
               <div id="cfg-pays-checkboxes" style="display:flex;flex-wrap:wrap;gap:6px 14px;max-height:200px;overflow-y:auto;padding:8px;background:var(--bg3);border-radius:6px;border:1px solid var(--border2);">
                 <span style="font-size:12px;color:var(--text3);">Chargement des pays…</span>
               </div>
@@ -4614,7 +4624,10 @@ function filterSocContactsGrid() {
   const q = (document.getElementById('soc-contacts-search')?.value || '').toLowerCase();
   const pays = document.getElementById('soc-contacts-pays-filter')?.value || '';
   const fab = document.getElementById('soc-contacts-fab-filter')?.value || '';
+  // Blacklist pays définie dans Paramètres
+  const excluded = (typeof getExcludedPays === 'function') ? getExcludedPays() : [];
   const filtered = allSocContacts.filter(ct => {
+    if (excluded.length && ct.pays && excluded.includes(ct.pays)) return false;
     if (pays && ct.pays !== pays) return false;
     if (fab && ct.organisation !== fab) return false;
     if (q) {
@@ -4917,6 +4930,8 @@ function filterContactsGrid() {
   // Toolbar outreach filter: 'contacted' / 'not_contacted' / '' (all)
   const outreach = document.getElementById('ct-outreach-filter')?.value || '';
   const segs = window._buyerSegments;
+  // Blacklist pays définie dans Paramètres (vide si non configurée)
+  const excluded = (typeof getExcludedPays === 'function') ? getExcludedPays() : [];
 
   // If user picked an outreach toolbar filter and the cache isn't ready, fetch it then refilter.
   if (outreach && !segs) {
@@ -4931,6 +4946,8 @@ function filterContactsGrid() {
 
   const filtered = allContacts.filter(ct => {
     if (!ct.end_user_id) return false; // exclure contacts fabricants
+    // Blacklist pays (Paramètres)
+    if (excluded.length && ct.pays && excluded.includes(ct.pays)) return false;
     if (pays && ct.pays !== pays) return false;
     if (q) {
       const hay = [ct.prenom, ct.nom, ct.titre, ct.organisation, ct.domaine, ct.notes, ct.pays].join(' ').toLowerCase();
@@ -5057,6 +5074,8 @@ function filterEndUsers() {
   // Lookup tables are populated by loadBuyerSegments() (cached on window._buyerSegments).
   const dashFilter = window._dashboardFilter;
   const segs = window._buyerSegments;
+  // Blacklist pays définie dans Paramètres (vide si non configurée)
+  const excluded = (typeof getExcludedPays === 'function') ? getExcludedPays() : [];
 
   // If user picked an outreach toolbar filter, ensure the segments cache is loaded.
   // Async fire-and-refilter so the user doesn't see a blank grid the first time.
@@ -5065,6 +5084,8 @@ function filterEndUsers() {
   }
 
   const filtered = allEndUsers.filter(eu => {
+    // Blacklist pays (Paramètres)
+    if (excluded.length && eu.pays && excluded.includes(eu.pays)) return false;
     if (pays && eu.pays !== pays) return false;
     if (q && !eu.nom.toLowerCase().includes(q) && !eu.pays?.toLowerCase().includes(q) && !(eu.description||'').toLowerCase().includes(q)) return false;
 
@@ -5444,9 +5465,10 @@ function loadSavedFilters() {
   try { return JSON.parse(localStorage.getItem(FILTERS_KEY)) || {}; } catch { return {}; }
 }
 function saveSettings() {
+  const prev = loadSettings();
   const s = {
     name:        document.getElementById('cfg-name')?.value || '',
-    targetPays:  loadSettings().targetPays || [],
+    excludedPays: prev.excludedPays || [],
     secteurs:    [...document.querySelectorAll('#cfg-secteurs input[type=checkbox]')]
                    .filter(el => el.checked).map(el => el.dataset.secteur),
     defaultTab:  document.getElementById('cfg-default-tab')?.value || 'dashboard',
@@ -5467,13 +5489,13 @@ function showSaveMsg() {
 
 function applySettings() {
   const s = loadSettings();
-  // Afficher/masquer bouton "Mes pays"
+  // Bouton "Mes pays" — désactivé en mode blacklist (ça ne fait pas sens "Mes pays exclus")
   const btnMyPays = document.getElementById('btn-my-pays');
-  if (btnMyPays) btnMyPays.style.display = (s.targetPays?.length) ? 'block' : 'none';
+  if (btnMyPays) btnMyPays.style.display = 'none';
   // Nom
   const nameEl = document.getElementById('cfg-name');
   if (nameEl) nameEl.value = s.name || '';
-  // Pays cibles — les checkboxes sont reconstruits par populateConfigPays()
+  // Pays exclus — les checkboxes sont reconstruits par populateConfigPays()
   populateConfigPays();
   // Secteurs
   document.querySelectorAll('#cfg-secteurs input[type=checkbox]').forEach(el => {
@@ -5491,9 +5513,17 @@ function applySettings() {
   applyDensity(s.density || 'normal');
   // Résumé filtres
   renderFiltersSummary();
-  // Peupler select pays
-  populateConfigPays();
 }
+
+// ── Helper global : retourne la liste des pays exclus (Settings) ─
+// Tolère l'ancien champ `targetPays` pour rétrocompatibilité (migré au prochain save).
+window.getExcludedPays = function() {
+  const s = loadSettings();
+  if (Array.isArray(s.excludedPays) && s.excludedPays.length) return s.excludedPays;
+  // Fallback rétrocompat : s'il y avait une whitelist (targetPays) on l'ignore
+  // (sémantique inverse, on ne peut pas la convertir automatiquement).
+  return [];
+};
 
 function applyDensity(density) {
   document.querySelectorAll('.entity-card').forEach(el => {
@@ -5504,7 +5534,7 @@ function applyDensity(density) {
   });
 }
 
-// ── Pays cibles — checkboxes multi-sélection ──────────────────
+// ── Pays exclus — checkboxes multi-sélection ──────────────────
 function populateConfigPays() {
   const container = document.getElementById('cfg-pays-checkboxes');
   if (!container) return;
@@ -5515,12 +5545,12 @@ function populateConfigPays() {
       ...(allContacts||[]).map(ct => ct.pays)
     ].filter(Boolean))].sort();
 
-    const current = loadSettings().targetPays || [];
+    const current = loadSettings().excludedPays || [];
 
     container.innerHTML = all.length ? all.map(p => `
       <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;min-width:130px;">
         <input type="checkbox" data-pays="${p}" ${current.includes(p) ? 'checked' : ''}
-          onchange="saveTargetPays()" style="accent-color:var(--accent);">
+          onchange="saveExcludedPays()" style="accent-color:var(--accent);">
         ${p}
       </label>`).join('') : '<span style="font-size:12px;color:var(--text3);">Aucune donnée disponible</span>';
   };
@@ -5533,34 +5563,35 @@ function populateConfigPays() {
   }
 }
 
-function saveTargetPays() {
+function saveExcludedPays() {
   const checked = [...document.querySelectorAll('#cfg-pays-checkboxes input[type=checkbox]:checked')]
     .map(el => el.dataset.pays);
   const s = loadSettings();
-  s.targetPays = checked;
+  s.excludedPays = checked;
+  // Nettoyer ancien champ si présent (on ne convertit pas, sémantique inverse)
+  delete s.targetPays;
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-  const btn = document.getElementById('btn-my-pays');
-  if (btn) btn.style.display = checked.length ? 'block' : 'none';
   showSaveMsg();
+  // Re-filtrer immédiatement la grille active pour montrer l'effet
+  if (typeof filterCurrentTab === 'function') {
+    try { filterCurrentTab(); } catch {}
+  }
+  if (typeof filterSocContactsGrid === 'function') {
+    try { filterSocContactsGrid(); } catch {}
+  }
 }
 
+// Backwards-compat: certains appels existants peuvent encore référencer ces noms
+function saveTargetPays() { return saveExcludedPays(); }
 function addTargetPays() {}
 function removeTargetPays() {}
 function renderTargetPays() {}
 
-// ── Filtre rapide "Mes pays" ───────────────────────────────────
+// ── Filtre rapide "Mes pays" — DEPRECATED depuis le passage en blacklist ───
+// La sémantique est maintenant "pays exclus", donc un filtre "Mes pays" en
+// whitelist n'a plus de sens. Conservé en no-op pour la rétrocompat.
 function applyMyPaysFilter(tab) {
-  const pays = loadSettings().targetPays || [];
-  if (!pays.length) { alert('Définissez vos pays cibles dans Paramètres.'); return; }
-  // Pas de filtre multi-pays natif — on filtre sur le 1er pays cible
-  // et on affiche un badge
-  if (tab === 'end-users') {
-    const sel = document.getElementById('eu-pays-filter');
-    if (sel) { sel.value = pays[0]; filterEndUsers(); }
-  } else if (tab === 'contacts') {
-    const sel = document.getElementById('ct-pays-filter');
-    if (sel) { sel.value = pays[0]; filterContactsGrid(); }
-  }
+  alert('Le filtre par pays est désormais une exclusion (Paramètres → Pays à exclure).\nLes contacts des pays cochés seront masqués automatiquement partout.');
 }
 
 // ── Filtres mémorisés ─────────────────────────────────────────
