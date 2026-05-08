@@ -1255,19 +1255,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-sub db-kpi-sub-muted" id="m-tenders-total">—</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('end-users', { tab: 'comptes', filter: 'ready' })" title="Buyers qui ont au moins 1 contact email en base mais aucun outreach réel. Ce sont les prospects prêts à être attaqués.">
+        <div class="db-kpi" onclick="go('end-users', { tab: 'comptes', filter: 'ready' })" title="Buyers avec ≥1 email valide en base mais aucun outreach. Cible directe : à attaquer en priorité.">
           <div class="db-kpi-icon">🎯</div>
           <div class="db-kpi-body">
             <div class="db-kpi-val" id="m-buyers-ready">—</div>
-            <div class="db-kpi-label">Buyers prêts</div>
+            <div class="db-kpi-label">À prospecter</div>
             <div class="db-kpi-sub db-kpi-sub-muted" id="m-buyers-total">—</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('end-users', { tab: 'comptes', filter: 'covered' })" title="Buyers déjà approchés / Buyers avec au moins 1 contact email (= adressables). Mesure le % de couverture commerciale réelle. Le sub-label compte le total d'emails envoyés — peut être supérieur au nb de buyers couverts si plusieurs contacts ont été touchés au sein du même buyer ou si certains contacts n'ont pas de buyer associé." id="m-engagement-tile">
-          <div class="db-kpi-icon">✉️</div>
+        <div class="db-kpi" onclick="go('end-users', { tab: 'comptes', filter: 'covered' })" title="Buyers déjà contactés (≥1 outreach réel) sur l'ensemble des buyers adressables (avec ≥1 email valide). Le sous-label compte le total d'emails envoyés." id="m-engagement-tile">
+          <div class="db-kpi-icon">📨</div>
           <div class="db-kpi-body">
             <div class="db-kpi-val" id="m-coverage">—</div>
-            <div class="db-kpi-label">Couverture buyers</div>
+            <div class="db-kpi-label">Déjà contactés</div>
             <div class="db-kpi-sub db-kpi-sub-muted" id="m-coverage-7d">—</div>
           </div>
         </div>
@@ -2805,8 +2805,8 @@ function renderDashboard() {
   }).catch(()=>{});
 
   // Action-oriented dashboard KPIs from /contacts/stats-engagement:
-  //   - 🎯 Buyers prêts: end-users with ≥1 email AND 0 outreach (sub: total adressables)
-  //   - ✉️ Couverture buyers: eu_with_outreach / eu_with_email (sub: total emails sent)
+  //   - 🎯 À prospecter: end-users with ≥1 email AND 0 outreach (sub: / N buyers adressables)
+  //   - 📨 Déjà contactés: covered/N (sub: % progression + total emails envoyés)
   // Source: server-side aggregation, no auth required.
   // Pre-warm the buyer-segments cache so deep-link clicks ('ready' / 'covered') filter instantly.
   loadBuyerSegments();
@@ -2817,29 +2817,28 @@ function renderDashboard() {
     const covered = d.eu_with_outreach || 0;
     const emailsSent = d.emails_sent || 0;
 
-    // Buyers prêts à attaquer (1+ email, 0 outreach)
+    // À prospecter (1+ email, 0 outreach)
     const readyEl = document.getElementById('m-buyers-ready');
     const readySubEl = document.getElementById('m-buyers-total');
     if (readyEl) readyEl.textContent = ready;
     if (readySubEl) readySubEl.textContent = total_addressable > 0
-      ? `/ ${total_addressable} adressables`
+      ? `sur ${total_addressable} buyers avec email`
       : '—';
 
-    // Couverture buyers = covered / addressable
-    // Sub-label: total emails sent (raw count, includes contacts without end_user_id)
+    // Déjà contactés = covered / addressable + badge %
     const covEl = document.getElementById('m-coverage');
     const covSubEl = document.getElementById('m-coverage-7d');
     if (covEl) covEl.textContent = total_addressable > 0
       ? `${covered}/${total_addressable}`
       : '0';
     if (covSubEl) {
-      if (emailsSent > 0) {
-        covSubEl.textContent = `📨 ${emailsSent} email${emailsSent > 1 ? 's' : ''} envoyé${emailsSent > 1 ? 's' : ''}`;
-        covSubEl.classList.remove('db-kpi-sub-muted');
-      } else {
-        covSubEl.textContent = '📨 0 email envoyé';
-        covSubEl.classList.add('db-kpi-sub-muted');
-      }
+      const pct = total_addressable > 0 ? Math.round((covered / total_addressable) * 100) : 0;
+      const parts = [];
+      if (total_addressable > 0) parts.push(`${pct}% des buyers`);
+      if (emailsSent > 0) parts.push(`📨 ${emailsSent} email${emailsSent > 1 ? 's' : ''}`);
+      covSubEl.textContent = parts.length ? parts.join(' · ') : '0% des buyers';
+      if (parts.length) covSubEl.classList.remove('db-kpi-sub-muted');
+      else covSubEl.classList.add('db-kpi-sub-muted');
     }
   }).catch(()=>{});
   // Charger contrats pour le widget liste
