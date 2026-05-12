@@ -6996,8 +6996,10 @@ async function runHealthCheck() {
         btn.style.border = '1px solid rgba(251,146,60,.6)';
         btn.style.color = '#fb923c';
         btn.style.animation = 'db-pulse-bg 2.5s ease-in-out infinite';
-        btn.textContent = '📬 Retour reçu ?';
-        btn.title = `Email envoyé le ${formatDate(status.last_email_sent_at)} (il y a ${Math.round(hoursSinceEmail/24)}j). Clique pour logger le retour reçu.`;
+        // Show original sender attribution (option C: collective visibility + attribution)
+        const senderInitial = status.owner ? status.owner.charAt(0).toUpperCase() : '?';
+        btn.textContent = `📬 Retour ? (${senderInitial})`;
+        btn.title = `Email envoyé par ${status.owner || '?'} le ${formatDate(status.last_email_sent_at)} (il y a ${Math.round(hoursSinceEmail/24)}j). Clique pour logger le retour reçu.`;
         return;
       }
     }
