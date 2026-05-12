@@ -1228,61 +1228,43 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div id="panel-dashboard" class="panel active">
       <div class="topbar"><h1>Defence Drone Deals</h1></div>
 
-      <!-- KPI ROW -->
+      <!-- KPI ROW - Prospection cockpit -->
       <div class="db-kpi-row">
-        <div class="db-kpi db-kpi-accent" onclick="go('contracts')">
-          <div class="db-kpi-icon">💰</div>
+        <div class="db-kpi db-kpi-accent" onclick="go('contacts')" title="Total contacts en base avec un email valide (format a@b)">
+          <div class="db-kpi-icon">📇</div>
           <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-valeur">—</div>
-            <div class="db-kpi-label">Valeur totale contrats</div>
+            <div class="db-kpi-val" id="m-emails-base">—</div>
+            <div class="db-kpi-label">Emails qualifiés en base</div>
+            <div class="db-kpi-sub db-kpi-sub-muted" id="m-emails-base-sub">—</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('contracts')">
-          <div class="db-kpi-icon">📋</div>
+        <div class="db-kpi" onclick="go('contacts')" title="Nouveaux contacts avec email ajoutés dans les 7 derniers jours (auto-prospect + ajouts manuels)">
+          <div class="db-kpi-icon">✨</div>
           <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-alerts">0</div>
-            <div class="db-kpi-label">Contrats attribués</div>
+            <div class="db-kpi-val" id="m-emails-new-7d">—</div>
+            <div class="db-kpi-label">Nouveaux emails (7j)</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('contracts', { filter: 'closing30d' })" title="Tenders qui ferment dans les 30 prochains jours. Sub-label = total tenders ouverts.">
-          <div class="db-kpi-icon" style="position:relative;">
-            🔥
-            <span class="db-pulse" id="m-tenders-pulse" style="display:none;"></span>
-          </div>
+        <div class="db-kpi" onclick="go('contacts')" title="Emails marqués comme envoyés dans Scout sur les 7 derniers jours">
+          <div class="db-kpi-icon">📤</div>
           <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-tenders-30d">—</div>
-            <div class="db-kpi-label">Tenders &lt; 30j</div>
-            <div class="db-kpi-sub db-kpi-sub-muted" id="m-tenders-total">—</div>
+            <div class="db-kpi-val" id="m-emails-sent-7d">—</div>
+            <div class="db-kpi-label">Emails envoyés (7j)</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('end-users', { tab: 'comptes', filter: 'ready' })" title="Buyers avec ≥1 email valide en base mais aucun outreach. Cible directe : à attaquer en priorité.">
-          <div class="db-kpi-icon">🎯</div>
-          <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-buyers-ready">—</div>
-            <div class="db-kpi-label">À prospecter</div>
-            <div class="db-kpi-sub db-kpi-sub-muted" id="m-buyers-total">—</div>
-          </div>
-        </div>
-        <div class="db-kpi" onclick="go('end-users', { tab: 'comptes', filter: 'covered' })" title="Buyers déjà contactés (≥1 outreach réel) sur l'ensemble des buyers adressables (avec ≥1 email valide). Le sous-label compte le total d'emails envoyés." id="m-engagement-tile">
+        <div class="db-kpi" onclick="go('contacts')" title="Total cumulé des emails envoyés depuis le début">
           <div class="db-kpi-icon">📨</div>
           <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-coverage">—</div>
-            <div class="db-kpi-label">Déjà contactés</div>
-            <div class="db-kpi-sub db-kpi-sub-muted" id="m-coverage-7d">—</div>
+            <div class="db-kpi-val" id="m-emails-sent-total">—</div>
+            <div class="db-kpi-label">Emails envoyés (total)</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('societes')">
-          <div class="db-kpi-icon">🏭</div>
+        <div class="db-kpi" onclick="go('contacts')" title="Part des contacts avec email valide / sans email">
+          <div class="db-kpi-icon">📊</div>
           <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-societes">0</div>
-            <div class="db-kpi-label">Fabricants suivis</div>
-          </div>
-        </div>
-        <div class="db-kpi" onclick="go('produits-db')">
-          <div class="db-kpi-icon">🚁</div>
-          <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-produits">0</div>
-            <div class="db-kpi-label">Systèmes catalogués</div>
+            <div class="db-kpi-val" id="m-emails-ratio">—</div>
+            <div class="db-kpi-label">Avec email</div>
+            <div class="db-kpi-sub db-kpi-sub-muted" id="m-emails-ratio-sub">—</div>
           </div>
         </div>
       </div>
@@ -2783,73 +2765,77 @@ function _renderRecentRows(items) {
 
 
 function renderDashboard() {
-  // KPIs immédiats — depuis cache local si disponible
-  document.getElementById('m-societes').textContent = societes.length || '…';
-  document.getElementById('m-produits').textContent = produits.length || '…';
-  // Vrai count depuis la DB (indépendant du chargement local)
-  fetch(API + '/ping').then(r=>r.json()).then(d=>{
-    if (d.ok && d.produits > 0) document.getElementById('m-produits').textContent = d.produits;
-    if (d.ok && d.societes > 0) document.getElementById('m-societes').textContent = d.societes;
-    if (d.ok && d.contacts > 0) { /* disponible pour extension future */ }
-  }).catch(()=>{});
+  // ===========================================================================
+  // COCKPIT PROSPECTION — 5 KPIs
+  //   1. Emails qualifiés en base       -> total_qualified (sub: total contacts)
+  //   2. Nouveaux emails (7j)           -> added_last_7d
+  //   3. Emails envoyés (7j)            -> emails_sent_last_7d
+  //   4. Emails envoyés (total)         -> emails_sent
+  //   5. Avec email (proportion)        -> total_qualified / total_contacts
+  // Source: /contacts/stats-engagement (aggregated server-side)
+  // ===========================================================================
 
-  // Charger les contrats si pas encore chargés, puis mettre à jour
-  // Toujours charger la valeur depuis l'API stats (fiable, indépendant du cache local)
-  fetch(API + '/contracts/stats').then(r => r.json()).then(sd => {
-    const nb = parseInt(sd?.total?.nb || 0);
-    const totalM = parseFloat(sd?.total?.total_m || 0) / 1_000_000;
-    if (nb > 0) document.getElementById('m-alerts').textContent = nb;
-    if (totalM > 0) document.getElementById('m-valeur').textContent = totalM > 1000
-      ? '$' + (totalM/1000).toFixed(1) + 'B'
-      : '$' + totalM.toFixed(0) + 'M';
-  }).catch(()=>{});
-
-  // Action-oriented dashboard KPIs from /contacts/stats-engagement:
-  //   - 🎯 À prospecter: end-users with ≥1 email AND 0 outreach (sub: / N buyers adressables)
-  //   - 📨 Déjà contactés: covered/N (sub: % progression + total emails envoyés)
-  // Source: server-side aggregation, no auth required.
-  // Pre-warm the buyer-segments cache so deep-link clicks ('ready' / 'covered') filter instantly.
+  // Pre-warm buyer-segments cache (used by contacts/end-users grid filters)
   loadBuyerSegments();
+
   fetch(API + '/contacts/stats-engagement').then(r => r.json()).then(d => {
     if (!d || !d.ok) return;
-    const ready = d.eu_ready_to_attack || 0;
-    const total_addressable = d.eu_with_email || 0;
-    const covered = d.eu_with_outreach || 0;
-    const emailsSent = d.emails_sent || 0;
 
-    // À prospecter (1+ email, 0 outreach)
-    const readyEl = document.getElementById('m-buyers-ready');
-    const readySubEl = document.getElementById('m-buyers-total');
-    if (readyEl) readyEl.textContent = ready;
-    if (readySubEl) readySubEl.textContent = total_addressable > 0
-      ? `sur ${total_addressable} buyers avec email`
+    const totalQualified   = d.total_qualified       || 0;
+    const totalContacts    = d.total_contacts        || 0;
+    const addedLast7d      = d.added_last_7d         || 0;
+    const emailsSentTotal  = d.emails_sent           || 0;
+    const emailsSent7d     = d.emails_sent_last_7d   || 0;
+    const sansEmail        = Math.max(0, totalContacts - totalQualified);
+    const pctWithEmail     = totalContacts > 0
+      ? Math.round((totalQualified / totalContacts) * 100)
+      : 0;
+
+    // KPI 1 — Emails qualifiés en base
+    const el1 = document.getElementById('m-emails-base');
+    if (el1) el1.textContent = totalQualified.toLocaleString('fr-FR');
+    const el1sub = document.getElementById('m-emails-base-sub');
+    if (el1sub) el1sub.textContent = totalContacts > 0
+      ? `sur ${totalContacts.toLocaleString('fr-FR')} contacts`
       : '—';
 
-    // Déjà contactés = covered / addressable + badge %
-    const covEl = document.getElementById('m-coverage');
-    const covSubEl = document.getElementById('m-coverage-7d');
-    if (covEl) covEl.textContent = total_addressable > 0
-      ? `${covered}/${total_addressable}`
-      : '0';
-    if (covSubEl) {
-      const pct = total_addressable > 0 ? Math.round((covered / total_addressable) * 100) : 0;
-      const parts = [];
-      if (total_addressable > 0) parts.push(`${pct}% des buyers`);
-      if (emailsSent > 0) parts.push(`📨 ${emailsSent} email${emailsSent > 1 ? 's' : ''}`);
-      covSubEl.textContent = parts.length ? parts.join(' · ') : '0% des buyers';
-      if (parts.length) covSubEl.classList.remove('db-kpi-sub-muted');
-      else covSubEl.classList.add('db-kpi-sub-muted');
+    // KPI 2 — Nouveaux emails (7j)
+    const el2 = document.getElementById('m-emails-new-7d');
+    if (el2) el2.textContent = addedLast7d.toLocaleString('fr-FR');
+
+    // KPI 3 — Emails envoyés (7j)
+    const el3 = document.getElementById('m-emails-sent-7d');
+    if (el3) el3.textContent = emailsSent7d.toLocaleString('fr-FR');
+
+    // KPI 4 — Emails envoyés (total)
+    const el4 = document.getElementById('m-emails-sent-total');
+    if (el4) el4.textContent = emailsSentTotal.toLocaleString('fr-FR');
+
+    // KPI 5 — Avec email (proportion)
+    const el5 = document.getElementById('m-emails-ratio');
+    if (el5) el5.textContent = `${pctWithEmail}%`;
+    const el5sub = document.getElementById('m-emails-ratio-sub');
+    if (el5sub) {
+      el5sub.textContent = sansEmail > 0
+        ? `${sansEmail.toLocaleString('fr-FR')} sans email`
+        : 'tous renseignés';
+      el5sub.classList.remove('db-kpi-sub-muted');
     }
   }).catch(()=>{});
+
+  // ===========================================================================
+  // SUITE — chargement des widgets contrats / tenders / brief (non-KPI)
+  // Ces données alimentent les widgets de liste/brief en-dessous des KPIs.
+  // ===========================================================================
+
   // Charger contrats pour le widget liste
   if (contracts.length > 0) {
-    document.getElementById('m-alerts').textContent = contracts.length;
     renderDbContracts();
   } else {
     loadContracts().then(() => { renderDbContracts(); }).catch(()=>{});
   }
 
-  // Buyers + tenders depuis API
+  // Buyers + tenders depuis API (pour widgets brief et listes)
   Promise.all([
     fetch(API + '/end-users?limit=3000', { headers: window.getAuthHeaders() }).then(r=>r.json()).catch(()=>({end_users:[]})),
     fetch(API + '/tenders').then(r=>r.json()).catch(()=>({tenders:[]})),
@@ -3214,7 +3200,8 @@ async function loadSocieteProduits(societeId) {
     </div>`).join('');
     // Merge into global produits list
     prods.forEach(p => { if (!produits.find(x => x.id === p.id)) produits.push(p); });
-    document.getElementById('m-produits').textContent = produits.length;
+    const mp1 = document.getElementById('m-produits');
+    if (mp1) mp1.textContent = produits.length;
   } catch(e) { console.error(e); }
 }
 
@@ -3296,7 +3283,8 @@ async function loadAllProduits() {
 }
 
 function renderProduits() {
-  document.getElementById('m-produits').textContent = produits.length;
+  const mp2 = document.getElementById('m-produits');
+  if (mp2) mp2.textContent = produits.length;
   // Reset domain and show all
   activeDomaine = 'Tous';
   activeCat = 'Tous';
@@ -3784,7 +3772,8 @@ async function loadContracts() {
     const r = await fetch(API + '/contracts');
     const d = await r.json();
     contracts = d.contracts || [];
-    document.getElementById('m-alerts').textContent = contracts.length;
+    const ma = document.getElementById('m-alerts');
+    if (ma) ma.textContent = contracts.length;
   } catch(e) { console.error('loadContracts:', e); }
 }
 
