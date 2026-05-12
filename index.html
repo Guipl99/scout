@@ -6850,36 +6850,55 @@ async function runHealthCheck() {
       return !cached || isStale || isNull;
     });
     if (!needRefetch.length) return;
-    try {
-      const url = API + '/contacts-status?ids=' + encodeURIComponent(needRefetch.join(','));
-      const r = await fetch(url, { headers: authHeaders() });
-      // DEBUG: stocker les infos de la dernière requête pour diagnostic visuel
-      window._lastFetchStatus = {
-        url: url.slice(0, 100) + (url.length > 100 ? '...' : ''),
-        status: r.status,
-        ok: r.ok,
-        ts: new Date().toISOString().slice(11, 19),
-        ids_sent: needRefetch.length,
-        auth_present: !!(authHeaders().Authorization || authHeaders().authorization),
-      };
-      if (!r.ok) {
-        window._lastFetchStatus.body = (await r.text()).slice(0, 200);
-        return;
+
+    // Batch into chunks of 100 IDs to avoid URL length issues
+    // (1064 IDs × ~25 chars = 26KB URL which Express truncates silently,
+    // returning status=200 ok=true but received=0 entries)
+    const CHUNK_SIZE = 100;
+    let totalReceived = 0;
+    let lastStatus = 0;
+    let firstError = null;
+    let firstEntry = null;
+
+    for (let i = 0; i < needRefetch.length; i += CHUNK_SIZE) {
+      const chunk = needRefetch.slice(i, i + CHUNK_SIZE);
+      try {
+        const url = API + '/contacts-status?ids=' + encodeURIComponent(chunk.join(','));
+        const r = await fetch(url, { headers: authHeaders() });
+        lastStatus = r.status;
+        if (!r.ok) {
+          if (!firstError) firstError = `HTTP ${r.status}: ${(await r.text()).slice(0, 100)}`;
+          continue;
+        }
+        const data = await r.json();
+        const entries = Object.entries(data.status || {});
+        totalReceived += entries.length;
+        if (!firstEntry && entries.length) firstEntry = entries[0];
+        for (const id of chunk) {
+          contactStatusCache.set(id, null);
+          cacheTimestamps.set(id, now);
+        }
+        for (const [id, s] of entries) {
+          contactStatusCache.set(id, s);
+          cacheTimestamps.set(id, now);
+        }
+      } catch (e) {
+        if (!firstError) firstError = e.message;
       }
-      const data = await r.json();
-      window._lastFetchStatus.received = Object.keys(data.status || {}).length;
-      window._lastFetchStatus.first_entry = Object.entries(data.status || {})[0];
-      for (const id of needRefetch) {
-        contactStatusCache.set(id, null);
-        cacheTimestamps.set(id, now);
-      }
-      for (const [id, s] of Object.entries(data.status || {})) {
-        contactStatusCache.set(id, s);
-        cacheTimestamps.set(id, now);
-      }
-    } catch (e) {
-      window._lastFetchStatus = { error: e.message, ts: new Date().toISOString().slice(11, 19) };
     }
+
+    // DEBUG: stocker les infos pour diagnostic visuel
+    window._lastFetchStatus = {
+      url: `[batched ${Math.ceil(needRefetch.length / CHUNK_SIZE)} chunks of ${CHUNK_SIZE}]`,
+      status: lastStatus,
+      ok: !firstError,
+      ts: new Date().toISOString().slice(11, 19),
+      ids_sent: needRefetch.length,
+      auth_present: !!(authHeaders().Authorization || authHeaders().authorization),
+      received: totalReceived,
+      first_entry: firstEntry,
+      body: firstError,
+    };
   }
 
   // Global click delegation — catches clicks on ANY .scout-cs-inline-btn
