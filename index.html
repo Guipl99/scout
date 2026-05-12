@@ -1259,7 +1259,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-label">Emails envoyés (total)</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('contacts')" title="Stock d'emails qualifiés pas encore contactés. Sub-label : nb de jours restants au rythme moyen des 7 derniers jours.">
+        <div class="db-kpi" onclick="go('contacts')" title="Stock pertinent = emails qualifiés non encore contactés ET pas dans une société déjà saturée (≥5 contacts touchés). Sub-label : jours restants au rythme 7j + sociétés saturées exclues.">
           <div class="db-kpi-icon">⏳</div>
           <div class="db-kpi-body">
             <div class="db-kpi-val" id="m-stock-restant">—</div>
@@ -2787,7 +2787,10 @@ function renderDashboard() {
     const emailsSentTotal  = d.emails_sent           || 0;
     const emailsSent7d     = d.emails_sent_last_7d   || 0;
     const contactedQual    = d.contacted             || 0;
-    const stockRemaining   = Math.max(0, totalQualified - contactedQual);
+    const stockRemaining   = (d.stock_relevant !== undefined && d.stock_relevant !== null)
+      ? d.stock_relevant
+      : Math.max(0, totalQualified - contactedQual);
+    const saturatedOrgs    = d.saturated_orgs_count   || 0;
     const dailyRate7d      = emailsSent7d / 7;
     const daysRemaining    = dailyRate7d > 0
       ? Math.round(stockRemaining / dailyRate7d)
@@ -2821,17 +2824,23 @@ function renderDashboard() {
     if (el5) el5.textContent = stockRemaining.toLocaleString('fr-FR');
     const el5sub = document.getElementById('m-stock-jours');
     if (el5sub) {
+      let runwayText;
       if (daysRemaining === null) {
-        el5sub.textContent = 'cadence inconnue';
+        runwayText = 'cadence inconnue';
       } else if (daysRemaining >= 365) {
-        el5sub.textContent = `> 1 an au rythme actuel`;
+        runwayText = `> 1 an au rythme actuel`;
       } else if (daysRemaining >= 60) {
-        el5sub.textContent = `~${Math.round(daysRemaining/30)} mois au rythme actuel`;
+        runwayText = `~${Math.round(daysRemaining/30)} mois au rythme actuel`;
       } else if (daysRemaining >= 14) {
-        el5sub.textContent = `~${Math.round(daysRemaining/7)} sem. au rythme actuel`;
+        runwayText = `~${Math.round(daysRemaining/7)} sem. au rythme actuel`;
       } else {
-        el5sub.textContent = `~${daysRemaining}j au rythme actuel`;
+        runwayText = `~${daysRemaining}j au rythme actuel`;
       }
+      // Ajoute info societes saturees si pertinent
+      if (saturatedOrgs > 0) {
+        runwayText += ` · ${saturatedOrgs} société${saturatedOrgs > 1 ? 's' : ''} saturée${saturatedOrgs > 1 ? 's' : ''}`;
+      }
+      el5sub.textContent = runwayText;
       el5sub.classList.remove('db-kpi-sub-muted');
     }
   }).catch(()=>{});
