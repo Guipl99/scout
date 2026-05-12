@@ -5047,8 +5047,9 @@ function filterContactsGrid() {
         if (!s) return 3;
         if (s.has_reply) return s.reply_sentiment === 'positive' ? 1 : 2;
         if (s.owned && s.last_email_sent_at) {
-          const h = (Date.now() - new Date(s.last_email_sent_at).getTime()) / 3600000;
-          if (h > 24) return 0;
+          const days = (Date.now() - new Date(s.last_email_sent_at).getTime()) / 86400000;
+          if (days > 1 && days <= 30) return 0;  // 📬 Retour reçu ? (URGENT)
+          if (days > 30) return 4;               // ⏱️ Sans réponse — en bas
         }
         return 3;
       };
@@ -7005,18 +7006,33 @@ async function runHealthCheck() {
       }
     }
 
-    // PRIORITY 2 — Email sent >24h ago AND no reply yet → contextual prompt
+    // PRIORITY 2 — Email sent >24h ago AND no reply yet
+    // - 24h-30j → bouton orange pulse "📬 Retour ? (X)" (suivi actif)
+    // - >30j   → bouton gris "⏱️ Sans réponse (30j+)" (suivi expiré)
     if (status && status.owned && status.last_email_sent_at && !status.has_reply) {
       const hoursSinceEmail = (Date.now() - new Date(status.last_email_sent_at).getTime()) / 3600000;
-      if (hoursSinceEmail > 24) {
+      const daysSinceEmail = hoursSinceEmail / 24;
+
+      if (hoursSinceEmail > 24 && daysSinceEmail <= 30) {
+        // 24h - 30j : suivi actif → bouton orange pulsant
         btn.style.background = 'rgba(251,146,60,.15)';
         btn.style.border = '1px solid rgba(251,146,60,.6)';
         btn.style.color = '#fb923c';
         btn.style.animation = 'db-pulse-bg 2.5s ease-in-out infinite';
-        // Show original sender attribution (option C: collective visibility + attribution)
         const senderInitial = status.owner ? status.owner.charAt(0).toUpperCase() : '?';
         btn.textContent = `📬 Retour ? (${senderInitial})`;
-        btn.title = `Email envoyé par ${status.owner || '?'} le ${formatDate(status.last_email_sent_at)} (il y a ${Math.round(hoursSinceEmail/24)}j). Clique pour logger le retour reçu.`;
+        btn.title = `Email envoyé par ${status.owner || '?'} le ${formatDate(status.last_email_sent_at)} (il y a ${Math.round(daysSinceEmail)}j). Clique pour logger le retour reçu.`;
+        return;
+      }
+
+      if (daysSinceEmail > 30) {
+        // >30j : suivi expiré → bouton gris discret, plus de pulse
+        btn.style.background = 'rgba(107,114,128,.1)';
+        btn.style.border = '1px solid rgba(107,114,128,.4)';
+        btn.style.color = '#9ca3af';
+        btn.style.animation = '';
+        btn.textContent = `⏱️ Sans réponse`;
+        btn.title = `Email envoyé par ${status.owner || '?'} le ${formatDate(status.last_email_sent_at)} (il y a ${Math.round(daysSinceEmail)}j). Suivi expiré (>30j). Tu peux toujours logger un retour si reçu tardivement ou relancer.`;
         return;
       }
     }
@@ -7080,8 +7096,9 @@ async function runHealthCheck() {
         if (!s) return 3;
         if (s.has_reply) return s.reply_sentiment === 'positive' ? 1 : 2;
         if (s.owned && s.last_email_sent_at) {
-          const h = (Date.now() - new Date(s.last_email_sent_at).getTime()) / 3600000;
-          if (h > 24) return 0;
+          const days = (Date.now() - new Date(s.last_email_sent_at).getTime()) / 86400000;
+          if (days > 1 && days <= 30) return 0;
+          if (days > 30) return 4;
         }
         return 3;
       };
