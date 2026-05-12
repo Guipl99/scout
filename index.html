@@ -6845,17 +6845,30 @@ async function runHealthCheck() {
     const needRefetch = ids.filter(id => {
       const cached = contactStatusCache.has(id);
       const ts = cacheTimestamps.get(id) || 0;
-      // Re-fetch if: never fetched, OR cache stale (>30s), OR value is null
-      // (null might be obsolete since contact may have gained actions since)
       const isStale = (now - ts) > CACHE_TTL_MS;
       const isNull = cached && contactStatusCache.get(id) === null;
       return !cached || isStale || isNull;
     });
     if (!needRefetch.length) return;
     try {
-      const r = await fetch(API + '/contacts-status?ids=' + encodeURIComponent(needRefetch.join(',')), { headers: authHeaders() });
-      if (!r.ok) return;
+      const url = API + '/contacts-status?ids=' + encodeURIComponent(needRefetch.join(','));
+      const r = await fetch(url, { headers: authHeaders() });
+      // DEBUG: stocker les infos de la dernière requête pour diagnostic visuel
+      window._lastFetchStatus = {
+        url: url.slice(0, 100) + (url.length > 100 ? '...' : ''),
+        status: r.status,
+        ok: r.ok,
+        ts: new Date().toISOString().slice(11, 19),
+        ids_sent: needRefetch.length,
+        auth_present: !!(authHeaders().Authorization || authHeaders().authorization),
+      };
+      if (!r.ok) {
+        window._lastFetchStatus.body = (await r.text()).slice(0, 200);
+        return;
+      }
       const data = await r.json();
+      window._lastFetchStatus.received = Object.keys(data.status || {}).length;
+      window._lastFetchStatus.first_entry = Object.entries(data.status || {})[0];
       for (const id of needRefetch) {
         contactStatusCache.set(id, null);
         cacheTimestamps.set(id, now);
@@ -6864,7 +6877,9 @@ async function runHealthCheck() {
         contactStatusCache.set(id, s);
         cacheTimestamps.set(id, now);
       }
-    } catch {}
+    } catch (e) {
+      window._lastFetchStatus = { error: e.message, ts: new Date().toISOString().slice(11, 19) };
+    }
   }
 
   // Global click delegation — catches clicks on ANY .scout-cs-inline-btn
@@ -7124,6 +7139,30 @@ async function runHealthCheck() {
       }
       lines.push('');
       lines.push(`📊 Sur ${ids.length} boutons scannés, ${countOrangeAll} doivent être 🟠`);
+      // DEBUG: last HTTP fetch info
+      if (window._lastFetchStatus) {
+        const lfs = window._lastFetchStatus;
+        lines.push('');
+        lines.push('🌐 Dernière requête:');
+        if (lfs.error) {
+          lines.push(`   ERREUR: ${lfs.error}`);
+        } else {
+          lines.push(`   ${lfs.ts} status=${lfs.status} ok=${lfs.ok}`);
+          lines.push(`   auth=${lfs.auth_present} ids_sent=${lfs.ids_sent}`);
+          if (lfs.received !== undefined) {
+            lines.push(`   received=${lfs.received} entries`);
+            if (lfs.first_entry) {
+              const [fid, fs] = lfs.first_entry;
+              lines.push(`   1st: ${fid.slice(0,20)}`);
+              lines.push(`     fields: ${Object.keys(fs || {}).join(',')}`);
+            }
+          }
+          if (lfs.body) lines.push(`   body: ${lfs.body.slice(0,80)}`);
+        }
+      } else {
+        lines.push('');
+        lines.push('⚠️ Aucune requête /contacts-status faite');
+      }
       content.textContent = lines.join('\n');
 
       // Si la grille contacts est visible, re-trier UNIQUEMENT si l'ordre actuel
