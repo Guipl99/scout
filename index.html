@@ -115,6 +115,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-kpi-critical { border-color:rgba(255,80,80,.6); background:linear-gradient(135deg,#2a1010 0%,var(--bg2) 100%); animation:db-pulse-bg 2s ease-in-out infinite; }
 .db-kpi-critical:hover { border-color:rgba(255,80,80,1); }
 .db-kpi-critical .db-kpi-val { color:#ff5050; }
+.db-kpi-success { border-color:rgba(34,197,94,.4); background:linear-gradient(135deg,#102a18 0%,var(--bg2) 100%); }
+.db-kpi-success:hover { border-color:rgba(34,197,94,.8); }
+.db-kpi-success .db-kpi-val { color:#22c55e; }
 @keyframes db-pulse-bg { 0%,100% { opacity:1; } 50% { opacity:.85; } }
 .db-kpi-icon { font-size:22px; flex-shrink:0; position:relative; }
 .db-kpi-val { font-size:20px; font-weight:700; font-family:'DM Mono',monospace; color:var(--text); line-height:1; }
@@ -1272,6 +1275,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-val" id="m-stock-restant">—</div>
             <div class="db-kpi-label">Stock à contacter</div>
             <div class="db-kpi-sub db-kpi-sub-muted" id="m-stock-jours">—</div>
+          </div>
+        </div>
+        <div class="db-kpi db-kpi-success" onclick="go('contacts')" title="Nombre de contacts ayant manifesté un intérêt (retour mail positif). Sub-label : taux de conversion emails envoyés → réponses positives.">
+          <div class="db-kpi-icon">✅</div>
+          <div class="db-kpi-body">
+            <div class="db-kpi-val" id="m-replies-positive">—</div>
+            <div class="db-kpi-label">Intéressés</div>
+            <div class="db-kpi-sub db-kpi-sub-muted" id="m-replies-rate">—</div>
           </div>
         </div>
       </div>
@@ -2859,6 +2870,23 @@ function renderDashboard() {
         tile5.classList.remove('db-kpi-warning', 'db-kpi-critical');
         if (alertLevel === 'warning') tile5.classList.add('db-kpi-warning');
         if (alertLevel === 'critical') tile5.classList.add('db-kpi-critical');
+      }
+    }
+
+    // KPI 6 — Intéressés (replies positives, sub: taux conversion)
+    const repliesPositive = d.replies_positive || 0;
+    const replies7d       = d.replies_positive_last_7d || 0;
+    const el6 = document.getElementById('m-replies-positive');
+    if (el6) el6.textContent = repliesPositive.toLocaleString('fr-FR');
+    const el6sub = document.getElementById('m-replies-rate');
+    if (el6sub) {
+      if (emailsSentTotal > 0) {
+        const rate = ((repliesPositive / emailsSentTotal) * 100).toFixed(1);
+        const trend = replies7d > 0 ? ` · +${replies7d} (7j)` : '';
+        el6sub.textContent = `${repliesPositive}/${emailsSentTotal} = ${rate}%${trend}`;
+        el6sub.classList.remove('db-kpi-sub-muted');
+      } else {
+        el6sub.textContent = 'pas encore d\'envoi';
       }
     }
   }).catch(()=>{});
@@ -6815,8 +6843,82 @@ async function runHealthCheck() {
       const nameEl = card.querySelector('[style*="font-weight:600"], [style*="font-weight: 600"]');
       if (nameEl) name = nameEl.textContent.replace(/[👤📋💼🚀✓🔒]/g,'').trim();
     }
+    // Contextual flow: if button is in "Retour reçu ?" state, open the reply mini-popup
+    // instead of the normal action drawer.
+    const status = contactStatusCache.get(contactId);
+    if (status && status.owned && status.last_email_sent_at && !status.has_reply) {
+      const hoursSinceEmail = (Date.now() - new Date(status.last_email_sent_at).getTime()) / 3600000;
+      if (hoursSinceEmail > 24) {
+        openReplyPrompt(contactId, name);
+        return false;
+      }
+    }
     openDrawer(contactId, name);
     return false;
+  }
+
+  // ─── Reply prompt mini-popup (intéressé / pas intéressé) ───
+  function openReplyPrompt(contactId, name) {
+    // Build or reuse the modal
+    let modal = document.getElementById('scout-reply-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'scout-reply-modal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:100002;display:flex;align-items:center;justify-content:center;padding:16px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;';
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
+    }
+    modal.innerHTML = `
+      <div style="background:var(--bg2,#1e293b);color:var(--text,#f1f5f9);border:1px solid var(--border,#334155);border-radius:12px;max-width:420px;width:100%;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.5);">
+        <div style="font-size:14px;color:var(--text2,#94a3b8);margin-bottom:6px;">📬 Retour de ${name}</div>
+        <div style="font-size:18px;font-weight:600;margin-bottom:18px;">Quel est le retour reçu ?</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button type="button" id="scout-reply-pos-btn" style="padding:12px 16px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.6);color:#22c55e;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;text-align:left;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">✅</span>
+            <div>
+              <div>Intéressé</div>
+              <div style="font-size:11px;font-weight:400;color:var(--text2,#94a3b8);margin-top:2px;">Retour positif, à relancer</div>
+            </div>
+          </button>
+          <button type="button" id="scout-reply-neg-btn" style="padding:12px 16px;background:rgba(107,114,128,.15);border:1px solid rgba(107,114,128,.6);color:#9ca3af;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;text-align:left;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">❌</span>
+            <div>
+              <div>Pas intéressé</div>
+              <div style="font-size:11px;font-weight:400;color:var(--text2,#94a3b8);margin-top:2px;">Retour négatif, ne plus relancer</div>
+            </div>
+          </button>
+        </div>
+        <div style="margin-top:14px;padding:10px;background:var(--bg3,#0f172a);border-radius:6px;">
+          <label style="font-size:11px;color:var(--text2,#94a3b8);display:block;margin-bottom:4px;">Note (facultatif)</label>
+          <textarea id="scout-reply-notes" rows="2" placeholder="Ex: demande une démo en juin..." style="width:100%;background:var(--bg2,#1e293b);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-size:12px;resize:vertical;font-family:inherit;"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+          <button type="button" id="scout-reply-cancel-btn" style="padding:8px 14px;background:transparent;color:var(--text2,#94a3b8);border:1px solid var(--border,#334155);border-radius:6px;cursor:pointer;font-size:13px;">Annuler</button>
+        </div>
+      </div>
+    `;
+    const submit = async (sentiment) => {
+      const notes = document.getElementById('scout-reply-notes').value.trim();
+      try {
+        const r = await fetch(API + '/action/log-reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ contact_id: contactId, sentiment, notes: notes || null }),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || 'erreur');
+        modal.remove();
+        // Refresh status + cockpit
+        contactStatusCache.delete(contactId);
+        if (typeof scanAndUpdate === 'function') scanAndUpdate();
+        if (typeof renderDashboard === 'function') renderDashboard();
+      } catch (e) {
+        alert('Erreur log-reply : ' + e.message);
+      }
+    };
+    document.getElementById('scout-reply-pos-btn').onclick = () => submit('positive');
+    document.getElementById('scout-reply-neg-btn').onclick = () => submit('negative');
+    document.getElementById('scout-reply-cancel-btn').onclick = () => modal.remove();
   }
   document.addEventListener('click', handleInlineBtnClick, true);
   document.addEventListener('mousedown', (e) => {
@@ -6831,21 +6933,60 @@ async function runHealthCheck() {
 
   function applyCardBtnStyle(btn, contactId) {
     const status = contactStatusCache.get(contactId);
+
+    // PRIORITY 1 — Reply already logged (intéressé / pas intéressé)
+    if (status && status.has_reply) {
+      if (status.reply_sentiment === 'positive') {
+        btn.style.background = 'rgba(34,197,94,.15)';
+        btn.style.border = '1px solid rgba(34,197,94,.6)';
+        btn.style.color = '#22c55e';
+        btn.textContent = '✅ Intéressé';
+        btn.title = `Retour positif loggé par ${status.owner || '?'} le ${formatDate(status.reply_at)}. Clic pour voir l'historique.`;
+        return;
+      } else if (status.reply_sentiment === 'negative') {
+        btn.style.background = 'rgba(107,114,128,.15)';
+        btn.style.border = '1px solid rgba(107,114,128,.6)';
+        btn.style.color = '#9ca3af';
+        btn.textContent = '❌ Pas intéressé';
+        btn.title = `Retour négatif loggé par ${status.owner || '?'} le ${formatDate(status.reply_at)}. Clic pour voir l'historique.`;
+        return;
+      }
+    }
+
+    // PRIORITY 2 — Email sent >24h ago AND no reply yet → contextual prompt
+    if (status && status.owned && status.last_email_sent_at && !status.has_reply) {
+      const hoursSinceEmail = (Date.now() - new Date(status.last_email_sent_at).getTime()) / 3600000;
+      if (hoursSinceEmail > 24) {
+        btn.style.background = 'rgba(251,146,60,.15)';
+        btn.style.border = '1px solid rgba(251,146,60,.6)';
+        btn.style.color = '#fb923c';
+        btn.style.animation = 'db-pulse-bg 2.5s ease-in-out infinite';
+        btn.textContent = '📬 Retour reçu ?';
+        btn.title = `Email envoyé le ${formatDate(status.last_email_sent_at)} (il y a ${Math.round(hoursSinceEmail/24)}j). Clique pour logger le retour reçu.`;
+        return;
+      }
+    }
+
+    // PRIORITY 3 — Already owned (email sent <24h or other action)
     if (status && status.owned) {
       const def = ACTION_LABELS[status.action_type] || { label: status.action_type, icon: '•' };
       const owner = status.owner || '?';
       btn.style.background = 'rgba(239,68,68,.15)';
       btn.style.border = '1px solid rgba(239,68,68,.5)';
       btn.style.color = '#fca5a5';
+      btn.style.animation = '';
       btn.textContent = `🔒 ${owner}`;
       btn.title = `Pris en main par ${owner} le ${formatDate(status.performed_at)} via ${def.label}. C'est lui qui gère la suite — clic pour voir l'historique.`;
-    } else {
-      btn.style.background = 'var(--bg3)';
-      btn.style.border = '1px solid var(--accent)';
-      btn.style.color = 'var(--accent)';
-      btn.textContent = '+ Action';
-      btn.title = 'Ouvrir les actions disponibles pour ce contact';
+      return;
     }
+
+    // DEFAULT — not yet touched
+    btn.style.background = 'var(--bg3)';
+    btn.style.border = '1px solid var(--accent)';
+    btn.style.color = 'var(--accent)';
+    btn.style.animation = '';
+    btn.textContent = '+ Action';
+    btn.title = 'Ouvrir les actions disponibles pour ce contact';
   }
 
   // Buttons are now injected directly in the card HTML template.
