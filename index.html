@@ -109,6 +109,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-kpi:hover { border-color:var(--accent); background:var(--bg3); }
 .db-kpi-accent { border-color:rgba(108,99,255,.4); background:linear-gradient(135deg,#1a1830 0%,var(--bg2) 100%); }
 .db-kpi-accent:hover { border-color:var(--accent); }
+.db-kpi-warning { border-color:rgba(255,180,0,.5); background:linear-gradient(135deg,#2a2210 0%,var(--bg2) 100%); }
+.db-kpi-warning:hover { border-color:rgba(255,180,0,.8); }
+.db-kpi-warning .db-kpi-val { color:#ffb400; }
+.db-kpi-critical { border-color:rgba(255,80,80,.6); background:linear-gradient(135deg,#2a1010 0%,var(--bg2) 100%); animation:db-pulse-bg 2s ease-in-out infinite; }
+.db-kpi-critical:hover { border-color:rgba(255,80,80,1); }
+.db-kpi-critical .db-kpi-val { color:#ff5050; }
+@keyframes db-pulse-bg { 0%,100% { opacity:1; } 50% { opacity:.85; } }
 .db-kpi-icon { font-size:22px; flex-shrink:0; position:relative; }
 .db-kpi-val { font-size:20px; font-weight:700; font-family:'DM Mono',monospace; color:var(--text); line-height:1; }
 .db-kpi-accent .db-kpi-val { color:var(--accent2); }
@@ -2821,10 +2828,12 @@ function renderDashboard() {
 
     // KPI 5 — Stock à contacter (sub: jours restants au rythme 7j)
     const el5 = document.getElementById('m-stock-restant');
+    const tile5 = el5 ? el5.closest('.db-kpi') : null;
     if (el5) el5.textContent = stockRemaining.toLocaleString('fr-FR');
     const el5sub = document.getElementById('m-stock-jours');
     if (el5sub) {
       let runwayText;
+      let alertLevel = 'ok';
       if (daysRemaining === null) {
         runwayText = 'cadence inconnue';
       } else if (daysRemaining >= 365) {
@@ -2833,15 +2842,24 @@ function renderDashboard() {
         runwayText = `~${Math.round(daysRemaining/30)} mois au rythme actuel`;
       } else if (daysRemaining >= 14) {
         runwayText = `~${Math.round(daysRemaining/7)} sem. au rythme actuel`;
+      } else if (daysRemaining >= 7) {
+        runwayText = `⚠️ ~${daysRemaining}j au rythme actuel`;
+        alertLevel = 'warning';
       } else {
-        runwayText = `~${daysRemaining}j au rythme actuel`;
+        runwayText = `🚨 ~${daysRemaining}j — stock critique`;
+        alertLevel = 'critical';
       }
-      // Ajoute info societes saturees si pertinent
       if (saturatedOrgs > 0) {
         runwayText += ` · ${saturatedOrgs} société${saturatedOrgs > 1 ? 's' : ''} saturée${saturatedOrgs > 1 ? 's' : ''}`;
       }
       el5sub.textContent = runwayText;
       el5sub.classList.remove('db-kpi-sub-muted');
+      // Visual alert state on the tile
+      if (tile5) {
+        tile5.classList.remove('db-kpi-warning', 'db-kpi-critical');
+        if (alertLevel === 'warning') tile5.classList.add('db-kpi-warning');
+        if (alertLevel === 'critical') tile5.classList.add('db-kpi-critical');
+      }
     }
   }).catch(()=>{});
 
