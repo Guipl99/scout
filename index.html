@@ -6834,15 +6834,36 @@ async function runHealthCheck() {
   // ═══════════════════════════ CARD BUTTONS + STATUS ═══════════════════
   const contactStatusCache = new Map();
 
+  // Cache TTL: re-fetch statuses every 30 seconds. Also forces re-fetch of
+  // `null` entries (contact not owned at time of cache) to catch DB updates
+  // like manual fusions / new email actions logged via other sessions.
+  const CACHE_TTL_MS = 30000;
+  const cacheTimestamps = new Map(); // id → ms timestamp of last fetch
+
   async function fetchStatusBatch(ids) {
-    const unknown = ids.filter(id => !contactStatusCache.has(id));
-    if (!unknown.length) return;
+    const now = Date.now();
+    const needRefetch = ids.filter(id => {
+      const cached = contactStatusCache.has(id);
+      const ts = cacheTimestamps.get(id) || 0;
+      // Re-fetch if: never fetched, OR cache stale (>30s), OR value is null
+      // (null might be obsolete since contact may have gained actions since)
+      const isStale = (now - ts) > CACHE_TTL_MS;
+      const isNull = cached && contactStatusCache.get(id) === null;
+      return !cached || isStale || isNull;
+    });
+    if (!needRefetch.length) return;
     try {
-      const r = await fetch(API + '/contacts-status?ids=' + encodeURIComponent(unknown.join(',')), { headers: authHeaders() });
+      const r = await fetch(API + '/contacts-status?ids=' + encodeURIComponent(needRefetch.join(',')), { headers: authHeaders() });
       if (!r.ok) return;
       const data = await r.json();
-      for (const id of unknown) contactStatusCache.set(id, null);
-      for (const [id, s] of Object.entries(data.status || {})) contactStatusCache.set(id, s);
+      for (const id of needRefetch) {
+        contactStatusCache.set(id, null);
+        cacheTimestamps.set(id, now);
+      }
+      for (const [id, s] of Object.entries(data.status || {})) {
+        contactStatusCache.set(id, s);
+        cacheTimestamps.set(id, now);
+      }
     } catch {}
   }
 
