@@ -5035,40 +5035,28 @@ function filterContactsGrid() {
     return true;
   });
 
-  // Tri par priorité d'action commerciale (les "Retour reçu ?" remontent en haut)
-  // - 0 : email >24h sans reply → 📬 Retour reçu ? (URGENT)
-  // - 1 : reply_positive (Intéressé) — à relancer
-  // - 2 : reply_negative (Pas intéressé) — info utile
-  // - 3 : autres états (+ Action, 🔒 owner)
-  // Le cache contactStatusCache est rempli par scanAndUpdate après render initial,
-  // donc au 1er pass tout est en priorité 3 (ordre par défaut) puis re-tri au scan.
-  const cache = window.scoutContactStatus
-    ? (window._cs_cache || (window._cs_cache = null))
-    : null;
-  const getCacheEntry = (id) => {
-    try {
-      return window.scoutContactStatus && typeof window.scoutContactStatus.getStatus === 'function'
-        ? window.scoutContactStatus.getStatus(id)
-        : null;
-    } catch { return null; }
-  };
-  const priorityOf = (ct) => {
-    const s = getCacheEntry(ct.id);
-    if (!s) return 3;
-    if (s.has_reply) {
-      return s.reply_sentiment === 'positive' ? 1 : 2;
+  // Tri par priorité d'action commerciale (Retour reçu / Intéressés en haut)
+  // Protégé contre l'absence de window.scoutContactStatus au 1er render :
+  // si l'API n'est pas encore disponible, on saute le tri (toutes les cartes
+  // sont en priorité 3 par défaut, ordre d'origine conservé).
+  try {
+    const api = window.scoutContactStatus;
+    if (api && typeof api.getStatus === 'function') {
+      const priorityOf = (ct) => {
+        const s = api.getStatus(ct.id);
+        if (!s) return 3;
+        if (s.has_reply) return s.reply_sentiment === 'positive' ? 1 : 2;
+        if (s.owned && s.last_email_sent_at) {
+          const h = (Date.now() - new Date(s.last_email_sent_at).getTime()) / 3600000;
+          if (h > 24) return 0;
+        }
+        return 3;
+      };
+      filtered.sort((a, b) => priorityOf(a) - priorityOf(b));
     }
-    if (s.owned && s.last_email_sent_at) {
-      const hoursSinceEmail = (Date.now() - new Date(s.last_email_sent_at).getTime()) / 3600000;
-      if (hoursSinceEmail > 24) return 0; // 📬 Retour reçu ? = top
-    }
-    return 3;
-  };
-  filtered.sort((a, b) => {
-    const pa = priorityOf(a), pb = priorityOf(b);
-    if (pa !== pb) return pa - pb;
-    return 0; // garde l'ordre relatif d'origine pour le même bucket
-  });
+  } catch (e) {
+    console.warn('[scout] priority sort skipped:', e.message);
+  }
 
   renderContactsGrid(filtered);
   saveCurrentFilters();
