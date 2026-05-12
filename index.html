@@ -6851,54 +6851,28 @@ async function runHealthCheck() {
     });
     if (!needRefetch.length) return;
 
-    // Batch into chunks of 100 IDs to avoid URL length issues
-    // (1064 IDs × ~25 chars = 26KB URL which Express truncates silently,
-    // returning status=200 ok=true but received=0 entries)
+    // Batch into chunks of 100 IDs to avoid URL length issues.
+    // A single ?ids=... query string with 1000+ IDs (~25KB URL) gets silently
+    // truncated by Express/Node, returning 200 OK but with zero matches.
+    // 100 IDs per chunk keeps URLs around 2.5 KB max.
     const CHUNK_SIZE = 100;
-    let totalReceived = 0;
-    let lastStatus = 0;
-    let firstError = null;
-    let firstEntry = null;
-
     for (let i = 0; i < needRefetch.length; i += CHUNK_SIZE) {
       const chunk = needRefetch.slice(i, i + CHUNK_SIZE);
       try {
         const url = API + '/contacts-status?ids=' + encodeURIComponent(chunk.join(','));
         const r = await fetch(url, { headers: authHeaders() });
-        lastStatus = r.status;
-        if (!r.ok) {
-          if (!firstError) firstError = `HTTP ${r.status}: ${(await r.text()).slice(0, 100)}`;
-          continue;
-        }
+        if (!r.ok) continue;
         const data = await r.json();
-        const entries = Object.entries(data.status || {});
-        totalReceived += entries.length;
-        if (!firstEntry && entries.length) firstEntry = entries[0];
         for (const id of chunk) {
           contactStatusCache.set(id, null);
           cacheTimestamps.set(id, now);
         }
-        for (const [id, s] of entries) {
+        for (const [id, s] of Object.entries(data.status || {})) {
           contactStatusCache.set(id, s);
           cacheTimestamps.set(id, now);
         }
-      } catch (e) {
-        if (!firstError) firstError = e.message;
-      }
+      } catch {}
     }
-
-    // DEBUG: stocker les infos pour diagnostic visuel
-    window._lastFetchStatus = {
-      url: `[batched ${Math.ceil(needRefetch.length / CHUNK_SIZE)} chunks of ${CHUNK_SIZE}]`,
-      status: lastStatus,
-      ok: !firstError,
-      ts: new Date().toISOString().slice(11, 19),
-      ids_sent: needRefetch.length,
-      auth_present: !!(authHeaders().Authorization || authHeaders().authorization),
-      received: totalReceived,
-      first_entry: firstEntry,
-      body: firstError,
-    };
   }
 
   // Global click delegation — catches clicks on ANY .scout-cs-inline-btn
@@ -7012,19 +6986,6 @@ async function runHealthCheck() {
   function applyCardBtnStyle(btn, contactId) {
     const status = contactStatusCache.get(contactId);
 
-    // DEBUG TEMPORAIRE (à retirer une fois le bug confirmé résolu)
-    // Logue uniquement les cas qui devraient déclencher le bouton orange
-    if (status && status.owned && status.last_email_sent_at && !status.has_reply) {
-      const h = (Date.now() - new Date(status.last_email_sent_at).getTime()) / 3600000;
-      if (h > 24 && window._scoutLoggedOrange !== contactId) {
-        window._scoutLoggedOrange = contactId;
-        console.log('[scout reply] orange button should show:', {
-          contactId, owner: status.owner, hoursAgo: Math.round(h),
-          last_email: status.last_email_sent_at, has_reply: status.has_reply
-        });
-      }
-    }
-
     // PRIORITY 1 — Reply already logged (intéressé / pas intéressé)
     if (status && status.has_reply) {
       if (status.reply_sentiment === 'positive') {
@@ -7108,81 +7069,6 @@ async function runHealthCheck() {
       buttons.forEach(btn => {
         applyCardBtnStyle(btn, btn.dataset.contactId);
       });
-
-      // ─── DEBUG BANNER (temporaire) ───────────────────────────────────────
-      // Affiche un panneau diagnostique pour 4 contacts test directement
-      // dans la page. À retirer une fois le bug résolu.
-      const testIds = ['ct_arx_peter_schulze','ct_baainbw_lehnigk_emden','ct_bw_kaiser_gunter','contact_def_eu_baainbw_uas_1777407003_4'];
-      let banner = document.getElementById('scout-debug-banner');
-      if (!banner) {
-        banner = document.createElement('div');
-        banner.id = 'scout-debug-banner';
-        banner.style.cssText = 'position:fixed;top:60px;right:8px;max-width:380px;background:#111;color:#0f0;font-family:monospace;font-size:10px;padding:8px 10px;border:1px solid #0f0;border-radius:6px;z-index:99999;white-space:pre-wrap;line-height:1.3;max-height:60vh;overflow:auto;box-shadow:0 4px 20px rgba(0,255,0,0.2);';
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = '×';
-        closeBtn.style.cssText = 'position:absolute;top:2px;right:6px;background:transparent;color:#0f0;border:none;font-size:18px;cursor:pointer;line-height:1;';
-        closeBtn.onclick = () => banner.remove();
-        banner.appendChild(closeBtn);
-        const content = document.createElement('div');
-        content.id = 'scout-debug-content';
-        banner.appendChild(content);
-        document.body.appendChild(banner);
-      }
-      const content = document.getElementById('scout-debug-content');
-      const lines = ['🟢 Cache state (4 test contacts):', ''];
-      for (const tid of testIds) {
-        const s = contactStatusCache.get(tid);
-        const shortId = tid.slice(0, 30);
-        if (s === null) {
-          lines.push(`❌ ${shortId} : null (not owned)`);
-        } else if (s === undefined) {
-          lines.push(`⚠️ ${shortId} : undefined (not fetched yet)`);
-        } else {
-          const h = s.last_email_sent_at
-            ? Math.round((Date.now() - new Date(s.last_email_sent_at).getTime()) / 3600000)
-            : '?';
-          const willShowOrange = s.owned && s.last_email_sent_at && !s.has_reply && h > 24;
-          lines.push(`${willShowOrange ? '🟠' : '🔵'} ${shortId}`);
-          lines.push(`   owner=${s.owner||'?'} h_ago=${h} reply=${s.has_reply}`);
-          lines.push(`   last_email=${(s.last_email_sent_at||'').slice(0,16)}`);
-        }
-      }
-      // Compte aussi combien de boutons devraient être orange en tout
-      let countOrangeAll = 0;
-      for (const id of ids) {
-        const s = contactStatusCache.get(id);
-        if (s && s.owned && s.last_email_sent_at && !s.has_reply) {
-          const h = (Date.now() - new Date(s.last_email_sent_at).getTime()) / 3600000;
-          if (h > 24) countOrangeAll++;
-        }
-      }
-      lines.push('');
-      lines.push(`📊 Sur ${ids.length} boutons scannés, ${countOrangeAll} doivent être 🟠`);
-      // DEBUG: last HTTP fetch info
-      if (window._lastFetchStatus) {
-        const lfs = window._lastFetchStatus;
-        lines.push('');
-        lines.push('🌐 Dernière requête:');
-        if (lfs.error) {
-          lines.push(`   ERREUR: ${lfs.error}`);
-        } else {
-          lines.push(`   ${lfs.ts} status=${lfs.status} ok=${lfs.ok}`);
-          lines.push(`   auth=${lfs.auth_present} ids_sent=${lfs.ids_sent}`);
-          if (lfs.received !== undefined) {
-            lines.push(`   received=${lfs.received} entries`);
-            if (lfs.first_entry) {
-              const [fid, fs] = lfs.first_entry;
-              lines.push(`   1st: ${fid.slice(0,20)}`);
-              lines.push(`     fields: ${Object.keys(fs || {}).join(',')}`);
-            }
-          }
-          if (lfs.body) lines.push(`   body: ${lfs.body.slice(0,80)}`);
-        }
-      } else {
-        lines.push('');
-        lines.push('⚠️ Aucune requête /contacts-status faite');
-      }
-      content.textContent = lines.join('\n');
 
       // Si la grille contacts est visible, re-trier UNIQUEMENT si l'ordre actuel
       // n'est pas déjà conforme. Anti-loop: on compare l'ordre actuel des priorités
