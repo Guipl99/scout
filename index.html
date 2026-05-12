@@ -6890,12 +6890,17 @@ async function runHealthCheck() {
     e.preventDefault();
     const contactId = btn.dataset.contactId;
     if (!contactId) return;
-    const card = btn.closest('.entity-card');
+    // Récupérer le nom propre depuis allContacts (évite de scraper le DOM qui
+    // peut contenir le texte du bouton lui-même comme "📬 Retour ? (F)").
     let name = contactId;
-    if (card) {
-      const nameEl = card.querySelector('[style*="font-weight:600"], [style*="font-weight: 600"]');
-      if (nameEl) name = nameEl.textContent.replace(/[👤📋💼🚀✓🔒]/g,'').trim();
-    }
+    try {
+      const list = (typeof allContacts !== 'undefined' && allContacts) || window.allContacts || [];
+      const ct = list.find(c => c.id === contactId);
+      if (ct) {
+        const fullName = `${ct.prenom || ''} ${ct.nom || ''}`.trim();
+        if (fullName) name = fullName;
+      }
+    } catch {}
     // Contextual flow: if button is in "Retour reçu ?" state, open the reply mini-popup
     // instead of the normal action drawer.
     const status = contactStatusCache.get(contactId);
@@ -6930,14 +6935,14 @@ async function runHealthCheck() {
             <span style="font-size:20px;">✅</span>
             <div>
               <div>Intéressé</div>
-              <div style="font-size:11px;font-weight:400;color:var(--text2,#94a3b8);margin-top:2px;">Retour positif, à relancer</div>
+              <div style="font-size:11px;font-weight:400;color:var(--text2,#94a3b8);margin-top:2px;">Retour positif, transmis au commercial</div>
             </div>
           </button>
           <button type="button" id="scout-reply-neg-btn" style="padding:12px 16px;background:rgba(107,114,128,.15);border:1px solid rgba(107,114,128,.6);color:#9ca3af;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;text-align:left;display:flex;align-items:center;gap:10px;">
             <span style="font-size:20px;">❌</span>
             <div>
               <div>Pas intéressé</div>
-              <div style="font-size:11px;font-weight:400;color:var(--text2,#94a3b8);margin-top:2px;">Retour négatif, ne plus relancer</div>
+              <div style="font-size:11px;font-weight:400;color:var(--text2,#94a3b8);margin-top:2px;">Retour négatif, prospect fermé</div>
             </div>
           </button>
         </div>
