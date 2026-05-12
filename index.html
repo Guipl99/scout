@@ -6957,6 +6957,19 @@ async function runHealthCheck() {
   function applyCardBtnStyle(btn, contactId) {
     const status = contactStatusCache.get(contactId);
 
+    // DEBUG TEMPORAIRE (à retirer une fois le bug confirmé résolu)
+    // Logue uniquement les cas qui devraient déclencher le bouton orange
+    if (status && status.owned && status.last_email_sent_at && !status.has_reply) {
+      const h = (Date.now() - new Date(status.last_email_sent_at).getTime()) / 3600000;
+      if (h > 24 && window._scoutLoggedOrange !== contactId) {
+        window._scoutLoggedOrange = contactId;
+        console.log('[scout reply] orange button should show:', {
+          contactId, owner: status.owner, hoursAgo: Math.round(h),
+          last_email: status.last_email_sent_at, has_reply: status.has_reply
+        });
+      }
+    }
+
     // PRIORITY 1 — Reply already logged (intéressé / pas intéressé)
     if (status && status.has_reply) {
       if (status.reply_sentiment === 'positive') {
