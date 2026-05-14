@@ -1248,18 +1248,20 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-sub db-kpi-sub-muted" id="m-emails-base-sub">—</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('contacts')" title="Nouveaux contacts avec email ajoutés dans les 7 derniers jours (auto-prospect + ajouts manuels)">
+        <div class="db-kpi" onclick="go('contacts')" title="Nouveaux contacts avec email ajoutés dans les 7 derniers jours (auto-prospect + ajouts manuels). Sub-label : moyenne quotidienne sur les 15 derniers jours.">
           <div class="db-kpi-icon">✨</div>
           <div class="db-kpi-body">
             <div class="db-kpi-val" id="m-emails-new-7d">—</div>
             <div class="db-kpi-label">Nouveaux emails (7j)</div>
+            <div class="db-kpi-sub db-kpi-sub-muted" id="m-emails-new-avg15d">—</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('contacts')" title="Emails marqués comme envoyés dans Scout sur les 7 derniers jours">
+        <div class="db-kpi" onclick="go('contacts')" title="Emails marqués comme envoyés dans Scout sur les 7 derniers jours. Sub-label : moyenne quotidienne sur les 15 derniers jours.">
           <div class="db-kpi-icon">📤</div>
           <div class="db-kpi-body">
             <div class="db-kpi-val" id="m-emails-sent-7d">—</div>
             <div class="db-kpi-label">Emails envoyés (7j)</div>
+            <div class="db-kpi-sub db-kpi-sub-muted" id="m-emails-sent-avg15d">—</div>
           </div>
         </div>
         <div class="db-kpi" onclick="go('contacts')" title="Total cumulé des emails envoyés depuis le début">
@@ -2810,13 +2812,25 @@ function renderDashboard() {
       ? `${pctWithEmail}% des ${totalContacts.toLocaleString('fr-FR')} contacts`
       : '—';
 
-    // KPI 2 — Nouveaux emails (7j)
+    // KPI 2 — Nouveaux emails (7j) + sub-label moyenne 15j
     const el2 = document.getElementById('m-emails-new-7d');
     if (el2) el2.textContent = addedLast7d.toLocaleString('fr-FR');
+    const el2sub = document.getElementById('m-emails-new-avg15d');
+    if (el2sub) {
+      const added15d = d.added_last_15d || 0;
+      const avg15 = (added15d / 15).toFixed(1);
+      el2sub.textContent = `moy. ${avg15.replace('.', ',')}/jour (15j)`;
+    }
 
-    // KPI 3 — Emails envoyés (7j)
+    // KPI 3 — Emails envoyés (7j) + sub-label moyenne 15j
     const el3 = document.getElementById('m-emails-sent-7d');
     if (el3) el3.textContent = emailsSent7d.toLocaleString('fr-FR');
+    const el3sub = document.getElementById('m-emails-sent-avg15d');
+    if (el3sub) {
+      const sent15d = d.emails_sent_last_15d || 0;
+      const avg15s = (sent15d / 15).toFixed(1);
+      el3sub.textContent = `moy. ${avg15s.replace('.', ',')}/jour (15j)`;
+    }
 
     // KPI 4 — Emails envoyés (total)
     const el4 = document.getElementById('m-emails-sent-total');
