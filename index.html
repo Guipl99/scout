@@ -941,6 +941,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <span class="icon">↩️</span><span>Fermer</span>
         </button>
       </div>
+      <div class="scout-mark-as-row" style="margin-top:14px; padding-top:14px; border-top:1px dashed #d1d5db;">
+        <div style="font-size:12px; color:#6b7280; text-align:center; margin-bottom:8px;">Ce contact est hors flux ?</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <button class="scout-action-btn-item" style="font-size:13px;" onclick="scoutAction.markAlreadyClient()">
+            <span class="icon">🤝</span><span>Déjà client</span>
+          </button>
+          <button class="scout-action-btn-item" style="font-size:13px;" onclick="scoutAction.markAlreadyProspected()">
+            <span class="icon">📨</span><span>Déjà prospecté</span>
+          </button>
+        </div>
+      </div>
       <button class="scout-skip-btn" onclick="scoutAction.skip()">⏭️ Passer ce contact et voir le suivant</button>
       <div id="scout-action-result"></div>
     `;
@@ -1129,6 +1140,54 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         });
       } catch {}
       fetchNextContact();
+    },
+    markAlreadyClient: async () => {
+      if (!currentContact) return;
+      const c = currentContact;
+      const fullName = `${c.prenom || ''} ${c.nom || ''}`.trim() || 'ce contact';
+      const orgPart = c.organisation ? ` (${c.organisation})` : '';
+      if (!confirm(`Marquer ${fullName}${orgPart} comme DÉJÀ CLIENT ?\n\nIl ne réapparaîtra plus dans le flux "Prochaine action".`)) return;
+      const notes = prompt('Note optionnelle (contexte client, contrat…) :', '') || null;
+      const result = await confirmAction('already_client', notes ? { note: notes } : null);
+      const body = document.getElementById('scout-action-body');
+      if (result?.ok) {
+        body.innerHTML = `
+          <div style="text-align:center; padding:40px 20px;">
+            <div style="font-size:48px; margin-bottom:12px;">🤝</div>
+            <div style="font-weight:600; color:#065f46; margin-bottom:8px;">${escapeHtml(fullName)} marqué·e comme déjà client</div>
+            <div style="color:#6b7280; font-size:14px; margin-bottom:20px;">Le contact est retiré du flux "Prochaine action".</div>
+            <button class="scout-action-btn-item" style="margin:0 auto; max-width:280px;" onclick="scoutAction.open()">
+              <span class="icon">🎯</span><span>Voir la prochaine action</span>
+            </button>
+          </div>
+        `;
+      } else {
+        alert('Erreur lors du marquage. Réessaie.');
+      }
+    },
+    markAlreadyProspected: async () => {
+      if (!currentContact) return;
+      const c = currentContact;
+      const fullName = `${c.prenom || ''} ${c.nom || ''}`.trim() || 'ce contact';
+      const orgPart = c.organisation ? ` (${c.organisation})` : '';
+      if (!confirm(`Marquer ${fullName}${orgPart} comme DÉJÀ PROSPECTÉ (hors Scout) ?\n\nIl ne réapparaîtra plus dans le flux "Prochaine action".`)) return;
+      const notes = prompt('Note optionnelle (canal, date, réponse…) :', '') || null;
+      const result = await confirmAction('already_prospected_external', notes ? { note: notes } : null);
+      const body = document.getElementById('scout-action-body');
+      if (result?.ok) {
+        body.innerHTML = `
+          <div style="text-align:center; padding:40px 20px;">
+            <div style="font-size:48px; margin-bottom:12px;">📨</div>
+            <div style="font-weight:600; color:#065f46; margin-bottom:8px;">${escapeHtml(fullName)} marqué·e comme déjà prospecté·e</div>
+            <div style="color:#6b7280; font-size:14px; margin-bottom:20px;">Le contact est retiré du flux "Prochaine action".</div>
+            <button class="scout-action-btn-item" style="margin:0 auto; max-width:280px;" onclick="scoutAction.open()">
+              <span class="icon">🎯</span><span>Voir la prochaine action</span>
+            </button>
+          </div>
+        `;
+      } else {
+        alert('Erreur lors du marquage. Réessaie.');
+      }
     },
     confirmSent: async (actionType) => {
       const result = await confirmAction(actionType);
@@ -6384,6 +6443,8 @@ async function runHealthCheck() {
     in_person:          { label: 'Rencontre / salon',    icon: '🤝' },
     third_party:        { label: 'Via un tiers (intro)', icon: '🔗' },
     other:              { label: 'Autre',                icon: '📌' },
+    already_client:               { label: 'Déjà client',                icon: '🤝' },
+    already_prospected_external:  { label: 'Déjà prospecté (hors Scout)', icon: '📨' },
   };
 
   // ═══════════════════════════ CONFIG PANEL INTEGRATION ════════════════
