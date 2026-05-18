@@ -575,6 +575,24 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   }
   #scout-action-btn.hidden { display: none; }
 
+  /* Nurturing button */
+  #scout-nurture-btn {
+    position: fixed; bottom: 24px; right: 280px; z-index: 9997;
+    background: linear-gradient(135deg, #0a66c2, #1e40af);
+    color: white; border: none; border-radius: 30px;
+    padding: 14px 22px; font-size: 15px; font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 8px 24px rgba(10, 102, 194, 0.35);
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+  #scout-nurture-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(10, 102, 194, 0.5);
+  }
+  #scout-nurture-btn.hidden { display: none; }
+  #scout-nurture-modal.open { display: flex !important; }
+
   /* Action modal */
   #scout-action-modal {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -699,6 +717,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   <span>🎯</span><span>Prochaine action</span>
 </button>
 
+<!-- NURTURING BUTTON -->
+<button id="scout-nurture-btn" class="hidden" aria-label="Campagnes Nurturing LinkedIn" title="Campagnes Nurturing LinkedIn">
+  <span>📣</span><span>Nurturing</span>
+</button>
+
 <!-- ACTION MODAL -->
 <div id="scout-action-modal" role="dialog" aria-label="Prochaine action">
   <div class="scout-action-content">
@@ -708,6 +731,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     </div>
     <div class="scout-action-body" id="scout-action-body">
       <div class="scout-loading">Chargement…</div>
+    </div>
+  </div>
+</div>
+
+<!-- NURTURING MODAL -->
+<div id="scout-nurture-modal" role="dialog" aria-label="Nurturing LinkedIn" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:9998; align-items:flex-start; justify-content:center; padding:32px 16px; overflow-y:auto;">
+  <div style="background:#fff; border-radius:16px; max-width:1100px; width:100%; max-height:calc(100vh - 64px); overflow:hidden; display:flex; flex-direction:column; box-shadow:0 24px 64px rgba(0,0,0,0.4);">
+    <div style="background:linear-gradient(135deg,#0a66c2,#1e40af); color:#fff; padding:18px 24px; display:flex; align-items:center; justify-content:space-between;">
+      <div style="font-size:18px; font-weight:600;">📣 Campagnes Nurturing LinkedIn</div>
+      <button onclick="scoutNurture.close()" style="background:transparent; border:none; color:#fff; font-size:28px; cursor:pointer; line-height:1;">×</button>
+    </div>
+    <div id="scout-nurture-body" style="padding:24px; overflow-y:auto; flex:1;">
+      <div style="text-align:center; padding:40px;">Chargement…</div>
     </div>
   </div>
 </div>
@@ -1232,6 +1268,479 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   };
 
   actionBtn.addEventListener('click', scoutAction.open);
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // NURTURING LINKEDIN — Campaign segments + CSV export + 1st-degree tracker
+  // ═══════════════════════════════════════════════════════════════════════
+  const nurtureBtn = document.getElementById('scout-nurture-btn');
+  const nurtureModal = document.getElementById('scout-nurture-modal');
+  const nurtureBody = document.getElementById('scout-nurture-body');
+
+  let currentSegmentId = null;
+  let currentFilters = {};
+  let availablePays = [];
+  let savedSegments = [];
+
+  function authHeadersN() {
+    return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token };
+  }
+
+  async function loadDistinctPays() {
+    if (availablePays.length) return availablePays;
+    try {
+      const r = await fetch(API + '/contacts/pays-list', { headers: authHeadersN() });
+      if (r.ok) {
+        const data = await r.json();
+        availablePays = (data.pays || []).filter(Boolean);
+      }
+    } catch {}
+    if (!availablePays.length) {
+      // Fallback list of known pays in DB
+      availablePays = ['France','Royaume-Uni','Allemagne','Italie','Espagne','Belgique','Pays-Bas',
+        'Suède','Finlande','Estonie','Lettonie','Lituanie','Pologne','Norvège','Danemark','Islande',
+        'Tchéquie','Slovaquie','Hongrie','Roumanie','Bulgarie','Grèce','Croatie','Slovénie','Autriche',
+        'Suisse','Portugal','Irlande','Ukraine','États-Unis','Canada','Japon','Corée du Sud','Inde',
+        'Australie','Singapour','Israël','Liban','Albanie','Chypre','Kosovo','Malte','Nouvelle-Zélande'];
+    }
+    return availablePays;
+  }
+
+  async function loadSegments() {
+    try {
+      const r = await fetch(API + '/campaigns/segments', { headers: authHeadersN() });
+      if (r.ok) {
+        const data = await r.json();
+        savedSegments = data.segments || [];
+      }
+    } catch {}
+  }
+
+  async function previewSegment(filters) {
+    try {
+      const r = await fetch(API + '/campaigns/preview', {
+        method: 'POST',
+        headers: authHeadersN(),
+        body: JSON.stringify({ filters, limit: 200 }),
+      });
+      return await r.json();
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+
+  function renderNurtureHome() {
+    nurtureBody.innerHTML = `
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+        <button onclick="scoutNurture.newSegment()" style="padding:18px; background:#0a66c2; color:#fff; border:none; border-radius:12px; font-size:15px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;">
+          ➕ Nouveau segment
+        </button>
+        <button onclick="scoutNurture.bulkImport()" style="padding:18px; background:#fff; color:#0a66c2; border:2px solid #0a66c2; border-radius:12px; font-size:15px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;">
+          📥 Importer connexions LinkedIn
+        </button>
+      </div>
+      <div style="margin-bottom:12px; font-size:15px; font-weight:600; color:#1f2937;">Segments sauvegardés</div>
+      <div id="scout-nurture-segments-list">
+        ${savedSegments.length === 0
+          ? '<div style="padding:24px; background:#f9fafb; border-radius:8px; color:#6b7280; text-align:center;">Aucun segment sauvegardé. Crée ton premier segment pour cibler tes campagnes nurturing LinkedIn.</div>'
+          : savedSegments.map(s => `
+            <div style="padding:14px 16px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+              <div style="flex:1; cursor:pointer;" onclick="scoutNurture.openSegment(${s.id})">
+                <div style="font-weight:600; color:#1f2937;">${escapeHtmlN(s.name)}</div>
+                ${s.description ? `<div style="font-size:12px; color:#6b7280; margin-top:3px;">${escapeHtmlN(s.description)}</div>` : ''}
+                <div style="font-size:11px; color:#9ca3af; margin-top:4px;">Modifié ${new Date(s.updated_at).toLocaleDateString('fr-FR')}</div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button onclick="scoutNurture.exportCsv(${s.id})" style="padding:8px 14px; background:#0a66c2; color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer;">📤 CSV</button>
+                <button onclick="scoutNurture.openSegment(${s.id})" style="padding:8px 14px; background:#fff; color:#0a66c2; border:1px solid #0a66c2; border-radius:8px; font-size:13px; cursor:pointer;">👁️ Voir</button>
+                <button onclick="scoutNurture.deleteSegment(${s.id})" style="padding:8px 12px; background:#fff; color:#dc2626; border:1px solid #fecaca; border-radius:8px; font-size:13px; cursor:pointer;">🗑️</button>
+              </div>
+            </div>
+          `).join('')
+        }
+      </div>
+
+      <div style="margin-top:32px; padding:18px; background:#eff6ff; border-radius:10px; border-left:4px solid #0a66c2;">
+        <div style="font-weight:600; color:#1e40af; margin-bottom:8px;">💡 Stratégie LinkedIn Matched Audiences</div>
+        <ol style="color:#374151; font-size:13px; line-height:1.7; margin:0; padding-left:20px;">
+          <li>Crée un segment (pays + métier + seniority)</li>
+          <li>Export CSV au format LinkedIn Ads</li>
+          <li>Upload dans LinkedIn Campaign Manager → Matched Audiences</li>
+          <li>Lance Single Image Ads / Document Ads sur cette audience (300 contacts min)</li>
+          <li>Tes posts perso + Page Elistair apparaissent dans leur fil ✨</li>
+        </ol>
+        <div style="font-size:12px; color:#6b7280; margin-top:10px;">Taux de match LinkedIn typique : 30-60% des contacts uploadés.</div>
+      </div>
+    `;
+  }
+
+  function renderSegmentEditor(segmentData) {
+    const s = segmentData || { name: '', description: '', filters: { require_linkedin: true } };
+    currentSegmentId = s.id || null;
+    currentFilters = JSON.parse(JSON.stringify(s.filters || {}));
+
+    const paysList = availablePays.sort();
+    const selectedPays = new Set(currentFilters.pays || []);
+    const selectedExcludePays = new Set(currentFilters.exclude_pays || []);
+    const segmentKeywords = (currentFilters.secteur_keywords || []).join(', ');
+    const selectedTypeContact = new Set(currentFilters.type_contact || []);
+
+    nurtureBody.innerHTML = `
+      <button onclick="scoutNurture.back()" style="background:transparent; border:none; color:#0a66c2; cursor:pointer; font-size:14px; margin-bottom:16px;">← Retour aux segments</button>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+        <div>
+          <h3 style="margin:0 0 16px 0; color:#1f2937;">${currentSegmentId ? '✏️ Éditer segment' : '➕ Nouveau segment'}</h3>
+
+          <label style="display:block; margin-bottom:4px; font-size:13px; font-weight:600; color:#374151;">Nom du segment *</label>
+          <input id="seg-name" type="text" value="${escapeHtmlN(s.name)}" placeholder="Ex: Baltic Drone Wall - décideurs"
+            style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; margin-bottom:14px; font-size:14px;">
+
+          <label style="display:block; margin-bottom:4px; font-size:13px; font-weight:600; color:#374151;">Description</label>
+          <textarea id="seg-desc" placeholder="Contexte de la campagne…" rows="2"
+            style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; margin-bottom:18px; font-size:14px; resize:vertical;">${escapeHtmlN(s.description || '')}</textarea>
+
+          <details open style="margin-bottom:14px;">
+            <summary style="cursor:pointer; font-weight:600; color:#1f2937; margin-bottom:8px;">🌍 Pays</summary>
+            <div style="max-height:220px; overflow-y:auto; padding:10px; background:#f9fafb; border-radius:8px; display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:13px;">
+              ${paysList.map(p => `
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                  <input type="checkbox" data-pays="${escapeHtmlN(p)}" ${selectedPays.has(p) ? 'checked' : ''} onchange="scoutNurture.toggleFilter('pays', this.dataset.pays, this.checked)">
+                  <span>${escapeHtmlN(p)}</span>
+                </label>
+              `).join('')}
+            </div>
+          </details>
+
+          <details style="margin-bottom:14px;">
+            <summary style="cursor:pointer; font-weight:600; color:#1f2937; margin-bottom:8px;">🏷️ Secteur (mots-clés)</summary>
+            <input id="seg-secteurs" type="text" value="${escapeHtmlN(segmentKeywords)}" placeholder="border, police, customs, coast guard, MoD…"
+              style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;"
+              oninput="scoutNurture.updateSecteurs(this.value)">
+            <div style="font-size:11px; color:#6b7280; margin-top:4px;">Séparés par virgule. Match ILIKE sur secteur contact + secteur org.</div>
+          </details>
+
+          <details style="margin-bottom:14px;">
+            <summary style="cursor:pointer; font-weight:600; color:#1f2937; margin-bottom:8px;">👔 Type de contact</summary>
+            <div style="padding:10px; background:#f9fafb; border-radius:8px; display:flex; flex-direction:column; gap:6px; font-size:13px;">
+              ${['decideur_senior','decideur_programme','partenaire_industriel','veille_concurrent'].map(t => `
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                  <input type="checkbox" data-tc="${t}" ${selectedTypeContact.has(t) ? 'checked' : ''} onchange="scoutNurture.toggleFilter('type_contact', this.dataset.tc, this.checked)">
+                  <span>${t.replace(/_/g, ' ')}</span>
+                </label>
+              `).join('')}
+            </div>
+          </details>
+
+          <details style="margin-bottom:14px;">
+            <summary style="cursor:pointer; font-weight:600; color:#1f2937; margin-bottom:8px;">⚙️ Options</summary>
+            <div style="padding:10px; background:#f9fafb; border-radius:8px; display:flex; flex-direction:column; gap:8px; font-size:13px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" ${currentFilters.require_linkedin ? 'checked' : ''} onchange="scoutNurture.updateBool('require_linkedin', this.checked)">
+                <span><strong>LinkedIn URL obligatoire</strong> (recommandé pour Matched Audiences)</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" ${currentFilters.require_email ? 'checked' : ''} onchange="scoutNurture.updateBool('require_email', this.checked)">
+                <span>Email obligatoire (améliore le taux de match LinkedIn)</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" ${currentFilters.only_end_user_orgs ? 'checked' : ''} onchange="scoutNurture.updateBool('only_end_user_orgs', this.checked)">
+                <span>End-users defense uniquement</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" ${currentFilters.exclude_already_contacted ? 'checked' : ''} onchange="scoutNurture.updateBool('exclude_already_contacted', this.checked)">
+                <span>Exclure contacts déjà approchés (cooldown actif)</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" ${currentFilters.exclude_connected ? 'checked' : ''} onchange="scoutNurture.updateBool('exclude_connected', this.checked)">
+                <span>Exclure contacts déjà connectés LinkedIn 1er degré</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <span>Score Hunter min :</span>
+                <input type="number" min="0" max="100" value="${currentFilters.min_hunter_score || 0}"
+                  style="width:70px; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px;"
+                  onchange="scoutNurture.updateNum('min_hunter_score', parseInt(this.value, 10) || 0)">
+              </label>
+            </div>
+          </details>
+
+          <div style="display:flex; gap:10px; margin-top:20px;">
+            <button onclick="scoutNurture.save()" style="flex:1; padding:12px; background:#0a66c2; color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;">💾 Sauvegarder</button>
+            ${currentSegmentId ? `<button onclick="scoutNurture.exportCsv(${currentSegmentId})" style="padding:12px 16px; background:#fff; color:#0a66c2; border:2px solid #0a66c2; border-radius:8px; font-weight:600; cursor:pointer;">📤 CSV</button>` : ''}
+          </div>
+        </div>
+
+        <div>
+          <h3 style="margin:0 0 16px 0; color:#1f2937;">👁️ Aperçu</h3>
+          <div id="seg-preview" style="background:#f9fafb; border-radius:10px; padding:16px; min-height:300px;">
+            <div style="text-align:center; color:#6b7280; padding:40px;">Sélectionne des filtres pour voir l'aperçu…</div>
+          </div>
+        </div>
+      </div>
+    `;
+    setTimeout(() => refreshPreview(), 100);
+  }
+
+  async function refreshPreview() {
+    const previewEl = document.getElementById('seg-preview');
+    if (!previewEl) return;
+    previewEl.innerHTML = '<div style="text-align:center; padding:40px; color:#6b7280;">Calcul de l\\'aperçu…</div>';
+    const data = await previewSegment(currentFilters);
+    if (!data.ok) {
+      previewEl.innerHTML = `<div style="padding:20px; color:#dc2626;">Erreur : ${escapeHtmlN(data.error || 'inconnue')}</div>`;
+      return;
+    }
+    const total = data.total || 0;
+    const contacts = data.contacts || [];
+    const withLinkedin = contacts.filter(c => c.linkedin).length;
+    const connected = contacts.filter(c => c.is_connected_1st).length;
+
+    previewEl.innerHTML = `
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px;">
+        <div style="text-align:center; padding:12px; background:#fff; border-radius:8px; border:1px solid #e5e7eb;">
+          <div style="font-size:28px; font-weight:700; color:#0a66c2;">${total}</div>
+          <div style="font-size:11px; color:#6b7280;">Contacts total</div>
+        </div>
+        <div style="text-align:center; padding:12px; background:#fff; border-radius:8px; border:1px solid #e5e7eb;">
+          <div style="font-size:28px; font-weight:700; color:#059669;">${withLinkedin}</div>
+          <div style="font-size:11px; color:#6b7280;">Avec LinkedIn (aperçu)</div>
+        </div>
+        <div style="text-align:center; padding:12px; background:#fff; border-radius:8px; border:1px solid #e5e7eb;">
+          <div style="font-size:28px; font-weight:700; color:#7c3aed;">${connected}</div>
+          <div style="font-size:11px; color:#6b7280;">Déjà connectés</div>
+        </div>
+      </div>
+      ${total >= 300
+        ? '<div style="padding:8px 12px; background:#d1fae5; color:#065f46; border-radius:6px; font-size:12px; margin-bottom:12px;">✅ Audience suffisante pour LinkedIn Matched Audiences (min 300)</div>'
+        : '<div style="padding:8px 12px; background:#fef3c7; color:#78350f; border-radius:6px; font-size:12px; margin-bottom:12px;">⚠️ &lt; 300 contacts : LinkedIn Ads exigera plus pour activer l\\'audience matched. Élargis tes filtres.</div>'
+      }
+      <div style="max-height:380px; overflow-y:auto; background:#fff; border-radius:8px; border:1px solid #e5e7eb;">
+        ${contacts.slice(0, 50).map(c => `
+          <div style="padding:10px 12px; border-bottom:1px solid #f3f4f6; display:flex; align-items:center; justify-content:space-between; font-size:13px;">
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; color:#1f2937;">${escapeHtmlN(c.prenom || '')} ${escapeHtmlN(c.nom || '')}</div>
+              <div style="color:#6b7280; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtmlN(c.titre || '—')} · ${escapeHtmlN(c.pays || '')}</div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              ${c.linkedin ? `<a href="${escapeHtmlN(c.linkedin)}" target="_blank" rel="noopener" style="color:#0a66c2; text-decoration:none;" title="Voir LinkedIn">💼</a>` : '<span style="color:#d1d5db;">—</span>'}
+              ${c.is_connected_1st
+                ? '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:600;">1°</span>'
+                : `<button onclick="scoutNurture.markConnected('${escapeHtmlN(c.id)}', true, this)" style="background:transparent; border:1px solid #d1d5db; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:10px; color:#6b7280;">Marquer 1°</button>`
+              }
+            </div>
+          </div>
+        `).join('')}
+        ${contacts.length > 50 ? `<div style="padding:10px; text-align:center; color:#6b7280; font-size:12px;">+ ${contacts.length - 50} autres dans l'aperçu (sur ${total} total)</div>` : ''}
+      </div>
+    `;
+  }
+
+  function escapeHtmlN(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+  }
+
+  function renderBulkImport() {
+    nurtureBody.innerHTML = `
+      <button onclick="scoutNurture.back()" style="background:transparent; border:none; color:#0a66c2; cursor:pointer; font-size:14px; margin-bottom:16px;">← Retour</button>
+      <h3 style="margin:0 0 16px 0;">📥 Importer mes connexions LinkedIn 1er degré</h3>
+      <div style="padding:16px; background:#eff6ff; border-radius:10px; border-left:4px solid #0a66c2; margin-bottom:20px; font-size:13px; line-height:1.6;">
+        <strong>Workflow recommandé :</strong>
+        <ol style="margin:8px 0 0 18px;">
+          <li>Va sur LinkedIn → <em>Préférences</em> → <em>Confidentialité des données</em> → <em>Obtenir une copie de vos données</em></li>
+          <li>Coche "Connexions" → télécharge le ZIP (envoyé sous 24h)</li>
+          <li>Ouvre le fichier <code>Connections.csv</code> (colonnes : First Name, Last Name, URL, Email, Company, Position)</li>
+          <li>Copie-colle ci-dessous les URLs LinkedIn (1 par ligne)</li>
+        </ol>
+      </div>
+      <textarea id="bulk-linkedin-urls" placeholder="https://www.linkedin.com/in/john-doe/
+https://www.linkedin.com/in/jane-smith/
+..." rows="10" style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; font-family:monospace;"></textarea>
+      <div style="margin-top:14px;">
+        <button onclick="scoutNurture.runBulkMatch()" style="padding:12px 24px; background:#0a66c2; color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;">🔍 Matcher avec ma base</button>
+      </div>
+      <div id="bulk-result" style="margin-top:20px;"></div>
+    `;
+  }
+
+  window.scoutNurture = {
+    open: async () => {
+      nurtureModal.classList.add('open');
+      nurtureBody.innerHTML = '<div style="text-align:center; padding:40px;">Chargement…</div>';
+      await Promise.all([loadDistinctPays(), loadSegments()]);
+      renderNurtureHome();
+    },
+    close: () => {
+      nurtureModal.classList.remove('open');
+      currentSegmentId = null;
+      currentFilters = {};
+    },
+    back: async () => {
+      await loadSegments();
+      renderNurtureHome();
+    },
+    newSegment: () => renderSegmentEditor(),
+    openSegment: async (id) => {
+      const seg = savedSegments.find(s => s.id === id);
+      if (seg) renderSegmentEditor(seg);
+    },
+    deleteSegment: async (id) => {
+      if (!confirm('Supprimer ce segment ?')) return;
+      await fetch(API + '/campaigns/segments/' + id, { method: 'DELETE', headers: authHeadersN() });
+      await loadSegments();
+      renderNurtureHome();
+    },
+    toggleFilter: (key, value, on) => {
+      currentFilters[key] = currentFilters[key] || [];
+      if (on) {
+        if (!currentFilters[key].includes(value)) currentFilters[key].push(value);
+      } else {
+        currentFilters[key] = currentFilters[key].filter(v => v !== value);
+      }
+      if (!currentFilters[key].length) delete currentFilters[key];
+      refreshPreview();
+    },
+    updateSecteurs: (value) => {
+      const arr = value.split(',').map(s => s.trim()).filter(Boolean);
+      if (arr.length) currentFilters.secteur_keywords = arr;
+      else delete currentFilters.secteur_keywords;
+      clearTimeout(window._nurtureDebouce);
+      window._nurtureDebouce = setTimeout(refreshPreview, 400);
+    },
+    updateBool: (key, on) => {
+      if (on) currentFilters[key] = true;
+      else delete currentFilters[key];
+      refreshPreview();
+    },
+    updateNum: (key, n) => {
+      if (n > 0) currentFilters[key] = n;
+      else delete currentFilters[key];
+      refreshPreview();
+    },
+    save: async () => {
+      const name = document.getElementById('seg-name')?.value.trim();
+      const desc = document.getElementById('seg-desc')?.value.trim();
+      if (!name) { alert('Nom du segment requis'); return; }
+      const body = { name, description: desc, filters: currentFilters };
+      let url = API + '/campaigns/segments';
+      let method = 'POST';
+      if (currentSegmentId) {
+        url += '/' + currentSegmentId;
+        method = 'PUT';
+      }
+      const r = await fetch(url, { method, headers: authHeadersN(), body: JSON.stringify(body) });
+      const data = await r.json();
+      if (data.ok) {
+        currentSegmentId = data.segment.id;
+        await loadSegments();
+        alert('Segment sauvegardé ✅');
+        renderNurtureHome();
+      } else {
+        alert('Erreur : ' + (data.error || 'inconnue'));
+      }
+    },
+    exportCsv: async (id) => {
+      const format = prompt('Format CSV :\\n1 = LinkedIn Ads (Matched Audiences)\\n2 = Sales Navigator\\n3 = Générique', '1');
+      const formatMap = { '1': 'linkedin_ads', '2': 'sales_nav', '3': 'generic' };
+      const fmt = formatMap[format] || 'linkedin_ads';
+      window.open(API + '/campaigns/segments/' + id + '/export-csv?format=' + fmt + '&token=' + encodeURIComponent(session.token), '_blank');
+      // Note: token via query if backend supports it; otherwise use fetch+blob
+      try {
+        const r = await fetch(API + '/campaigns/segments/' + id + '/export-csv?format=' + fmt, { headers: authHeadersN() });
+        if (!r.ok) { alert('Erreur export'); return; }
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/)?.[1] || 'scout_export.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Erreur : ' + e.message);
+      }
+    },
+    markConnected: async (contactId, isConnected, btnEl) => {
+      try {
+        const r = await fetch(API + '/campaigns/contacts/' + contactId + '/mark-connected', {
+          method: 'POST',
+          headers: authHeadersN(),
+          body: JSON.stringify({ is_connected: isConnected }),
+        });
+        if (r.ok && btnEl) {
+          btnEl.outerHTML = '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:600;">1°</span>';
+        }
+      } catch (e) {
+        alert('Erreur : ' + e.message);
+      }
+    },
+    bulkImport: () => renderBulkImport(),
+    runBulkMatch: async () => {
+      const raw = document.getElementById('bulk-linkedin-urls')?.value || '';
+      const urls = raw.split('\\n').map(s => s.trim()).filter(s => s.includes('linkedin.com/in/'));
+      if (!urls.length) { alert('Aucune URL LinkedIn valide trouvée'); return; }
+      const resultEl = document.getElementById('bulk-result');
+      resultEl.innerHTML = '<div style="padding:20px; text-align:center;">Matching ' + urls.length + ' URLs avec la base…</div>';
+      try {
+        // Match via preview filter or a dedicated bulk-match endpoint
+        const r = await fetch(API + '/campaigns/bulk-match-linkedin', {
+          method: 'POST',
+          headers: authHeadersN(),
+          body: JSON.stringify({ linkedin_urls: urls }),
+        });
+        if (!r.ok) {
+          resultEl.innerHTML = '<div style="padding:16px; background:#fef2f2; color:#991b1b; border-radius:8px;">Endpoint /campaigns/bulk-match-linkedin pas encore déployé côté backend. Réessaie dans 1-2 minutes (Railway redéploie automatiquement).</div>';
+          return;
+        }
+        const data = await r.json();
+        if (!data.ok) {
+          resultEl.innerHTML = `<div style="padding:16px; background:#fef2f2; color:#991b1b; border-radius:8px;">Erreur : ${escapeHtmlN(data.error)}</div>`;
+          return;
+        }
+        const matched = data.matched || [];
+        resultEl.innerHTML = `
+          <div style="padding:16px; background:#d1fae5; border-radius:8px; margin-bottom:12px;">
+            <div style="font-weight:600; color:#065f46;">✅ ${matched.length} contact(s) matchés sur ${urls.length} URLs fournies</div>
+            ${matched.length ? `<button onclick="scoutNurture.confirmBulkMark(${JSON.stringify(matched.map(m => m.contact_id)).replace(/"/g, '&quot;')})" style="margin-top:10px; padding:8px 16px; background:#0a66c2; color:#fff; border:none; border-radius:6px; cursor:pointer;">Marquer les ${matched.length} comme 1° degré</button>` : ''}
+          </div>
+          ${matched.length ? `
+            <div style="max-height:300px; overflow-y:auto; background:#fff; border-radius:8px; border:1px solid #e5e7eb;">
+              ${matched.map(m => `
+                <div style="padding:8px 12px; border-bottom:1px solid #f3f4f6; font-size:13px;">
+                  <strong>${escapeHtmlN(m.prenom || '')} ${escapeHtmlN(m.nom || '')}</strong> — ${escapeHtmlN(m.organisation || '')} (${escapeHtmlN(m.pays || '')})
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        `;
+      } catch (e) {
+        resultEl.innerHTML = `<div style="padding:16px; background:#fef2f2; color:#991b1b; border-radius:8px;">Erreur réseau : ${escapeHtmlN(e.message)}</div>`;
+      }
+    },
+    confirmBulkMark: async (contactIds) => {
+      if (!Array.isArray(contactIds) || !contactIds.length) return;
+      if (!confirm('Marquer ' + contactIds.length + ' contacts comme 1° degré LinkedIn ?')) return;
+      const r = await fetch(API + '/campaigns/contacts/bulk-mark-connected', {
+        method: 'POST',
+        headers: authHeadersN(),
+        body: JSON.stringify({ contact_ids: contactIds, is_connected: true }),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        alert(`✅ ${data.count} contact(s) marqué(s) comme connexions 1° degré`);
+        renderNurtureHome();
+      } else {
+        alert('Erreur : ' + (data.error || 'inconnue'));
+      }
+    },
+  };
+
+  nurtureBtn.addEventListener('click', () => scoutNurture.open());
+
+  // Reveal nurturing button whenever auth succeeds (poll for actionBtn visibility)
+  const _revealNurtureWhenAuthed = setInterval(() => {
+    if (!actionBtn.classList.contains('hidden')) {
+      nurtureBtn.classList.remove('hidden');
+      clearInterval(_revealNurtureWhenAuthed);
+    }
+  }, 300);
 
   // Init
   restoreSessionOrShowGate();
