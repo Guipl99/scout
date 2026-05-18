@@ -1843,6 +1843,26 @@ Réinitialiser tous les filtres
           </div>
         </div>
 
+        <!-- ── Export CSV LinkedIn Matched Audiences ──────────── -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📣 Export CSV LinkedIn (Matched Audiences)</span>
+          </div>
+          <div class="card-body" style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;">
+            <div style="font-size:12px;color:var(--text3);line-height:1.5;">
+              Exporte un CSV pré-formaté pour LinkedIn Campaign Manager → <em>Audiences</em> → <em>Matched Audiences (List upload)</em>.<br>
+              Colonnes : <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:3px;">firstname, lastname, email, company, jobtitle, country</code>.<br>
+              Taux de match LinkedIn typique : 30-60% selon la qualité des emails pros. Min 300 contacts pour activer une audience.
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button onclick="exportLinkedInCsv('all')" style="padding:8px 14px;background:#0a66c2;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">📤 Tous les contacts avec email</button>
+              <button onclick="exportLinkedInCsv('go_score')" style="padding:8px 14px;background:#fff;color:#0a66c2;border:1px solid #0a66c2;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">📤 GO score ≥ 90 uniquement</button>
+              <button onclick="exportLinkedInCsv('end_users')" style="padding:8px 14px;background:#fff;color:#0a66c2;border:1px solid #0a66c2;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">📤 End-users defense</button>
+            </div>
+            <div id="csv-export-status" style="font-size:12px;color:var(--text3);"></div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -5859,6 +5879,44 @@ async function runHealthCheck() {
       + (d.images ? '<div style="margin-top:8px;color:var(--text3);">Images: ' + d.images.with_data + ' base64 / ' + d.images.with_url + ' URLs / ' + d.images.total + ' produits</div>' : '');
   } catch(e) {
     el.innerHTML = '<span style="color:#ef4444;">Erreur: ' + e.message + '</span>';
+  }
+}
+
+async function exportLinkedInCsv(scope) {
+  const statusEl = document.getElementById('csv-export-status');
+  if (statusEl) statusEl.innerHTML = '⏳ Génération du CSV…';
+  try {
+    const token = (window.scoutSession && window.scoutSession.token)
+                  || JSON.parse(localStorage.getItem('scout_chat_session') || '{}').token;
+    if (!token) {
+      if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;">Session non active. Reconnecte-toi via le chat.</span>';
+      return;
+    }
+    const r = await fetch(API + '/campaigns/export-linkedin-csv?scope=' + encodeURIComponent(scope || 'all'), {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;">Erreur HTTP ' + r.status + ' : ' + (txt || '').slice(0, 200) + '</span>';
+      return;
+    }
+    const blob = await r.blob();
+    const cd = r.headers.get('Content-Disposition') || '';
+    const fn = cd.match(/filename="([^"]+)"/)?.[1] || ('scout_linkedin_' + scope + '_' + new Date().toISOString().slice(0,10) + '.csv');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fn;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    // Count lines for feedback
+    const text = await blob.text();
+    const lineCount = Math.max(0, text.split('\n').filter(l => l.trim()).length - 1); // minus header
+    if (statusEl) statusEl.innerHTML = '<span style="color:#22c55e;">✅ ' + lineCount + ' contact(s) exportés dans <strong>' + fn + '</strong>. Upload dans LinkedIn Campaign Manager → Audiences → Matched Audiences.</span>';
+  } catch (e) {
+    if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;">Erreur : ' + (e.message || e) + '</span>';
   }
 }
 
