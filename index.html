@@ -1852,7 +1852,8 @@ Réinitialiser tous les filtres
             <div style="font-size:12px;color:var(--text3);line-height:1.5;">
               Exporte un CSV pré-formaté pour LinkedIn Campaign Manager → <em>Audiences</em> → <em>Matched Audiences (List upload)</em>.<br>
               Colonnes : <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:3px;">firstname, lastname, email, company, jobtitle, country</code>.<br>
-              Taux de match LinkedIn typique : 30-60% selon la qualité des emails pros. Min 300 contacts pour activer une audience.
+              Taux de match LinkedIn typique : 30-60% selon la qualité des emails pros. Min 300 contacts pour activer une audience.<br>
+              🔒 <em>Protégé par mot de passe — demandé au premier export par session.</em>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <button onclick="exportLinkedInCsv('all')" style="padding:8px 14px;background:#0a66c2;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">📤 Tous les contacts avec email</button>
@@ -5884,6 +5885,16 @@ async function runHealthCheck() {
 
 async function exportLinkedInCsv(scope) {
   const statusEl = document.getElementById('csv-export-status');
+  // Ask for export password (cached per session in sessionStorage to avoid asking each time)
+  let exportPw = sessionStorage.getItem('scout_csv_export_pw');
+  if (!exportPw) {
+    exportPw = prompt('🔒 Mot de passe export CSV LinkedIn :');
+    if (!exportPw) {
+      if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;">Export annulé (mot de passe requis).</span>';
+      return;
+    }
+    sessionStorage.setItem('scout_csv_export_pw', exportPw);
+  }
   if (statusEl) statusEl.innerHTML = '⏳ Génération du CSV…';
   try {
     const token = (window.scoutSession && window.scoutSession.token)
@@ -5893,8 +5904,18 @@ async function exportLinkedInCsv(scope) {
       return;
     }
     const r = await fetch(API + '/campaigns/export-linkedin-csv?scope=' + encodeURIComponent(scope || 'all'), {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'X-Export-Password': exportPw,
+      },
     });
+    if (r.status === 403) {
+      // Likely wrong export password - clear cached pw and retry
+      sessionStorage.removeItem('scout_csv_export_pw');
+      const errBody = await r.json().catch(() => ({}));
+      if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;">🔒 ' + (errBody.error || 'Mot de passe export incorrect') + '. Réessaie.</span>';
+      return;
+    }
     if (!r.ok) {
       const txt = await r.text();
       if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;">Erreur HTTP ' + r.status + ' : ' + (txt || '').slice(0, 200) + '</span>';
