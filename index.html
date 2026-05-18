@@ -6295,9 +6295,13 @@ async function exportLinkedInCsv(scope) {
     return false;
   }
 
-  function open() {
+  async function open() {
     state.open = true;
     panel.classList.add('open');
+    // Re-check session on each open (handles race condition with main auth gate)
+    if (!session) {
+      await restoreSession();
+    }
     render();
   }
   function close() {
