@@ -943,7 +943,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
     actionBody.innerHTML = `
       ${pastNote}
-      <div class="scout-contact-card">
+      <div class="scout-contact-card" onclick="scoutAction.openProfile()" style="cursor:pointer;" title="Ouvrir la fiche complète du prospect">
         <div class="name">
           ${escapeHtml(c.prenom || '')} ${escapeHtml(c.nom || '')}
           <span class="scout-priority-badge ${pri.cls}">${pri.label}</span>
@@ -954,6 +954,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           ${hasEmail ? `<span>✉️ ${escapeHtml(c.email)}</span>` : ''}
           ${hasLinkedin ? `<span>💼 LinkedIn OK</span>` : ''}
         </div>
+        <div class="scout-profile-hint" style="margin-top:8px;font-size:11px;color:var(--accent,#6c63ff);font-weight:600;">👤 Voir la fiche complète →</div>
       </div>
       <div class="scout-actions-grid">
         <button class="scout-action-btn-item" onclick="scoutAction.openLinkedIn()" ${!hasLinkedin ? 'disabled' : ''}>
@@ -1060,6 +1061,31 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     close: () => {
       actionModal.classList.remove('open');
       currentContact = null;
+    },
+    openProfile: () => {
+      // Ouvre la fiche complète du prospect (contexte) — compte lié via openContactFromGrid,
+      // sinon fallback onglet Contacts + recherche par nom. Ferme la modale au passage.
+      const c = currentContact;
+      if (!c) return;
+      scoutAction.close();
+      try {
+        if (typeof openContactFromGrid === 'function' && typeof allContacts !== 'undefined'
+            && Array.isArray(allContacts) && allContacts.some(x => x.id === c.id)) {
+          openContactFromGrid(c.id);
+          return;
+        }
+      } catch (e) {}
+      try {
+        if (typeof go === 'function') {
+          go('end-users', { tab: 'contacts' });
+          setTimeout(() => {
+            if (typeof setEuTab === 'function') setEuTab('contacts');
+            const search = document.getElementById('contacts-search');
+            const nom = [c.prenom, c.nom].filter(Boolean).join(' ');
+            if (search && nom) { search.value = nom; if (typeof filterCurrentTab === 'function') filterCurrentTab(); }
+          }, 400);
+        }
+      } catch (e) {}
     },
     openLinkedIn: () => {
       if (!currentContact?.linkedin) return;
