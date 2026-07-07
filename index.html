@@ -2198,10 +2198,19 @@ let editingProduitId = null;
 
 // ── Navigation ────────────────────────────────────────────────
 function go(id, opts) {
+  // FIX ecran noir : 'contacts' n'est PAS un panel autonome — c'est le sous-onglet
+  // Contacts du panel Comptes (end-users). Les tuiles KPI du cockpit appelaient
+  // go('contacts') -> getElementById('panel-contacts')=null -> throw -> tous les
+  // panels desactives -> ECRAN NOIR. On l'alias vers end-users/contacts.
+  if (id === 'contacts') { return go('end-users', Object.assign({}, opts || {}, { tab: 'contacts' })); }
+  // Garde-fou : si le panel demande n'existe pas, ne rien casser (evite l'ecran noir
+  // pour tout id inconnu). On verifie AVANT de desactiver les panels courants.
+  const panelEl = document.getElementById('panel-' + id);
+  if (!panelEl) { console.error('go(): panneau inexistant, navigation ignoree:', id); return; }
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.bn-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('panel-' + id).classList.add('active');
+  panelEl.classList.add('active');
   const nav = document.getElementById('nav-' + id);
   if (nav) nav.classList.add('active');
   const bn = document.getElementById('bn-' + id);
