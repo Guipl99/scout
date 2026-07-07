@@ -38,6 +38,25 @@
   --radius-lg: 14px;
 }
 
+/* ── Accessibilité : thème clair (mode jour) ── */
+body.theme-light {
+  --bg: #f5f6f8;
+  --bg2: #ffffff;
+  --bg3: #eceef2;
+  --border: #e3e6ec;
+  --border2: #cfd4dc;
+  --text: #1b1e24;
+  --text2: #566070;
+  --text3: #7c8595;
+  /* accents (violet/vert/ambre/rouge/teal) inchangés — bon contraste sur clair */
+}
+body.theme-light .nav-item.active { background: #ecebff; }
+body.theme-light ::-webkit-scrollbar-thumb { background: #c8cdd6; }
+
+/* ── Accessibilité : taille du texte (zoom global de l'interface) ── */
+html.fs-grand  { zoom: 1.12; }
+html.fs-xgrand { zoom: 1.25; }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
@@ -1798,6 +1817,31 @@ Mes pays
                 </label>
                 <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
                   <input type="radio" name="cfg-density" value="compact" onchange="applyDensity(this.value);saveSettings()" style="accent-color:var(--accent);"> Compact
+                </label>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Thème</label>
+              <div style="display:flex;gap:8px;">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-theme" value="dark" onchange="applyTheme(this.value);saveSettings()" style="accent-color:var(--accent);"> 🌙 Sombre
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-theme" value="light" onchange="applyTheme(this.value);saveSettings()" style="accent-color:var(--accent);"> ☀️ Clair (jour)
+                </label>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Taille du texte</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-fontsize" value="normal" onchange="applyFontSize(this.value);saveSettings()" style="accent-color:var(--accent);"> Normal
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-fontsize" value="grand" onchange="applyFontSize(this.value);saveSettings()" style="accent-color:var(--accent);"> Grand
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-fontsize" value="xgrand" onchange="applyFontSize(this.value);saveSettings()" style="accent-color:var(--accent);"> Très grand
                 </label>
               </div>
             </div>
@@ -5647,6 +5691,8 @@ function saveSettings() {
     defaultTab:  document.getElementById('cfg-default-tab')?.value || 'dashboard',
     defaultSubtab: document.querySelector('input[name="cfg-default-subtab"]:checked')?.value || 'comptes',
     density:     document.querySelector('input[name="cfg-density"]:checked')?.value || 'normal',
+    theme:       document.querySelector('input[name="cfg-theme"]:checked')?.value || 'dark',
+    fontSize:    document.querySelector('input[name="cfg-fontsize"]:checked')?.value || 'normal',
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
   showSaveMsg();
@@ -5684,6 +5730,14 @@ function applySettings() {
   const den = document.querySelector(`input[name="cfg-density"][value="${s.density || 'normal'}"]`);
   if (den) den.checked = true;
   applyDensity(s.density || 'normal');
+  // Thème (mode jour/sombre)
+  const th = document.querySelector(`input[name="cfg-theme"][value="${s.theme || 'dark'}"]`);
+  if (th) th.checked = true;
+  applyTheme(s.theme || 'dark');
+  // Taille du texte
+  const fsz = document.querySelector(`input[name="cfg-fontsize"][value="${s.fontSize || 'normal'}"]`);
+  if (fsz) fsz.checked = true;
+  applyFontSize(s.fontSize || 'normal');
   // Résumé filtres
   renderFiltersSummary();
 }
@@ -5706,6 +5760,29 @@ function applyDensity(density) {
     el.style.gap = density === 'compact' ? '6px' : '';
   });
 }
+
+// ── Accessibilité : thème (mode jour) + taille du texte ──────────
+function applyTheme(theme) {
+  const light = theme === 'light';
+  if (document.body) document.body.classList.toggle('theme-light', light);
+  const mc = document.querySelector('meta[name="theme-color"]');
+  if (mc) mc.setAttribute('content', light ? '#ffffff' : '#0f0f0f');
+}
+function applyFontSize(size) {
+  const el = document.documentElement;
+  el.classList.remove('fs-grand', 'fs-xgrand');
+  if (size === 'grand') el.classList.add('fs-grand');
+  else if (size === 'xgrand') el.classList.add('fs-xgrand');
+}
+// Applique les préférences d'affichage dès le chargement (avant l'ouverture des Paramètres)
+(function applyDisplayPrefsOnBoot() {
+  try {
+    let s = {};
+    try { s = JSON.parse(localStorage.getItem('scout_settings_v1')) || {}; } catch (e) {}
+    applyTheme(s.theme || 'dark');
+    applyFontSize(s.fontSize || 'normal');
+  } catch (e) {}
+})();
 
 // ── Pays exclus — checkboxes multi-sélection ──────────────────
 function populateConfigPays() {
