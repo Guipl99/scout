@@ -52,6 +52,15 @@ body.theme-light {
 }
 body.theme-light .nav-item.active { background: #ecebff; }
 body.theme-light ::-webkit-scrollbar-thumb { background: #c8cdd6; }
+/* Tuiles KPI spéciales : dégradés clairs en mode jour (sinon fond sombre codé en dur) */
+body.theme-light .db-kpi-accent   { background: linear-gradient(135deg,#eeecff 0%, var(--bg2) 100%); }
+body.theme-light .db-kpi-accent .db-kpi-val { color: var(--accent); }
+body.theme-light .db-kpi-warning  { background: linear-gradient(135deg,#fdf3dd 0%, var(--bg2) 100%); }
+body.theme-light .db-kpi-warning .db-kpi-val { color: #b45309; }
+body.theme-light .db-kpi-critical { background: linear-gradient(135deg,#fde4e4 0%, var(--bg2) 100%); }
+body.theme-light .db-kpi-critical .db-kpi-val { color: #dc2626; }
+body.theme-light .db-kpi-success  { background: linear-gradient(135deg,#e3f7ea 0%, var(--bg2) 100%); }
+body.theme-light .db-kpi-success .db-kpi-val { color: #16a34a; }
 
 /* ── Accessibilité : taille du texte (zoom global de l'interface) ── */
 html.fs-grand  { zoom: 1.12; }
