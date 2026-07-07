@@ -954,8 +954,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           ${hasEmail ? `<span>✉️ ${escapeHtml(c.email)}</span>` : ''}
           ${hasLinkedin ? `<span>💼 LinkedIn OK</span>` : ''}
         </div>
-        <div class="scout-profile-hint" style="margin-top:8px;font-size:11px;color:var(--accent,#6c63ff);font-weight:600;">👤 Voir la fiche complète →</div>
+        <div class="scout-profile-hint" style="margin-top:8px;font-size:11px;color:var(--accent,#6c63ff);font-weight:600;">👤 Voir le contexte complet →</div>
       </div>
+      <div id="scout-profile-detail" style="display:none;"></div>
       <div class="scout-actions-grid">
         <button class="scout-action-btn-item" onclick="scoutAction.openLinkedIn()" ${!hasLinkedin ? 'disabled' : ''}>
           <span class="icon">💼</span><span>Se connecter sur LinkedIn</span>
@@ -1063,95 +1064,41 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       currentContact = null;
     },
     openProfile: async () => {
-      // Ouvre le CONTEXTE du contact précis. /action/next-contact ne renvoie ni
-      // end_user_id ni organisation_id -> on récupère le contact COMPLET (/contacts/:id)
-      // puis on route par ID (fiable) :
-      //  1) end_user_id -> fiche du compte
-      //  2) organisation_id -> fiche Fabricant (par id) + onglet Contacts + surlignage
-      //  3) fallback -> onglet Contacts filtré par nom
+      // Affiche le CONTEXTE COMPLET du contact directement dans la modale (fiable pour
+      // TOUT contact, peu importe son rattachement). Récupère le détail via /contacts/:id
+      // (notes, organisation, etc. absents de /action/next-contact). Clic = toggle.
       const c = currentContact;
       if (!c) return;
-      scoutAction.close();
-      let full = null;
+      const box = document.getElementById('scout-profile-detail');
+      if (!box) return;
+      if (box.style.display !== 'none' && box.dataset.for === String(c.id)) { box.style.display = 'none'; return; }
+      box.style.display = 'block';
+      box.dataset.for = String(c.id);
+      box.innerHTML = '<div class="scout-loading" style="padding:10px;">Chargement du contexte…</div>';
+      let f = null;
       try {
         const r = await fetch(API + '/contacts/' + encodeURIComponent(c.id), {
           headers: (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {}
         });
-        if (r.ok) full = await r.json();
+        if (r.ok) f = await r.json();
       } catch (e) {}
-      const euId = full && full.end_user_id;
-      const orgId = full && full.organisation_id;
-
-      // 1) Contact rattaché à un compte end-user
-      if (euId && typeof go === 'function' && typeof openEndUser === 'function') {
-        go('end-users', { tab: 'comptes' });
-        setTimeout(() => {
-          try {
-            if (typeof setEuTab === 'function') setEuTab('comptes');
-            openEndUser(euId);
-            setTimeout(() => scoutAction._highlightContact(c.id), 500);
-          } catch (e) {}
-        }, 350);
-        return;
-      }
-
-      // 2) Contact d'entreprise -> fiche Fabricant par ID
-      if (orgId) {
-        const doOpen = () => {
-          if (typeof societes === 'undefined' || !Array.isArray(societes) || !societes.some(x => x.id === orgId)) return false;
-          if (typeof go === 'function') go('societes');
-          setTimeout(() => {
-            try {
-              if (typeof openSociete === 'function') openSociete(orgId);
-              setTimeout(() => {
-                try {
-                  if (typeof showSTab === 'function') {
-                    const tabEl = document.querySelector('[onclick*="s-contacts"]');
-                    if (tabEl) showSTab('s-contacts', tabEl);
-                  }
-                  if (typeof loadSocieteContacts === 'function') loadSocieteContacts(orgId);
-                  setTimeout(() => scoutAction._highlightContact(c.id), 700);
-                } catch (e) {}
-              }, 260);
-            } catch (e) {}
-          }, 130);
-          return true;
-        };
-        if (typeof societes !== 'undefined' && Array.isArray(societes) && societes.length && doOpen()) return;
-        if (typeof loadSocietes === 'function') {
-          try { await loadSocietes(); } catch (e) {}
-          if (doOpen()) return;
-        }
-      }
-
-      // 3) Fallback recherche par nom
-      scoutAction._openContactsSearchFallback(c);
-    },
-    _highlightContact: (cid) => {
-      try {
-        const card = document.querySelector('[data-contact-id="' + cid + '"]');
-        if (card && card.scrollIntoView) {
-          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          card.style.outline = '2px solid var(--accent)';
-          card.style.outlineOffset = '2px';
-          card.style.borderRadius = '8px';
-          setTimeout(() => { try { card.style.outline = ''; } catch (e) {} }, 2800);
-        }
-      } catch (e) {}
-    },
-    _openContactsSearchFallback: (c) => {
-      try {
-        if (typeof go !== 'function') return;
-        go('end-users', { tab: 'contacts' });
-        setTimeout(() => {
-          try {
-            if (typeof setEuTab === 'function') setEuTab('contacts');
-            const search = document.getElementById('eu-contact-search');
-            const nom = [c.prenom, c.nom].filter(Boolean).join(' ');
-            if (search) { search.value = nom; if (typeof filterContactsGrid === 'function') filterContactsGrid(); else if (typeof filterCurrentTab === 'function') filterCurrentTab(); }
-          } catch (e) {}
-        }, 450);
-      } catch (e) {}
+      f = f || c;
+      const esc = (typeof escapeHtml === 'function') ? escapeHtml : (x => String(x == null ? '' : x));
+      const row = (label, val) => val ? '<div style="display:flex;gap:8px;font-size:12px;margin:3px 0;"><span style="color:var(--text3);min-width:92px;flex-shrink:0;">' + label + '</span><span style="color:var(--text);word-break:break-word;">' + esc(String(val)) + '</span></div>' : '';
+      let html = '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:left;max-height:300px;overflow:auto;margin-top:10px;">';
+      html += '<div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--text);">' + esc(((f.prenom || '') + ' ' + (f.nom || '')).trim()) + '</div>';
+      html += row('Titre', f.titre);
+      html += row('Organisation', f.organisation);
+      html += row('Pays', f.pays);
+      html += row('Type', f.type_contact);
+      html += row('Email', f.email);
+      html += row('Téléphone', f.telephone);
+      if (f.linkedin) html += '<div style="display:flex;gap:8px;font-size:12px;margin:3px 0;"><span style="color:var(--text3);min-width:92px;flex-shrink:0;">LinkedIn</span><a href="' + esc(f.linkedin) + '" target="_blank" rel="noopener" style="color:var(--accent);">Ouvrir le profil ↗</a></div>';
+      if (f.verified) html += '<div style="font-size:11px;color:var(--green,#22c55e);margin-top:4px;">✓ Email vérifié</div>';
+      if (f.notes) html += '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);"><div style="color:var(--text3);font-size:11px;margin-bottom:4px;">Notes / contexte</div><div style="font-size:12px;line-height:1.55;white-space:pre-wrap;color:var(--text);">' + esc(f.notes) + '</div></div>';
+      html += '</div>';
+      box.innerHTML = html;
+      try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
     },
     openLinkedIn: () => {
       if (!currentContact?.linkedin) return;
