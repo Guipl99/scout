@@ -1063,28 +1063,88 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       currentContact = null;
     },
     openProfile: () => {
-      // Ouvre la fiche complète du prospect (contexte) — compte lié via openContactFromGrid,
-      // sinon fallback onglet Contacts + recherche par nom. Ferme la modale au passage.
+      // Ouvre le CONTEXTE du contact précis. Routage selon son type :
+      //  1) contact rattaché à un compte end-user -> fiche du compte
+      //  2) contact d'entreprise (organisation) -> fiche Fabricant + onglet Contacts + surlignage
+      //  3) fallback -> onglet Contacts filtré par nom
       const c = currentContact;
       if (!c) return;
       scoutAction.close();
+      // 1) Buyer (rattaché à un end-user)
       try {
-        if (typeof openContactFromGrid === 'function' && typeof allContacts !== 'undefined'
-            && Array.isArray(allContacts) && allContacts.some(x => x.id === c.id)) {
-          openContactFromGrid(c.id);
+        if (typeof allContacts !== 'undefined' && Array.isArray(allContacts)) {
+          const hit = allContacts.find(x => x.id === c.id);
+          if (hit && hit.end_user_id && typeof openContactFromGrid === 'function') {
+            openContactFromGrid(c.id);
+            return;
+          }
+        }
+      } catch (e) {}
+      // 2) Contact d'entreprise -> fiche Fabricant (charge les sociétés si besoin)
+      try {
+        if (typeof societes !== 'undefined' && Array.isArray(societes) && societes.length) {
+          if (scoutAction._openCompanyFiche(c)) return;
+        } else if (typeof loadSocietes === 'function') {
+          loadSocietes().then(() => {
+            if (!scoutAction._openCompanyFiche(c)) scoutAction._openContactsSearchFallback(c);
+          }).catch(() => scoutAction._openContactsSearchFallback(c));
           return;
         }
       } catch (e) {}
+      // 3) Fallback recherche par nom
+      scoutAction._openContactsSearchFallback(c);
+    },
+    _openCompanyFiche: (c) => {
+      // Trouve la société par nom (exact puis fuzzy), ouvre sa fiche + onglet Contacts,
+      // puis surligne la carte du contact précis. Retourne true si une société a matché.
       try {
-        if (typeof go === 'function') {
-          go('end-users', { tab: 'contacts' });
-          setTimeout(() => {
+        const orgLower = (c.organisation || '').toLowerCase().trim();
+        if (!orgLower || typeof societes === 'undefined' || !Array.isArray(societes)) return false;
+        let soc = societes.find(x => (x.name || '').toLowerCase().trim() === orgLower);
+        if (!soc) soc = societes.find(x => {
+          const n = (x.name || '').toLowerCase().trim();
+          return n && (orgLower.startsWith(n + ' ') || orgLower.startsWith(n + ',') || orgLower.startsWith(n + '(') || n.startsWith(orgLower + ' '));
+        });
+        if (!soc) return false;
+        if (typeof go === 'function') go('societes');
+        setTimeout(() => {
+          try {
+            if (typeof openSociete === 'function') openSociete(soc.id);
+            setTimeout(() => {
+              try {
+                if (typeof showSTab === 'function') {
+                  const tabEl = document.querySelector('[onclick*="s-contacts"]');
+                  if (tabEl) showSTab('s-contacts', tabEl);
+                }
+                if (typeof loadSocieteContacts === 'function') loadSocieteContacts(soc.id);
+                setTimeout(() => {
+                  const card = document.querySelector('[data-contact-id="' + c.id + '"]');
+                  if (card && card.scrollIntoView) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    card.style.outline = '2px solid var(--accent)';
+                    card.style.outlineOffset = '2px';
+                    setTimeout(() => { card.style.outline = ''; }, 2600);
+                  }
+                }, 550);
+              } catch (e) {}
+            }, 250);
+          } catch (e) {}
+        }, 120);
+        return true;
+      } catch (e) { return false; }
+    },
+    _openContactsSearchFallback: (c) => {
+      try {
+        if (typeof go !== 'function') return;
+        go('end-users', { tab: 'contacts' });
+        setTimeout(() => {
+          try {
             if (typeof setEuTab === 'function') setEuTab('contacts');
-            const search = document.getElementById('contacts-search');
+            const search = document.getElementById('eu-contact-search');
             const nom = [c.prenom, c.nom].filter(Boolean).join(' ');
-            if (search && nom) { search.value = nom; if (typeof filterCurrentTab === 'function') filterCurrentTab(); }
-          }, 400);
-        }
+            if (search) { search.value = nom; if (typeof filterContactsGrid === 'function') filterContactsGrid(); else if (typeof filterCurrentTab === 'function') filterCurrentTab(); }
+          } catch (e) {}
+        }, 450);
       } catch (e) {}
     },
     openLinkedIn: () => {
