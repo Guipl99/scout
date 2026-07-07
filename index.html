@@ -1062,76 +1062,82 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       actionModal.classList.remove('open');
       currentContact = null;
     },
-    openProfile: () => {
-      // Ouvre le CONTEXTE du contact précis. Routage selon son type :
-      //  1) contact rattaché à un compte end-user -> fiche du compte
-      //  2) contact d'entreprise (organisation) -> fiche Fabricant + onglet Contacts + surlignage
+    openProfile: async () => {
+      // Ouvre le CONTEXTE du contact précis. /action/next-contact ne renvoie ni
+      // end_user_id ni organisation_id -> on récupère le contact COMPLET (/contacts/:id)
+      // puis on route par ID (fiable) :
+      //  1) end_user_id -> fiche du compte
+      //  2) organisation_id -> fiche Fabricant (par id) + onglet Contacts + surlignage
       //  3) fallback -> onglet Contacts filtré par nom
       const c = currentContact;
       if (!c) return;
       scoutAction.close();
-      // 1) Buyer (rattaché à un end-user)
+      let full = null;
       try {
-        if (typeof allContacts !== 'undefined' && Array.isArray(allContacts)) {
-          const hit = allContacts.find(x => x.id === c.id);
-          if (hit && hit.end_user_id && typeof openContactFromGrid === 'function') {
-            openContactFromGrid(c.id);
-            return;
-          }
-        }
+        const r = await fetch(API + '/contacts/' + encodeURIComponent(c.id), {
+          headers: (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {}
+        });
+        if (r.ok) full = await r.json();
       } catch (e) {}
-      // 2) Contact d'entreprise -> fiche Fabricant (charge les sociétés si besoin)
-      try {
-        if (typeof societes !== 'undefined' && Array.isArray(societes) && societes.length) {
-          if (scoutAction._openCompanyFiche(c)) return;
-        } else if (typeof loadSocietes === 'function') {
-          loadSocietes().then(() => {
-            if (!scoutAction._openCompanyFiche(c)) scoutAction._openContactsSearchFallback(c);
-          }).catch(() => scoutAction._openContactsSearchFallback(c));
-          return;
+      const euId = full && full.end_user_id;
+      const orgId = full && full.organisation_id;
+
+      // 1) Contact rattaché à un compte end-user
+      if (euId && typeof go === 'function' && typeof openEndUser === 'function') {
+        go('end-users', { tab: 'comptes' });
+        setTimeout(() => {
+          try {
+            if (typeof setEuTab === 'function') setEuTab('comptes');
+            openEndUser(euId);
+            setTimeout(() => scoutAction._highlightContact(c.id), 500);
+          } catch (e) {}
+        }, 350);
+        return;
+      }
+
+      // 2) Contact d'entreprise -> fiche Fabricant par ID
+      if (orgId) {
+        const doOpen = () => {
+          if (typeof societes === 'undefined' || !Array.isArray(societes) || !societes.some(x => x.id === orgId)) return false;
+          if (typeof go === 'function') go('societes');
+          setTimeout(() => {
+            try {
+              if (typeof openSociete === 'function') openSociete(orgId);
+              setTimeout(() => {
+                try {
+                  if (typeof showSTab === 'function') {
+                    const tabEl = document.querySelector('[onclick*="s-contacts"]');
+                    if (tabEl) showSTab('s-contacts', tabEl);
+                  }
+                  if (typeof loadSocieteContacts === 'function') loadSocieteContacts(orgId);
+                  setTimeout(() => scoutAction._highlightContact(c.id), 700);
+                } catch (e) {}
+              }, 260);
+            } catch (e) {}
+          }, 130);
+          return true;
+        };
+        if (typeof societes !== 'undefined' && Array.isArray(societes) && societes.length && doOpen()) return;
+        if (typeof loadSocietes === 'function') {
+          try { await loadSocietes(); } catch (e) {}
+          if (doOpen()) return;
         }
-      } catch (e) {}
+      }
+
       // 3) Fallback recherche par nom
       scoutAction._openContactsSearchFallback(c);
     },
-    _openCompanyFiche: (c) => {
-      // Trouve la société par nom (exact puis fuzzy), ouvre sa fiche + onglet Contacts,
-      // puis surligne la carte du contact précis. Retourne true si une société a matché.
+    _highlightContact: (cid) => {
       try {
-        const orgLower = (c.organisation || '').toLowerCase().trim();
-        if (!orgLower || typeof societes === 'undefined' || !Array.isArray(societes)) return false;
-        let soc = societes.find(x => (x.name || '').toLowerCase().trim() === orgLower);
-        if (!soc) soc = societes.find(x => {
-          const n = (x.name || '').toLowerCase().trim();
-          return n && (orgLower.startsWith(n + ' ') || orgLower.startsWith(n + ',') || orgLower.startsWith(n + '(') || n.startsWith(orgLower + ' '));
-        });
-        if (!soc) return false;
-        if (typeof go === 'function') go('societes');
-        setTimeout(() => {
-          try {
-            if (typeof openSociete === 'function') openSociete(soc.id);
-            setTimeout(() => {
-              try {
-                if (typeof showSTab === 'function') {
-                  const tabEl = document.querySelector('[onclick*="s-contacts"]');
-                  if (tabEl) showSTab('s-contacts', tabEl);
-                }
-                if (typeof loadSocieteContacts === 'function') loadSocieteContacts(soc.id);
-                setTimeout(() => {
-                  const card = document.querySelector('[data-contact-id="' + c.id + '"]');
-                  if (card && card.scrollIntoView) {
-                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    card.style.outline = '2px solid var(--accent)';
-                    card.style.outlineOffset = '2px';
-                    setTimeout(() => { card.style.outline = ''; }, 2600);
-                  }
-                }, 550);
-              } catch (e) {}
-            }, 250);
-          } catch (e) {}
-        }, 120);
-        return true;
-      } catch (e) { return false; }
+        const card = document.querySelector('[data-contact-id="' + cid + '"]');
+        if (card && card.scrollIntoView) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.style.outline = '2px solid var(--accent)';
+          card.style.outlineOffset = '2px';
+          card.style.borderRadius = '8px';
+          setTimeout(() => { try { card.style.outline = ''; } catch (e) {} }, 2800);
+        }
+      } catch (e) {}
     },
     _openContactsSearchFallback: (c) => {
       try {
@@ -3356,9 +3362,11 @@ async function loadSocieteContacts(societeId) {
     const nameLower = (name || '').toLowerCase().trim();
     const list = (source || []).filter(c => {
       if (c.end_user_id) return false; // exclude end-user contacts
+      // Match précis par organisation_id (fiable même si le nom d'organisation diffère
+      // du nom de la société — cas fréquent des leads sourcés). Fallback : match par nom.
+      if (societeId && c.organisation_id && c.organisation_id === societeId) return true;
       const org = (c.organisation || '').toLowerCase().trim();
       if (!org) return false;
-      // Exact match, or org starts with the name + space (e.g., "DJI Enterprise"), or name is a distinct word
       return org === nameLower
           || org.startsWith(nameLower + ' ')
           || org.startsWith(nameLower + ',')
@@ -3369,7 +3377,7 @@ async function loadSocieteContacts(societeId) {
       return;
     }
     el.innerHTML = list.map(ct => `
-      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px;position:relative;">
+      <div data-contact-id="${ct.id}" style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px;position:relative;">
         <button class="scout-cs-inline-btn" data-contact-id="${ct.id}" type="button" style="position:absolute;top:8px;right:8px;padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--accent);background:var(--bg3);color:var(--accent);cursor:pointer;z-index:10;font-weight:600;">+ Action</button>
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding-right:80px;">
           <div>
