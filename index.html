@@ -73,6 +73,10 @@ html.fs-xgrand { zoom: 1.25; }
 #contact-detail-modal .cd-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); font-weight:600; font-size:15px; color:var(--text); }
 #contact-detail-modal .cd-header button { background:none; border:none; font-size:22px; color:var(--text2); cursor:pointer; line-height:1; }
 #contact-detail-modal .cd-body { padding:18px; overflow:auto; }
+/* ── Bouton Retour global ── */
+#nav-back-btn { position:fixed; z-index:9997; bottom:24px; left:216px; align-items:center; gap:6px; padding:9px 16px; background:var(--bg2); color:var(--text); border:1px solid var(--border2); border-radius:24px; box-shadow:0 4px 16px rgba(0,0,0,.28); cursor:pointer; font-size:13px; font-weight:600; }
+#nav-back-btn:hover { border-color:var(--accent); color:var(--accent); }
+@media (max-width: 860px){ #nav-back-btn { left:14px; bottom:82px; } }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
@@ -2089,6 +2093,9 @@ Réinitialiser tous les filtres
       </style>
     </div>
 
+<!-- BOUTON RETOUR GLOBAL -->
+<button id="nav-back-btn" onclick="navBack()" style="display:none;">← Retour</button>
+
 <!-- MODALE FICHE CONTACT -->
 <div id="contact-detail-modal" role="dialog" aria-label="Fiche contact" onclick="if(event.target===this)closeContactDetail()">
   <div class="cd-content">
@@ -2404,6 +2411,7 @@ function go(id, opts) {
     loadContacts(forceReload);
   }
   // Persister l'onglet dans le hash
+  try { if (typeof _setCurrentView === 'function') _setCurrentView({ kind:'panel', id: id, tab: opts && opts.tab }); } catch(e){}
   if (!opts?.silent) history.replaceState(null, '', '#' + id + (opts?.tab ? '/' + opts.tab : ''));
 }
 
@@ -3389,6 +3397,7 @@ async function openSociete(id) {
 
   document.getElementById('societes-list-view').style.display = 'none';
   document.getElementById('societe-detail-view').style.display = 'block';
+  try { if (typeof _setCurrentView === 'function') _setCurrentView({ kind:'societe', id: id }); } catch(e){}
 
   const av = document.getElementById('s-av');
   av.className = 'detail-av ' + avatarClass(i);
@@ -3593,6 +3602,7 @@ async function openProduit(id) {
 
   document.getElementById('produits-list-view').style.display = 'none';
   document.getElementById('produit-detail-view').style.display = 'block';
+  try { if (typeof _setCurrentView === 'function') _setCurrentView({ kind:'produit', id: id }); } catch(e){}
 
   document.getElementById('p-emoji').textContent = (p.name||'').slice(0,2).toUpperCase();
   document.getElementById('p-name').textContent = p.name;
@@ -5556,6 +5566,7 @@ async function openEndUser(id) {
   if (!eu) return;
   document.getElementById('eu-list-view').style.display = 'none';
   document.getElementById('eu-detail-view').style.display = 'block';
+  try { if (typeof _setCurrentView === 'function') _setCurrentView({ kind:'endUser', id: id }); } catch(e){}
   document.getElementById('eu-detail-name').textContent = eu.nom;
   
   const typeEmoji = { Militaire:'🪖', Gouvernement:'🏛️', Civil:'🏢', ONG:'🌍' };
@@ -8214,6 +8225,39 @@ async function openContactDetail(id) {
 function closeContactDetail() {
   const modal = document.getElementById('contact-detail-modal');
   if (modal) modal.classList.remove('open');
+}
+
+// ===================== Pile de navigation (bouton Retour global) =====================
+window._navStack = window._navStack || [];
+let _currentView = null, _navRestoring = false, _panelSetAt = 0;
+function _panelForFiche(k){ return k==='societe'?'societes':k==='produit'?'produits-db':k==='endUser'?'end-users':null; }
+function _viewEq(a,b){ return a&&b&&a.kind===b.kind&&a.id===b.id&&(a.tab||'')===(b.tab||''); }
+function _updateBackBtn(){ const b=document.getElementById('nav-back-btn'); if(b) b.style.display = window._navStack.length ? 'inline-flex' : 'none'; }
+function _setCurrentView(v){
+  if(_navRestoring){ _currentView=v; if(v.kind==='panel')_panelSetAt=Date.now(); _updateBackBtn(); return; }
+  if(_currentView && !_viewEq(_currentView, v)){
+    const isFiche = (v.kind==='societe'||v.kind==='produit'||v.kind==='endUser');
+    // transit : panneau -> fiche du même panneau en <1.2s (ex: go('societes')+openSociete) => on ne l'empile pas
+    const transit = isFiche && _currentView.kind==='panel' && _currentView.id===_panelForFiche(v.kind) && (Date.now()-_panelSetAt < 1200);
+    if(!transit) window._navStack.push(_currentView);
+  }
+  _currentView = v;
+  if(v.kind==='panel') _panelSetAt = Date.now();
+  _updateBackBtn();
+}
+function navBack(){
+  if(!window._navStack.length) return;
+  const v = window._navStack.pop();
+  _navRestoring = true;
+  const done = function(){ _navRestoring=false; _updateBackBtn(); };
+  try {
+    if(v.kind==='panel'){ go(v.id, v.tab?{tab:v.tab}:{}); setTimeout(done, 500); }
+    else if(v.kind==='societe'){ go('societes'); setTimeout(function(){ try{openSociete(v.id);}catch(e){} setTimeout(done,250); }, 350); }
+    else if(v.kind==='produit'){ go('produits-db'); setTimeout(function(){ try{openProduit(v.id);}catch(e){} setTimeout(done,250); }, 350); }
+    else if(v.kind==='endUser'){ go('end-users',{tab:'comptes'}); setTimeout(function(){ try{openEndUser(v.id);}catch(e){} setTimeout(done,250); }, 400); }
+    else done();
+  } catch(e){ done(); }
+  _updateBackBtn();
 }
 </script>
 </body>
