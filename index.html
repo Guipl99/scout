@@ -67,7 +67,7 @@ html.fs-grand  { zoom: 1.12; }
 html.fs-xgrand { zoom: 1.25; }
 
 /* ── Modale fiche contact (onglet Contacts) ── */
-#contact-detail-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9998; align-items:center; justify-content:center; padding:20px; }
+#contact-detail-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100002; align-items:center; justify-content:center; padding:20px; }
 #contact-detail-modal.open { display:flex; }
 #contact-detail-modal .cd-content { background:var(--bg2); border:1px solid var(--border); border-radius:14px; width:100%; max-width:460px; max-height:85vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.4); }
 #contact-detail-modal .cd-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); font-weight:600; font-size:15px; color:var(--text); }
@@ -966,7 +966,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           ${hasEmail ? `<span>✉️ ${escapeHtml(c.email)}</span>` : ''}
           ${hasLinkedin ? `<span>💼 LinkedIn OK</span>` : ''}
         </div>
-        <div class="scout-profile-hint" style="margin-top:8px;font-size:11px;color:var(--accent,#6c63ff);font-weight:600;">👤 Voir le contexte complet →</div>
+        <div class="scout-profile-hint" style="margin-top:8px;font-size:11px;color:var(--accent,#6c63ff);font-weight:600;">👤 Voir la fiche complète →</div>
       </div>
       <div id="scout-profile-detail" style="display:none;"></div>
       <div class="scout-actions-grid">
@@ -1084,42 +1084,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       actionModal.classList.remove('open');
       currentContact = null;
     },
-    openProfile: async () => {
-      // Affiche le CONTEXTE COMPLET du contact directement dans la modale (fiable pour
-      // TOUT contact, peu importe son rattachement). Récupère le détail via /contacts/:id
-      // (notes, organisation, etc. absents de /action/next-contact). Clic = toggle.
+    openProfile: () => {
+      // Ouvre la FICHE COMPLÈTE du contact — LA MÊME que dans l'onglet Contacts de la base
+      // (organisation, statut contacté, flag "pas à jour", notes, "voir le compte"...).
+      // Elle s'affiche PAR-DESSUS la modale Prochaine action et se ferme pour y revenir.
+      // Fonctionne pour TOUT contact, y compris ceux d'entreprise absents de Buyers>Contacts.
       const c = currentContact;
       if (!c) return;
-      const box = document.getElementById('scout-profile-detail');
-      if (!box) return;
-      if (box.style.display !== 'none' && box.dataset.for === String(c.id)) { box.style.display = 'none'; return; }
-      box.style.display = 'block';
-      box.dataset.for = String(c.id);
-      box.innerHTML = '<div class="scout-loading" style="padding:10px;">Chargement du contexte…</div>';
-      let f = null;
-      try {
-        const r = await fetch(API + '/contacts/' + encodeURIComponent(c.id), {
-          headers: (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {}
-        });
-        if (r.ok) f = await r.json();
-      } catch (e) {}
-      f = f || c;
-      const esc = (typeof escapeHtml === 'function') ? escapeHtml : (x => String(x == null ? '' : x));
-      const row = (label, val) => val ? '<div style="display:flex;gap:8px;font-size:12px;margin:3px 0;"><span style="color:var(--text3);min-width:92px;flex-shrink:0;">' + label + '</span><span style="color:var(--text);word-break:break-word;">' + esc(String(val)) + '</span></div>' : '';
-      let html = '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:left;max-height:300px;overflow:auto;margin-top:10px;">';
-      html += '<div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--text);">' + esc(((f.prenom || '') + ' ' + (f.nom || '')).trim()) + '</div>';
-      html += row('Titre', f.titre);
-      html += row('Organisation', f.organisation);
-      html += row('Pays', f.pays);
-      html += row('Type', f.type_contact);
-      html += row('Email', f.email);
-      html += row('Téléphone', f.telephone);
-      if (f.linkedin) html += '<div style="display:flex;gap:8px;font-size:12px;margin:3px 0;"><span style="color:var(--text3);min-width:92px;flex-shrink:0;">LinkedIn</span><a href="' + esc(f.linkedin) + '" target="_blank" rel="noopener" style="color:var(--accent);">Ouvrir le profil ↗</a></div>';
-      if (f.verified) html += '<div style="font-size:11px;color:var(--green,#22c55e);margin-top:4px;">✓ Email vérifié</div>';
-      if (f.notes) html += '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);"><div style="color:var(--text3);font-size:11px;margin-bottom:4px;">Notes / contexte</div><div style="font-size:12px;line-height:1.55;color:var(--text);">' + ((typeof formatNotes==='function')?formatNotes(f.notes):esc(f.notes)) + '</div></div>';
-      html += '</div>';
-      box.innerHTML = html;
-      try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+      if (typeof openContactDetail === 'function') openContactDetail(c.id);
     },
     openLinkedIn: () => {
       if (!currentContact?.linkedin) return;
