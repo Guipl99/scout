@@ -66,6 +66,14 @@ body.theme-light .db-kpi-success .db-kpi-val { color: #16a34a; }
 html.fs-grand  { zoom: 1.12; }
 html.fs-xgrand { zoom: 1.25; }
 
+/* ── Modale fiche contact (onglet Contacts) ── */
+#contact-detail-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9998; align-items:center; justify-content:center; padding:20px; }
+#contact-detail-modal.open { display:flex; }
+#contact-detail-modal .cd-content { background:var(--bg2); border:1px solid var(--border); border-radius:14px; width:100%; max-width:460px; max-height:85vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+#contact-detail-modal .cd-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); font-weight:600; font-size:15px; color:var(--text); }
+#contact-detail-modal .cd-header button { background:none; border:none; font-size:22px; color:var(--text2); cursor:pointer; line-height:1; }
+#contact-detail-modal .cd-body { padding:18px; overflow:auto; }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
@@ -1345,6 +1353,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M15 13c0-1.66-1.34-3-3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
       Buyers
     </div>
+    <div class="nav-item" id="nav-contacts" onclick="go('contacts')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="2.6" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 13.5c0-3 2.46-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Contacts
+    </div>
     <div class="nav-item" id="nav-contracts" onclick="go('contracts')">
       <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       Contrats & Tenders
@@ -1966,6 +1978,21 @@ Réinitialiser tous les filtres
 </div>
 
 <!-- RESELLERS PANEL -->
+    <div id="panel-contacts" class="panel">
+      <div class="topbar"><h1>Contacts</h1></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+        <input id="contacts-panel-search" type="text" placeholder="Rechercher (nom, titre, organisation, email, notes…)" oninput="filterContactsPanel()" style="flex:1;min-width:220px;font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
+        <select id="contacts-panel-pays" onchange="filterContactsPanel()" style="font-size:13px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);"><option value="">🌍 Tous les pays</option></select>
+        <select id="contacts-panel-type" onchange="filterContactsPanel()" style="font-size:13px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
+          <option value="">Tous</option>
+          <option value="email">Avec email</option>
+          <option value="buyer">Rattachés à un compte</option>
+          <option value="company">Contacts entreprise</option>
+        </select>
+        <span id="contacts-panel-count" style="font-size:12px;color:var(--text3);white-space:nowrap;">—</span>
+      </div>
+      <div id="contacts-panel-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;"></div>
+    </div>
     <div id="panel-resellers" class="panel" style="display:none;flex-direction:column;height:100%;overflow:hidden;">
       <div class="topbar" style="margin-bottom:0;padding-bottom:12px;flex-shrink:0;display:flex;align-items:center;gap:12px;">
         <button class="btn-back-home" onclick="go('dashboard')" title="Retour à l'accueil">←</button>
@@ -2061,6 +2088,14 @@ Réinitialiser tous les filtres
       </style>
     </div>
 
+<!-- MODALE FICHE CONTACT -->
+<div id="contact-detail-modal" role="dialog" aria-label="Fiche contact" onclick="if(event.target===this)closeContactDetail()">
+  <div class="cd-content">
+    <div class="cd-header"><span>👤 Fiche contact</span><button onclick="closeContactDetail()" aria-label="Fermer">×</button></div>
+    <div id="contact-detail-body" class="cd-body"></div>
+  </div>
+</div>
+
 <!-- BOTTOM NAV MOBILE -->
 <nav class="bottom-nav">
   <div class="bottom-nav-items">
@@ -2091,6 +2126,10 @@ Réinitialiser tous les filtres
     <div class="bn-item" id="bn-end-users" onclick="go('end-users')">
       <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M15 13c0-1.66-1.34-3-3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
       Comptes
+    </div>
+    <div class="bn-item bn-secondary" id="bn-contacts" onclick="go('contacts')">
+      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="2.6" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 13.5c0-3 2.46-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Contacts
     </div>
     <div class="bn-item bn-secondary" id="bn-config" onclick="go('config')">
       <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -2293,11 +2332,6 @@ let editingProduitId = null;
 
 // ── Navigation ────────────────────────────────────────────────
 function go(id, opts) {
-  // FIX ecran noir : 'contacts' n'est PAS un panel autonome — c'est le sous-onglet
-  // Contacts du panel Comptes (end-users). Les tuiles KPI du cockpit appelaient
-  // go('contacts') -> getElementById('panel-contacts')=null -> throw -> tous les
-  // panels desactives -> ECRAN NOIR. On l'alias vers end-users/contacts.
-  if (id === 'contacts') { return go('end-users', Object.assign({}, opts || {}, { tab: 'contacts' })); }
   // Garde-fou : si le panel demande n'existe pas, ne rien casser (evite l'ecran noir
   // pour tout id inconnu). On verifie AVANT de desactiver les panels courants.
   const panelEl = document.getElementById('panel-' + id);
@@ -2325,6 +2359,7 @@ function go(id, opts) {
   }
 
   if (id === 'dashboard') renderDashboard();
+  if (id === 'contacts') renderContactsPanel();
   if (id === 'societes') { backToSocietes(); loadSocietes().then(renderSocietes); }
   if (id === 'produits-db') { backToProduits(); loadAllProduits().then(renderProduits); }
   if (id === 'contracts') {
@@ -8025,6 +8060,123 @@ async function exportLinkedInCsv(scope) {
     }
   };
 })();
+</script>
+<script>
+// ===================== Onglet Contacts (tous les contacts) =====================
+let _contactsPanelData = [];
+let _contactsPanelLoaded = false;
+
+async function renderContactsPanel(force) {
+  const grid = document.getElementById('contacts-panel-grid');
+  if (!grid) return;
+  if (!_contactsPanelLoaded || force) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text3);">Chargement des contacts…</div>';
+    try {
+      const r = await fetch(API + '/contacts?limit=5000', { headers: (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {} });
+      const d = await r.json();
+      _contactsPanelData = d.contacts || [];
+      _contactsPanelLoaded = true;
+      populateContactsPanelPays();
+    } catch (e) {
+      grid.innerHTML = '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text3);">Erreur de chargement.</div>';
+      return;
+    }
+  }
+  filterContactsPanel();
+}
+
+function populateContactsPanelPays() {
+  const sel = document.getElementById('contacts-panel-pays');
+  if (!sel) return;
+  const cur = sel.value;
+  const paysList = [...new Set(_contactsPanelData.map(c => c.pays).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">🌍 Tous les pays</option>' + paysList.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+  sel.value = cur;
+}
+
+function filterContactsPanel() {
+  const grid = document.getElementById('contacts-panel-grid');
+  if (!grid) return;
+  const q = (document.getElementById('contacts-panel-search')?.value || '').toLowerCase().trim();
+  const pays = document.getElementById('contacts-panel-pays')?.value || '';
+  const typ = document.getElementById('contacts-panel-type')?.value || '';
+  const excluded = (typeof getExcludedPays === 'function') ? getExcludedPays() : [];
+  const list = _contactsPanelData.filter(c => {
+    if (excluded.length && c.pays && excluded.includes(c.pays)) return false;
+    if (pays && c.pays !== pays) return false;
+    if (typ === 'email' && !(c.email && String(c.email).trim())) return false;
+    if (typ === 'company' && c.end_user_id) return false;
+    if (typ === 'buyer' && !c.end_user_id) return false;
+    if (q) {
+      const hay = [c.prenom, c.nom, c.titre, c.organisation, c.pays, c.email, c.notes].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const badge = document.getElementById('contacts-panel-count');
+  if (badge) badge.textContent = list.length + ' contact' + (list.length > 1 ? 's' : '');
+  if (!list.length) { grid.innerHTML = '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text3);">Aucun contact trouvé</div>'; return; }
+  const LIMIT = 600;
+  const shown = list.slice(0, LIMIT);
+  grid.innerHTML = shown.map(contactPanelCard).join('') +
+    (list.length > LIMIT ? `<div style="grid-column:1/-1;padding:1rem;text-align:center;color:var(--text3);font-size:12px;">${LIMIT} premiers affichés sur ${list.length} — affine la recherche.</div>` : '');
+}
+
+function contactPanelCard(ct) {
+  const initials = ((ct.prenom || '')[0] || '') + ((ct.nom || '')[0] || '');
+  return `<div class="entity-card" style="cursor:pointer;padding:14px;" onclick="openContactDetail('${escapeHtml(ct.id)}')" title="Voir le contexte">
+    <div style="display:flex;gap:10px;align-items:flex-start;">
+      <div style="width:38px;height:38px;border-radius:50%;background:rgba(108,99,255,.14);border:2px solid rgba(108,99,255,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">${escapeHtml(initials || '?')}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <span style="font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(((ct.prenom || '') + ' ' + (ct.nom || '')).trim())}</span>
+          ${ct.verified ? '<span style="font-size:10px;color:#22c55e;">✓</span>' : ''}
+        </div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.3;">${escapeHtml(ct.titre || '')}</div>
+      </div>
+    </div>
+    ${ct.organisation ? `<div style="margin-top:8px;font-size:11px;color:var(--accent2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🏢 ${escapeHtml(ct.organisation)}</div>` : ''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;">
+      ${ct.pays ? `<span style="font-size:10px;color:var(--text3);">🌍 ${escapeHtml(ct.pays)}</span>` : ''}
+      ${ct.email ? '<span style="font-size:10px;color:var(--accent2);">✉️</span>' : ''}
+      ${ct.linkedin ? '<span style="font-size:10px;color:#0077b5;font-weight:700;">in</span>' : ''}
+    </div>
+  </div>`;
+}
+
+async function openContactDetail(id) {
+  const modal = document.getElementById('contact-detail-modal');
+  const body = document.getElementById('contact-detail-body');
+  if (!modal || !body) return;
+  modal.classList.add('open');
+  body.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div>';
+  let f = _contactsPanelData.find(c => c.id === id) || null;
+  try {
+    const r = await fetch(API + '/contacts/' + encodeURIComponent(id), { headers: (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {} });
+    if (r.ok) f = await r.json();
+  } catch (e) {}
+  if (!f) { body.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3);">Contact introuvable.</div>'; return; }
+  const row = (label, val) => val ? `<div style="display:flex;gap:10px;font-size:13px;margin:5px 0;"><span style="color:var(--text3);min-width:110px;flex-shrink:0;">${label}</span><span style="color:var(--text);word-break:break-word;">${escapeHtml(String(val))}</span></div>` : '';
+  const compte = (typeof allEndUsers !== 'undefined' && Array.isArray(allEndUsers)) ? allEndUsers.find(e => e.id === f.end_user_id) : null;
+  let html = `<div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:2px;">${escapeHtml(((f.prenom || '') + ' ' + (f.nom || '')).trim())}</div>`;
+  html += `<div style="font-size:13px;color:var(--accent2);margin-bottom:14px;">${escapeHtml(f.titre || '')}</div>`;
+  html += row('Organisation', f.organisation);
+  html += row('Pays', f.pays);
+  html += row('Type', f.type_contact);
+  html += row('Email', f.email);
+  html += row('Téléphone', f.telephone);
+  if (f.linkedin) html += `<div style="display:flex;gap:10px;font-size:13px;margin:5px 0;"><span style="color:var(--text3);min-width:110px;flex-shrink:0;">LinkedIn</span><a href="${escapeHtml(f.linkedin)}" target="_blank" rel="noopener" style="color:var(--accent);">Ouvrir le profil ↗</a></div>`;
+  if (f.verified) html += `<div style="font-size:12px;color:#22c55e;margin-top:6px;">✓ Email vérifié</div>`;
+  if (f.email) html += `<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><a href="mailto:${escapeHtml(f.email)}" style="font-size:12px;color:var(--accent);text-decoration:none;background:var(--bg3);padding:6px 12px;border-radius:6px;border:1px solid var(--border);">✉️ Envoyer un email</a>${f.telephone ? `<a href="tel:${escapeHtml(f.telephone)}" style="font-size:12px;color:#22c55e;text-decoration:none;background:var(--bg3);padding:6px 12px;border-radius:6px;border:1px solid var(--border);">📞 Appeler</a>` : ''}</div>`;
+  if (f.notes) html += `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);"><div style="color:var(--text3);font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;">Notes / contexte</div><div style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:var(--text);">${escapeHtml(f.notes)}</div></div>`;
+  if (compte) html += `<div style="margin-top:16px;"><button onclick="closeContactDetail();go('end-users',{tab:'comptes'});setTimeout(function(){openEndUser('${escapeHtml(compte.id)}');},350);" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:7px 12px;cursor:pointer;">🏛️ Voir le compte : ${escapeHtml(compte.nom)}</button></div>`;
+  body.innerHTML = html;
+}
+
+function closeContactDetail() {
+  const modal = document.getElementById('contact-detail-modal');
+  if (modal) modal.classList.remove('open');
+}
 </script>
 </body>
 </html>
