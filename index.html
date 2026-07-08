@@ -1429,6 +1429,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         </div>
       </div>
 
+      <!-- MINI-GRAPHE ACTIVITÉ -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <span style="font-size:13px;font-weight:600;color:var(--text);">📈 Activité — 14 derniers jours</span>
+          <span id="db-chart-legend" style="display:flex;gap:14px;font-size:11px;color:var(--text2);flex-wrap:wrap;"></span>
+        </div>
+        <div id="db-email-chart" style="min-height:150px;"></div>
+      </div>
+
       <!-- INSIGHTS ACTIONNABLES -->
       <div class="db-ins">
         <div class="db-ins-header">
@@ -2992,6 +3001,37 @@ function _renderRecentRows(items) {
 
 
 
+function renderCockpitChart(series){
+  const el = document.getElementById('db-email-chart');
+  if(!el) return;
+  if(!series || !series.length){ el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:24px;text-align:center;">Aucune donnée.</div>'; return; }
+  const W=700, H=150, padL=26, padR=10, padT=12, padB=22;
+  const n=series.length;
+  const maxE=Math.max(1, ...series.map(d=>+d.emails_sent||0));
+  const plotH=H-padT-padB, plotW=W-padL-padR;
+  const bw=Math.min(26, (plotW/n)*0.6);
+  const x = i => padL + (plotW*(i+0.5)/n);
+  const y = v => padT + plotH*(1 - v/maxE);
+  const totalE = series.reduce((a,d)=>a+(+d.emails_sent||0),0);
+  const totalR = series.reduce((a,d)=>a+(+d.replies_positive||0),0);
+  let svg = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Emails envoyes et retours positifs par jour sur 14 jours">';
+  svg += '<line x1="'+padL+'" y1="'+y(0)+'" x2="'+(W-padR)+'" y2="'+y(0)+'" stroke="var(--border2)" stroke-width="1"/>';
+  svg += '<line x1="'+padL+'" y1="'+y(maxE)+'" x2="'+(W-padR)+'" y2="'+y(maxE)+'" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 3"/>';
+  svg += '<text x="'+(padL-4)+'" y="'+(y(maxE)+3)+'" text-anchor="end" font-size="9" fill="var(--text3)">'+maxE+'</text>';
+  svg += '<text x="'+(padL-4)+'" y="'+(y(0)+3)+'" text-anchor="end" font-size="9" fill="var(--text3)">0</text>';
+  series.forEach(function(d,i){
+    const e=+d.emails_sent||0, rp=+d.replies_positive||0;
+    if(e>0){ const bh=Math.max(0, plotH*e/maxE); svg += '<rect x="'+(x(i)-bw/2)+'" y="'+y(e)+'" width="'+bw+'" height="'+bh+'" rx="2" fill="var(--accent)"><title>'+d.day+' : '+e+' email'+(e>1?'s':'')+'</title></rect>'; }
+    if(rp>0){ svg += '<circle cx="'+x(i)+'" cy="'+(y(e)-6)+'" r="4" fill="var(--green,#22c55e)"><title>'+d.day+' : '+rp+' retour positif'+(rp>1?'s':'')+'</title></circle>'; }
+    if(i%3===0 || i===n-1){ const dd=d.day.slice(8,10)+'/'+d.day.slice(5,7); svg += '<text x="'+x(i)+'" y="'+(H-6)+'" text-anchor="middle" font-size="9" fill="var(--text3)">'+dd+'</text>'; }
+  });
+  svg += '</svg>';
+  el.innerHTML = svg;
+  const leg=document.getElementById('db-chart-legend');
+  if(leg) leg.innerHTML = '<span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--accent);"></span>Emails envoyés ('+totalE+')</span>'
+    + '<span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--green,#22c55e);"></span>Retours positifs ('+totalR+')</span>';
+}
+
 function renderDashboard() {
   // ===========================================================================
   // COCKPIT PROSPECTION — 5 KPIs
@@ -3005,6 +3045,11 @@ function renderDashboard() {
 
   // Pre-warm buyer-segments cache (used by contacts/end-users grid filters)
   loadBuyerSegments();
+
+  // Mini-graphe activité (emails envoyés + retours positifs)
+  fetch(API + '/contacts/stats-timeseries?days=14').then(r => r.json()).then(d => {
+    if (d && d.ok) renderCockpitChart(d.days);
+  }).catch(()=>{});
 
   fetch(API + '/contacts/stats-engagement').then(r => r.json()).then(d => {
     if (!d || !d.ok) return;
