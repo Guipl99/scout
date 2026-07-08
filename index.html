@@ -1106,7 +1106,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       html += row('Téléphone', f.telephone);
       if (f.linkedin) html += '<div style="display:flex;gap:8px;font-size:12px;margin:3px 0;"><span style="color:var(--text3);min-width:92px;flex-shrink:0;">LinkedIn</span><a href="' + esc(f.linkedin) + '" target="_blank" rel="noopener" style="color:var(--accent);">Ouvrir le profil ↗</a></div>';
       if (f.verified) html += '<div style="font-size:11px;color:var(--green,#22c55e);margin-top:4px;">✓ Email vérifié</div>';
-      if (f.notes) html += '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);"><div style="color:var(--text3);font-size:11px;margin-bottom:4px;">Notes / contexte</div><div style="font-size:12px;line-height:1.55;white-space:pre-wrap;color:var(--text);">' + esc(f.notes) + '</div></div>';
+      if (f.notes) html += '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);"><div style="color:var(--text3);font-size:11px;margin-bottom:4px;">Notes / contexte</div><div style="font-size:12px;line-height:1.55;color:var(--text);">' + ((typeof formatNotes==='function')?formatNotes(f.notes):esc(f.notes)) + '</div></div>';
       html += '</div>';
       box.innerHTML = html;
       try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
@@ -8064,6 +8064,42 @@ async function exportLinkedInCsv(scope) {
 </script>
 <script>
 function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+// Formate un champ notes dense en sections lisibles : étoiles de priorité,
+// et blocs étiquetés [Label] (Hunter, Pertinence Khronos, source, etc.).
+function formatNotes(raw){
+  var s = String(raw==null?'':raw).trim();
+  if(!s) return '';
+  var parts = [], rx = /\[([^\]]+)\]/g, last = 0, m, lastLabel = null;
+  while((m = rx.exec(s))){
+    var before = s.slice(last, m.index).trim();
+    if(lastLabel === null){ if(before) parts.push({label:null, text:before}); }
+    else parts.push({label:lastLabel, text:before});
+    lastLabel = m[1]; last = m.index + m[0].length;
+  }
+  var tail = s.slice(last).trim();
+  if(lastLabel === null){ if(tail) parts.push({label:null, text:tail}); }
+  else parts.push({label:lastLabel, text:tail});
+  var html = '';
+  for(var i=0;i<parts.length;i++){
+    var pt = parts[i];
+    if(pt.label === null){
+      var t = pt.text, star = t.match(/^([★⭐]{1,5})\s*/);
+      if(star){ var n=[].concat(Array.from(star[1])).length; html += '<div style="color:#f59e0b;font-size:14px;margin-bottom:4px;letter-spacing:1px;">'+ '★★★★★'.slice(0,n) +'</div>'; t = t.slice(star[0].length); }
+      if(t.trim()) html += '<div style="font-size:13px;color:var(--text);margin-bottom:6px;line-height:1.5;">'+ esc(t.trim()) +'</div>';
+    } else {
+      var label = pt.label.trim(), low = label.toLowerCase(), color='var(--text3)', icon='•';
+      if(low.indexOf('hunter')>-1){ color='#14b8a6'; icon='🔎'; }
+      else if(low.indexOf('khronos')>-1 || low.indexOf('pertinence')>-1){ color='var(--accent)'; icon='🎯'; }
+      else if(low.indexOf('source')>-1){ color='var(--text3)'; icon='🔗'; }
+      else if(low.indexOf('linkedin')>-1){ color='#0077b5'; icon='in'; }
+      html += '<div style="margin-top:9px;">'
+        + '<span style="font-size:10px;font-weight:700;color:'+color+';text-transform:uppercase;letter-spacing:.04em;">'+icon+' '+esc(label)+'</span>'
+        + (pt.text.trim() ? '<div style="font-size:13px;color:var(--text);line-height:1.5;margin-top:2px;">'+esc(pt.text.trim())+'</div>' : '')
+        + '</div>';
+    }
+  }
+  return html;
+}
 // ===================== Onglet Contacts (tous les contacts) =====================
 let _contactsPanelData = [];
 let _contactsPanelLoaded = false;
@@ -8170,7 +8206,7 @@ async function openContactDetail(id) {
   if (f.linkedin) html += `<div style="display:flex;gap:10px;font-size:13px;margin:5px 0;"><span style="color:var(--text3);min-width:110px;flex-shrink:0;">LinkedIn</span><a href="${esc(f.linkedin)}" target="_blank" rel="noopener" style="color:var(--accent);">Ouvrir le profil ↗</a></div>`;
   if (f.verified) html += `<div style="font-size:12px;color:#22c55e;margin-top:6px;">✓ Email vérifié</div>`;
   if (f.email) html += `<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><a href="mailto:${esc(f.email)}" style="font-size:12px;color:var(--accent);text-decoration:none;background:var(--bg3);padding:6px 12px;border-radius:6px;border:1px solid var(--border);">✉️ Envoyer un email</a>${f.telephone ? `<a href="tel:${esc(f.telephone)}" style="font-size:12px;color:#22c55e;text-decoration:none;background:var(--bg3);padding:6px 12px;border-radius:6px;border:1px solid var(--border);">📞 Appeler</a>` : ''}</div>`;
-  if (f.notes) html += `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);"><div style="color:var(--text3);font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;">Notes / contexte</div><div style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:var(--text);">${esc(f.notes)}</div></div>`;
+  if (f.notes) html += `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);"><div style="color:var(--text3);font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;">Notes / contexte</div><div style="font-size:13px;line-height:1.6;color:var(--text);">${formatNotes(f.notes)}</div></div>`;
   if (compte) html += `<div style="margin-top:16px;"><button onclick="closeContactDetail();go('end-users',{tab:'comptes'});setTimeout(function(){openEndUser('${esc(compte.id)}');},350);" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:7px 12px;cursor:pointer;">🏛️ Voir le compte : ${esc(compte.nom)}</button></div>`;
   body.innerHTML = html;
 }
