@@ -5375,12 +5375,11 @@ function openContactFromGrid(id) {
   const ct = allContacts.find(c => c.id === id);
   if (!ct) return;
   if (ct.end_user_id) {
-    const eu = allEndUsers.find(e => e.id === ct.end_user_id);
-    if (eu) {
-      go('end-users', { tab: 'comptes' });
-      setTimeout(function() { setEuTab('comptes'); openEndUser(eu.id); }, 300);
-      return;
-    }
+    // Ouvrir directement la fiche du compte via end_user_id (openEndUser s'auto-charge
+    // si la liste des buyers n'est pas encore prête — sinon on retombait sur la liste).
+    go('end-users', { tab: 'comptes' });
+    setTimeout(function() { setEuTab('comptes'); openEndUser(ct.end_user_id); }, 200);
+    return;
   }
   // Contact sans compte associe — aller onglet Contacts et filtrer
   go('end-users', { tab: 'contacts' });
@@ -5585,8 +5584,21 @@ function renderEndUsers(list) {
 }
 
 async function openEndUser(id) {
-  const eu = allEndUsers.find(e => e.id === id);
-  if (!eu) return;
+  let eu = allEndUsers.find(e => e.id === id);
+  if (!eu) {
+    // Race : la liste des buyers n'est peut-être pas encore chargée (fetch 3000 en cours).
+    // On (re)charge puis on réessaie — évite de retomber sur la LISTE au lieu de la FICHE.
+    try { if (typeof loadEndUsers === 'function') await loadEndUsers(true); } catch(e){}
+    eu = allEndUsers.find(e => e.id === id);
+  }
+  if (!eu) {
+    // Dernier recours : fetch direct de ce buyer par id.
+    try {
+      const r = await fetch(API + '/end-users/' + encodeURIComponent(id), { headers: (typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{} });
+      if (r.ok) { const d = await r.json(); if (d && d.id) { eu = d; if (Array.isArray(allEndUsers)) allEndUsers.push(d); } }
+    } catch(e){}
+  }
+  if (!eu || !eu.id) return;
   document.getElementById('eu-list-view').style.display = 'none';
   document.getElementById('eu-detail-view').style.display = 'block';
   try { if (typeof _setCurrentView === 'function') _setCurrentView({ kind:'endUser', id: id }); } catch(e){}
