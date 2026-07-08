@@ -983,7 +983,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <span class="icon">↩️</span><span>Fermer</span>
         </button>
       </div>
-      <button class="scout-action-btn-item" style="width:100%; margin-top:10px; border-color:#dc2626; color:#991b1b;" onclick="scoutAction.cancelSent()">
+      <button class="scout-action-btn-item" style="width:100%; margin-top:10px; border-color:#10b981; color:#065f46;" onclick="scoutAction.confirmSent('email')">
+        <span class="icon">✅</span><span>J'ai déjà envoyé l'email — marquer contacté</span>
+      </button>
+      <button class="scout-action-btn-item" style="width:100%; margin-top:8px; border-color:#dc2626; color:#991b1b;" onclick="scoutAction.cancelSent()">
         <span class="icon">❌</span><span>Annuler l'action (libérer le contact)</span>
       </button>
       <div class="scout-mark-as-row" style="margin-top:14px; padding-top:14px; border-top:1px dashed #d1d5db;">
@@ -8219,7 +8222,65 @@ async function openContactDetail(id) {
   if (f.email) html += `<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><a href="mailto:${esc(f.email)}" style="font-size:12px;color:var(--accent);text-decoration:none;background:var(--bg3);padding:6px 12px;border-radius:6px;border:1px solid var(--border);">✉️ Envoyer un email</a>${f.telephone ? `<a href="tel:${esc(f.telephone)}" style="font-size:12px;color:#22c55e;text-decoration:none;background:var(--bg3);padding:6px 12px;border-radius:6px;border:1px solid var(--border);">📞 Appeler</a>` : ''}</div>`;
   if (f.notes) html += `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);"><div style="color:var(--text3);font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;">Notes / contexte</div><div style="font-size:13px;line-height:1.6;color:var(--text);">${formatNotes(f.notes)}</div></div>`;
   if (compte) html += `<div style="margin-top:16px;"><button onclick="closeContactDetail();go('end-users',{tab:'comptes'});setTimeout(function(){openEndUser('${esc(compte.id)}');},350);" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:7px 12px;cursor:pointer;">🏛️ Voir le compte : ${esc(compte.nom)}</button></div>`;
+  html += `<div id="cd-status-block" style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);"></div>`;
   body.innerHTML = html;
+  renderContactStatusBlock(f.id);
+}
+
+const _CD_STATUS_LABELS = { email:'Email', linkedin_message:'Message LinkedIn', linkedin_connect:'Connexion LinkedIn', phone:'Appel', in_person:'Rencontre', third_party:'Via tiers', other:'Autre', reply_positive:'Réponse positive', reply_negative:'Réponse négative', already_client:'Déjà client', already_prospected_external:'Déjà prospecté' };
+
+async function renderContactStatusBlock(id){
+  const box = document.getElementById('cd-status-block');
+  if(!box) return;
+  box.innerHTML = '<div style="color:var(--text3);font-size:11px;">Chargement du statut…</div>';
+  let actions = [];
+  try {
+    const r = await fetch(API + '/action/history?contact_id=' + encodeURIComponent(id), { headers: (typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{} });
+    if(r.ok){ const d = await r.json(); actions = (d.actions||[]).filter(a=>a.action_type!=='skip'); }
+  } catch(e){}
+  const lbl = 'color:var(--text3);font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;';
+  const btn = 'font-size:12px;background:var(--bg3);border-radius:6px;padding:6px 10px;cursor:pointer;';
+  if(actions.length){
+    const a = actions[0];
+    const dt = a.performed_at ? new Date(a.performed_at).toLocaleDateString('fr-FR') : '';
+    box.innerHTML = '<div style="'+lbl+'">Statut</div>'
+      + '<div style="font-size:13px;color:#22c55e;font-weight:600;margin-bottom:8px;">✓ Contacté'
+        + (a.performed_by ? ' par ' + esc(a.performed_by) : '')
+        + (dt ? ' le ' + dt : '')
+        + (_CD_STATUS_LABELS[a.action_type] ? ' · ' + _CD_STATUS_LABELS[a.action_type] : '') + '</div>'
+      + '<button onclick="unmarkContacted(\''+esc(id)+'\')" style="'+btn+'color:#991b1b;border:1px solid #dc2626;">↩️ Marquer comme non contacté</button>';
+  } else {
+    box.innerHTML = '<div style="'+lbl+'">Statut : non contacté</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+      + '<button onclick="markContacted(\''+esc(id)+'\',\'email\')" style="'+btn+'color:var(--accent);border:1px solid var(--accent);">✉️ Email envoyé</button>'
+      + '<button onclick="markContacted(\''+esc(id)+'\',\'phone\')" style="'+btn+'color:#22c55e;border:1px solid var(--border2);">📞 Appelé</button>'
+      + '<button onclick="markContacted(\''+esc(id)+'\',\'linkedin_message\')" style="'+btn+'color:#0077b5;border:1px solid var(--border2);">💼 LinkedIn</button>'
+      + '<button onclick="markContacted(\''+esc(id)+'\',\'other\')" style="'+btn+'color:var(--text2);border:1px solid var(--border2);">✔️ Autre</button>'
+      + '</div>';
+  }
+}
+
+async function markContacted(id, type){
+  const box = document.getElementById('cd-status-block');
+  if(box) box.innerHTML = '<div style="color:var(--text3);font-size:11px;">Enregistrement…</div>';
+  try {
+    await fetch(API + '/action/log-manual', { method:'POST', headers: Object.assign({'Content-Type':'application/json'}, (typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}), body: JSON.stringify({ contact_id:id, action_type:type }) });
+  } catch(e){}
+  renderContactStatusBlock(id);
+}
+
+async function unmarkContacted(id){
+  if(!confirm('Marquer ce contact comme NON contacté ? Cela supprimera son historique d\'actions de prospection.')) return;
+  const box = document.getElementById('cd-status-block');
+  if(box) box.innerHTML = '<div style="color:var(--text3);font-size:11px;">Suppression…</div>';
+  try {
+    const r = await fetch(API + '/action/history?contact_id=' + encodeURIComponent(id), { headers: (typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{} });
+    const d = await r.json();
+    for(const a of (d.actions||[])){
+      await fetch(API + '/action/delete', { method:'DELETE', headers: Object.assign({'Content-Type':'application/json'}, (typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}), body: JSON.stringify({ id:a.id }) });
+    }
+  } catch(e){}
+  renderContactStatusBlock(id);
 }
 
 function closeContactDetail() {
