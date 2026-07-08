@@ -999,6 +999,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <span class="icon">📨</span><span>Déjà prospecté</span>
           </button>
         </div>
+        <button class="scout-action-btn-item" style="width:100%;margin-top:10px;border-color:#f59e0b;color:#b45309;" onclick="scoutAction.flagStale()">
+          <span class="icon">🕓</span><span>Contact pas à jour (contexte obsolète)</span>
+        </button>
       </div>
       <button class="scout-skip-btn" onclick="scoutAction.skip()">⏭️ Passer ce contact et voir le suivant</button>
       <div id="scout-action-result"></div>
@@ -1294,6 +1297,23 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           box.innerHTML = '<div style="color:#991b1b;">Erreur lors de la confirmation. Réessaie.</div>';
         }
       }
+    },
+    flagStale: async () => {
+      if (!currentContact) return;
+      const reason = prompt("Pourquoi ce contact n'est-il plus à jour ? (ex: a changé de poste, a quitté l'organisation, promotion...)", '');
+      if (reason === null) return;
+      try {
+        await fetch(API + '/action/flag-stale', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','Authorization':'Bearer '+session.token},
+          body: JSON.stringify({ contact_id: currentContact.id, reason })
+        });
+      } catch (e) {}
+      const body = document.getElementById('scout-action-body');
+      body.innerHTML = '<div style="text-align:center;padding:40px 20px;">'
+        + '<div style="font-size:48px;margin-bottom:12px;">🕓</div>'
+        + '<div style="color:#6b7280;margin-bottom:20px;">Contact signalé « pas à jour ». Il sort du flux « Prochaine action » jusqu\'à ce que ses infos soient rafraîchies.</div>'
+        + '<button class="scout-action-btn-item" style="margin:0 auto;max-width:280px;" onclick="scoutAction.open()"><span class="icon">🎯</span><span>Voir la prochaine action</span></button></div>';
     },
     cancelSent: async () => {
       await cancelAction();
@@ -8222,6 +8242,11 @@ async function openContactDetail(id) {
   if (f.email) html += `<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><a href="mailto:${esc(f.email)}" style="font-size:12px;color:var(--accent);text-decoration:none;background:var(--bg3);padding:6px 12px;border-radius:6px;border:1px solid var(--border);">✉️ Envoyer un email</a>${f.telephone ? `<a href="tel:${esc(f.telephone)}" style="font-size:12px;color:#22c55e;text-decoration:none;background:var(--bg3);padding:6px 12px;border-radius:6px;border:1px solid var(--border);">📞 Appeler</a>` : ''}</div>`;
   if (f.notes) html += `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);"><div style="color:var(--text3);font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;">Notes / contexte</div><div style="font-size:13px;line-height:1.6;color:var(--text);">${formatNotes(f.notes)}</div></div>`;
   if (compte) html += `<div style="margin-top:16px;"><button onclick="closeContactDetail();go('end-users',{tab:'comptes'});setTimeout(function(){openEndUser('${esc(compte.id)}');},350);" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:7px 12px;cursor:pointer;">🏛️ Voir le compte : ${esc(compte.nom)}</button></div>`;
+  if (f.needs_update_at) {
+    html += `<div style="margin-top:14px;padding:10px 12px;background:rgba(245,158,11,.12);border:1px solid #f59e0b;border-radius:8px;"><div style="font-size:12px;color:#b45309;font-weight:600;">🕓 Signalé « pas à jour »${f.needs_update_by?' par '+esc(f.needs_update_by):''}</div>${f.needs_update_reason?`<div style="font-size:12px;color:var(--text2);margin-top:3px;">${esc(f.needs_update_reason)}</div>`:''}<button onclick="unflagStaleContact('${esc(f.id)}')" style="margin-top:8px;font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;cursor:pointer;">✓ Marquer à jour (retirer)</button></div>`;
+  } else {
+    html += `<div style="margin-top:14px;"><button onclick="flagStaleContact('${esc(f.id)}')" style="font-size:12px;color:#b45309;background:var(--bg3);border:1px solid #f59e0b;border-radius:6px;padding:6px 12px;cursor:pointer;">🕓 Signaler « contact pas à jour »</button></div>`;
+  }
   html += `<div id="cd-status-block" style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);"></div>`;
   body.innerHTML = html;
   renderContactStatusBlock(f.id);
@@ -8281,6 +8306,20 @@ async function unmarkContacted(id){
     }
   } catch(e){}
   renderContactStatusBlock(id);
+}
+
+async function flagStaleContact(id){
+  const reason = prompt("Pourquoi ce contact n'est-il plus à jour ? (ex: a changé de poste, a quitté l'organisation, promotion...)", '');
+  if(reason===null) return;
+  try { await fetch(API + '/action/flag-stale', { method:'POST', headers: Object.assign({'Content-Type':'application/json'}, (typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}), body: JSON.stringify({ contact_id:id, reason }) }); } catch(e){}
+  // maj le cache local si présent
+  try { const c=(_contactsPanelData||[]).find(x=>x.id===id); if(c){ c.needs_update_at=new Date().toISOString(); c.needs_update_reason=reason; } } catch(e){}
+  openContactDetail(id);
+}
+async function unflagStaleContact(id){
+  try { await fetch(API + '/action/unflag-stale', { method:'POST', headers: Object.assign({'Content-Type':'application/json'}, (typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}), body: JSON.stringify({ contact_id:id }) }); } catch(e){}
+  try { const c=(_contactsPanelData||[]).find(x=>x.id===id); if(c){ c.needs_update_at=null; c.needs_update_reason=null; } } catch(e){}
+  openContactDetail(id);
 }
 
 function closeContactDetail() {
