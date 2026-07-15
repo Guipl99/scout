@@ -903,7 +903,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     actionBody.innerHTML = '<div class="scout-loading">Recherche du meilleur contact…</div>';
     try {
       // Filtre par SEGMENTS (Paramètres → Segments proposés dans « Prochaine action »)
-      const segQS = (typeof buildSegQS === 'function') ? buildSegQS() : '';
+      const segQS = (typeof window.buildSegQS === 'function') ? window.buildSegQS() : '';
       const r = await fetch(API + '/action/next-contact' + segQS, {
         headers: {'Authorization': 'Bearer ' + session.token}
       });
@@ -921,7 +921,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       currentContact = data.contact;
       renderContact(data);
       try {
-        const sum = (typeof getSegSummary === 'function') ? getSegSummary() : '';
+        const sum = (typeof window.getSegSummary === 'function') ? window.getSegSummary() : '';
         if (sum) {
           const badge = document.createElement('div');
           badge.textContent = '🎯 Filtre séquence : ' + sum;
@@ -5983,6 +5983,13 @@ function getSegSummary() {
   }
   return bits.join(' · ');
 }
+// Exposer sur window (fetchNextContact est dans un autre scope, comme getExcludedPays)
+window.buildSegQS = buildSegQS;
+window.getSegSummary = getSegSummary;
+window.getSegFilter = getSegFilter;
+window.saveSegFilter = saveSegFilter;
+window.renderSegFilter = renderSegFilter;
+window.fetchSegCounts = fetchSegCounts;
 
 
 function applyDensity(density) {
