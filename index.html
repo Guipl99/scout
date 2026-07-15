@@ -890,8 +890,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   const actionBody = document.getElementById('scout-action-body');
 
   function priorityLabel(score) {
-    if (score >= 90) return { cls: 'scout-priority-high', label: '⭐⭐⭐ VIP' };
-    if (score >= 60) return { cls: 'scout-priority-medium', label: '⭐⭐ Priorité' };
+    if (score >= 90) return { cls: 'scout-priority-high', label: 'VIP' };
+    if (score >= 60) return { cls: 'scout-priority-medium', label: 'Priorité' };
     return { cls: 'scout-priority-low', label: 'Standard' };
   }
 
