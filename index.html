@@ -5954,8 +5954,12 @@ function renderSegFilter() {
 }
 async function fetchSegCounts() {
   try {
-    if (typeof session === 'undefined' || !session || !session.token) return;
-    const r = await fetch(API + '/action/segment-counts', { headers: {'Authorization':'Bearer '+session.token} });
+    let tok = (typeof session !== 'undefined' && session && session.token)
+           || (window.session && window.session.token) || null;
+    if (!tok) { for (const k of Object.keys(localStorage)) { try { const v = JSON.parse(localStorage.getItem(k)); if (v && v.token) { tok = v.token; break; } } catch (e) {} } }
+    if (!tok) return;
+    const API_SEG = (window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
+    const r = await fetch(API_SEG + '/action/segment-counts', { headers: {'Authorization':'Bearer '+tok} });
     const d = await r.json(); if (!d || !d.counts) return;
     for (const [key, v] of Object.entries(d.counts)) {
       const dot = key.indexOf('.'); const f = key.slice(0, dot), opt = key.slice(dot+1);
