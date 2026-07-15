@@ -953,29 +953,51 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   }
   function starWidgetHtml(c, score) {
     const cur = effectiveStars(c, score);
+    // Palier AUTO (sans correction manuelle) : sert \u00e0 recolorer quand on "efface" la correction
+    const auto = (typeof score === 'number') ? (score >= 90 ? 3 : score >= 60 ? 2 : 0) : effectiveStars({ manual_priority: null, notes: (c && c.notes) || '' });
+    const isManual = c && c.manual_priority !== null && c.manual_priority !== undefined;
     let stars = '';
     for (let i = 1; i <= 3; i++) {
       stars += '<span onclick="event.stopPropagation();window.setContactPriority(\''+c.id+'\','+i+')" style="cursor:pointer;font-size:17px;line-height:1;color:'+(i<=cur?'#f5b301':'var(--text3)')+';" title="'+i+' \u00e9toile(s)">\u2605</span>';
     }
-    return '<div class="scout-stars" data-cid="'+c.id+'" onclick="event.stopPropagation()" style="margin:6px 0 2px;display:flex;align-items:center;gap:3px;">'
+    // "effacer" ne s'affiche que si une correction manuelle est en place ; il remet le scoring automatique
+    const effacer = isManual
+      ? '<span onclick="event.stopPropagation();window.setContactPriority(\''+c.id+'\',null)" style="cursor:pointer;font-size:10px;color:var(--text3);margin-left:8px;" title="Revenir au scoring automatique">effacer</span>'
+      : '';
+    return '<div class="scout-stars" data-cid="'+c.id+'" data-auto="'+auto+'" onclick="event.stopPropagation()" style="margin:6px 0 2px;display:flex;align-items:center;gap:3px;">'
       + '<span style="font-size:11px;color:var(--text3);margin-right:4px;">Priorit\u00e9</span>' + stars
-      + '<span onclick="event.stopPropagation();window.setContactPriority(\''+c.id+'\',0)" style="cursor:pointer;font-size:10px;color:var(--text3);margin-left:8px;" title="Retirer la priorit\u00e9">effacer</span>'
+      + effacer
       + '</div>';
   }
   window.effectiveStars = effectiveStars;
   window.starWidgetHtml = starWidgetHtml;
   window.setContactPriority = async function(id, stars) {
     try {
+      const clear = (stars === null || stars === undefined);
       let tok = null; for (const k of Object.keys(localStorage)) { try { const v = JSON.parse(localStorage.getItem(k)); if (v && v.token) { tok = v.token; break; } } catch (e) {} }
       const API_P = (window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
-      const r = await fetch(API_P + '/action/set-priority', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok }, body: JSON.stringify({ contact_id: id, stars: stars }) });
+      const r = await fetch(API_P + '/action/set-priority', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok }, body: JSON.stringify({ contact_id: id, stars: clear ? null : stars }) });
       const d = await r.json();
       if (!r.ok) { alert('Erreur priorit\u00e9 : ' + (d.error || r.status)); return; }
       document.querySelectorAll('.scout-stars[data-cid="' + id + '"]').forEach(w => {
+        // Si on efface, on recolore au palier AUTO stock\u00e9 sur le widget
+        const fill = clear ? Number(w.dataset.auto || 0) : stars;
         const spans = [...w.querySelectorAll('span')].filter(x => x.textContent === '\u2605');
-        spans.forEach((x, idx) => { x.style.color = (idx + 1) <= stars ? '#f5b301' : 'var(--text3)'; });
+        spans.forEach((x, idx) => { x.style.color = (idx + 1) <= fill ? '#f5b301' : 'var(--text3)'; });
+        // Masquer/afficher le lien "effacer" selon qu'une correction manuelle est en place
+        const eff = [...w.querySelectorAll('span')].find(x => (x.textContent || '').trim() === 'effacer');
+        if (eff && clear) { eff.remove(); }
+        else if (!eff && !clear) {
+          // Ajoute dynamiquement le lien "effacer" (une correction manuelle vient d'\u00eatre pos\u00e9e)
+          const e = document.createElement('span');
+          e.textContent = 'effacer';
+          e.setAttribute('style', 'cursor:pointer;font-size:10px;color:var(--text3);margin-left:8px;');
+          e.title = 'Revenir au scoring automatique';
+          e.onclick = function (ev) { ev.stopPropagation(); window.setContactPriority(id, null); };
+          w.appendChild(e);
+        }
       });
-      if (window.currentContact && window.currentContact.id === id) window.currentContact.manual_priority = stars;
+      if (window.currentContact && window.currentContact.id === id) window.currentContact.manual_priority = clear ? null : stars;
     } catch (e) { alert('Erreur r\u00e9seau (priorit\u00e9)'); }
   };
 
