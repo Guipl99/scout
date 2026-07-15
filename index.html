@@ -934,6 +934,43 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     }
   }
 
+  // ── Scoring manuel (étoiles) — corrige le palier d'étoiles du scoring existant ──
+  function effectiveStars(c) {
+    if (c && c.manual_priority !== null && c.manual_priority !== undefined) return Number(c.manual_priority) || 0;
+    const n = (c && c.notes) || '';
+    if (/\u2b50\u2b50\u2b50/.test(n)) return 3;
+    if (/\u2b50\u2b50/.test(n)) return 2;
+    if (/\u2b50/.test(n)) return 1;
+    return 0;
+  }
+  function starWidgetHtml(c) {
+    const cur = effectiveStars(c);
+    let stars = '';
+    for (let i = 1; i <= 3; i++) {
+      stars += '<span onclick="event.stopPropagation();window.setContactPriority(\''+c.id+'\','+i+')" style="cursor:pointer;font-size:17px;line-height:1;color:'+(i<=cur?'#f5b301':'var(--text3)')+';" title="'+i+' \u00e9toile(s)">\u2605</span>';
+    }
+    return '<div class="scout-stars" data-cid="'+c.id+'" onclick="event.stopPropagation()" style="margin:6px 0 2px;display:flex;align-items:center;gap:3px;">'
+      + '<span style="font-size:11px;color:var(--text3);margin-right:4px;">Priorit\u00e9</span>' + stars
+      + '<span onclick="event.stopPropagation();window.setContactPriority(\''+c.id+'\',0)" style="cursor:pointer;font-size:10px;color:var(--text3);margin-left:8px;" title="Retirer la priorit\u00e9">effacer</span>'
+      + '</div>';
+  }
+  window.effectiveStars = effectiveStars;
+  window.starWidgetHtml = starWidgetHtml;
+  window.setContactPriority = async function(id, stars) {
+    try {
+      let tok = null; for (const k of Object.keys(localStorage)) { try { const v = JSON.parse(localStorage.getItem(k)); if (v && v.token) { tok = v.token; break; } } catch (e) {} }
+      const API_P = (window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
+      const r = await fetch(API_P + '/action/set-priority', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok }, body: JSON.stringify({ contact_id: id, stars: stars }) });
+      const d = await r.json();
+      if (!r.ok) { alert('Erreur priorit\u00e9 : ' + (d.error || r.status)); return; }
+      document.querySelectorAll('.scout-stars[data-cid="' + id + '"]').forEach(w => {
+        const spans = [...w.querySelectorAll('span')].filter(x => x.textContent === '\u2605');
+        spans.forEach((x, idx) => { x.style.color = (idx + 1) <= stars ? '#f5b301' : 'var(--text3)'; });
+      });
+      if (window.currentContact && window.currentContact.id === id) window.currentContact.manual_priority = stars;
+    } catch (e) { alert('Erreur r\u00e9seau (priorit\u00e9)'); }
+  };
+
   function renderContact(data) {
     const c = data.contact;
     const pri = priorityLabel(data.priority_score);
@@ -961,6 +998,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           ${escapeHtml(c.prenom || '')} ${escapeHtml(c.nom || '')}
           <span class="scout-priority-badge ${pri.cls}">${pri.label}</span>
         </div>
+        ${starWidgetHtml(c)}
         <div class="title">${escapeHtml(c.titre || '')} ${c.organisation ? ' — ' + escapeHtml(c.organisation) : ''}</div>
         <div class="meta">
           ${c.pays ? `<span>📍 ${escapeHtml(c.pays)}</span>` : ''}
@@ -8382,6 +8420,7 @@ async function openContactDetail(id) {
   const compte = (typeof allEndUsers !== 'undefined' && Array.isArray(allEndUsers)) ? allEndUsers.find(e => e.id === f.end_user_id) : null;
   let html = `<div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:2px;">${esc(((f.prenom || '') + ' ' + (f.nom || '')).trim())}</div>`;
   html += `<div style="font-size:13px;color:var(--accent2);margin-bottom:14px;">${esc(f.titre || '')}</div>`;
+  html += (typeof window.starWidgetHtml === 'function') ? '<div style="margin-bottom:12px;">' + window.starWidgetHtml(f) + '</div>' : '';
   html += row('Organisation', f.organisation);
   html += row('Pays', f.pays);
   html += row('Type', f.type_contact);
