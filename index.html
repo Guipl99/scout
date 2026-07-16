@@ -1419,7 +1419,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     </div>
     <div class="nav-item" id="nav-end-users" onclick="go('end-users')">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M15 13c0-1.66-1.34-3-3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Buyers
+      Comptes
     </div>
     <div class="nav-item" id="nav-contacts" onclick="go('contacts')">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="2.6" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 13.5c0-3 2.46-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -1577,7 +1577,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <!-- TOP BUYERS -->
         <div class="db-card">
           <div class="db-card-header">
-            <span class="db-card-title">🎖️ Buyers clés</span>
+            <span class="db-card-title">🎖️ Comptes clés</span>
             <button class="db-link" onclick="go('end-users')">Voir tout →</button>
           </div>
           <div id="db-buyers-list" class="db-list">
@@ -1822,7 +1822,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <!-- Toggle Buyers / Contacts -->
           <div style="display:flex;background:var(--bg3);border-radius:8px;padding:2px;gap:2px;">
             <button id="eu-tab-comptes" onclick="setEuTab('comptes')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--accent);color:white;font-weight:600;transition:all 0.15s;">🏢 Comptes</button>
-            <button id="eu-tab-contacts" onclick="setEuTab('contacts')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">👤 Contacts</button>
+            <button id="eu-tab-contacts" onclick="setEuTab('contacts')" style="display:none;font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">👤 Contacts</button>
           </div>
           <span id="eu-count-badge" style="font-size:11px;color:var(--text2);background:var(--bg3);border-radius:10px;padding:2px 8px;"></span>
           <button id="btn-my-pays" onclick="applyMyPaysFilter(euTab)" title="Filtrer sur mes pays cibles"
@@ -1935,10 +1935,10 @@ Mes pays
                 <option value="societes">Fabricants</option>
                 <option value="produits-db">Systèmes</option>
                 <option value="contracts">Contrats & Tenders</option>
-                <option value="end-users">Buyers</option>
+                <option value="end-users">Comptes</option>
               </select>
             </div>
-            <div>
+            <div style="display:none;">
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Sous-onglet par défaut dans Buyers</label>
               <div style="display:flex;gap:8px;">
                 <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
@@ -2474,9 +2474,9 @@ function go(id, opts) {
     // The fetch is cheap (cached after first call) and runs in parallel with loadEndUsers.
     const segPromise = loadBuyerSegments();
     Promise.all([loadEndUsers(forceReload), segPromise]).then(() => {
-      const tab = opts?.tab || loadSettings().defaultSubtab || 'comptes';
+      const tab = 'comptes'; // l'onglet Contacts est désormais un onglet séparé
       setEuTab(tab);
-      restoreSavedFilters(tab === 'contacts' ? 'contacts' : 'end-users');
+      restoreSavedFilters('end-users');
       filterCurrentTab();
       populateEuDroneFilters();
       // Render the dashboard-filter badge if any
@@ -2521,7 +2521,7 @@ function renderDashboardFilterBadge() {
   if (contractsRow) contractsRow.innerHTML = '';
   if (!filter) return;
   const labels = {
-    ready:      { txt: '🎯 Buyers prêts (≥1 email, 0 outreach)', bg: 'rgba(108,99,255,.15)', col: 'var(--accent2)', borderCol: 'rgba(108,99,255,.4)' },
+    ready:      { txt: '🎯 Comptes prêts (≥1 email, 0 outreach)', bg: 'rgba(108,99,255,.15)', col: 'var(--accent2)', borderCol: 'rgba(108,99,255,.4)' },
     covered:    { txt: '✉️ Couverture (≥1 outreach)',           bg: 'rgba(34,197,94,.15)',  col: '#22c55e',         borderCol: 'rgba(34,197,94,.4)' },
     closing30d: { txt: '🔥 Tenders fermant < 30j',              bg: 'rgba(245,158,11,.15)', col: '#f59e0b',         borderCol: 'rgba(245,158,11,.4)' },
   };
@@ -2994,7 +2994,7 @@ var _recentCache = null;
 var RECENT_TYPE_META = {
   societe:  { emoji: '\ud83c\udfe2', label: 'Société',  dot: 'ugv_target',  nav: function(id){ go('societes'); setTimeout(function(){ openSociete(id); }, 300); } },
   contract: { emoji: '\ud83d\udccb', label: 'Contrat',  dot: 'contract',    nav: function(id){ go('contracts'); setTimeout(function(){ openContractDetail(id); }, 200); } },
-  contact:  { emoji: '\ud83d\udc64', label: 'Contact',  dot: 'prospect',    nav: function(id){ go('end-users'); setTimeout(async function(){ if (!allEndUsers.length) await loadEndUsers(); setEuTab('contacts'); }, 300); } },
+  contact:  { emoji: '\ud83d\udc64', label: 'Contact',  dot: 'prospect',    nav: function(id){ go('contacts'); setTimeout(function(){ if (typeof openContactDetail === 'function' && id) openContactDetail(id); }, 300); } },
   end_user: { emoji: '\ud83c\udfaf', label: 'End-user', dot: 'buyer',       nav: function(id){ go('end-users'); setTimeout(async function(){ if (!allEndUsers.length) await loadEndUsers(); openEndUser(id); }, 300); } },
   tender:   { emoji: '\u23f0',        label: 'Tender',   dot: 'tender_isr',  nav: function(id){ go('contracts'); setTimeout(function(){ setContractTypeTab('live'); setTimeout(function(){ openTenderDetail(id); }, 400); }, 200); } }
 };
@@ -5293,6 +5293,7 @@ let allEndUsers = [];
 let euTab = 'comptes'; // 'comptes' or 'contacts'
 
 function setEuTab(tab) {
+  if (tab === 'contacts') { if (typeof go === 'function') go('contacts'); return; }
   euTab = tab;
   // Toggle button styles
   const btnC = document.getElementById('eu-tab-comptes');
