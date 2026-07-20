@@ -1465,7 +1465,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-sub db-kpi-sub-muted" id="m-emails-new-avg15d">—</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('contacts',{contactFilter:'contacted7d'})" title="Emails marqués comme envoyés dans Scout sur les 7 derniers jours. Sub-label : moyenne quotidienne sur les 15 derniers jours.">
+        <div class="db-kpi" onclick="go('contacts',{contactFilter:'emailed7d'})" title="Emails marqués comme envoyés dans Scout sur les 7 derniers jours. Sub-label : moyenne quotidienne sur les 15 derniers jours.">
           <div class="db-kpi-icon">📤</div>
           <div class="db-kpi-body">
             <div class="db-kpi-val" id="m-emails-sent-7d">—</div>
@@ -1473,7 +1473,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-sub db-kpi-sub-muted" id="m-emails-sent-avg15d">—</div>
           </div>
         </div>
-        <div class="db-kpi" onclick="go('contacts',{contactFilter:'contacted'})" title="Total cumulé des emails envoyés depuis le début">
+        <div class="db-kpi" onclick="go('contacts',{contactFilter:'emailed'})" title="Total cumulé des emails envoyés depuis le début">
           <div class="db-kpi-icon">📨</div>
           <div class="db-kpi-body">
             <div class="db-kpi-val" id="m-emails-sent-total">—</div>
@@ -8386,6 +8386,8 @@ function filterContactsPanel() {
     if (_cf === 'email' && !(c.email && String(c.email).trim())) return false;
     if (_cf === 'new7d') { const _t = c.created_at ? new Date(c.created_at).getTime() : 0; if (!(_t && (_now - _t) <= 7*86400000)) return false; }
     if (_cf === 'contacted' && !c.contacted) return false;
+    if (_cf === 'emailed' && !c.emailed) return false;
+    if (_cf === 'emailed7d' && !c.emailed_7d) return false;
     if (_cf === 'contacted7d' && !c.contacted_7d) return false;
     if (_cf === 'stock' && !((c.email && String(c.email).trim()) && !c.contacted)) return false;
     if (excluded.length && c.pays && excluded.includes(c.pays)) return false;
@@ -8403,7 +8405,7 @@ function filterContactsPanel() {
   if (badge) badge.textContent = list.length + ' contact' + (list.length > 1 ? 's' : '');
   const chip = document.getElementById('contacts-panel-filterchip');
   if (chip) {
-    const FLABEL = { interested:'✅ Intéressés', email:'✉️ Avec email', new7d:'🆕 Nouveaux (7j)', contacted:'📤 Déjà contactés', contacted7d:'📤 Contactés (7j)', stock:'🎯 À contacter (stock)' };
+    const FLABEL = { interested:'✅ Intéressés', email:'✉️ Avec email', new7d:'🆕 Nouveaux (7j)', contacted:'📤 Déjà contactés', contacted7d:'📤 Contactés (7j)', emailed:'📧 Emailés', emailed7d:'📧 Emailés (7j)', stock:'🎯 À contacter (stock)' };
     if (_cf && FLABEL[_cf]) {
       chip.style.display = 'inline-flex';
       chip.style.cssText += ';align-items:center;gap:6px;font-size:12px;font-weight:600;color:#16a34a;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);border-radius:14px;padding:4px 10px;cursor:default;';
