@@ -2421,14 +2421,15 @@ function go(id, opts) {
   // Ferme toute modale/overlay ouverte avant de changer d'onglet (évite qu'une modale
   // reste affichée par-dessus la nouvelle page — Prochaine action, recherche globale, etc.)
   try {
-    ['scout-action-modal','scout-gs-overlay','scout-reply-modal','contact-detail-modal'].forEach(function(mid){
+    // Modales persistantes pilotées par la classe .open : on retire juste la classe (ne PAS toucher au style inline,
+    // sinon elles ne se rouvrent plus).
+    ['scout-action-modal','scout-gs-overlay','contact-detail-modal'].forEach(function(mid){
       var el = document.getElementById(mid);
-      if (!el) return;
-      if (el.classList && el.classList.contains('open')) el.classList.remove('open');
-      // les overlays créés dynamiquement (reply/search/action) sont retirés du DOM ; sinon on masque
-      if (mid === 'scout-reply-modal' || mid === 'scout-gs-overlay') { try { el.remove(); } catch(_) { el.style.display='none'; } }
-      else { el.style.display = 'none'; }
+      if (el && el.classList) el.classList.remove('open');
     });
+    // La modale de réponse est créée dynamiquement (appendChild) : on la retire du DOM.
+    var _rm = document.getElementById('scout-reply-modal');
+    if (_rm) { try { _rm.remove(); } catch(_) {} }
   } catch(_) {}
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
