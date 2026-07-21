@@ -108,7 +108,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 #panel-resellers.active { display: flex !important; }
 
 /* ── Topbar ── */
-.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 8px; flex-wrap: wrap; }
+.topbar { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 1.5rem; gap: 12px; flex-wrap: wrap; }
 .topbar h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.5px; }
 /* Back-to-home button reused on every panel header. Lives next to the H1 (or next to
    subtab toggles on panels without a topbar). 36px touch target works on mobile + desktop. */
@@ -2454,7 +2454,14 @@ function go(id, opts) {
   }
 
   if (id === 'dashboard') renderDashboard();
-  if (id === 'contacts') { window._contactsPanelFilter = (opts && opts.contactFilter) || null; renderContactsPanel(); }
+  if (id === 'contacts') {
+    window._contactsPanelFilter = (opts && opts.contactFilter) || null;
+    // Uniformise le reset : à chaque arrivée sur l'onglet, on repart d'une base propre (comme la puce)
+    var _cs=document.getElementById('contacts-panel-search'); if(_cs) _cs.value='';
+    var _cp=document.getElementById('contacts-panel-pays'); if(_cp) _cp.value='';
+    var _ct=document.getElementById('contacts-panel-type'); if(_ct) _ct.value='';
+    renderContactsPanel();
+  }
   if (id === 'societes') { backToSocietes(); loadSocietes().then(renderSocietes); }
   if (id === 'produits-db') { backToProduits(); loadAllProduits().then(renderProduits); }
   if (id === 'contracts') {
@@ -8596,7 +8603,7 @@ window._navStack = window._navStack || [];
 let _currentView = null, _navRestoring = false, _panelSetAt = 0;
 function _panelForFiche(k){ return k==='societe'?'societes':k==='produit'?'produits-db':k==='endUser'?'end-users':null; }
 function _viewEq(a,b){ return a&&b&&a.kind===b.kind&&a.id===b.id&&(a.tab||'')===(b.tab||''); }
-function _updateBackBtn(){ const b=document.getElementById('nav-back-btn'); if(b) b.style.display = window._navStack.length ? 'inline-flex' : 'none'; }
+function _updateBackBtn(){ const b=document.getElementById('nav-back-btn'); if(!b) return; const _d=_currentView&&(_currentView.kind==='societe'||_currentView.kind==='produit'||_currentView.kind==='endUser'); b.style.display = (window._navStack.length && _d) ? 'inline-flex' : 'none'; }
 function _setCurrentView(v){
   if(_navRestoring){ _currentView=v; if(v.kind==='panel')_panelSetAt=Date.now(); _updateBackBtn(); return; }
   if(_currentView && !_viewEq(_currentView, v)){
