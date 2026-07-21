@@ -3317,16 +3317,22 @@ function renderMyStats() {
     const rate = d.emails_total > 0 ? Math.round((d.interested / d.emails_total) * 100) : 0;
     set('m-my-interested-sub', d.emails_total > 0 ? rate + '% de mes emails' : '—');
     if (strip) {
-      if (d.my_rank && d.team_size > 1) {
-        const medal = d.my_rank === 1 ? '\U0001F947' : d.my_rank === 2 ? '\U0001F948' : d.my_rank === 3 ? '\U0001F949' : '\U0001F3C5';
+      const lb = d.leaderboard || [];
+      if (lb.length) {
         const meLc = (d.me || '').trim().toLowerCase();
-        const lead = (d.leaderboard || []).map(m => {
+        let rankHtml;
+        if (d.my_rank) {
+          const medal = d.my_rank === 1 ? '🥇' : d.my_rank === 2 ? '🥈' : d.my_rank === 3 ? '🥉' : '🏅';
+          rankHtml = '<div class="db-perso-rank"><span class="db-perso-badge">' + medal + '</span> #' + d.my_rank + '</div>'
+            + '<div style="font-size:12px;color:var(--text2);">' + (d.my_share_pct || 0) + '% des emails de l\'équipe (7j)</div>';
+        } else {
+          rankHtml = '<div class="db-perso-rank" style="color:var(--text2);font-weight:600;"><span class="db-perso-badge">📊</span> Non classé cette semaine</div>';
+        }
+        const lead = lb.map(m => {
           const cls = (m.name || '').trim().toLowerCase() === meLc ? 'db-lead-me' : '';
           return '<span class="' + cls + '">' + escapeHtml(m.name || '?') + ' <b>' + (m.emails || 0) + '</b></span>';
         }).join('');
-        strip.innerHTML =
-          '<div class="db-perso-rank"><span class="db-perso-badge">' + medal + '</span> #' + d.my_rank + ' sur ' + d.team_size + '</div>'
-          + '<div style="font-size:12px;color:var(--text2);">' + (d.my_share_pct || 0) + '% des emails de l\'équipe (7j)</div>'
+        strip.innerHTML = rankHtml
           + '<div class="db-perso-sep"></div>'
           + '<div class="db-perso-lead"><span style="color:var(--text3);">Classement 7j&nbsp;:</span>' + lead + '</div>';
         strip.style.display = 'flex';
