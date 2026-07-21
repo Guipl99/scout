@@ -713,17 +713,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div class="scout-auth-subtitle">BD Défense Drones Elistair — accès équipe</div>
     <form id="scout-auth-form">
       <div class="scout-field">
-        <label for="scout-auth-firstname">Ton prénom</label>
-        <input id="scout-auth-firstname" type="text" placeholder="Guillaume" autocomplete="given-name" required />
+        <label for="scout-auth-firstname">Ton profil</label>
+        <select id="scout-auth-firstname" required style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#111827;font-size:14px;">
+          <option value="">— Choisis ton profil —</option>
+        </select>
       </div>
       <div class="scout-field">
-        <label for="scout-auth-password">Mot de passe équipe</label>
+        <label for="scout-auth-password">Mot de passe</label>
         <input id="scout-auth-password" type="password" placeholder="••••••••••••" autocomplete="current-password" required />
       </div>
       <button type="submit" id="scout-auth-submit">Se connecter</button>
       <div id="scout-auth-err" class="scout-auth-err" style="display:none;"></div>
     </form>
-    <div class="scout-auth-hint">Session valide 7 jours • Accès réservé équipe Elistair</div>
+    <div class="scout-auth-hint">1re connexion : mot de passe d'équipe, puis crée ton mot de passe perso • Accès réservé équipe Elistair</div>
   </div>
 </div>
 
@@ -786,16 +788,26 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   const authErr = document.getElementById('scout-auth-err');
   const actionBtn = document.getElementById('scout-action-btn');
 
+  async function populateProfiles(){
+    if (!authFirstname || authFirstname.tagName !== 'SELECT') return;
+    try {
+      const r = await fetch(API + '/team/public');
+      const d = await r.json();
+      const savedName = localStorage.getItem(LS_NAME) || '';
+      const opts = ['<option value="">— Choisis ton profil —</option>']
+        .concat((d.users||[]).map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`));
+      authFirstname.innerHTML = opts.join('');
+      if (savedName && (d.users||[]).some(n => n.toLowerCase()===savedName.toLowerCase())) authFirstname.value = savedName;
+    } catch(e) {}
+  }
   function showAuthGate() {
     authGate.classList.remove('hidden');
     authErr.style.display = 'none';
-    // Prefill firstname if known
-    const savedName = localStorage.getItem(LS_NAME);
-    if (savedName) authFirstname.value = savedName;
+    populateProfiles();
     setTimeout(() => {
       if (authFirstname.value) authPassword.focus();
       else authFirstname.focus();
-    }, 100);
+    }, 200);
   }
 
   function hideAuthGate() {
@@ -844,12 +856,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       });
       const data = await r.json();
       if (r.ok && data.session_token) {
-        session = {token: data.session_token, first_name: data.first_name || firstName};
+        session = {token: data.session_token, first_name: data.first_name || firstName, role: data.role || 'commercial'};
         localStorage.setItem(LS_SESSION, JSON.stringify(session));
-        localStorage.setItem(LS_NAME, firstName);
+        localStorage.setItem(LS_NAME, session.first_name);
         // Let other widgets (like chat) pick up the session
         window.scoutSession = session;
         hideAuthGate();
+        try { if (typeof applyServerProfile==='function') applyServerProfile(); } catch(e){}
+        if (data.must_set_password && typeof window.promptSetPassword==='function') setTimeout(()=>window.promptSetPassword(true), 700);
       } else {
         authErr.style.display = 'block';
         authErr.textContent = data.error || 'Erreur de connexion';
@@ -865,6 +879,76 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     }
   });
 
+  function _authH(){ return session && session.token ? {'Authorization':'Bearer '+session.token} : {}; }
+  async function applyServerProfile(){
+    try{
+      const r = await fetch(API + '/me', { headers: _authH() });
+      if(!r.ok) return;
+      const d = await r.json();
+      if(session){ session.role = d.role || 'commercial'; window.scoutSession = session; try{ localStorage.setItem(LS_SESSION, JSON.stringify(session)); }catch(e){} }
+      // Territoire : préférences serveur -> localStorage (le filtre de segments suit l'utilisateur)
+      try{
+        if(d.prefs && d.prefs.segFilter && typeof loadSettings==='function'){
+          const st = loadSettings(); st.segFilter = d.prefs.segFilter; st.segFilterVersion = (typeof SEG_FILTER_VERSION!=='undefined'?SEG_FILTER_VERSION:1);
+          if(d.prefs.name && !st.name) st.name = d.prefs.name;
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(st));
+          if(typeof renderSegFilter==='function') renderSegFilter();
+        }
+      }catch(e){}
+      // Panneau admin visible seulement pour les admins
+      try{
+        const ap = document.getElementById('cfg-team-admin');
+        if(ap) ap.style.display = (session && session.role==='admin') ? 'block' : 'none';
+        if(session && session.role==='admin' && typeof loadTeamPanel==='function') loadTeamPanel();
+      }catch(e){}
+    }catch(e){}
+  }
+  window.promptSetPassword = function(firstTime){
+    let m = document.getElementById('scout-pw-modal');
+    if(!m){ m=document.createElement('div'); m.id='scout-pw-modal'; m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100003;display:flex;align-items:center;justify-content:center;padding:16px;'; m.addEventListener('click',e=>{if(e.target===m)m.remove();}); document.body.appendChild(m); }
+    m.innerHTML = '<div style="background:var(--bg2,#1e293b);color:var(--text,#f1f5f9);border:1px solid var(--border,#334155);border-radius:12px;max-width:420px;width:100%;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.5);">'
+      + '<div style="font-size:16px;font-weight:600;margin-bottom:6px;">'+(firstTime?'Crée ton mot de passe personnel':'Changer mon mot de passe')+'</div>'
+      + '<div style="font-size:12px;color:var(--text2,#94a3b8);margin-bottom:14px;">'+(firstTime?'Tu es connecté avec le mot de passe d\'équipe. Choisis maintenant ton mot de passe perso (min 6 caractères) — tu l\'utiliseras la prochaine fois.':'Min 6 caractères.')+'</div>'
+      + '<input id="scout-pw-new" type="password" placeholder="Nouveau mot de passe" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border2,#334155);background:var(--bg3,#0f172a);color:var(--text,#f1f5f9);font-size:14px;margin-bottom:10px;box-sizing:border-box;">'
+      + '<div id="scout-pw-err" style="display:none;color:#ef4444;font-size:12px;margin-bottom:8px;"></div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+      + '<button id="scout-pw-cancel" style="padding:8px 14px;background:transparent;border:1px solid var(--border,#334155);border-radius:6px;color:var(--text2,#94a3b8);cursor:pointer;font-size:13px;">'+(firstTime?'Plus tard':'Annuler')+'</button>'
+      + '<button id="scout-pw-save" style="padding:8px 14px;background:var(--accent,#6366f1);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Enregistrer</button></div></div>';
+    document.getElementById('scout-pw-cancel').onclick = ()=>m.remove();
+    document.getElementById('scout-pw-save').onclick = async ()=>{
+      const pw=document.getElementById('scout-pw-new').value; const err=document.getElementById('scout-pw-err');
+      if((pw||'').length<6){ err.style.display='block'; err.textContent='Minimum 6 caractères.'; return; }
+      try{
+        const r=await fetch(API+'/me/password',{method:'POST',headers:{'Content-Type':'application/json',..._authH()},body:JSON.stringify({password:pw})});
+        const d=await r.json();
+        if(!r.ok||!d.ok){ err.style.display='block'; err.textContent=d.error||'Erreur'; return; }
+        m.remove(); alert('Mot de passe enregistré ✅ Tu l\'utiliseras à ta prochaine connexion.');
+      }catch(e){ err.style.display='block'; err.textContent='Erreur réseau'; }
+    };
+    setTimeout(()=>{ const el=document.getElementById('scout-pw-new'); if(el) el.focus(); }, 50);
+  };
+  function _teamH(){ const tok=(window.scoutSession&&window.scoutSession.token)||(window.session&&window.session.token); return tok?{'Authorization':'Bearer '+tok}:{}; }
+  window.loadTeamPanel = async function(){
+    const box=document.getElementById('cfg-team-list'); if(!box) return;
+    box.innerHTML='<div style="font-size:12px;color:var(--text3);">Chargement…</div>';
+    try{
+      const r=await fetch(API+'/team',{headers:_teamH()}); const d=await r.json();
+      if(!r.ok){ box.innerHTML='<div style="font-size:12px;color:#ef4444;">'+(d.error||'Erreur')+'</div>'; return; }
+      box.innerHTML=(d.users||[]).map(function(u){
+        const badge=u.role==='admin'?' <span style="font-size:10px;color:var(--accent2);border:1px solid var(--accent);border-radius:8px;padding:1px 6px;">admin</span>':'';
+        const pw=u.has_password?'<span style="font-size:10px;color:#16a34a;">🔒 perso</span>':'<span style="font-size:10px;color:#f59e0b;">mdp équipe</span>';
+        const op=u.active?'':'opacity:.5;';
+        return `<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 8px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;${op}">`
+          + `<span style="font-weight:600;flex:1;min-width:0;">${u.name}${badge}</span>${pw}`
+          + `<button type="button" onclick="window.teamReset(${u.id})" style="font-size:11px;color:var(--accent);background:transparent;border:1px solid var(--border2);border-radius:5px;padding:3px 8px;cursor:pointer;">Réinit. mdp</button>`
+          + `<button type="button" onclick="window.teamToggle(${u.id},${u.active?'false':'true'})" style="font-size:11px;color:var(--text2);background:transparent;border:1px solid var(--border2);border-radius:5px;padding:3px 8px;cursor:pointer;">${u.active?'Désactiver':'Activer'}</button>`
+          + `</div>`;
+      }).join('') || '<div style="font-size:12px;color:var(--text3);">Aucun profil.</div>';
+    }catch(e){ box.innerHTML='<div style="font-size:12px;color:#ef4444;">Erreur réseau</div>'; }
+  };
+  window.teamReset=async function(id){ const pw=prompt('Nouveau mot de passe pour ce commercial (min 6) :'); if(!pw) return; if(pw.length<6){alert('Minimum 6 caractères');return;} try{ const r=await fetch(API+'/team/'+id+'/password',{method:'POST',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({password:pw})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} alert('Mot de passe réinitialisé.'); window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
+  window.teamToggle=async function(id,active){ try{ const r=await fetch(API+'/team/'+id,{method:'PATCH',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({active:active})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
+  window.addTeamMember=async function(){ const name=prompt('Prénom du nouveau commercial :'); if(!name) return; try{ const r=await fetch(API+'/team',{method:'POST',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({name:name.trim()})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} alert('Profil créé. Il se connecte avec le mot de passe d\'équipe, puis crée son mot de passe perso.'); window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
   async function restoreSessionOrShowGate() {
     const raw = localStorage.getItem(LS_SESSION);
     if (!raw) { showAuthGate(); return; }
@@ -875,9 +959,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       });
       if (r.ok) {
         const data = await r.json();
-        session = {token: s.token, first_name: data.first_name || s.first_name || 'Anonyme'};
+        session = {token: s.token, first_name: data.first_name || s.first_name || 'Anonyme', role: (s.role||'commercial')};
         window.scoutSession = session;
         hideAuthGate();
+        try { if (typeof applyServerProfile==='function') applyServerProfile(); } catch(e){}
         return;
       }
     } catch {}
@@ -1896,6 +1981,17 @@ Mes pays
               <input id="cfg-name" type="text" placeholder="Votre nom ou équipe" maxlength="60"
                 style="width:100%;max-width:320px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);outline:none;"
                 oninput="saveSettings()">
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Mot de passe personnel</label>
+              <button type="button" onclick="if(window.promptSetPassword)window.promptSetPassword(false)" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 12px;cursor:pointer;">🔑 Créer / changer mon mot de passe</button>
+            </div>
+            <div id="cfg-team-admin" style="display:none;border-top:1px dashed var(--border);padding-top:12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <label style="font-size:12px;color:var(--text3);">👥 Gestion de l'équipe (admin)</label>
+                <button type="button" onclick="if(window.addTeamMember)window.addTeamMember()" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;cursor:pointer;">+ Ajouter un commercial</button>
+              </div>
+              <div id="cfg-team-list" style="display:flex;flex-direction:column;gap:6px;"></div>
             </div>
             <div>
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Segments proposés dans « Prochaine action » <span style="color:var(--text3);font-weight:400;">(pour cibler une séquence · tout coché = aucun filtre)</span></label>
@@ -6045,6 +6141,13 @@ function saveSegFilter() {
     sf[f] = [...document.querySelectorAll('#cfg-seg-filter input[data-facet="'+f+'"]:checked')].map(el => el.dataset.key);
   const s = loadSettings(); s.segFilter = sf;
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  // Sync serveur : le territoire suit l'utilisateur (best-effort)
+  try {
+    if (window.session && window.session.token || (window.scoutSession && window.scoutSession.token)) {
+      const tok = (window.scoutSession && window.scoutSession.token) || (window.session && window.session.token);
+      fetch(API + '/me/prefs', { method:'PUT', headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok}, body: JSON.stringify({ prefs: { segFilter: sf, name: s.name || '' } }) }).catch(()=>{});
+    }
+  } catch(e) {}
   showSaveMsg();
 }
 function renderSegFilter() {
