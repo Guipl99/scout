@@ -6015,12 +6015,13 @@ const SEG_FACETS = {
     ['am_latine','Amérique latine'],
     ['asie','Asie'],
     ['moyen_orient','Moyen-Orient'],
+    ['israel_turquie','Israël / Turquie'],
     ['afrique','Afrique'],
     ['oceanie','Océanie'] ]},
   equip: { label:'Équipement / concurrent connu (best-effort)', opts:[
     ['dji','DJI'],['skydio','Skydio'],['fotokite','Fotokite'],['parrot','Parrot'],['flock_axon_brinc','Flock / Axon / BRINC'],['inconnu','Inconnu'] ]},
 };
-const SEG_FILTER_VERSION = 2; // bump quand les clés de facettes changent (métier/zone)
+const SEG_FILTER_VERSION = 3; // bump quand les clés de facettes changent (métier/zone)
 function getSegFilter() {
   const s = loadSettings();
   const allChecked = () => { const o={}; for (const f of Object.keys(SEG_FACETS)) o[f]=SEG_FACETS[f].opts.map(x=>x[0]); return o; };
