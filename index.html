@@ -3328,9 +3328,10 @@ function renderMyStats() {
         } else {
           rankHtml = '<div class="db-perso-rank" style="color:var(--text2);font-weight:600;"><span class="db-perso-badge">📊</span> Non classé cette semaine</div>';
         }
+        const esc = t => String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         const lead = lb.map(m => {
           const cls = (m.name || '').trim().toLowerCase() === meLc ? 'db-lead-me' : '';
-          return '<span class="' + cls + '">' + escapeHtml(m.name || '?') + ' <b>' + (m.emails || 0) + '</b></span>';
+          return '<span class="' + cls + '">' + esc(m.name || '?') + ' <b>' + (m.emails || 0) + '</b></span>';
         }).join('');
         strip.innerHTML = rankHtml
           + '<div class="db-perso-sep"></div>'

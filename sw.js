@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scout-drone-v96';
+const CACHE_NAME = 'scout-drone-v97';
 const STATIC_ASSETS = [
   '/scout/',
   '/scout/index.html',
