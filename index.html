@@ -758,6 +758,28 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 (function(){
   const API = (typeof window !== 'undefined' && window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
   const LS_SESSION = 'scout_chat_session';
+  // SECURITY: injecte automatiquement le token de session sur TOUS les appels à l'API
+  // (le backend exige désormais une session pour lire les données). Couvre les appels qui
+  // n'envoyaient pas déjà les en-têtes d'auth.
+  (function(){
+    if (window.__scoutFetchPatched) return; window.__scoutFetchPatched = true;
+    const _f = window.fetch.bind(window);
+    window.fetch = function(input, init){
+      try{
+        const url = (typeof input === 'string') ? input : (input && input.url) || '';
+        if (url.indexOf(API) === 0) {
+          init = init || {};
+          const h = new Headers(init.headers || {});
+          if (!h.has('Authorization')) {
+            const tok = (window.scoutSession && window.scoutSession.token) || null;
+            if (tok) h.set('Authorization', 'Bearer ' + tok);
+          }
+          init.headers = h;
+        }
+      }catch(e){}
+      return _f(input, init);
+    };
+  })();
   const LS_NAME = 'scout_user_firstname';
 
   let session = null; // { token, first_name }
