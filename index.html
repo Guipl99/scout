@@ -173,6 +173,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-section-sub { font-size:11px; color:var(--text3); white-space:nowrap; }
 .db-section-head::after { content:''; flex:1; height:1px; background:var(--border); }
 .db-kpi-row-perso { grid-template-columns:repeat(4,1fr); }
+.db-chart-scope { display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; }
+.db-chart-scope button { background:transparent; border:0; color:var(--text2); font-size:11px; font-weight:600; padding:3px 11px; cursor:pointer; transition:background .15s,color .15s; }
+.db-chart-scope button:hover { color:var(--text); }
+.db-chart-scope button.active { background:var(--accent); color:#fff; }
 .db-perso-strip { display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:9px 14px; margin-top:2px; }
 .db-perso-rank { font-size:13px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:6px; }
 .db-perso-rank .db-perso-badge { font-size:15px; }
@@ -1669,7 +1673,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <!-- MINI-GRAPHE ACTIVITÉ -->
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-          <span style="font-size:13px;font-weight:600;color:var(--text);">📈 Activité — 14 derniers jours</span>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span id="db-chart-title" style="font-size:13px;font-weight:600;color:var(--text);">📈 Activité — 14 derniers jours · équipe</span>
+            <div class="db-chart-scope" id="db-chart-scope">
+              <button type="button" data-scope="team" class="active" onclick="setChartScope('team')">Équipe</button>
+              <button type="button" data-scope="me" onclick="setChartScope('me')">Moi</button>
+            </div>
+          </div>
           <span id="db-chart-legend" style="display:flex;gap:14px;font-size:11px;color:var(--text2);flex-wrap:wrap;"></span>
         </div>
         <div id="db-email-chart" style="min-height:150px;"></div>
@@ -3270,6 +3280,19 @@ function _renderRecentRows(items) {
 
 
 
+function getChartScope(){ try { return localStorage.getItem('scoutChartScope') === 'me' ? 'me' : 'team'; } catch(e){ return 'team'; } }
+function syncChartScopeButtons(){ const sc = getChartScope(); document.querySelectorAll('#db-chart-scope button').forEach(b => b.classList.toggle('active', b.dataset.scope === sc)); }
+function setChartScope(sc){ sc = sc === 'me' ? 'me' : 'team'; try { localStorage.setItem('scoutChartScope', sc); } catch(e){} syncChartScopeButtons(); loadCockpitChart(); }
+function loadCockpitChart(){
+  const scope = getChartScope();
+  const ep = scope === 'me' ? '/me/stats-timeseries' : '/contacts/stats-timeseries';
+  const titleEl = document.getElementById('db-chart-title');
+  if (titleEl) titleEl.textContent = '📈 Activité — 14 derniers jours · ' + (scope === 'me' ? 'moi' : 'équipe');
+  fetch(API + ep + '?days=14').then(r => r.json()).then(d => {
+    if (d && d.ok) renderCockpitChart(d.days);
+  }).catch(()=>{});
+}
+
 function renderCockpitChart(series){
   const el = document.getElementById('db-email-chart');
   if(!el) return;
@@ -3361,10 +3384,9 @@ function renderDashboard() {
   // Stats perso du commercial connecté (section « Mon activité »)
   renderMyStats();
 
-  // Mini-graphe activité (emails envoyés + retours positifs)
-  fetch(API + '/contacts/stats-timeseries?days=14').then(r => r.json()).then(d => {
-    if (d && d.ok) renderCockpitChart(d.days);
-  }).catch(()=>{});
+  // Mini-graphe activité (emails envoyés + retours positifs) — bascule Équipe / Moi
+  syncChartScopeButtons();
+  loadCockpitChart();
 
   fetch(API + '/contacts/stats-engagement').then(r => r.json()).then(d => {
     if (!d || !d.ok) return;
