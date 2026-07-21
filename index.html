@@ -941,6 +941,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         const ap = document.getElementById('cfg-team-admin');
         if(ap) ap.style.display = (session && session.role==='admin') ? 'block' : 'none';
         if(session && session.role==='admin' && typeof loadTeamPanel==='function') loadTeamPanel();
+        const irc = document.getElementById('card-import-review');
+        if(irc) irc.style.display = (session && session.role==='admin') ? 'block' : 'none';
+        if(session && session.role==='admin' && typeof loadImportReview==='function') loadImportReview();
       }catch(e){}
     }catch(e){}
   }
@@ -2194,6 +2197,33 @@ Réinitialiser tous les filtres
           <span id="cfg-save-msg" style="font-size:12px;color:#22c55e;opacity:0;transition:opacity 0.3s;"></span>
         </div>
 
+        <!-- ── Import de contacts (tous les commerciaux) ────── -->
+        <div class="card" id="card-import">
+          <div class="card-header"><span class="card-title">📥 Importer des contacts</span></div>
+          <div class="card-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+            <p style="font-size:13px;color:var(--text2);margin:0;">
+              Téléversez un fichier <b>CSV</b> ou <b>Excel</b> (.xlsx). Les contacts ne sont pas ajoutés directement :
+              ils partent en file de validation, où l'admin les qualifie avant intégration. Colonnes reconnues
+              automatiquement : prénom, nom, email, organisation, titre, pays, LinkedIn, téléphone.
+            </p>
+            <input type="file" id="import-file" accept=".csv,.tsv,.xlsx,.xls" onchange="handleImportFile(event)"
+              style="font-size:13px;color:var(--text2);">
+            <div id="import-map" style="display:none;"></div>
+            <div id="import-result" style="font-size:12.5px;"></div>
+          </div>
+        </div>
+
+        <!-- ── Contacts importés à valider (admin) ────────────── -->
+        <div class="card" id="card-import-review" style="display:none;">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <span class="card-title">🗂️ Contacts importés à valider <span id="import-review-count" style="font-size:10px;color:var(--text3);margin-left:4px;"></span></span>
+            <button onclick="loadImportReview()" style="font-size:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--text2);">↻ Rafraîchir</button>
+          </div>
+          <div class="card-body" id="import-review-body" style="padding:16px;">
+            <span style="font-size:12px;color:var(--text3);">Chargement…</span>
+          </div>
+        </div>
+
         <!-- ── Modération veille web ─────────────────────────── -->
         <div class="card" id="card-pending">
           <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
@@ -2670,6 +2700,13 @@ function go(id, opts) {
     // Settings panel — peupler la liste des pays exclus et tous les champs.
     // applySettings() s'occupe de loadEndUsers/loadContacts si besoin.
     if (typeof applySettings === 'function') applySettings();
+    // File de validation des imports (admin uniquement)
+    try {
+      const isAdmin = window.scoutSession && window.scoutSession.role === 'admin';
+      const irc = document.getElementById('card-import-review');
+      if (irc) irc.style.display = isAdmin ? 'block' : 'none';
+      if (isAdmin && typeof loadImportReview === 'function') loadImportReview();
+    } catch(e){}
   }
   if (id === 'end-users') {
     // When user clicks "Comptes" in the nav, force a fresh fetch — the in-memory cache
@@ -5393,6 +5430,272 @@ function renderProduitsFiltered(list) {
 }
 
 // ── MODÉRATION VEILLE WEB ─────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+// IMPORT DE CONTACTS (front) — parsing CSV/Excel, mapping, upload, validation admin
+// ══════════════════════════════════════════════════════════════════
+const IMPORT_TARGETS = [
+  ['prenom','Prénom'], ['nom','Nom'], ['fullname','Nom complet (à découper)'],
+  ['email','Email'], ['organisation','Organisation'], ['titre','Titre / poste'],
+  ['pays','Pays'], ['linkedin','LinkedIn'], ['telephone','Téléphone'],
+  ['secteur','Secteur'], ['notes','Notes']
+];
+const IMPORT_SYN = {
+  prenom:['prenom','first name','firstname','first','given name','given'],
+  nom:['last name','lastname','surname','family name','nom de famille','last','nom'],
+  fullname:['full name','nom complet','contact name','nom et prenom','name'],
+  email:['email','e-mail','mail','courriel','adresse mail'],
+  organisation:['organisation','organization','company','societe','entreprise','account','employer','compte','org'],
+  titre:['titre','title','poste','position','job title','job','fonction','role'],
+  pays:['pays','country','location','region','zone'],
+  linkedin:['linkedin','profil linkedin','linkedin url','profile url','profil','profile'],
+  telephone:['telephone','phone','tel','mobile','portable','numero','tel.'],
+  secteur:['secteur','sector','industry','industrie','domaine','domain'],
+  notes:['notes','note','comment','commentaire','remarque','remarks','description','info']
+};
+function _impNorm(x){ return String(x==null?'':x).toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function _impEsc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+let _importParsed = null; // { headers:[], rows:[{header:value}] }
+
+function _detectDelim(line){
+  const c = { ',':0, ';':0, '\t':0 };
+  let q=false;
+  for(const ch of line){ if(ch==='"') q=!q; else if(!q && c[ch]!==undefined) c[ch]++; }
+  let best=',', bv=-1; for(const k in c){ if(c[k]>bv){ bv=c[k]; best=k; } }
+  return best;
+}
+function _parseCSV(text){
+  text = text.replace(/^﻿/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const firstLine = text.slice(0, text.indexOf('\n')>-1?text.indexOf('\n'):text.length);
+  const delim = _detectDelim(firstLine);
+  const rows=[]; let row=[], cur='', q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){
+      if(ch==='"'){ if(text[i+1]==='"'){ cur+='"'; i++; } else q=false; }
+      else cur+=ch;
+    } else {
+      if(ch==='"') q=true;
+      else if(ch===delim){ row.push(cur); cur=''; }
+      else if(ch==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+      else cur+=ch;
+    }
+  }
+  if(cur.length||row.length){ row.push(cur); rows.push(row); }
+  const nonEmpty = rows.filter(r=>r.some(c=>String(c).trim()!==''));
+  if(!nonEmpty.length) return { headers:[], rows:[] };
+  const headers = nonEmpty[0].map(h=>String(h).trim());
+  const out = nonEmpty.slice(1).map(r=>{ const o={}; headers.forEach((h,idx)=>o[h]=r[idx]!==undefined?String(r[idx]).trim():''); return o; });
+  return { headers, rows: out };
+}
+function _loadSheetJS(){
+  return new Promise((resolve,reject)=>{
+    if(window.XLSX) return resolve(window.XLSX);
+    const sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    sc.onload=()=>resolve(window.XLSX); sc.onerror=()=>reject(new Error('Impossible de charger le lecteur Excel'));
+    document.head.appendChild(sc);
+  });
+}
+async function _parseXLSX(file){
+  const XLSX = await _loadSheetJS();
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type:'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const aoa = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', raw:false });
+  const nonEmpty = aoa.filter(r=>r.some(c=>String(c).trim()!==''));
+  if(!nonEmpty.length) return { headers:[], rows:[] };
+  const headers = nonEmpty[0].map(h=>String(h).trim());
+  const rows = nonEmpty.slice(1).map(r=>{ const o={}; headers.forEach((h,idx)=>o[h]=r[idx]!==undefined?String(r[idx]).trim():''); return o; });
+  return { headers, rows };
+}
+
+async function handleImportFile(ev){
+  const file = ev.target.files && ev.target.files[0];
+  const resEl = document.getElementById('import-result');
+  const mapEl = document.getElementById('import-map');
+  if(resEl) resEl.innerHTML='';
+  if(!file){ if(mapEl) mapEl.style.display='none'; return; }
+  try{
+    let parsed;
+    const name = file.name.toLowerCase();
+    if(name.endsWith('.xlsx') || name.endsWith('.xls')){
+      if(resEl) resEl.innerHTML='<span style="color:var(--text3);">Lecture du fichier Excel…</span>';
+      parsed = await _parseXLSX(file);
+    } else {
+      const text = await file.text();
+      parsed = _parseCSV(text);
+    }
+    if(resEl) resEl.innerHTML='';
+    if(!parsed.headers.length || !parsed.rows.length){
+      if(resEl) resEl.innerHTML='<span style="color:#f59e0b;">Aucune donnée détectée dans le fichier.</span>';
+      if(mapEl) mapEl.style.display='none';
+      return;
+    }
+    _importParsed = parsed;
+    _renderImportMapping(file.name);
+  }catch(e){
+    if(resEl) resEl.innerHTML='<span style="color:#ef4444;">Erreur de lecture : '+_impEsc(e.message)+'</span>';
+  }
+}
+function _autoMap(headers){
+  const used=new Set(); const map={};
+  for(const [key] of IMPORT_TARGETS){
+    const syns=IMPORT_SYN[key]||[];
+    let found=null;
+    // exact match first
+    for(const h of headers){ if(used.has(h)) continue; const nh=_impNorm(h); if(syns.some(sy=>nh===_impNorm(sy))){ found=h; break; } }
+    // then startsWith / includes
+    if(!found){ for(const h of headers){ if(used.has(h)) continue; const nh=_impNorm(h); if(syns.some(sy=>{const ns=_impNorm(sy); return nh.startsWith(ns)||nh.includes(ns);})){ found=h; break; } } }
+    if(found){ map[key]=found; used.add(found); }
+  }
+  // If both prenom & fullname matched the same idea, prefer explicit prenom/nom
+  if((map.prenom||map.nom) && map.fullname){ delete map.fullname; }
+  return map;
+}
+function _renderImportMapping(filename){
+  const mapEl = document.getElementById('import-map'); if(!mapEl) return;
+  const { headers, rows } = _importParsed;
+  const auto = _autoMap(headers);
+  const opts = h => '<option value="">— ignorer —</option>' + headers.map(x=>'<option value="'+_impEsc(x)+'"'+(h===x?' selected':'')+'>'+_impEsc(x)+'</option>').join('');
+  let html = '<div style="border-top:1px dashed var(--border);padding-top:12px;display:flex;flex-direction:column;gap:10px;">';
+  html += '<div style="font-size:12.5px;color:var(--text2);"><b>'+rows.length.toLocaleString('fr-FR')+'</b> ligne'+(rows.length>1?'s':'')+' détectée'+(rows.length>1?'s':'')+' dans <i>'+_impEsc(filename)+'</i>. Vérifiez la correspondance des colonnes :</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;">';
+  for(const [key,label] of IMPORT_TARGETS){
+    html += '<div style="display:flex;flex-direction:column;gap:3px;">'
+      + '<label style="font-size:11px;color:var(--text3);">'+label+'</label>'
+      + '<select data-imp-target="'+key+'" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--text);">'+opts(auto[key]||null)+'</select>'
+      + '</div>';
+  }
+  html += '</div>';
+  html += '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">'
+    + '<button onclick="doImport()" style="background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;">Envoyer '+rows.length.toLocaleString('fr-FR')+' contacts en validation</button>'
+    + '<span style="font-size:11px;color:var(--text3);">Ils seront qualifiés par l\'admin avant intégration.</span>'
+    + '</div>';
+  html += '</div>';
+  mapEl.innerHTML = html;
+  mapEl.style.display='block';
+}
+async function doImport(){
+  if(!_importParsed) return;
+  const mapEl = document.getElementById('import-map');
+  const resEl = document.getElementById('import-result');
+  const map={};
+  mapEl.querySelectorAll('select[data-imp-target]').forEach(sel=>{ if(sel.value) map[sel.getAttribute('data-imp-target')]=sel.value; });
+  if(!map.email && !map.prenom && !map.nom && !map.fullname && !map.organisation){
+    resEl.innerHTML='<span style="color:#f59e0b;">Associez au moins un email, un nom ou une organisation.</span>'; return;
+  }
+  const outRows = _importParsed.rows.map(r=>{
+    const o={};
+    for(const [key] of IMPORT_TARGETS){ if(key==='fullname') continue; if(map[key]) o[key]=r[map[key]]||''; }
+    if(map.fullname && !((o.prenom||'').trim()) && !((o.nom||'').trim())){
+      const parts=String(r[map.fullname]||'').trim().split(/\s+/);
+      o.prenom=parts.shift()||''; o.nom=parts.join(' ');
+    }
+    return o;
+  });
+  const btn = mapEl.querySelector('button'); if(btn){ btn.disabled=true; btn.textContent='Envoi…'; }
+  try{
+    const r = await fetch(API + '/contact-imports', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ rows: outRows, label: (document.getElementById('import-file')?.files?.[0]?.name)||'' }) });
+    const d = await r.json();
+    if(!r.ok || !d.ok){ resEl.innerHTML='<span style="color:#ef4444;">Erreur : '+_impEsc(d.error||'échec')+'</span>'; if(btn){btn.disabled=false;} return; }
+    let msg = '✅ <b>'+d.inserted.toLocaleString('fr-FR')+'</b> contact'+(d.inserted>1?'s':'')+' envoyé'+(d.inserted>1?'s':'')+' en validation.';
+    if(d.duplicates_flagged) msg += ' '+d.duplicates_flagged+' doublon'+(d.duplicates_flagged>1?'s':'')+' signalé'+(d.duplicates_flagged>1?'s':'')+' (email déjà en base).';
+    if(d.skipped_empty) msg += ' '+d.skipped_empty+' ligne'+(d.skipped_empty>1?'s':'')+' vide'+(d.skipped_empty>1?'s':'')+' ignorée'+(d.skipped_empty>1?'s':'')+'.';
+    resEl.innerHTML='<span style="color:#22c55e;">'+msg+'</span>';
+    mapEl.style.display='none'; _importParsed=null;
+    const fi=document.getElementById('import-file'); if(fi) fi.value='';
+    if(window.scoutSession && window.scoutSession.role==='admin' && typeof loadImportReview==='function') loadImportReview();
+  }catch(e){ resEl.innerHTML='<span style="color:#ef4444;">Erreur réseau : '+_impEsc(e.message)+'</span>'; if(btn){btn.disabled=false;} }
+}
+
+// ── Validation admin ──────────────────────────────────────────────
+async function loadImportReview(){
+  const body=document.getElementById('import-review-body'); const cnt=document.getElementById('import-review-count');
+  if(!body) return;
+  body.innerHTML='<span style="font-size:12px;color:var(--text3);">Chargement…</span>';
+  try{
+    const r = await fetch(API + '/contact-imports?status=pending');
+    const d = await r.json();
+    if(!r.ok || !d.ok){ body.innerHTML='<span style="color:#ef4444;font-size:12px;">'+_impEsc(d.error||'Erreur')+'</span>'; return; }
+    const rows = d.rows||[];
+    if(cnt) cnt.textContent = rows.length ? '('+rows.length+' en attente)' : '';
+    if(!rows.length){ body.innerHTML='<span style="font-size:12.5px;color:var(--text3);">Aucun contact en attente de validation. 🎉</span>'; return; }
+    // group by batch
+    const batches={};
+    for(const row of rows){ (batches[row.batch_id]=batches[row.batch_id]||[]).push(row); }
+    let html='';
+    for(const bid of Object.keys(batches)){
+      const list=batches[bid]; const meta=list[0];
+      const dt = meta.created_at ? new Date(meta.created_at).toLocaleString('fr-FR') : '';
+      html += '<div style="border:1px solid var(--border2);border-radius:8px;margin-bottom:14px;overflow:hidden;">';
+      html += '<div style="background:var(--bg3);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">'
+        + '<span style="font-size:12.5px;color:var(--text2);">📄 <b>'+_impEsc(meta.batch_label||'Import')+'</b> · '+list.length+' ligne'+(list.length>1?'s':'')+' · par '+_impEsc(meta.uploaded_by||'?')+' · '+_impEsc(dt)+'</span>'
+        + '<span style="display:flex;gap:6px;">'
+        + '<button onclick="validateBatch(\''+bid+'\',\'validate\',this)" style="background:#16a34a;color:#fff;border:0;border-radius:6px;padding:4px 10px;font-size:11.5px;font-weight:600;cursor:pointer;">Tout valider</button>'
+        + '<button onclick="validateBatch(\''+bid+'\',\'reject\',this)" style="background:var(--bg2);color:var(--text2);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;font-size:11.5px;cursor:pointer;">Tout rejeter</button>'
+        + '</span></div>';
+      html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
+      html += '<thead><tr style="color:var(--text3);text-align:left;">'
+        + '<th style="padding:6px 8px;font-weight:500;">Prénom</th><th style="padding:6px 8px;font-weight:500;">Nom</th>'
+        + '<th style="padding:6px 8px;font-weight:500;">Email</th><th style="padding:6px 8px;font-weight:500;">Organisation</th>'
+        + '<th style="padding:6px 8px;font-weight:500;">Titre</th><th style="padding:6px 8px;font-weight:500;">Pays</th>'
+        + '<th style="padding:6px 8px;font-weight:500;">Actions</th></tr></thead><tbody>';
+      const inp = (id,fld,val) => '<input data-imp-row="'+id+'" data-imp-fld="'+fld+'" value="'+_impEsc(val||'')+'" style="width:100%;min-width:90px;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:4px 6px;font-size:11.5px;color:var(--text);">';
+      for(const row of list){
+        const dup = row.dup_of ? ' <span title="Email déjà présent en base — la validation fusionnera les champs manquants" style="color:#f59e0b;font-size:10px;">🔁 doublon</span>' : '';
+        html += '<tr style="border-top:1px solid var(--border);">'
+          + '<td style="padding:5px 8px;">'+inp(row.id,'prenom',row.prenom)+'</td>'
+          + '<td style="padding:5px 8px;">'+inp(row.id,'nom',row.nom)+'</td>'
+          + '<td style="padding:5px 8px;min-width:170px;">'+inp(row.id,'email',row.email)+dup+'</td>'
+          + '<td style="padding:5px 8px;">'+inp(row.id,'organisation',row.organisation)+'</td>'
+          + '<td style="padding:5px 8px;">'+inp(row.id,'titre',row.titre)+'</td>'
+          + '<td style="padding:5px 8px;">'+inp(row.id,'pays',row.pays)+'</td>'
+          + '<td style="padding:5px 8px;white-space:nowrap;">'
+          + '<button onclick="validateImportRow('+row.id+',this)" title="Valider" style="background:#16a34a;color:#fff;border:0;border-radius:5px;padding:4px 9px;font-size:11.5px;cursor:pointer;margin-right:4px;">✓</button>'
+          + '<button onclick="rejectImportRow('+row.id+',this)" title="Rejeter" style="background:var(--bg2);color:#ef4444;border:1px solid var(--border2);border-radius:5px;padding:4px 9px;font-size:11.5px;cursor:pointer;">✕</button>'
+          + '</td></tr>';
+      }
+      html += '</tbody></table></div></div>';
+    }
+    body.innerHTML=html;
+  }catch(e){ body.innerHTML='<span style="color:#ef4444;font-size:12px;">Erreur réseau : '+_impEsc(e.message)+'</span>'; }
+}
+function _rowEdits(id){
+  const o={}; document.querySelectorAll('input[data-imp-row="'+id+'"]').forEach(i=>{ o[i.getAttribute('data-imp-fld')]=i.value; });
+  return o;
+}
+async function validateImportRow(id, btn){
+  if(btn){ btn.disabled=true; btn.textContent='…'; }
+  try{
+    const edits=_rowEdits(id);
+    if(Object.keys(edits).length){ await fetch(API+'/contact-imports/'+id, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(edits) }); }
+    const r = await fetch(API+'/contact-imports/'+id+'/validate', { method:'POST' });
+    const d = await r.json();
+    if(!r.ok || !d.ok){ alert(d.error||'Erreur'); if(btn){btn.disabled=false;btn.textContent='✓';} return; }
+    loadImportReview();
+  }catch(e){ alert('Erreur réseau'); if(btn){btn.disabled=false;btn.textContent='✓';} }
+}
+async function rejectImportRow(id, btn){
+  if(btn){ btn.disabled=true; }
+  try{
+    const r = await fetch(API+'/contact-imports/'+id+'/reject', { method:'POST' });
+    const d = await r.json(); if(!r.ok||!d.ok){ alert(d.error||'Erreur'); if(btn){btn.disabled=false;} return; }
+    loadImportReview();
+  }catch(e){ alert('Erreur réseau'); if(btn){btn.disabled=false;} }
+}
+async function validateBatch(batchId, action, btn){
+  if(action==='reject' && !confirm('Rejeter tout ce lot ?')) return;
+  if(btn){ btn.disabled=true; btn.textContent='…'; }
+  try{
+    const r = await fetch(API+'/contact-imports/validate-batch', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ batch_id:batchId, action }) });
+    const d = await r.json();
+    if(!r.ok || !d.ok){ alert(d.error||'Erreur'); if(btn){btn.disabled=false;} return; }
+    loadImportReview();
+  }catch(e){ alert('Erreur réseau'); if(btn){btn.disabled=false;} }
+}
+
+
 async function loadPending() {
   const list = document.getElementById('pending-list');
   const count = document.getElementById('pending-count');
