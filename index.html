@@ -166,6 +166,21 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* Sub-label shown under the label (e.g. "+11 cette semaine"). Smaller, accent color when delta > 0. */
 .db-kpi-sub { font-size:10px; color:var(--green); margin-top:2px; font-family:'DM Mono',monospace; line-height:1; }
 .db-kpi-sub-muted { color:var(--text3); }
+/* Dashboard sections (Mon activité / Vue générale) */
+.db-section { margin-bottom:18px; }
+.db-section-head { display:flex; align-items:center; gap:10px; margin:4px 0 10px; }
+.db-section-title { font-size:13px; font-weight:700; color:var(--text); letter-spacing:.02em; white-space:nowrap; }
+.db-section-sub { font-size:11px; color:var(--text3); white-space:nowrap; }
+.db-section-head::after { content:''; flex:1; height:1px; background:var(--border); }
+.db-kpi-row-perso { grid-template-columns:repeat(4,1fr); }
+.db-perso-strip { display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:9px 14px; margin-top:2px; }
+.db-perso-rank { font-size:13px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:6px; }
+.db-perso-rank .db-perso-badge { font-size:15px; }
+.db-perso-sep { width:1px; align-self:stretch; background:var(--border); }
+.db-perso-lead { display:flex; gap:12px; flex-wrap:wrap; font-size:11px; color:var(--text2); align-items:center; }
+.db-perso-lead .db-lead-me { color:var(--accent2); font-weight:700; }
+.db-perso-lead b { color:var(--text); font-family:'DM Mono',monospace; }
+@media (max-width:640px){ .db-kpi-row-perso { grid-template-columns:repeat(2,1fr); } }
 .db-pulse { position:absolute; top:-2px; right:-2px; width:8px; height:8px; border-radius:50%; background:#22c55e; animation:pulse 2s infinite; }
 
 .db-brief { background:var(--bg2); border:1px solid var(--accent); border-radius:var(--radius); padding:14px 16px; margin-bottom:14px; display:flex; align-items:flex-start; gap:12px; position:relative; }
@@ -1554,6 +1569,52 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div id="panel-dashboard" class="panel active">
       <div class="topbar"><h1>Defence Drone Deals</h1></div>
 
+      <!-- SECTION: MON ACTIVITÉ (perso, commercial connecté) -->
+      <div class="db-section" id="db-section-perso">
+        <div class="db-section-head">
+          <span class="db-section-title">👤 Mon activité</span>
+          <span class="db-section-sub" id="db-perso-name">—</span>
+        </div>
+        <div class="db-kpi-row db-kpi-row-perso">
+          <div class="db-kpi" onclick="go('contacts',{contactFilter:'emailed7d'})" title="Emails que j'ai envoyés (marqués dans Scout) sur les 7 derniers jours. Sub-label : ma moyenne quotidienne sur 15 jours.">
+            <div class="db-kpi-icon">📤</div>
+            <div class="db-kpi-body">
+              <div class="db-kpi-val" id="m-my-emails-7d">—</div>
+              <div class="db-kpi-label">Mes emails (7j)</div>
+              <div class="db-kpi-sub db-kpi-sub-muted" id="m-my-emails-7d-sub">—</div>
+            </div>
+          </div>
+          <div class="db-kpi" title="Total cumulé des emails que j'ai envoyés depuis le début.">
+            <div class="db-kpi-icon">📨</div>
+            <div class="db-kpi-body">
+              <div class="db-kpi-val" id="m-my-emails-total">—</div>
+              <div class="db-kpi-label">Mes emails (total)</div>
+            </div>
+          </div>
+          <div class="db-kpi" title="Contacts distincts que j'ai réellement approchés (hors intentions, skip et demandes de connexion LinkedIn).">
+            <div class="db-kpi-icon">🎯</div>
+            <div class="db-kpi-body">
+              <div class="db-kpi-val" id="m-my-contacted">—</div>
+              <div class="db-kpi-label">Contacts approchés</div>
+            </div>
+          </div>
+          <div class="db-kpi db-kpi-success" onclick="go('contacts',{contactFilter:'interested'})" title="Contacts que j'ai contactés par email et qui ont répondu positivement. Sub-label : mon taux de conversion emails → intéressés.">
+            <div class="db-kpi-icon">✅</div>
+            <div class="db-kpi-body">
+              <div class="db-kpi-val" id="m-my-interested">—</div>
+              <div class="db-kpi-label">Mes intéressés</div>
+              <div class="db-kpi-sub db-kpi-sub-muted" id="m-my-interested-sub">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="db-perso-strip" id="db-perso-rank-strip" style="display:none;"></div>
+      </div>
+
+      <!-- SECTION: VUE GÉNÉRALE (équipe / toute la base) -->
+      <div class="db-section-head">
+        <span class="db-section-title">📊 Vue générale · équipe</span>
+        <span class="db-section-sub">toute la base</span>
+      </div>
       <!-- KPI ROW - Prospection cockpit -->
       <div class="db-kpi-row">
         <div class="db-kpi db-kpi-accent" onclick="go('contacts',{contactFilter:'email'})" title="Total contacts en base avec un email valide (format a@b). Sub-label : % du total contacts.">
@@ -3240,6 +3301,42 @@ function renderCockpitChart(series){
     + '<span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--green,#22c55e);"></span>Retours positifs ('+totalR+')</span>';
 }
 
+function renderMyStats() {
+  const nameEl = document.getElementById('db-perso-name');
+  const strip  = document.getElementById('db-perso-rank-strip');
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  fetch(API + '/me/stats').then(r => r.json()).then(d => {
+    if (!d || !d.ok) return;
+    if (nameEl) nameEl.textContent = d.me || '';
+    set('m-my-emails-7d', (d.emails_7d || 0).toLocaleString('fr-FR'));
+    const avg15 = ((d.emails_15d || 0) / 15).toFixed(1).replace('.', ',');
+    set('m-my-emails-7d-sub', 'moy. ' + avg15 + '/jour (15j)');
+    set('m-my-emails-total', (d.emails_total || 0).toLocaleString('fr-FR'));
+    set('m-my-contacted', (d.contacted || 0).toLocaleString('fr-FR'));
+    set('m-my-interested', (d.interested || 0).toLocaleString('fr-FR'));
+    const rate = d.emails_total > 0 ? Math.round((d.interested / d.emails_total) * 100) : 0;
+    set('m-my-interested-sub', d.emails_total > 0 ? rate + '% de mes emails' : '—');
+    if (strip) {
+      if (d.my_rank && d.team_size > 1) {
+        const medal = d.my_rank === 1 ? '\U0001F947' : d.my_rank === 2 ? '\U0001F948' : d.my_rank === 3 ? '\U0001F949' : '\U0001F3C5';
+        const meLc = (d.me || '').trim().toLowerCase();
+        const lead = (d.leaderboard || []).map(m => {
+          const cls = (m.name || '').trim().toLowerCase() === meLc ? 'db-lead-me' : '';
+          return '<span class="' + cls + '">' + escapeHtml(m.name || '?') + ' <b>' + (m.emails || 0) + '</b></span>';
+        }).join('');
+        strip.innerHTML =
+          '<div class="db-perso-rank"><span class="db-perso-badge">' + medal + '</span> #' + d.my_rank + ' sur ' + d.team_size + '</div>'
+          + '<div style="font-size:12px;color:var(--text2);">' + (d.my_share_pct || 0) + '% des emails de l\'équipe (7j)</div>'
+          + '<div class="db-perso-sep"></div>'
+          + '<div class="db-perso-lead"><span style="color:var(--text3);">Classement 7j&nbsp;:</span>' + lead + '</div>';
+        strip.style.display = 'flex';
+      } else {
+        strip.style.display = 'none';
+      }
+    }
+  }).catch(() => {});
+}
+
 function renderDashboard() {
   // ===========================================================================
   // COCKPIT PROSPECTION — 5 KPIs
@@ -3253,6 +3350,9 @@ function renderDashboard() {
 
   // Pre-warm buyer-segments cache (used by contacts/end-users grid filters)
   loadBuyerSegments();
+
+  // Stats perso du commercial connecté (section « Mon activité »)
+  renderMyStats();
 
   // Mini-graphe activité (emails envoyés + retours positifs)
   fetch(API + '/contacts/stats-timeseries?days=14').then(r => r.json()).then(d => {
