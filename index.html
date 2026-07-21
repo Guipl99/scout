@@ -6020,8 +6020,17 @@ const SEG_FACETS = {
   equip: { label:'Équipement / concurrent connu (best-effort)', opts:[
     ['dji','DJI'],['skydio','Skydio'],['fotokite','Fotokite'],['parrot','Parrot'],['flock_axon_brinc','Flock / Axon / BRINC'],['inconnu','Inconnu'] ]},
 };
+const SEG_FILTER_VERSION = 2; // bump quand les clés de facettes changent (métier/zone)
 function getSegFilter() {
-  const s = loadSettings(); const sf = s.segFilter || {}; const out = {};
+  const s = loadSettings();
+  const allChecked = () => { const o={}; for (const f of Object.keys(SEG_FACETS)) o[f]=SEG_FACETS[f].opts.map(x=>x[0]); return o; };
+  // Migration : si le schéma de segmentation a changé, on repart de "tout coché" (aucun filtre) une seule fois
+  if (s.segFilterVersion !== SEG_FILTER_VERSION) {
+    s.segFilterVersion = SEG_FILTER_VERSION; delete s.segFilter;
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch(e){}
+    return allChecked();
+  }
+  const sf = s.segFilter || {}; const out = {};
   for (const f of Object.keys(SEG_FACETS)) {
     const all = SEG_FACETS[f].opts.map(o => o[0]);
     const _v = Array.isArray(sf[f]) ? sf[f].filter(k => all.includes(k)) : null;
