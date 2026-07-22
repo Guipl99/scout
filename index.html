@@ -2090,7 +2090,7 @@ Mes pays
               <div id="cfg-team-list" style="display:flex;flex-direction:column;gap:6px;"></div>
             </div>
             <div>
-              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Segments proposés dans « Prochaine action » <span style="color:var(--text3);font-weight:400;">(pour cibler une séquence · tout coché = aucun filtre)</span></label>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Segments proposés dans « Prochaine action » <span style="color:var(--text3);font-weight:400;">(pour cibler une séquence · tout coché = aucun filtre)</span> <span id="seg-total-ready" style="color:var(--accent2);font-weight:600;margin-left:6px;"></span></label>
               <div id="cfg-seg-filter" style="display:flex;flex-direction:column;gap:12px;padding:10px;background:var(--bg3);border-radius:6px;border:1px solid var(--border2);">
                 <span style="font-size:12px;color:var(--text3);">Chargement…</span>
               </div>
@@ -6621,19 +6621,26 @@ function renderSegFilter() {
   fetchSegCounts();
 }
 async function fetchSegCounts() {
+  // Le nb de contacts ÉLIGIBLES (prêts à prospecter) par option de segment.
+  // On s'appuie sur l'intercepteur fetch (qui injecte le token) + un header explicite
+  // en secours. Pas de garde sur le token : sinon les décomptes ne s'affichaient plus.
   try {
-    let tok = (typeof session !== 'undefined' && session && session.token)
-           || (window.session && window.session.token) || null;
-    if (!tok) { for (const k of Object.keys(localStorage)) { try { const v = JSON.parse(localStorage.getItem(k)); if (v && v.token) { tok = v.token; break; } } catch (e) {} } }
-    if (!tok) return;
-    const API_SEG = (window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
-    const r = await fetch(API_SEG + '/action/segment-counts', { headers: {'Authorization':'Bearer '+tok} });
+    const API_SEG = (typeof API !== 'undefined' && API) || (window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
+    const tok = (window.scoutSession && window.scoutSession.token) || (window.session && window.session.token) || null;
+    const opts = tok ? { headers: { 'Authorization': 'Bearer ' + tok } } : {};
+    const r = await fetch(API_SEG + '/action/segment-counts', opts);
+    if (!r.ok) return;
     const d = await r.json(); if (!d || !d.counts) return;
+    let total = 0;
     for (const [key, v] of Object.entries(d.counts)) {
-      const dot = key.indexOf('.'); const f = key.slice(0, dot), opt = key.slice(dot+1);
-      const el = document.getElementById('segc_'+f+'_'+opt);
-      if (el) el.textContent = ' ('+v+')';
+      const dot = key.indexOf('.'); if (dot < 0) continue;
+      const f = key.slice(0, dot), opt = key.slice(dot + 1);
+      const el = document.getElementById('segc_' + f + '_' + opt);
+      if (el) el.textContent = ' (' + v + ')';
+      if (f === 'metier') total += (parseInt(v, 10) || 0);
     }
+    const tEl = document.getElementById('seg-total-ready');
+    if (tEl) tEl.textContent = total ? (total.toLocaleString('fr-FR') + ' contacts prêts à prospecter') : '';
   } catch (e) {}
 }
 function buildSegQS() {
