@@ -3550,8 +3550,6 @@ async function renderDashboardCockpit(){
   try {
     let contacts = (_contactsPanelLoaded && _contactsPanelData.length) ? _contactsPanelData : null;
     if(!contacts){ try { const r = await fetch(API + "/contacts?limit=5000"); const d = await r.json(); contacts = d.contacts || []; _contactsPanelData = contacts; _contactsPanelLoaded = true; } catch(e){ contacts = []; } }
-    let accounts = (typeof allEndUsers !== "undefined" && allEndUsers && allEndUsers.length) ? allEndUsers : [];
-    if(!accounts.length && typeof loadEndUsers === "function"){ try { await loadEndUsers(); accounts = allEndUsers || []; } catch(e){} }
     const isOut = c => c.already_client || c.type_contact === "non_prospect_elistair";
     const interested = contacts.filter(c => c.interested && !isOut(c)).length;
     const vip = contacts.filter(c => (c.manual_priority === 3 || /⭐⭐⭐/.test(c.notes || "")) && !c.contacted && !isOut(c)).length;
@@ -9232,16 +9230,11 @@ window.openHotAccount = function(id){ go('end-users'); setTimeout(async ()=>{ tr
 async function renderHotProspects(){
   const body = document.getElementById('hot-body'); if(!body) return;
   body.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div>';
-  let contacts = [], accounts = [];
+  let contacts = [];
   try {
     if (_contactsPanelLoaded && _contactsPanelData.length) { contacts = _contactsPanelData; }
     else { const r = await fetch(API + '/contacts?limit=5000'); const d = await r.json(); contacts = d.contacts || []; _contactsPanelData = contacts; _contactsPanelLoaded = true; }
   } catch(e) {}
-  try {
-    if (allEndUsers && allEndUsers.length) { accounts = allEndUsers; }
-    else if (typeof loadEndUsers === 'function') { await loadEndUsers(); accounts = allEndUsers || []; }
-  } catch(e) {}
-
   const isOut = c => c.already_client || c.type_contact === 'non_prospect_elistair';
   const interested = contacts.filter(c => c.interested && !isOut(c));
   const vip = contacts.filter(c => (c.manual_priority === 3 || /⭐⭐⭐/.test(c.notes || '')) && !c.contacted && !isOut(c));
