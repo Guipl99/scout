@@ -2232,6 +2232,10 @@ Mes pays
                 <option value="end-users">Comptes</option>
               </select>
             </div>
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Délai avant relance (jours) <span style="color:var(--text3);font-weight:400;">— un contact emailé depuis ce délai, sans réponse, apparaît dans « Relances dues » (une seule relance)</span></label>
+              <input id="cfg-relance-days" type="number" min="1" max="90" value="14" onchange="saveSettings();if(typeof renderDashboardCockpit==='function')renderDashboardCockpit();" style="width:90px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);outline:none;">
+            </div>
             <div style="display:none;">
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Sous-onglet par défaut dans Buyers</label>
               <div style="display:flex;gap:8px;">
@@ -3563,7 +3567,8 @@ async function renderDashboardCockpit(){
   } catch(e){}
   // --- Relances dues ---
   try {
-    const r = await fetch(API + "/me/followups?days=5");
+    const _rd = (function(){ try{ const v=parseInt((loadSettings()||{}).relanceDays,10); return (v>=1&&v<=90)?v:14; }catch(e){ return 14; } })();
+    const r = await fetch(API + "/me/followups?days=" + _rd);
     const d = await r.json();
     const list = (d && d.followups) || [];
     window._dbFollowups = list;
@@ -6675,6 +6680,7 @@ function saveSettings() {
     density:     document.querySelector('input[name="cfg-density"]:checked')?.value || 'normal',
     theme:       document.querySelector('input[name="cfg-theme"]:checked')?.value || 'dark',
     fontSize:    document.querySelector('input[name="cfg-fontsize"]:checked')?.value || 'normal',
+    relanceDays: (function(){ const v=parseInt(document.getElementById('cfg-relance-days')?.value,10); return (v>=1&&v<=90)?v:(prev.relanceDays||14); })(),
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
   showSaveMsg();
@@ -6693,6 +6699,8 @@ function applySettings() {
   // Bouton "Mes pays" — désactivé en mode blacklist (ça ne fait pas sens "Mes pays exclus")
   const btnMyPays = document.getElementById('btn-my-pays');
   if (btnMyPays) btnMyPays.style.display = 'none';
+  // Délai de relance
+  const rdEl = document.getElementById('cfg-relance-days'); if (rdEl) rdEl.value = s.relanceDays || 14;
   // Nom
   const nameEl = document.getElementById('cfg-name');
   if (nameEl) nameEl.value = s.name || '';
