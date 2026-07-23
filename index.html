@@ -2338,6 +2338,7 @@ Réinitialiser tous les filtres
           <option value="buyer">Rattachés à un compte</option>
           <option value="company">Contacts entreprise</option>
         </select>
+        <button type="button" onclick="exportContactsCSV()" title="Exporter la vue filtrée en CSV (Excel)" style="font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;">⬇️ Exporter CSV</button>
         <span id="contacts-panel-count" style="font-size:12px;color:var(--text3);white-space:nowrap;">—</span>
         <span id="contacts-panel-filterchip" style="display:none;"></span>
       </div>
@@ -9053,6 +9054,7 @@ function filterContactsPanel() {
     }
     return true;
   });
+  window._contactsFilteredExport = list; // pour l'export CSV (vue filtrée courante)
   const badge = document.getElementById('contacts-panel-count');
   if (badge) badge.textContent = list.length + ' contact' + (list.length > 1 ? 's' : '');
   const chip = document.getElementById('contacts-panel-filterchip');
@@ -9073,6 +9075,24 @@ function filterContactsPanel() {
   grid.innerHTML = shown.map(contactPanelCard).join('') +
     (list.length > LIMIT ? `<div style="grid-column:1/-1;padding:1rem;text-align:center;color:var(--text3);font-size:12px;">${LIMIT} premiers affichés sur ${list.length} — affine la recherche.</div>` : '');
 }
+
+function exportContactsCSV() {
+  const list = window._contactsFilteredExport || [];
+  if (!list.length) { alert('Aucun contact à exporter dans la vue courante.'); return; }
+  const cols = [['prenom','Prénom'],['nom','Nom'],['titre','Titre'],['organisation','Organisation'],['pays','Pays'],['email','Email'],['linkedin','LinkedIn'],['telephone','Téléphone'],['secteur','Secteur'],['type_contact','Type'],['notes','Notes']];
+  const q = v => '"' + (v == null ? '' : String(v)).replace(/"/g,'""') + '"';
+  const header = cols.map(c => q(c[1])).join(',');
+  const rows = list.map(c => cols.map(col => q(c[col[0]])).join(','));
+  const csv = '\ufeff' + [header].concat(rows).join('\r\n'); // BOM UTF-8 pour Excel
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'scout_contacts_' + new Date().toISOString().slice(0,10) + '_' + list.length + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+window.exportContactsCSV = exportContactsCSV;
 
 function contactPanelCard(ct) {
   const initials = ((ct.prenom || '')[0] || '') + ((ct.nom || '')[0] || '');
