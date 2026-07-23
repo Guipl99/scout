@@ -173,6 +173,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-section-sub { font-size:11px; color:var(--text3); white-space:nowrap; }
 .db-section-head::after { content:''; flex:1; height:1px; background:var(--border); }
 .db-kpi-row-perso { grid-template-columns:repeat(4,1fr); }
+.db-cockpit { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px; }
+.db-cockpit-card { display:flex; align-items:center; gap:12px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; cursor:pointer; transition:border-color .15s, background .15s, filter .15s; }
+.db-cockpit-card:hover { border-color:var(--accent); background:var(--bg3); }
+.db-cockpit-action { background:linear-gradient(135deg,#dc2626,#ea580c); border-color:transparent; color:#fff; box-shadow:0 6px 18px rgba(220,38,38,.28); }
+.db-cockpit-action:hover { border-color:transparent; filter:brightness(1.06); }
+.db-cockpit-icon { font-size:26px; flex-shrink:0; }
+.db-cockpit-title { font-size:14px; font-weight:700; }
+.db-cockpit-sub { font-size:12px; color:var(--text2); margin-top:2px; }
+.db-cockpit-action .db-cockpit-sub { color:rgba(255,255,255,.92); }
+.db-cockpit-cta { margin-left:auto; font-size:12px; font-weight:700; opacity:.9; white-space:nowrap; }
+@media (max-width:820px){ .db-cockpit { grid-template-columns:1fr; } }
 .db-chart-scope { display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; }
 .db-chart-scope button { background:transparent; border:0; color:var(--text2); font-size:11px; font-weight:600; padding:3px 11px; cursor:pointer; transition:background .15s,color .15s; }
 .db-chart-scope button:hover { color:var(--text); }
@@ -1633,6 +1644,25 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div id="panel-dashboard" class="panel active">
       <div class="topbar"><h1>Defence Drone Deals</h1></div>
 
+      <!-- COCKPIT COMMERCIAL : action / prospects chauds / relances -->
+      <div class="db-cockpit">
+        <div class="db-cockpit-card db-cockpit-action" onclick="if(window.scoutAction)scoutAction.open()">
+          <div class="db-cockpit-icon">🎯</div>
+          <div class="db-cockpit-body"><div class="db-cockpit-title">Ma prochaine action</div><div class="db-cockpit-sub">Traiter le prochain contact suggéré</div></div>
+          <div class="db-cockpit-cta">Traiter →</div>
+        </div>
+        <div class="db-cockpit-card" id="db-cockpit-hot" onclick="go('hot')">
+          <div class="db-cockpit-icon">🔥</div>
+          <div class="db-cockpit-body"><div class="db-cockpit-title">Prospects chauds</div><div class="db-cockpit-sub" id="db-cockpit-hot-sub">…</div></div>
+          <div class="db-cockpit-cta">Voir →</div>
+        </div>
+        <div class="db-cockpit-card" id="db-cockpit-followups">
+          <div class="db-cockpit-icon">🔔</div>
+          <div class="db-cockpit-body"><div class="db-cockpit-title">Relances dues</div><div class="db-cockpit-sub" id="db-cockpit-followups-sub">…</div></div>
+          <div class="db-cockpit-cta" id="db-cockpit-followups-cta"></div>
+        </div>
+      </div>
+
       <!-- SECTION: MON ACTIVITÉ (perso, commercial connecté) -->
       <div class="db-section" id="db-section-perso">
         <div class="db-section-head">
@@ -1674,6 +1704,29 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <div class="db-perso-strip" id="db-perso-rank-strip" style="display:none;"></div>
       </div>
 
+      <!-- MINI-GRAPHE ACTIVITÉ -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span id="db-chart-title" style="font-size:13px;font-weight:600;color:var(--text);">📈 Activité — 14 derniers jours · équipe</span>
+            <div class="db-chart-scope" id="db-chart-scope">
+              <button type="button" data-scope="team" class="active" onclick="setChartScope('team')">Équipe</button>
+              <button type="button" data-scope="me" onclick="setChartScope('me')">Moi</button>
+            </div>
+          </div>
+          <span id="db-chart-legend" style="display:flex;gap:14px;font-size:11px;color:var(--text2);flex-wrap:wrap;"></span>
+        </div>
+        <div id="db-email-chart" style="min-height:150px;"></div>
+      </div>
+
+
+      <!-- SECTION MARCHÉ & VEILLE (repliable) -->
+      <div class="db-section-head db-market-toggle" onclick="toggleDbMarket()" style="cursor:pointer;user-select:none;">
+        <span class="db-section-title">📈 Marché &amp; veille</span>
+        <span class="db-section-sub" id="db-market-hint">déplier</span>
+        <span id="db-market-chevron" style="margin-left:auto;color:var(--text3);transition:transform .2s;">▾</span>
+      </div>
+      <div id="db-market" style="display:none;">
       <!-- SECTION: VUE GÉNÉRALE (équipe / toute la base) -->
       <div class="db-section-head">
         <span class="db-section-title">📊 Vue générale · équipe</span>
@@ -1728,21 +1781,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-sub db-kpi-sub-muted" id="m-replies-rate">—</div>
           </div>
         </div>
-      </div>
-
-      <!-- MINI-GRAPHE ACTIVITÉ -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <span id="db-chart-title" style="font-size:13px;font-weight:600;color:var(--text);">📈 Activité — 14 derniers jours · équipe</span>
-            <div class="db-chart-scope" id="db-chart-scope">
-              <button type="button" data-scope="team" class="active" onclick="setChartScope('team')">Équipe</button>
-              <button type="button" data-scope="me" onclick="setChartScope('me')">Moi</button>
-            </div>
-          </div>
-          <span id="db-chart-legend" style="display:flex;gap:14px;font-size:11px;color:var(--text2);flex-wrap:wrap;"></span>
-        </div>
-        <div id="db-email-chart" style="min-height:150px;"></div>
       </div>
 
       <!-- INSIGHTS ACTIONNABLES -->
@@ -1825,6 +1863,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
 
       </div>
+
+      </div><!-- /db-market -->
 
       <!-- hidden feed-list for compat -->
       <div id="feed-list" style="display:none;"></div>
@@ -3481,6 +3521,73 @@ function renderMyStats() {
   }).catch(() => {});
 }
 
+function toggleDbMarket(){
+  const m = document.getElementById('db-market'); if(!m) return;
+  const willOpen = (m.style.display === 'none' || !m.style.display);
+  m.style.display = willOpen ? '' : 'none';
+  const h = document.getElementById('db-market-hint'); if(h) h.textContent = willOpen ? 'replier' : 'déplier';
+  const c = document.getElementById('db-market-chevron'); if(c) c.style.transform = willOpen ? 'rotate(180deg)' : '';
+  try { localStorage.setItem('scoutDbMarketOpen', willOpen ? '1' : '0'); } catch(e){}
+}
+window.toggleDbMarket = toggleDbMarket;
+
+function _applyDbMarketState(){
+  try {
+    const open = localStorage.getItem('scoutDbMarketOpen') === '1';
+    const m = document.getElementById('db-market'); if(!m) return;
+    m.style.display = open ? '' : 'none';
+    const h = document.getElementById('db-market-hint'); if(h) h.textContent = open ? 'replier' : 'déplier';
+    const c = document.getElementById('db-market-chevron'); if(c) c.style.transform = open ? 'rotate(180deg)' : '';
+  } catch(e){}
+}
+
+async function renderDashboardCockpit(){
+  // --- Prospects chauds (résumé) ---
+  try {
+    let contacts = (_contactsPanelLoaded && _contactsPanelData.length) ? _contactsPanelData : null;
+    if(!contacts){ try { const r = await fetch(API + "/contacts?limit=5000"); const d = await r.json(); contacts = d.contacts || []; _contactsPanelData = contacts; _contactsPanelLoaded = true; } catch(e){ contacts = []; } }
+    let accounts = (typeof allEndUsers !== "undefined" && allEndUsers && allEndUsers.length) ? allEndUsers : [];
+    if(!accounts.length && typeof loadEndUsers === "function"){ try { await loadEndUsers(); accounts = allEndUsers || []; } catch(e){} }
+    const isOut = c => c.already_client || c.type_contact === "non_prospect_elistair";
+    const interested = contacts.filter(c => c.interested && !isOut(c)).length;
+    const vip = contacts.filter(c => (c.manual_priority === 3 || /⭐⭐⭐/.test(c.notes || "")) && !c.contacted && !isOut(c)).length;
+    const hotAcc = accounts.filter(e => e.statut && /chaud/i.test(e.statut)).length;
+    const sub = document.getElementById("db-cockpit-hot-sub");
+    if(sub){
+      const parts = [];
+      if(interested) parts.push(interested + " intéressé" + (interested>1?"s":""));
+      if(vip) parts.push(vip + " VIP à contacter");
+      if(hotAcc) parts.push(hotAcc + " compte" + (hotAcc>1?"s":"") + " chaud" + (hotAcc>1?"s":""));
+      sub.textContent = parts.length ? parts.join(" · ") : "Aucun pour le moment";
+    }
+  } catch(e){}
+  // --- Relances dues ---
+  try {
+    const r = await fetch(API + "/me/followups?days=5");
+    const d = await r.json();
+    const list = (d && d.followups) || [];
+    window._dbFollowups = list;
+    const sub = document.getElementById("db-cockpit-followups-sub");
+    const cta = document.getElementById("db-cockpit-followups-cta");
+    const card = document.getElementById("db-cockpit-followups");
+    if(sub){
+      if(list.length){
+        const oldest = list[0];
+        const nm = ((oldest.prenom||"") + " " + (oldest.nom||"")).trim() || oldest.organisation || "contact";
+        const dd = oldest.last_email ? Math.floor((Date.now() - new Date(oldest.last_email).getTime())/86400000) : null;
+        sub.textContent = list.length + " à relancer" + (dd!=null ? (" · plus ancien : " + nm + " (" + dd + "j)") : (" · " + nm));
+        if(cta) cta.textContent = "Relancer →";
+        if(card){ card.style.cursor = "pointer"; card.onclick = () => { if(typeof openContactDetail === "function") openContactDetail(oldest.id); }; }
+      } else {
+        sub.textContent = "Rien à relancer pour le moment 👍";
+        if(cta) cta.textContent = "";
+        if(card){ card.style.cursor = "default"; card.onclick = null; }
+      }
+    }
+  } catch(e){}
+}
+window.renderDashboardCockpit = renderDashboardCockpit;
+
 function renderDashboard() {
   // ===========================================================================
   // COCKPIT PROSPECTION — 5 KPIs
@@ -3494,6 +3601,10 @@ function renderDashboard() {
 
   // Pre-warm buyer-segments cache (used by contacts/end-users grid filters)
   loadBuyerSegments();
+
+  // Cockpit commercial (prochaine action / chauds / relances) + état section marché
+  renderDashboardCockpit();
+  _applyDbMarketState();
 
   // Stats perso du commercial connecté (section « Mon activité »)
   renderMyStats();
