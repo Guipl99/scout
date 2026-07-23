@@ -2396,7 +2396,7 @@ Réinitialiser tous les filtres
     <!-- PROSPECTS CHAUDS -->
     <div id="panel-hot" class="panel">
       <div class="topbar"><h1>🔥 Prospects chauds</h1></div>
-      <div style="padding:0 0 8px;font-size:13px;color:var(--text2);">Les leads à traiter en priorité : ceux qui ont répondu, les comptes signalés chauds, et tes contacts VIP pas encore approchés.</div>
+      <div style="padding:0 0 8px;font-size:13px;color:var(--text2);">Les leads à traiter en priorité : ceux qui ont répondu, et tes contacts VIP pas encore approchés.</div>
       <div id="hot-body"><div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div></div>
     </div>
 
@@ -3555,13 +3555,11 @@ async function renderDashboardCockpit(){
     const isOut = c => c.already_client || c.type_contact === "non_prospect_elistair";
     const interested = contacts.filter(c => c.interested && !isOut(c)).length;
     const vip = contacts.filter(c => (c.manual_priority === 3 || /⭐⭐⭐/.test(c.notes || "")) && !c.contacted && !isOut(c)).length;
-    const hotAcc = accounts.filter(e => e.statut && /chaud/i.test(e.statut)).length;
     const sub = document.getElementById("db-cockpit-hot-sub");
     if(sub){
       const parts = [];
       if(interested) parts.push(interested + " intéressé" + (interested>1?"s":""));
       if(vip) parts.push(vip + " VIP à contacter");
-      if(hotAcc) parts.push(hotAcc + " compte" + (hotAcc>1?"s":"") + " chaud" + (hotAcc>1?"s":""));
       sub.textContent = parts.length ? parts.join(" · ") : "Aucun pour le moment";
     }
   } catch(e){}
@@ -9247,28 +9245,14 @@ async function renderHotProspects(){
   const isOut = c => c.already_client || c.type_contact === 'non_prospect_elistair';
   const interested = contacts.filter(c => c.interested && !isOut(c));
   const vip = contacts.filter(c => (c.manual_priority === 3 || /⭐⭐⭐/.test(c.notes || '')) && !c.contacted && !isOut(c));
-  const hotAcc = (accounts || []).filter(e => e.statut && /chaud/i.test(e.statut));
-
   const gridOpen = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">';
   const empty = (msg) => `<div style="padding:1.1rem;color:var(--text3);font-size:13px;">${msg}</div>`;
   const secHead = (icon,title,n,color) => `<div style="display:flex;align-items:center;gap:8px;margin:20px 0 10px;"><span style="font-size:14px;font-weight:700;color:${color};">${icon} ${title}</span><span style="font-size:12px;color:var(--text3);">${n}</span><span style="flex:1;height:1px;background:var(--border);"></span></div>`;
-  const acctCard = (e) => {
-    const cts = (contacts || []).filter(c => c.end_user_id === e.id).length;
-    return `<div class="entity-card" style="cursor:pointer;padding:14px;" onclick="openHotAccount('${esc(e.id)}')">
-      <div style="font-size:13px;font-weight:600;color:var(--text);">🏛️ ${esc(e.nom || '')}</div>
-      <div style="font-size:11px;color:var(--text2);margin-top:4px;">${esc(e.pays || '')}${e.secteur ? ' · ' + esc(e.secteur) : ''}</div>
-      ${e.description ? `<div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.35;max-height:48px;overflow:hidden;">${esc(String(e.description).slice(0,140))}</div>` : ''}
-      <div style="margin-top:8px;font-size:10px;color:#dc2626;font-weight:700;">🔥 ${esc(e.statut || 'Prospect chaud')}${cts ? ' · 👤 ' + cts + ' contact' + (cts>1?'s':'') : ''}</div>
-    </div>`;
-  };
 
   let html = '';
   html += secHead('✅','Ont répondu (intéressés)', interested.length, '#16a34a');
   html += interested.length ? gridOpen + interested.map(contactPanelCard).join('') + '</div>'
         : empty(`Aucun contact n'a encore répondu positivement. Marque « a répondu » sur une fiche pour l'y voir apparaître.`);
-  html += secHead('🔥','Comptes signalés chauds', hotAcc.length, '#dc2626');
-  html += hotAcc.length ? gridOpen + hotAcc.map(acctCard).join('') + '</div>'
-        : empty(`Aucun compte marqué « Prospect chaud » pour l'instant. Tu peux en signaler depuis la fiche d'un compte.`);
   html += secHead('⭐','VIP à contacter (pas encore approchés)', vip.length, '#b45309');
   html += vip.length ? gridOpen + vip.slice(0,60).map(contactPanelCard).join('') + '</div>'
         : empty(`Aucun contact VIP (⭐⭐⭐) en attente. Mets 3 étoiles à un contact prioritaire pour l'y retrouver.`);
