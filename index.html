@@ -9125,8 +9125,9 @@ async function renderHotProspects(){
     else if (typeof loadEndUsers === 'function') { await loadEndUsers(); accounts = allEndUsers || []; }
   } catch(e) {}
 
-  const interested = contacts.filter(c => c.interested);
-  const vip = contacts.filter(c => (c.manual_priority === 3 || /⭐⭐⭐/.test(c.notes || '')) && !c.contacted);
+  const isOut = c => c.already_client || c.type_contact === 'non_prospect_elistair';
+  const interested = contacts.filter(c => c.interested && !isOut(c));
+  const vip = contacts.filter(c => (c.manual_priority === 3 || /⭐⭐⭐/.test(c.notes || '')) && !c.contacted && !isOut(c));
   const hotAcc = (accounts || []).filter(e => e.statut && /chaud/i.test(e.statut));
 
   const gridOpen = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">';
@@ -9244,6 +9245,16 @@ async function openContactDetail(id) {
     html += `<div style="margin-top:14px;"><button onclick="flagStaleContact('${esc(f.id)}')" style="font-size:12px;color:#b45309;background:var(--bg3);border:1px solid #f59e0b;border-radius:6px;padding:6px 12px;cursor:pointer;">🕓 Signaler « contact pas à jour »</button></div>`;
   }
   html += `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);"><button onclick="window.openReplyPrompt && window.openReplyPrompt('${esc(f.id)}', window.__cdName)" style="font-size:12px;color:#16a34a;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.5);border-radius:6px;padding:8px 12px;cursor:pointer;font-weight:600;">\ud83d\udcec Marquer un retour re\u00e7u (int\u00e9ress\u00e9 / pas int\u00e9ress\u00e9)</button></div>`;
+  if (f.already_client) {
+    html += `<div style="margin-top:10px;font-size:12px;color:#2563eb;font-weight:600;padding:8px 12px;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.35);border-radius:6px;">🤝 Marqué « déjà client » — retiré des prospects.</div>`;
+  } else if (f.type_contact === 'non_prospect_elistair') {
+    html += `<div style="margin-top:10px;font-size:12px;color:var(--text2);font-weight:600;padding:8px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;">🚫 Marqué « pas un bon prospect » — retiré des prospects.</div>`;
+  } else {
+    html += `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">`
+      + `<button onclick="markContactClient('${esc(f.id)}')" style="font-size:12px;color:#2563eb;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.4);border-radius:6px;padding:8px 12px;cursor:pointer;font-weight:600;">🤝 Déjà client</button>`
+      + `<button onclick="markContactNotRelevant('${esc(f.id)}')" style="font-size:12px;color:#6b7280;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;cursor:pointer;font-weight:600;">🚫 Pas un bon prospect</button>`
+      + `</div>`;
+  }
   html += `<div id="cd-status-block" style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border);"></div>`;
   body.innerHTML = html;
   renderContactStatusBlock(f.id);
@@ -9305,6 +9316,29 @@ async function unmarkContacted(id){
   } catch(e){}
   renderContactStatusBlock(id);
 }
+
+async function markContactClient(id){
+  if(!confirm('Marquer ce contact comme DÉJÀ CLIENT ?\nIl sera retiré des prospects chauds et de « Prochaine action ».')) return;
+  try{
+    await fetch(API+'/action/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contact_id:id,action_type:'already_client'})});
+    const c=(_contactsPanelData||[]).find(x=>x.id===id); if(c) c.already_client=true;
+    if(typeof closeContactDetail==='function') closeContactDetail();
+    if(document.getElementById('panel-hot')&&document.getElementById('panel-hot').classList.contains('active')) renderHotProspects();
+    else if(typeof filterContactsPanel==='function') filterContactsPanel();
+  }catch(e){ alert('Erreur réseau'); }
+}
+async function markContactNotRelevant(id){
+  if(!confirm('Marquer ce contact comme PAS UN BON PROSPECT ?\nIl sera retiré des prospects chauds et de « Prochaine action ».')) return;
+  try{
+    await fetch(API+'/action/set-nonprospect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contact_id:id})});
+    const c=(_contactsPanelData||[]).find(x=>x.id===id); if(c) c.type_contact='non_prospect_elistair';
+    if(typeof closeContactDetail==='function') closeContactDetail();
+    if(document.getElementById('panel-hot')&&document.getElementById('panel-hot').classList.contains('active')) renderHotProspects();
+    else if(typeof filterContactsPanel==='function') filterContactsPanel();
+  }catch(e){ alert('Erreur réseau'); }
+}
+window.markContactClient=markContactClient;
+window.markContactNotRelevant=markContactNotRelevant;
 
 async function flagStaleContact(id){
   const reason = prompt("Pourquoi ce contact n'est-il plus à jour ? (ex: a changé de poste, a quitté l'organisation, promotion...)", '');
