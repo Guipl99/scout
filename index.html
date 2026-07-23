@@ -633,6 +633,18 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     box-shadow: 0 12px 32px rgba(220, 38, 38, 0.5);
   }
   #scout-action-btn.hidden { display: none; }
+  /* Prochaine action — pastille "Reprendre" (état réduit) */
+  #scout-action-pill {
+    position: fixed; bottom: 78px; right: 100px; z-index: 9998;
+    display: none; align-items: center; gap: 0;
+    background: linear-gradient(135deg,#dc2626,#ea580c); color:#fff;
+    border-radius: 24px; box-shadow: 0 8px 24px rgba(220,38,38,.4);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; font-weight: 600; overflow: hidden;
+  }
+  #scout-action-pill .pill-main { padding: 10px 6px 10px 16px; cursor: pointer; white-space: nowrap; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+  #scout-action-pill .pill-x { background: rgba(255,255,255,.18); border: none; color:#fff; cursor: pointer; font-size: 17px; line-height: 1; padding: 10px 12px; }
+  #scout-action-pill .pill-x:hover { background: rgba(255,255,255,.35); }
+  @media (max-width: 640px){ #scout-action-pill { right: 16px; bottom: 84px; } }
 
   /* Action modal */
   #scout-action-modal {
@@ -765,7 +777,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   <div class="scout-action-content">
     <div class="scout-action-header">
       <div class="title">🎯 Prochaine action suggérée</div>
-      <button class="close-btn" onclick="scoutAction.close()" aria-label="Fermer">×</button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="close-btn" onclick="scoutAction.minimize()" aria-label="Réduire" title="Réduire — garder la progression et naviguer" style="font-size:24px;">–</button>
+        <button class="close-btn" onclick="scoutAction.close()" aria-label="Fermer">×</button>
+      </div>
     </div>
     <div class="scout-action-body" id="scout-action-body">
       <div class="scout-loading">Chargement…</div>
@@ -803,6 +818,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
   let session = null; // { token, first_name }
   let currentContact = null;
+  let actionMinimized = false;
 
   // Global auth headers helper — used by all API fetches so the backend
   // can recognise authenticated callers and return un-masked PII.
@@ -1273,14 +1289,51 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     `;
   }
 
+  function showActionPill(){
+    let pill = document.getElementById('scout-action-pill');
+    if(!pill){ pill = document.createElement('div'); pill.id='scout-action-pill'; document.body.appendChild(pill); }
+    const nm = currentContact ? (((currentContact.prenom||'')+' '+(currentContact.nom||'')).trim() || 'contact') : 'contact';
+    pill.innerHTML = '<span class="pill-main" title="Reprendre la prochaine action">🎯 Reprendre : '+escapeHtml(nm)+'</span><button class="pill-x" title="Abandonner cette action" aria-label="Abandonner">×</button>';
+    pill.querySelector('.pill-main').onclick = () => scoutAction.restore();
+    pill.querySelector('.pill-x').onclick = (e) => { e.stopPropagation(); scoutAction.close(); };
+    pill.style.display = 'flex';
+  }
+  function hideActionPill(){ const p = document.getElementById('scout-action-pill'); if(p) p.style.display='none'; }
+
   window.scoutAction = {
     open: () => {
+      // Si une action est en cours (réduite), on la REPREND au lieu d'en tirer une nouvelle.
+      if (actionMinimized && currentContact) { scoutAction.restore(); return; }
       actionModal.classList.add('open');
       fetchNextContact();
+    },
+    minimize: () => {
+      // Réduit sans perdre la progression : la modale est masquée, le contact courant conservé,
+      // et une pastille "Reprendre" apparaît pour revenir.
+      if (!currentContact) { scoutAction.close(); return; }
+      actionModal.classList.remove('open');
+      actionMinimized = true;
+      showActionPill();
+    },
+    restore: () => {
+      actionMinimized = false;
+      hideActionPill();
+      actionModal.classList.add('open');
+    },
+    onNavigateAway: () => {
+      // Appelée par go() : si une action est ouverte quand on change de page, on la réduit
+      // (au lieu de la fermer) pour ne pas perdre la progression.
+      if (currentContact && actionModal.classList.contains('open')) {
+        actionModal.classList.remove('open');
+        actionMinimized = true;
+        showActionPill();
+      }
     },
     close: () => {
       actionModal.classList.remove('open');
       currentContact = null;
+      actionMinimized = false;
+      hideActionPill();
     },
     openProfile: () => {
       // Ouvre la FICHE COMPLÈTE du contact — LA MÊME que dans l'onglet Contacts de la base
@@ -2642,10 +2695,12 @@ function go(id, opts) {
   try {
     // Modales persistantes pilotées par la classe .open : on retire juste la classe (ne PAS toucher au style inline,
     // sinon elles ne se rouvrent plus).
-    ['scout-action-modal','scout-gs-overlay','contact-detail-modal'].forEach(function(mid){
+    ['scout-gs-overlay','contact-detail-modal'].forEach(function(mid){
       var el = document.getElementById(mid);
       if (el && el.classList) el.classList.remove('open');
     });
+    // Prochaine action : on RÉDUIT (garde la progression) au lieu de fermer.
+    try { if (window.scoutAction && window.scoutAction.onNavigateAway) window.scoutAction.onNavigateAway(); else { var _am=document.getElementById('scout-action-modal'); if(_am&&_am.classList) _am.classList.remove('open'); } } catch(_) {}
     // La modale de réponse est créée dynamiquement (appendChild) : on la retire du DOM.
     var _rm = document.getElementById('scout-reply-modal');
     if (_rm) { try { _rm.remove(); } catch(_) {} }
