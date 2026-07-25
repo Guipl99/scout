@@ -752,13 +752,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 <div id="scout-auth-gate" class="hidden">
   <div class="scout-auth-card">
     <h1>Scout</h1>
-    <div class="scout-auth-subtitle">BD Défense Drones Elistair — accès équipe</div>
+    <div class="scout-auth-subtitle">Accès équipe</div>
     <form id="scout-auth-form">
       <div class="scout-field">
-        <label for="scout-auth-firstname">Ton profil</label>
-        <select id="scout-auth-firstname" required style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#111827;font-size:14px;">
-          <option value="">— Choisis ton profil —</option>
-        </select>
+        <label for="scout-auth-firstname">Ton prénom</label>
+        <input id="scout-auth-firstname" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Ton prénom" required style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#111827;font-size:14px;" />
       </div>
       <div class="scout-field">
         <label for="scout-auth-password">Mot de passe</label>
@@ -767,7 +765,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <button type="submit" id="scout-auth-submit">Se connecter</button>
       <div id="scout-auth-err" class="scout-auth-err" style="display:none;"></div>
     </form>
-    <div class="scout-auth-hint">1re connexion : mot de passe d'équipe, puis crée ton mot de passe perso • Accès réservé équipe Elistair</div>
+    <div class="scout-auth-hint">1re connexion : mot de passe d'équipe, puis crée ton mot de passe perso</div>
   </div>
 </div>
 
@@ -856,16 +854,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   const authErr = document.getElementById('scout-auth-err');
   const actionBtn = document.getElementById('scout-action-btn');
 
-  async function populateProfiles(){
-    if (!authFirstname || authFirstname.tagName !== 'SELECT') return;
+  function populateProfiles(){
+    // SECURITY: champ prénom libre — on n'expose plus la liste des profils.
+    // On pré-remplit seulement le dernier prénom utilisé sur cet appareil.
+    if (!authFirstname) return;
     try {
-      const r = await fetch(API + '/team/public');
-      const d = await r.json();
       const savedName = localStorage.getItem(LS_NAME) || '';
-      const opts = ['<option value="">— Choisis ton profil —</option>']
-        .concat((d.users||[]).map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`));
-      authFirstname.innerHTML = opts.join('');
-      if (savedName && (d.users||[]).some(n => n.toLowerCase()===savedName.toLowerCase())) authFirstname.value = savedName;
+      if (savedName && !authFirstname.value) authFirstname.value = savedName;
     } catch(e) {}
   }
   function showAuthGate() {
