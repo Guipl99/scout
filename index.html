@@ -9315,7 +9315,16 @@ async function openContactDetail(id) {
   window.__cdContact = f;
   const _cdName = ((f.prenom || '') + ' ' + (f.nom || '')).trim() || f.id;
   window.__cdName = _cdName;
-  const compte = (typeof allEndUsers !== 'undefined' && Array.isArray(allEndUsers)) ? allEndUsers.find(e => e.id === f.end_user_id) : null;
+  let compte = (typeof allEndUsers !== 'undefined' && Array.isArray(allEndUsers)) ? allEndUsers.find(e => e.id === f.end_user_id) : null;
+  // Fallback : si le compte n'est pas dans le cache allEndUsers (ex. fiche ouverte depuis
+  // « Prochaine action » sans avoir visité l'onglet Comptes), on le récupère directement par
+  // son id pour toujours afficher le bouton « Voir le compte » (vérification de la source).
+  if (!compte && f.end_user_id) {
+    try {
+      const rc = await fetch(API + '/end-users/' + encodeURIComponent(f.end_user_id), { headers: (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {} });
+      if (rc.ok) { const ec = await rc.json(); if (ec && ec.id) compte = ec; }
+    } catch (e) {}
+  }
   let html = `<div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:2px;">${esc(((f.prenom || '') + ' ' + (f.nom || '')).trim())}</div>`;
   html += `<div style="font-size:13px;color:var(--accent2);margin-bottom:14px;">${esc(f.titre || '')}</div>`;
   html += (typeof window.starWidgetHtml === 'function') ? '<div style="margin-bottom:12px;">' + window.starWidgetHtml(f) + '</div>' : '';
