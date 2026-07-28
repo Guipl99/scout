@@ -9133,12 +9133,12 @@ async function renderContactsPanel(force) {
       const d = await r.json();
       _contactsPanelData = d.contacts || [];
       _contactsPanelLoaded = true;
-      populateContactsPanelPays();
     } catch (e) {
       grid.innerHTML = '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text3);">Erreur de chargement.</div>';
       return;
     }
   }
+  populateContactsPanelPays();
   filterContactsPanel();
 }
 
