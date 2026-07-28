@@ -1223,6 +1223,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <button class="scout-action-btn-item" style="width:100%;margin-top:10px;border-color:#f59e0b;color:#b45309;" onclick="scoutAction.flagStale()">
           <span class="icon">🕓</span><span>Contact pas à jour (contexte obsolète)</span>
         </button>
+        <button class="scout-action-btn-item" style="width:100%;margin-top:10px;border-color:#9ca3af;color:#6b7280;" onclick="scoutAction.markNotRelevant()">
+          <span class="icon">🚫</span><span>Contact pas pertinent (retirer du flux, conserver en base)</span>
+        </button>
       </div>
       <div id="scout-action-result"></div>
     `;
@@ -1504,6 +1507,37 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         `;
       } else {
         alert('Erreur lors du marquage. Réessaie.');
+      }
+    },
+    markNotRelevant: async () => {
+      if (!currentContact) return;
+      const c = currentContact;
+      const fullName = `${c.prenom || ''} ${c.nom || ''}`.trim() || 'ce contact';
+      const orgPart = c.organisation ? ` (${c.organisation})` : '';
+      if (!confirm(`Marquer ${fullName}${orgPart} comme PAS PERTINENT ?\n\nIl est conservé en base mais ne réapparaîtra plus dans le flux "Prochaine action".`)) return;
+      try {
+        const r = await fetch(API + '/action/set-nonprospect', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token},
+          body: JSON.stringify({ contact_id: currentContact.id })
+        });
+        const body = document.getElementById('scout-action-body');
+        if (r.ok) {
+          body.innerHTML = `
+            <div style="text-align:center; padding:40px 20px;">
+              <div style="font-size:48px; margin-bottom:12px;">🚫</div>
+              <div style="font-weight:600; color:#374151; margin-bottom:8px;">${escapeHtml(fullName)} marqué·e comme pas pertinent</div>
+              <div style="color:#6b7280; font-size:14px; margin-bottom:20px;">Le contact est conservé en base et retiré du flux "Prochaine action".</div>
+              <button class="scout-action-btn-item" style="margin:0 auto; max-width:280px;" onclick="scoutAction.open()">
+                <span class="icon">🎯</span><span>Voir la prochaine action</span>
+              </button>
+            </div>
+          `;
+        } else {
+          alert('Erreur lors du marquage. Réessaie.');
+        }
+      } catch (e) {
+        alert('Erreur réseau. Réessaie.');
       }
     },
     confirmSent: async (actionType) => {
