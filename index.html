@@ -1189,6 +1189,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <div class="scout-profile-hint" style="margin-top:8px;font-size:11px;color:var(--accent,#6c63ff);font-weight:600;">👤 Voir la fiche complète →</div>
       </div>
       <div id="scout-profile-detail" style="display:none;"></div>
+      <button class="scout-skip-btn" style="width:100%;margin:0 0 12px;" onclick="scoutAction.skip()">⏭️ Passer ce contact et voir le suivant</button>
       <div class="scout-actions-grid">
         <button class="scout-action-btn-item" onclick="scoutAction.openLinkedIn()" ${!hasLinkedin ? 'disabled' : ''}>
           <span class="icon">💼</span><span>Se connecter sur LinkedIn</span>
@@ -1223,7 +1224,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <span class="icon">🕓</span><span>Contact pas à jour (contexte obsolète)</span>
         </button>
       </div>
-      <button class="scout-skip-btn" onclick="scoutAction.skip()">⏭️ Passer ce contact et voir le suivant</button>
       <div id="scout-action-result"></div>
     `;
   }
