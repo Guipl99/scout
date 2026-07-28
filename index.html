@@ -9342,6 +9342,7 @@ async function openContactDetail(id) {
       ? `<div style="margin-top:10px;font-size:12px;color:#b91c1c;font-weight:600;padding:8px 12px;background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.4);border-radius:6px;">\ud83d\udcedEmail signal\u00e9 non remis (bounce) \u2014 retir\u00e9 de \u00ab Prochaine action \u00bb.</div>`
       : `<div style="margin-top:10px;"><button onclick="markEmailBounced('${esc(f.id)}')" style="font-size:12px;color:#b91c1c;background:var(--bg3);border:1px solid rgba(220,38,38,.5);border-radius:6px;padding:6px 12px;cursor:pointer;">\ud83d\udced Email non remis (bounce)</button></div>`;
   }
+  if (f.email) html += `<div style="margin-top:12px;"><button onclick="cdDraftEmail('${esc(f.id)}')" style="font-size:12px;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:600;">\u2709\ufe0f G\u00e9n\u00e9rer un email de prospection (IA)</button></div><div id="cd-email-draft" style="margin-top:10px;"></div>`;
   if (f.notes) html += `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);"><div style="color:var(--text3);font-size:11px;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;">Notes / contexte</div><div style="font-size:13px;line-height:1.6;color:var(--text);">${formatNotes(f.notes)}</div></div>`;
   html += _contactSourcesHtml(f);
   if (compte) html += `<div style="margin-top:16px;"><button onclick="closeContactDetail();go('end-users',{tab:'comptes'});setTimeout(function(){openEndUser('${esc(compte.id)}');},350);" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:7px 12px;cursor:pointer;">🏛️ Voir le compte : ${esc(compte.nom)}</button></div>`;
@@ -9454,6 +9455,32 @@ async function markEmailBounced(id){
   }catch(e){ alert('Erreur r\u00e9seau'); }
 }
 window.markEmailBounced=markEmailBounced;
+window._cdDraft=null;
+async function cdDraftEmail(id){
+  const box=document.getElementById('cd-email-draft'); if(!box) return;
+  box.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px;">G\u00e9n\u00e9ration de l\'email par Claude\u2026</div>';
+  try{
+    const r=await fetch(API+'/action/draft-email',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:id})});
+    const d=await r.json();
+    if(!r.ok){ box.innerHTML='<div style="color:#ef4444;font-size:12px;padding:8px;">'+esc(d.error||'Erreur g\u00e9n\u00e9ration')+'</div>'; return; }
+    window._cdDraft={subject:d.subject,body:d.body,to:d.to};
+    box.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px;font-size:13px;line-height:1.5;">'
+      +'<div style="font-weight:600;margin-bottom:6px;">Objet : '+esc(d.subject)+'</div>'
+      +'<div style="white-space:pre-wrap;color:var(--text);">'+esc(d.body)+'</div></div>'
+      +'<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">'
+      +'<button onclick="cdSendDraft()" style="font-size:12px;color:#fff;background:var(--accent);border:none;border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:600;">\ud83d\udcee Ouvrir dans mail</button>'
+      +'<button onclick="cdCopyDraft(this)" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:7px 12px;cursor:pointer;">\ud83d\udccb Copier</button>'
+      +'<button onclick="cdDraftEmail(\''+esc(id)+'\')" style="font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 12px;cursor:pointer;">\ud83d\udd04 R\u00e9g\u00e9n\u00e9rer</button>'
+      +'</div>';
+  }catch(e){ box.innerHTML='<div style="color:#ef4444;font-size:12px;padding:8px;">Erreur : '+esc(e.message)+'</div>'; }
+}
+window.cdDraftEmail=cdDraftEmail;
+function cdSendDraft(){ const d=window._cdDraft; if(!d) return; window.location.href='mailto:'+encodeURIComponent(d.to)+'?subject='+encodeURIComponent(d.subject)+'&body='+encodeURIComponent(d.body);
+  try{ const cid=(window.__cdContact&&window.__cdContact.id); if(cid) fetch(API+'/action/log-intent',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:cid,action_type:'email',details:{subject:d.subject,to:d.to}})}); }catch(e){}
+}
+window.cdSendDraft=cdSendDraft;
+function cdCopyDraft(btn){ const d=window._cdDraft; if(!d) return; const t='Objet : '+d.subject+'\n\n'+d.body; try{ navigator.clipboard.writeText(t); if(btn){ const o=btn.innerHTML; btn.innerHTML='\u2713 Copi\u00e9'; setTimeout(function(){btn.innerHTML=o;},1500); } }catch(e){} }
+window.cdCopyDraft=cdCopyDraft;
 
 async function flagStaleContact(id){
   const reason = prompt("Pourquoi ce contact n'est-il plus à jour ? (ex: a changé de poste, a quitté l'organisation, promotion...)", '');
