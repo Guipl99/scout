@@ -2890,6 +2890,7 @@ function go(id, opts) {
     } catch(e){}
   }
   if (id === 'end-users') {
+    const _eug = document.getElementById('eu-grid'); if (_eug && typeof scoutSkeletonCards==='function') _eug.innerHTML = scoutSkeletonCards(9);
     // When user clicks "Comptes" in the nav, force a fresh fetch — the in-memory cache
     // can be stale by hours after DB changes (new EU/contacts inserted from another session).
     // Skip force when we're restoring from URL hash on initial load (silent), so the page
