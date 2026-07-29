@@ -172,7 +172,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-section-title { font-size:13px; font-weight:700; color:var(--text); letter-spacing:.02em; white-space:nowrap; }
 .db-section-sub { font-size:11px; color:var(--text3); white-space:nowrap; }
 .db-section-head::after { content:''; flex:1; height:1px; background:var(--border); }
-.db-kpi-row-perso { grid-template-columns:repeat(4,1fr); }
+.db-kpi-row-perso { grid-template-columns:repeat(5,1fr); }
 .db-cockpit { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px; }
 .db-cockpit-card { display:flex; align-items:center; gap:12px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; cursor:pointer; transition:border-color .15s, background .15s, filter .15s; }
 .db-cockpit-card:hover { border-color:var(--accent); background:var(--bg3); }
@@ -1710,6 +1710,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
             <div class="db-kpi-body">
               <div class="db-kpi-val" id="m-my-emails-total">—</div>
               <div class="db-kpi-label">Mes emails (total)</div>
+            </div>
+          </div>
+          <div class="db-kpi" title="Relances envoyées sur les 7 derniers jours (emails qui ne sont pas le 1er envoyé à un contact). Sub-label : total de relances depuis le début.">
+            <div class="db-kpi-icon">🔁</div>
+            <div class="db-kpi-body">
+              <div class="db-kpi-val" id="m-my-relances-7d">—</div>
+              <div class="db-kpi-label">Mes relances (7j)</div>
+              <div class="db-kpi-sub db-kpi-sub-muted" id="m-my-relances-7d-sub">—</div>
             </div>
           </div>
           <div class="db-kpi" title="Contacts distincts que j'ai réellement approchés (hors intentions, skip et demandes de connexion LinkedIn).">
@@ -3541,6 +3549,8 @@ function renderMyStats() {
     const avg15 = ((d.emails_15d || 0) / 15).toFixed(1).replace('.', ',');
     set('m-my-emails-7d-sub', 'moy. ' + avg15 + '/jour (15j)');
     set('m-my-emails-total', (d.emails_total || 0).toLocaleString('fr-FR'));
+    set('m-my-relances-7d', (d.relances_7d || 0).toLocaleString('fr-FR'));
+    set('m-my-relances-7d-sub', (d.relances_total || 0).toLocaleString('fr-FR') + ' au total');
     set('m-my-contacted', (d.contacted || 0).toLocaleString('fr-FR'));
     set('m-my-interested', (d.interested || 0).toLocaleString('fr-FR'));
     const rate = d.emails_total > 0 ? Math.round((d.interested / d.emails_total) * 100) : 0;
