@@ -746,6 +746,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   .scout-loading {
     text-align: center; padding: 40px; color: #6b7280;
   }
+  .sk { background: linear-gradient(90deg, var(--bg3) 25%, var(--bg2) 37%, var(--bg3) 63%); background-size: 400% 100%; animation: skwave 1.4s ease infinite; border-radius: 8px; }
+  @keyframes skwave { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 </style>
 
 <!-- AUTH GATE -->
@@ -2430,7 +2432,7 @@ Réinitialiser tous les filtres
         <button type="button" onclick="exportTrackingCSV()" style="font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;">⬇️ Exporter CSV</button>
       </div>
       <div id="trk-tiles" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;"></div>
-      <div id="trk-body"><div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div></div>
+      <div id="trk-body"></div>
     </div>
     <div id="panel-contacts" class="panel">
       <div class="topbar"><h1>Contacts</h1></div>
@@ -3660,10 +3662,7 @@ function renderDashboard() {
   // Source: /contacts/stats-engagement (aggregated server-side)
   // ===========================================================================
 
-  // Pre-warm buyer-segments cache (used by contacts/end-users grid filters)
-  loadBuyerSegments();
-
-  // Cockpit commercial (prochaine action / chauds / relances) + état section marché
+  // Cockpit commercial (prochaine action / chauds / relances) + état section marché — priorité (peint en premier)
   renderDashboardCockpit();
   _applyDbMarketState();
 
@@ -3672,7 +3671,8 @@ function renderDashboard() {
 
   // Mini-graphe activité (emails envoyés + retours positifs) — bascule Équipe / Moi
   syncChartScopeButtons();
-  loadCockpitChart();
+  // Différer les blocs lourds (prewarm segments + graphe Chart.js) pour peindre le cockpit d'abord (fluidité)
+  setTimeout(function(){ try{ loadBuyerSegments(); }catch(e){} try{ loadCockpitChart(); }catch(e){} }, 60);
 
   fetch(API + '/contacts/stats-engagement').then(r => r.json()).then(d => {
     if (!d || !d.ok) return;
@@ -6034,9 +6034,29 @@ init().then(() => {
 </script>
 <script>
 if ('serviceWorker' in navigator) {
+  function scoutShowUpdateBanner(){
+    if (document.getElementById('scout-update-banner')) return;
+    var b = document.createElement('div');
+    b.id = 'scout-update-banner';
+    b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:100000;background:var(--accent,#6c63ff);color:#fff;border-radius:24px;box-shadow:0 8px 24px rgba(108,99,255,.4);padding:10px 12px 10px 18px;display:flex;align-items:center;gap:12px;font-size:13px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,sans-serif;';
+    b.innerHTML = '<span>Nouvelle version disponible</span><button onclick="location.reload()" style="background:#fff;color:var(--accent,#6c63ff);border:none;border-radius:16px;padding:7px 14px;font-weight:700;cursor:pointer;font-size:13px;">Recharger</button><button onclick="var e=document.getElementById(\'scout-update-banner\');if(e)e.remove();" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:15px;line-height:1;">×</button>';
+    document.body.appendChild(b);
+  }
   navigator.serviceWorker.register('/scout/sw.js', { scope: '/scout/' })
-    .then(r => console.log('[Scout PWA] SW registered', r.scope))
-    .catch(e => console.log('[Scout PWA] SW error', e));
+    .then(function(reg){
+      console.log('[Scout PWA] SW registered', reg.scope);
+      reg.addEventListener('updatefound', function(){
+        var nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', function(){
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) scoutShowUpdateBanner();
+        });
+      });
+      setInterval(function(){ try{ reg.update(); }catch(e){} }, 60000);
+    })
+    .catch(function(e){ console.log('[Scout PWA] SW error', e); });
+  var _hadCtrl = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', function(){ if(_hadCtrl) scoutShowUpdateBanner(); });
 }
 // ── Restaurer l'onglet depuis l'URL hash au rechargement ──────
 (function restoreFromHash() {
@@ -9192,7 +9212,7 @@ async function renderContactsPanel(force) {
   const grid = document.getElementById('contacts-panel-grid');
   if (!grid) return;
   if (!_contactsPanelLoaded || force) {
-    grid.innerHTML = '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text3);">Chargement des contacts…</div>';
+    grid.innerHTML = (typeof scoutSkeletonCards==='function') ? scoutSkeletonCards(9) : '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text3);">Chargement…</div>';
     try {
       const r = await fetch(API + '/contacts?limit=5000', { headers: (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {} });
       const d = await r.json();
@@ -9324,7 +9344,7 @@ function _trkScopeStyle(){
 async function renderTracking(){
   _trkScopeStyle();
   const body=document.getElementById('trk-body'); if(!body) return;
-  body.innerHTML='<div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div>';
+  body.innerHTML=(typeof scoutSkeletonRows==='function')?scoutSkeletonRows(6):'<div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div>';
   try{
     const r=await fetch(API+'/me/tracking?scope='+_trackingScope,{headers:(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}});
     const d=await r.json();
@@ -9408,6 +9428,9 @@ function renderTrackingTable(){
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 window.renderTrackingTable=renderTrackingTable;
+function scoutSkeletonCards(n){ n=n||9; let h='<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;">'; for(let i=0;i<n;i++){ h+='<div style="border:1px solid var(--border2);border-radius:10px;padding:14px;"><div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;"><div class="sk" style="width:34px;height:34px;border-radius:50%;"></div><div style="flex:1;"><div class="sk" style="height:12px;width:70%;margin-bottom:6px;"></div><div class="sk" style="height:10px;width:45%;"></div></div></div><div class="sk" style="height:10px;width:55%;"></div></div>'; } return h+'</div>'; }
+function scoutSkeletonRows(n){ n=n||6; let h='<div style="border:1px solid var(--border2);border-radius:10px;overflow:hidden;">'; for(let i=0;i<n;i++){ h+='<div style="display:flex;gap:14px;padding:13px 12px;border-top:1px solid var(--border2);align-items:center;"><div class="sk" style="height:12px;flex:2;"></div><div class="sk" style="height:12px;flex:1;"></div><div class="sk" style="height:12px;flex:1;"></div><div class="sk" style="height:12px;flex:1;"></div></div>'; } return h+'</div>'; }
+window.scoutSkeletonCards=scoutSkeletonCards; window.scoutSkeletonRows=scoutSkeletonRows;
 async function trkTransmitCRM(id){
   try{ await fetch(API+'/action/transmit-crm',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:id})}); }catch(e){}
   const x=(_trackingData||[]).find(t=>t.id===id); if(x) x.status='transmitted';
