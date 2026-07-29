@@ -172,7 +172,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .db-section-title { font-size:13px; font-weight:700; color:var(--text); letter-spacing:.02em; white-space:nowrap; }
 .db-section-sub { font-size:11px; color:var(--text3); white-space:nowrap; }
 .db-section-head::after { content:''; flex:1; height:1px; background:var(--border); }
-.db-kpi-row-perso { grid-template-columns:repeat(5,1fr); }
+.db-kpi-row-perso { grid-template-columns:repeat(3,1fr); }
 .db-cockpit { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px; }
 .db-cockpit-card { display:flex; align-items:center; gap:12px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; cursor:pointer; transition:border-color .15s, background .15s, filter .15s; }
 .db-cockpit-card:hover { border-color:var(--accent); background:var(--bg3); }
@@ -1708,26 +1708,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
               <div class="db-kpi-sub db-kpi-sub-muted" id="m-my-emails-7d-sub">—</div>
             </div>
           </div>
-          <div class="db-kpi" title="Total cumulé des emails que j'ai envoyés depuis le début.">
-            <div class="db-kpi-icon">📨</div>
-            <div class="db-kpi-body">
-              <div class="db-kpi-val" id="m-my-emails-total">—</div>
-              <div class="db-kpi-label">Mes emails (total)</div>
-            </div>
-          </div>
           <div class="db-kpi" title="Relances envoyées sur les 7 derniers jours (emails qui ne sont pas le 1er envoyé à un contact). Sub-label : total de relances depuis le début.">
             <div class="db-kpi-icon">🔁</div>
             <div class="db-kpi-body">
               <div class="db-kpi-val" id="m-my-relances-7d">—</div>
               <div class="db-kpi-label">Mes relances (7j)</div>
               <div class="db-kpi-sub db-kpi-sub-muted" id="m-my-relances-7d-sub">—</div>
-            </div>
-          </div>
-          <div class="db-kpi" title="Contacts distincts que j'ai réellement approchés (hors intentions, skip et demandes de connexion LinkedIn).">
-            <div class="db-kpi-icon">🎯</div>
-            <div class="db-kpi-body">
-              <div class="db-kpi-val" id="m-my-contacted">—</div>
-              <div class="db-kpi-label">Contacts approchés</div>
             </div>
           </div>
           <div class="db-kpi db-kpi-success" onclick="go('contacts',{contactFilter:'interested'})" title="Contacts que j'ai contactés par email et qui ont répondu positivement. Sub-label : mon taux de conversion emails → intéressés.">
@@ -1742,6 +1728,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <div class="db-perso-strip" id="db-perso-rank-strip" style="display:none;"></div>
       </div>
 
+
+      <!-- SECTION MARCHÉ & VEILLE (repliable) -->
+      <div class="db-section-head db-market-toggle" onclick="toggleDbMarket()" style="cursor:pointer;user-select:none;">
+        <span class="db-section-title">📈 Activité &amp; marché</span>
+        <span class="db-section-sub" id="db-market-hint">déplier</span>
+        <span id="db-market-chevron" style="margin-left:auto;color:var(--text3);transition:transform .2s;">▾</span>
+      </div>
+      <div id="db-market" style="display:none;">
       <!-- MINI-GRAPHE ACTIVITÉ -->
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
@@ -1758,13 +1752,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       </div>
 
 
-      <!-- SECTION MARCHÉ & VEILLE (repliable) -->
-      <div class="db-section-head db-market-toggle" onclick="toggleDbMarket()" style="cursor:pointer;user-select:none;">
-        <span class="db-section-title">📈 Marché &amp; veille</span>
-        <span class="db-section-sub" id="db-market-hint">déplier</span>
-        <span id="db-market-chevron" style="margin-left:auto;color:var(--text3);transition:transform .2s;">▾</span>
-      </div>
-      <div id="db-market" style="display:none;">
       <!-- SECTION: VUE GÉNÉRALE (équipe / toute la base) -->
       <div class="db-section-head">
         <span class="db-section-title">📊 Vue générale · équipe</span>
@@ -3594,6 +3581,7 @@ function toggleDbMarket(){
   m.style.display = willOpen ? '' : 'none';
   const h = document.getElementById('db-market-hint'); if(h) h.textContent = willOpen ? 'replier' : 'déplier';
   const c = document.getElementById('db-market-chevron'); if(c) c.style.transform = willOpen ? 'rotate(180deg)' : '';
+  if(willOpen){ try{ if(typeof loadCockpitChart==='function') loadCockpitChart(); }catch(e){} }
   try { localStorage.setItem('scoutDbMarketOpen', willOpen ? '1' : '0'); } catch(e){}
 }
 window.toggleDbMarket = toggleDbMarket;
@@ -3605,6 +3593,7 @@ function _applyDbMarketState(){
     m.style.display = open ? '' : 'none';
     const h = document.getElementById('db-market-hint'); if(h) h.textContent = open ? 'replier' : 'déplier';
     const c = document.getElementById('db-market-chevron'); if(c) c.style.transform = open ? 'rotate(180deg)' : '';
+    if(open){ try{ if(typeof loadCockpitChart==='function') loadCockpitChart(); }catch(e){} }
   } catch(e){}
 }
 
@@ -3672,8 +3661,8 @@ function renderDashboard() {
 
   // Mini-graphe activité (emails envoyés + retours positifs) — bascule Équipe / Moi
   syncChartScopeButtons();
-  // Différer les blocs lourds (prewarm segments + graphe Chart.js) pour peindre le cockpit d'abord (fluidité)
-  setTimeout(function(){ try{ loadBuyerSegments(); }catch(e){} try{ loadCockpitChart(); }catch(e){} }, 60);
+  // Différer le prewarm segments ; le graphe n'est rendu qu'à l'ouverture du bloc « Activité & marché » (épuré)
+  setTimeout(function(){ try{ loadBuyerSegments(); }catch(e){} }, 60);
 
   fetch(API + '/contacts/stats-engagement').then(r => r.json()).then(d => {
     if (!d || !d.ok) return;
