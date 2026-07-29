@@ -1399,7 +1399,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       if (!d) return;
       const url = `mailto:${encodeURIComponent(d.to)}?subject=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.body)}`;
       window.location.href = url;
-      logIntent('email', {subject: d.subject, to: d.to});
+      logIntent('email', {subject: d.subject, body: d.body, to: d.to});
       renderConfirmation('email', 'Email ouvert dans le client mail');
     },
     draftLinkedInMsg: async () => {
@@ -1538,7 +1538,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       }
     },
     confirmSent: async (actionType) => {
-      const result = await confirmAction(actionType);
+      const _dft = (actionType==='email' && window._scoutCurrentDraft) ? {subject:window._scoutCurrentDraft.subject, body:window._scoutCurrentDraft.body, to:window._scoutCurrentDraft.to} : undefined;
+      const result = await confirmAction(actionType, _dft);
       const body = document.getElementById('scout-action-body');
       if (result?.ok) {
         body.innerHTML = `
@@ -8127,7 +8128,7 @@ async function exportLinkedInCsv(scope) {
     if (!currentDraft) return;
     const url = `mailto:${encodeURIComponent(currentDraft.to)}?subject=${encodeURIComponent(currentDraft.subject)}&body=${encodeURIComponent(currentDraft.body)}`;
     window.location.href = url;
-    logIntent('email', { subject: currentDraft.subject, to: currentDraft.to });
+    logIntent('email', { subject: currentDraft.subject, body: currentDraft.body, to: currentDraft.to });
     renderConfirmBox('email', 'Email ouvert dans le client mail');
   }
 
@@ -9451,7 +9452,7 @@ window.trkSendRelance=trkSendRelance;
 function trkCopyRelance(btn){ const d=window._trkDraft; if(!d) return; try{ navigator.clipboard.writeText('Objet : '+d.subject+'\n\n'+d.body); if(btn){ const o=btn.innerHTML; btn.innerHTML='✓ Copié'; setTimeout(function(){btn.innerHTML=o;},1500); } }catch(e){} }
 window.trkCopyRelance=trkCopyRelance;
 async function trkMarkRelanceSent(id){
-  try{ await fetch(API+'/action/confirm',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:id,action_type:'email'})}); }catch(e){}
+  try{ const _d=window._trkDraft||{}; await fetch(API+'/action/confirm',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:id,action_type:'email',details:{subject:_d.subject,body:_d.body,to:_d.to}})}); }catch(e){}
   const m=document.getElementById('trk-relance-modal'); if(m) m.remove();
   renderTracking();
 }
@@ -9697,7 +9698,7 @@ async function cdDraftEmail(id){
 }
 window.cdDraftEmail=cdDraftEmail;
 function cdSendDraft(){ const d=window._cdDraft; if(!d) return; window.location.href='mailto:'+encodeURIComponent(d.to)+'?subject='+encodeURIComponent(d.subject)+'&body='+encodeURIComponent(d.body);
-  try{ const cid=(window.__cdContact&&window.__cdContact.id); if(cid) fetch(API+'/action/log-intent',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:cid,action_type:'email',details:{subject:d.subject,to:d.to}})}); }catch(e){}
+  try{ const cid=(window.__cdContact&&window.__cdContact.id); if(cid) fetch(API+'/action/log-intent',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:cid,action_type:'email',details:{subject:d.subject,body:d.body,to:d.to}})}); }catch(e){}
 }
 window.cdSendDraft=cdSendDraft;
 function cdCopyDraft(btn){ const d=window._cdDraft; if(!d) return; const t='Objet : '+d.subject+'\n\n'+d.body; try{ navigator.clipboard.writeText(t); if(btn){ const o=btn.innerHTML; btn.innerHTML='\u2713 Copi\u00e9'; setTimeout(function(){btn.innerHTML=o;},1500); } }catch(e){} }
