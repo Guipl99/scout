@@ -1645,6 +1645,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <span style="font-size:15px;line-height:1;width:16px;text-align:center;">🔥</span>
       Prospects chauds
     </div>
+    <div class="nav-item" id="nav-tracking" onclick="go('tracking')">
+      <span style="font-size:15px;line-height:1;width:16px;text-align:center;">📋</span>
+      Suivi &amp; relances
+    </div>
     <div class="nav-item" id="nav-contracts" onclick="go('contracts')">
       <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       Contrats & Tenders
@@ -2398,6 +2402,26 @@ Réinitialiser tous les filtres
 
       </div>
     </div>
+    <div id="panel-tracking" class="panel">
+      <div class="topbar"><h1>Suivi &amp; relances</h1></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <div style="display:inline-flex;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+          <button type="button" id="trk-scope-me" onclick="setTrackingScope('me')"></button>
+          <button type="button" id="trk-scope-team" onclick="setTrackingScope('team')"></button>
+        </div>
+        <select id="trk-status" onchange="renderTrackingTable()" style="font-size:13px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
+          <option value="">Tous les statuts</option>
+          <option value="waiting">En attente de réponse</option>
+          <option value="interested">Intéressé</option>
+          <option value="transmitted">Transmis au CRM</option>
+          <option value="not_interested">Pas intéressé</option>
+        </select>
+        <input id="trk-search" type="text" placeholder="Filtrer par contact / compte…" oninput="renderTrackingTable()" style="flex:1;min-width:180px;font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
+        <button type="button" onclick="exportTrackingCSV()" style="font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;">⬇️ Exporter CSV</button>
+      </div>
+      <div id="trk-tiles" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;"></div>
+      <div id="trk-body"><div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div></div>
+    </div>
     <div id="panel-contacts" class="panel">
       <div class="topbar"><h1>Contacts</h1></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
@@ -2840,6 +2864,7 @@ function go(id, opts) {
   }
   if (id === 'resellers') { loadResellersMap(); }
   if (id === 'hot') { try { renderHotProspects(); } catch(e){ console.error('renderHotProspects', e); } }
+  if (id === 'tracking') { try { renderTracking(); } catch(e){ console.error('renderTracking', e); } }
   if (id === 'config') {
     // Settings panel — peupler la liste des pays exclus et tous les champs.
     // applySettings() s'occupe de loadEndUsers/loadContacts si besoin.
@@ -9275,6 +9300,149 @@ async function renderHotProspects(){
   body.innerHTML = html;
 }
 window.renderHotProspects = renderHotProspects;
+
+// ===================== Suivi & relances =====================
+let _trackingScope = 'me', _trackingData = [];
+function _trkBtnCss(on){ return 'font-size:13px;padding:8px 16px;border:none;cursor:pointer;'+(on?'background:var(--accent);color:#fff;font-weight:600;':'background:var(--bg3);color:var(--text2);'); }
+function _trkScopeStyle(){
+  const me=document.getElementById('trk-scope-me'), tm=document.getElementById('trk-scope-team');
+  if(me){ me.textContent='Moi'; me.style.cssText=_trkBtnCss(_trackingScope==='me'); }
+  if(tm){ tm.textContent='Équipe'; tm.style.cssText=_trkBtnCss(_trackingScope==='team'); }
+}
+async function renderTracking(){
+  _trkScopeStyle();
+  const body=document.getElementById('trk-body'); if(!body) return;
+  body.innerHTML='<div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div>';
+  try{
+    const r=await fetch(API+'/me/tracking?scope='+_trackingScope,{headers:(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}});
+    const d=await r.json();
+    _trackingData=d.tracking||[];
+  }catch(e){ body.innerHTML='<div style="padding:2rem;text-align:center;color:var(--text3);">Erreur de chargement.</div>'; return; }
+  renderTrackingTiles();
+  renderTrackingTable();
+}
+window.renderTracking=renderTracking;
+function setTrackingScope(sc){ _trackingScope=sc; _trkScopeStyle(); renderTracking(); }
+window.setTrackingScope=setTrackingScope;
+function renderTrackingTiles(){
+  const t=document.getElementById('trk-tiles'); if(!t) return;
+  const D=_trackingData;
+  const overdue=D.filter(x=>x.urgency==='overdue').length;
+  const due=D.filter(x=>x.urgency==='due').length;
+  const waiting=D.filter(x=>x.status==='waiting').length;
+  const interested=D.filter(x=>x.status==='interested'||x.status==='transmitted').length;
+  const tile=(lbl,val,col)=>'<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;"><div style="font-size:11px;color:var(--text3);">'+lbl+'</div><div style="font-size:22px;font-weight:700;color:'+col+';">'+val+'</div></div>';
+  t.innerHTML=tile('En retard',overdue,'#dc2626')+tile("À relancer aujourd'hui",due,'#f59e0b')+tile('En attente',waiting,'var(--text)')+tile('Intéressés',interested,'#16a34a');
+}
+function _trkFiltered(){
+  const st=(document.getElementById('trk-status')||{}).value||'';
+  const q=((document.getElementById('trk-search')||{}).value||'').toLowerCase().trim();
+  return _trackingData.filter(x=>{
+    if(st && x.status!==st) return false;
+    if(q){ const hay=((x.prenom||'')+' '+(x.nom||'')+' '+(x.account_nom||'')+' '+(x.organisation||'')).toLowerCase(); if(!hay.includes(q)) return false; }
+    return true;
+  });
+}
+function _trkStatusChip(x){
+  const base='font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;';
+  if(x.status==='transmitted') return '<span style="'+base+'background:rgba(37,99,235,.12);color:#2563eb;">Transmis au CRM</span>';
+  if(x.status==='interested') return '<span style="'+base+'background:rgba(34,197,94,.14);color:#16a34a;">Intéressé</span>';
+  if(x.status==='not_interested') return '<span style="'+base+'background:var(--bg3);color:var(--text3);">Pas intéressé</span>';
+  return '<span style="'+base+'background:var(--bg3);color:var(--text2);">En attente</span>';
+}
+function _trkUrgencyCell(x){
+  if(x.status!=='waiting') return '<span style="color:var(--text3);">Hors séquence</span>';
+  if(x.urgency==='overdue') return '<span style="color:#dc2626;font-weight:600;">⚠️ En retard '+x.days_overdue+' j</span>';
+  if(x.urgency==='due') return '<span style="color:#f59e0b;font-weight:600;">🕐 Aujourd\'hui</span>';
+  if(x.urgency==='future') return '<span style="color:var(--text2);">Dans '+x.days_left+' j</span>';
+  return '<span style="color:var(--text3);">Séquence épuisée</span>';
+}
+function _trkActionBtn(x){
+  const b='font-size:12px;padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;';
+  if(x.status==='waiting' && x.email && (x.urgency==='overdue'||x.urgency==='due'||x.urgency==='future'))
+    return '<button onclick="trkRelance(\''+esc(x.id)+'\')" style="'+b+'color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;font-weight:600;">✉️ Relance</button>';
+  if(x.status==='interested')
+    return '<button onclick="trkTransmitCRM(\''+esc(x.id)+'\')" style="'+b+'color:#2563eb;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.4);font-weight:600;">→ Transmettre au CRM</button>';
+  return '<button onclick="openContactDetail(\''+esc(x.id)+'\')" style="'+b+'color:var(--text2);background:var(--bg3);border:1px solid var(--border2);">👁️ Fiche</button>';
+}
+function renderTrackingTable(){
+  const body=document.getElementById('trk-body'); if(!body) return;
+  const list=_trkFiltered(); window._trackingExport=list;
+  if(!list.length){ body.innerHTML='<div style="padding:2rem;text-align:center;color:var(--text3);">Aucun prospect contacté ici pour le moment.</div>'; return; }
+  const showOwner=(_trackingScope==='team');
+  const rows=list.map(function(x){
+    const name=((x.prenom||'')+' '+(x.nom||'')).trim()||x.id;
+    const compte=x.account_nom||x.organisation||'';
+    const euId=x.end_user_id;
+    return '<tr style="border-top:1px solid var(--border2);">'
+      +'<td style="padding:9px 10px;">'
+        +'<div onclick="openContactDetail(\''+esc(x.id)+'\')" style="color:var(--accent2);cursor:pointer;font-weight:500;">'+esc(name)+'</div>'
+        +'<div '+(euId?'onclick="go(\'end-users\');setTimeout(function(){openEndUser(\''+esc(euId)+'\')},300)" style="font-size:11px;color:var(--text3);cursor:pointer;"':'style="font-size:11px;color:var(--text3);"')+'>'+esc(compte)+'</div>'
+      +'</td>'
+      +(showOwner?'<td style="padding:9px 10px;color:var(--text2);font-size:12px;">'+esc(x.owner||'')+'</td>':'')
+      +'<td style="padding:9px 10px;">'+_trkStatusChip(x)+'<div style="font-size:11px;color:var(--text3);margin-top:3px;">'+esc(x.stage)+'</div></td>'
+      +'<td style="padding:9px 10px;font-size:12px;">'+_trkUrgencyCell(x)+'</td>'
+      +'<td style="padding:9px 10px;">'+_trkActionBtn(x)+'</td>'
+    +'</tr>';
+  }).join('');
+  body.innerHTML='<div style="border:1px solid var(--border2);border-radius:10px;overflow:hidden;overflow-x:auto;">'
+    +'<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead>'
+    +'<tr style="background:var(--bg3);color:var(--text3);text-align:left;">'
+    +'<th style="padding:9px 10px;font-weight:500;">Contact / compte</th>'
+    +(showOwner?'<th style="padding:9px 10px;font-weight:500;">Owner</th>':'')
+    +'<th style="padding:9px 10px;font-weight:500;">Statut / étape</th>'
+    +'<th style="padding:9px 10px;font-weight:500;">Prochaine relance</th>'
+    +'<th style="padding:9px 10px;font-weight:500;">Action</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+window.renderTrackingTable=renderTrackingTable;
+async function trkTransmitCRM(id){
+  try{ await fetch(API+'/action/transmit-crm',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:id})}); }catch(e){}
+  const x=(_trackingData||[]).find(t=>t.id===id); if(x) x.status='transmitted';
+  renderTrackingTiles(); renderTrackingTable();
+}
+window.trkTransmitCRM=trkTransmitCRM;
+async function trkRelance(id){
+  let modal=document.getElementById('trk-relance-modal');
+  if(!modal){ modal=document.createElement('div'); modal.id='trk-relance-modal'; modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;'; document.body.appendChild(modal); }
+  modal.innerHTML='<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;max-width:560px;width:100%;max-height:85vh;overflow:auto;padding:18px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="font-weight:600;color:var(--text);">✉️ Relance</div><button onclick="var m=document.getElementById(\'trk-relance-modal\');if(m)m.remove();" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);">×</button></div><div id="trk-relance-body" style="color:var(--text3);font-size:13px;">Génération de la relance par Claude…</div></div>';
+  try{
+    const r=await fetch(API+'/action/draft-email',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:id,mode:'relance'})});
+    const d=await r.json();
+    const box=document.getElementById('trk-relance-body'); if(!box) return;
+    if(!r.ok){ box.innerHTML='<span style="color:#ef4444;">'+esc(d.error||'Erreur')+'</span>'; return; }
+    window._trkDraft={subject:d.subject,body:d.body,to:d.to,id:id};
+    box.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px;font-size:13px;line-height:1.5;color:var(--text);"><div style="font-weight:600;margin-bottom:6px;">Objet : '+esc(d.subject)+'</div><div style="white-space:pre-wrap;">'+esc(d.body)+'</div></div>'
+      +'<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
+      +'<button onclick="trkSendRelance()" style="font-size:12px;color:#fff;background:var(--accent);border:none;border-radius:6px;padding:8px 12px;cursor:pointer;font-weight:600;">📮 Ouvrir dans mail</button>'
+      +'<button onclick="trkCopyRelance(this)" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:8px 12px;cursor:pointer;">📋 Copier</button>'
+      +'<button onclick="trkMarkRelanceSent(\''+esc(id)+'\')" style="font-size:12px;color:#065f46;background:rgba(16,185,129,.12);border:1px solid #10b981;border-radius:6px;padding:8px 12px;cursor:pointer;font-weight:600;">✅ Marquer relance envoyée</button>'
+      +'</div>';
+  }catch(e){ const box=document.getElementById('trk-relance-body'); if(box) box.innerHTML='<span style="color:#ef4444;">Erreur : '+esc(e.message)+'</span>'; }
+}
+window.trkRelance=trkRelance;
+function trkSendRelance(){ const d=window._trkDraft; if(!d) return; window.location.href='mailto:'+encodeURIComponent(d.to)+'?subject='+encodeURIComponent(d.subject)+'&body='+encodeURIComponent(d.body); }
+window.trkSendRelance=trkSendRelance;
+function trkCopyRelance(btn){ const d=window._trkDraft; if(!d) return; try{ navigator.clipboard.writeText('Objet : '+d.subject+'\n\n'+d.body); if(btn){ const o=btn.innerHTML; btn.innerHTML='✓ Copié'; setTimeout(function(){btn.innerHTML=o;},1500); } }catch(e){} }
+window.trkCopyRelance=trkCopyRelance;
+async function trkMarkRelanceSent(id){
+  try{ await fetch(API+'/action/confirm',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:id,action_type:'email'})}); }catch(e){}
+  const m=document.getElementById('trk-relance-modal'); if(m) m.remove();
+  renderTracking();
+}
+window.trkMarkRelanceSent=trkMarkRelanceSent;
+function exportTrackingCSV(){
+  const list=window._trackingExport||_trkFiltered();
+  const cols=['Owner','Prénom','Nom','Titre','Compte','Pays','Email','Statut','Étape','Prochaine relance','Jours de retard','Dernière action'];
+  const stMap={waiting:'En attente',interested:'Intéressé',transmitted:'Transmis au CRM',not_interested:'Pas intéressé'};
+  const q=function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; };
+  const lines=list.map(function(x){ return [x.owner||'',x.prenom||'',x.nom||'',x.titre||'',x.account_nom||x.organisation||'',x.pays||'',x.email||'',stMap[x.status]||x.status,x.stage||'',x.next_relance?String(x.next_relance).slice(0,10):'',x.urgency==='overdue'?x.days_overdue:'',x.last_action_at?String(x.last_action_at).slice(0,10):''].map(q).join(','); });
+  const csv='﻿'+cols.map(q).join(',')+'\n'+lines.join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='suivi_relances.csv'; document.body.appendChild(a); a.click(); a.remove();
+}
+window.exportTrackingCSV=exportTrackingCSV;
+
 
 function contactPanelCard(ct) {
   const initials = ((ct.prenom || '')[0] || '') + ((ct.nom || '')[0] || '');
