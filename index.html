@@ -1636,6 +1636,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.6c1.4 2 3.4 3.1 3.4 5.9a3.4 3.4 0 1 1-6.8 0c0-1 .35-1.8 1-2.5.15 1 .7 1.5 1.2 1.7C6.4 5.4 6.9 3.6 8 1.6z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
       Prospects chauds
     </div>
+    <div class="nav-item" id="nav-visitors" onclick="go('visitors')" title="Les organisations qui visitent elistair.com (identification par réseau)">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 8h13M8 1.5c2.2 2 2.2 11 0 13M8 1.5c-2.2 2-2.2 11 0 13" stroke="currentColor" stroke-width="1.2"/></svg>
+      Visiteurs web <span id="nav-visitors-badge" style="display:none;margin-left:auto;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#16a34a;color:#fff;">0</span>
+    </div>
     <div class="nav-section">Bases de données</div>
     <div class="nav-item" id="nav-societes" onclick="go('societes')">
       <svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M1 14c0-2.8 2.2-5 5-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.3"/></svg>
@@ -2440,6 +2444,33 @@ Réinitialiser tous les filtres
       <div id="contacts-panel-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;"></div>
     </div>
 
+    <!-- VISITEURS WEB (Leadfeeder interne) -->
+    <div id="panel-visitors" class="panel">
+      <div class="topbar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><h1>Visiteurs web</h1><span id="vis-status" style="font-size:12px;color:var(--text3);"></span></div>
+      <div style="padding:0 0 10px;font-size:13px;color:var(--text2);">Les organisations qui visitent elistair.com, identifiées par leur réseau (IP → société). Les comptes ABM remontent en alerte. Les box internet, mobiles et hébergeurs sont filtrés.</div>
+      <div id="vis-alerts" style="margin-bottom:12px;"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <div style="display:inline-flex;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;" id="vis-period">
+          <button type="button" data-days="7"></button><button type="button" data-days="30"></button><button type="button" data-days="90"></button>
+        </div>
+        <select id="vis-type" style="font-size:13px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
+          <option value="business,government,education">Entreprises + public</option>
+          <option value="business">Entreprises</option>
+          <option value="government">Public / défense</option>
+          <option value="education">Recherche / éducation</option>
+          <option value="isp,hosting,vpn,unknown">Filtrés (FAI, hébergeurs, VPN)</option>
+        </select>
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="vis-abm"> Comptes ABM seulement</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="vis-hidden"> Voir les ignorés</label>
+        <input id="vis-search" type="text" placeholder="Filtrer (société, domaine, pays)…" style="flex:1;min-width:180px;font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
+        <button type="button" id="vis-refresh" style="font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;">↻ Actualiser</button>
+        <button type="button" id="vis-settings-btn" style="font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;">⚙️ Réglages &amp; snippet</button>
+      </div>
+      <div id="vis-tiles" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;"></div>
+      <div id="vis-settings" style="display:none;margin-bottom:14px;"></div>
+      <div id="vis-body"></div>
+    </div>
+
     <!-- PROSPECTS CHAUDS -->
     <div id="panel-hot" class="panel">
       <div class="topbar"><h1>Prospects chauds</h1></div>
@@ -2596,6 +2627,10 @@ Réinitialiser tous les filtres
     <div class="bn-item bn-secondary" id="bn-hot" onclick="go('hot')">
       <span class="bn-icon" style="font-size:15px;line-height:1;">🔥</span>
       Chauds
+    </div>
+    <div class="bn-item bn-secondary" id="bn-visitors" onclick="go('visitors')" style="position:relative;">
+      <span class="bn-icon" style="font-size:15px;line-height:1;">🌐</span>
+      Visiteurs<span id="bn-visitors-badge" style="display:none;position:absolute;top:2px;right:8px;font-size:9px;font-weight:700;padding:0 4px;border-radius:999px;background:#16a34a;color:#fff;">0</span>
     </div>
     <div class="bn-item bn-secondary" id="bn-config" onclick="go('config')">
       <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -2864,6 +2899,7 @@ function go(id, opts) {
   }
   if (id === 'resellers') { loadResellersMap(); }
   if (id === 'hot') { try { renderHotProspects(); } catch(e){ console.error('renderHotProspects', e); } }
+  if (id === 'visitors') { try { renderVisitors(); } catch(e){ console.error('renderVisitors', e); } }
   if (id === 'tracking') { try { renderTracking(); } catch(e){ console.error('renderTracking', e); } }
   if (id === 'config') {
     // Settings panel — peupler la liste des pays exclus et tous les champs.
@@ -9323,6 +9359,243 @@ async function renderHotProspects(){
   body.innerHTML = html;
 }
 window.renderHotProspects = renderHotProspects;
+
+// ===================== Visiteurs web (Leadfeeder interne) =====================
+// Backend : scout-api/visitors.js (endpoints /v/*). Aucun onclick inline pour les actions
+// dynamiques : délégation d'événements sur #panel-visitors (data-act).
+var _visDays = 30, _visAccounts = [], _visStats = null, _visSettings = null, _visOpen = {}, _visLoading = false;
+function _visH() { return Object.assign({ 'Content-Type': 'application/json' }, (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {}); }
+function _visTypeChip(t) {
+  var m = { business: ['Entreprise', 'tag-accent'], government: ['Public / défense', 'tag-green'], education: ['Recherche / éduc.', 'tag-amber'], isp: ['FAI', 'tag-gray'], hosting: ['Hébergeur', 'tag-gray'], vpn: ['VPN / proxy', 'tag-gray'], unknown: ['Inconnu', 'tag-gray'] };
+  var x = m[t] || [t || '?', 'tag-gray'];
+  return tagHtml(x[0], x[1]);
+}
+function _visFlag(cc) {
+  if (!cc || cc.length !== 2) return '';
+  try { return String.fromCodePoint.apply(null, cc.toUpperCase().split('').map(function (c) { return 127397 + c.charCodeAt(0); })); } catch (e) { return cc; }
+}
+function _visAgo(ts) {
+  if (!ts) return '—';
+  var d = (Date.now() - new Date(ts).getTime()) / 60000;
+  if (d < 1) return 'à l\'instant';
+  if (d < 60) return Math.round(d) + ' min';
+  if (d < 48 * 60) return Math.round(d / 60) + ' h';
+  return Math.round(d / 1440) + ' j';
+}
+function _visDwell(ms) { if (!ms) return ''; var s = Math.round(ms / 1000); return s < 60 ? s + ' s' : Math.round(s / 60) + ' min'; }
+function _visPeriodStyle() {
+  document.querySelectorAll('#vis-period button').forEach(function (b) {
+    var on = +b.dataset.days === _visDays;
+    b.textContent = b.dataset.days + ' j';
+    b.style.cssText = 'font-size:13px;padding:8px 14px;border:none;cursor:pointer;' + (on ? 'background:var(--accent);color:#fff;font-weight:600;' : 'background:var(--bg3);color:var(--text2);');
+  });
+}
+async function renderVisitors() {
+  _visPeriodStyle();
+  var body = document.getElementById('vis-body'); if (!body) return;
+  if (_visLoading) return; _visLoading = true;
+  body.innerHTML = (typeof scoutSkeletonRows === 'function') ? scoutSkeletonRows(6) : '<div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div>';
+  var type = (document.getElementById('vis-type') || {}).value || 'business,government,education';
+  var abm = (document.getElementById('vis-abm') || {}).checked ? '1' : '0';
+  var hidden = (document.getElementById('vis-hidden') || {}).checked ? '1' : '0';
+  try {
+    var rs = await Promise.all([
+      fetch(API + '/v/stats?days=' + _visDays, { headers: _visH() }).then(function (r) { return r.json(); }),
+      fetch(API + '/v/accounts?days=' + _visDays + '&type=' + encodeURIComponent(type) + '&abm=' + abm + '&hidden=' + hidden, { headers: _visH() }).then(function (r) { return r.json(); }),
+      fetch(API + '/v/alerts', { headers: _visH() }).then(function (r) { return r.json(); })
+    ]);
+    _visStats = rs[0]; _visAccounts = rs[1].accounts || [];
+    _visRenderTiles(); _visRenderAlerts(rs[2].alerts || []); _visRenderTable();
+    _visSetNavBadge((rs[2].alerts || []).filter(function (a) { return !a.seen; }).length);
+    var st = document.getElementById('vis-status');
+    if (st) st.textContent = _visStats.last_hit ? ('dernière visite ' + _visAgo(_visStats.last_hit) + (_visStats.pending ? ' · ' + _visStats.pending + ' IP en cours de résolution' : '')) : 'aucune visite reçue — installe le snippet (⚙️)';
+  } catch (e) {
+    console.error('renderVisitors', e);
+    body.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3);">Erreur de chargement. Le backend est-il à jour (module visiteurs) ?</div>';
+  }
+  _visLoading = false;
+}
+window.renderVisitors = renderVisitors;
+function _visRenderTiles() {
+  var t = document.getElementById('vis-tiles'); if (!t || !_visStats) return;
+  var s = _visStats;
+  var rate = s.visitors ? Math.round(100 * s.identified_visitors / s.visitors) : 0;
+  var tile = function (lbl, val, col, sub) { return '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;"><div style="font-size:11px;color:var(--text3);">' + lbl + '</div><div style="font-size:22px;font-weight:700;color:' + col + ';">' + val + '</div>' + (sub ? '<div style="font-size:11px;color:var(--text3);">' + sub + '</div>' : '') + '</div>'; };
+  t.innerHTML = tile('Pages vues (' + s.days + ' j)', s.pageviews, 'var(--text)', s.visitors + ' visiteurs')
+    + tile('Organisations identifiées', s.accounts, 'var(--accent2)', rate + ' % des visiteurs')
+    + tile('Comptes ABM vus', s.abm_accounts, '#16a34a', s.unseen_alerts ? s.unseen_alerts + ' alerte(s) non lue(s)' : '')
+    + tile('Non identifiés', s.visitors - s.identified_visitors, 'var(--text2)', 'box, mobile, VPN, hébergeurs');
+}
+function _visRenderAlerts(alerts) {
+  var el = document.getElementById('vis-alerts'); if (!el) return;
+  var unseen = alerts.filter(function (a) { return !a.seen; });
+  if (!unseen.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.08);border-radius:10px;padding:10px 12px;">'
+    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-weight:700;color:#16a34a;">🎯 Comptes ABM sur le site</span><span style="font-size:12px;color:var(--text3);">' + unseen.length + '</span><span style="flex:1"></span><button type="button" data-act="alerts-seen" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">Marquer comme lu</button></div>'
+    + unseen.slice(0, 8).map(function (a) {
+      return '<div style="display:flex;gap:10px;align-items:center;font-size:13px;padding:4px 0;border-top:1px solid var(--border2);">'
+        + '<span style="color:var(--text3);font-size:12px;white-space:nowrap;">' + _visAgo(a.ts) + '</span>'
+        + '<b>' + esc(a.societe_name || a.org_name) + '</b>' + (a.country ? ' <span style="font-size:12px;">' + _visFlag(a.country) + '</span>' : '')
+        + '<span style="color:var(--text2);font-size:12px;">' + esc(a.path || '') + '</span>'
+        + (a.societe_id ? '<button type="button" data-act="open-societe" data-id="' + esc(a.societe_id) + '" style="margin-left:auto;font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">Fiche</button>' : '')
+        + '</div>';
+    }).join('') + '</div>';
+}
+function _visFiltered() {
+  var q = ((document.getElementById('vis-search') || {}).value || '').toLowerCase().trim();
+  var list = _visAccounts.slice();
+  if (q) list = list.filter(function (a) { return [a.org_name, a.org_domain, a.societe_name, a.country, a.as_name].filter(Boolean).join(' ').toLowerCase().indexOf(q) >= 0; });
+  list.sort(function (a, b) { return (b.score - a.score) || (new Date(b.last_seen) - new Date(a.last_seen)); });
+  return list;
+}
+function _visScoreBar(score) {
+  var pct = Math.min(100, Math.round(score * 2.5));
+  var col = pct >= 60 ? '#16a34a' : pct >= 30 ? '#f59e0b' : 'var(--text3)';
+  return '<div title="Score d\'intérêt (pages clés, visites répétées, ABM)" style="display:flex;align-items:center;gap:6px;"><div style="width:56px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:' + col + ';"></div></div><span style="font-size:11px;color:var(--text3);">' + score + '</span></div>';
+}
+function _visRenderTable() {
+  var body = document.getElementById('vis-body'); if (!body) return;
+  var list = _visFiltered();
+  if (!list.length) { body.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3);">Aucune organisation identifiée sur cette période avec ces filtres.</div>'; return; }
+  var rows = list.map(function (a) {
+    var name = a.societe_name || a.org_name || '?';
+    var sub = [a.org_domain, (a.societe_name && a.org_name !== a.societe_name) ? 'réseau : ' + a.org_name : null, a.city].filter(Boolean).join(' · ');
+    var pages = (a.top_pages || []).slice(0, 3).map(function (p) { return '<span style="display:inline-block;font-size:11px;padding:2px 6px;border-radius:5px;background:var(--bg3);color:var(--text2);margin:1px 2px 1px 0;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="' + esc(p.path) + '">' + esc(p.path) + (p.n > 1 ? ' ×' + p.n : '') + '</span>'; }).join('');
+    var labels = (a.key_labels || []).map(function (l) { return '<span style="font-size:10px;color:#16a34a;margin-right:5px;">● ' + esc(l) + '</span>'; }).join('');
+    var open = !!_visOpen[a.account_key];
+    return '<tr data-key="' + esc(a.account_key) + '" style="border-top:1px solid var(--border2);' + (a.hidden ? 'opacity:.55;' : '') + '">'
+      + '<td style="padding:9px 10px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b>' + esc(name) + '</b>'
+      + (a.country ? '<span title="' + esc(a.country) + '">' + _visFlag(a.country) + '</span>' : '')
+      + (a.is_abm ? tagHtml('ABM', 'tag-green') : '') + _visTypeChip(a.org_type)
+      + (a.hidden ? tagHtml('ignoré', 'tag-red') : '') + '</div>'
+      + (sub ? '<div style="font-size:11px;color:var(--text3);margin-top:2px;">' + esc(sub) + '</div>' : '') + '</td>'
+      + '<td style="padding:9px 10px;">' + _visScoreBar(a.score) + '<div style="margin-top:3px;">' + labels + '</div></td>'
+      + '<td style="padding:9px 10px;font-size:12px;white-space:nowrap;"><b>' + a.pageviews + '</b> pages · ' + a.visits + ' visite' + (a.visits > 1 ? 's' : '') + (a.dwell_ms ? '<div style="color:var(--text3);">' + _visDwell(a.dwell_ms) + ' cumulées</div>' : '') + '</td>'
+      + '<td style="padding:9px 10px;">' + pages + '</td>'
+      + '<td style="padding:9px 10px;font-size:12px;white-space:nowrap;">' + _visAgo(a.last_seen) + '<div style="color:var(--text3);">depuis ' + _visAgo(a.first_seen) + '</div></td>'
+      + '<td style="padding:9px 10px;white-space:nowrap;">'
+      + '<button type="button" data-act="toggle" data-key="' + esc(a.account_key) + '" style="font-size:12px;padding:6px 10px;border-radius:6px;cursor:pointer;color:var(--text2);background:var(--bg3);border:1px solid var(--border2);">' + (open ? '▾ Fermer' : '▸ Parcours') + '</button> '
+      + (a.societe_id ? '<button type="button" data-act="open-societe" data-id="' + esc(a.societe_id) + '" style="font-size:12px;padding:6px 10px;border-radius:6px;cursor:pointer;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;font-weight:600;">Fiche</button>'
+        : '<button type="button" data-act="link" data-key="' + esc(a.account_key) + '" style="font-size:12px;padding:6px 10px;border-radius:6px;cursor:pointer;color:#2563eb;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.4);font-weight:600;">Lier à une société</button>')
+      + ' <button type="button" data-act="' + (a.hidden ? 'unhide' : 'hide') + '" data-key="' + esc(a.account_key) + '" title="' + (a.hidden ? 'Réafficher' : 'Ignorer cette organisation (ex : nous, un partenaire, un fournisseur)') + '" style="font-size:12px;padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--text3);background:transparent;border:1px solid var(--border2);">' + (a.hidden ? '👁' : '✕') + '</button>'
+      + '</td></tr>'
+      + (open ? '<tr data-detail="' + esc(a.account_key) + '"><td colspan="6" style="padding:0 10px 12px;background:var(--bg2);"><div id="vis-detail-' + _visSlug(a.account_key) + '" style="padding:10px;border:1px solid var(--border2);border-radius:8px;font-size:12px;color:var(--text2);">Chargement…</div></td></tr>' : '');
+  }).join('');
+  body.innerHTML = '<div style="border:1px solid var(--border2);border-radius:10px;overflow:hidden;overflow-x:auto;">'
+    + '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="text-align:left;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:var(--bg2);">'
+    + '<th style="padding:9px 10px;font-weight:500;">Organisation</th><th style="padding:9px 10px;font-weight:500;">Intérêt</th><th style="padding:9px 10px;font-weight:500;">Activité</th><th style="padding:9px 10px;font-weight:500;">Pages vues</th><th style="padding:9px 10px;font-weight:500;">Dernière visite</th><th style="padding:9px 10px;font-weight:500;">Actions</th>'
+    + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+    + '<div style="font-size:11px;color:var(--text3);margin-top:8px;">' + list.length + ' organisation(s). Identification par réseau : fiable pour les sièges, ministères, bases et grands comptes ; aveugle sur les box, le mobile et le télétravail.</div>';
+  Object.keys(_visOpen).forEach(function (k) { if (_visOpen[k]) _visLoadDetail(k); });
+}
+function _visSlug(k) { return String(k).replace(/[^a-z0-9]/gi, '_'); }
+async function _visLoadDetail(key) {
+  var el = document.getElementById('vis-detail-' + _visSlug(key)); if (!el) return;
+  try {
+    var r = await fetch(API + '/v/accounts/detail?key=' + encodeURIComponent(key) + '&days=' + Math.max(_visDays, 90), { headers: _visH() });
+    var d = await r.json();
+    if (!d.sessions || !d.sessions.length) { el.innerHTML = 'Aucune session détaillée.'; return; }
+    var meta = d.meta ? '<div style="margin-bottom:8px;color:var(--text3);">Identifié via ' + esc(d.meta.source || '?') + ' (confiance ' + (d.meta.confidence || 0) + ')' + (d.meta.rdns ? ' · rDNS ' + esc(d.meta.rdns) : '') + (d.meta.as_name ? ' · AS ' + esc(d.meta.as_name) : '') + '</div>' : '';
+    el.innerHTML = meta + d.sessions.slice(0, 15).map(function (s) {
+      var start = new Date(s.start);
+      return '<div style="padding:6px 0;border-top:1px solid var(--border2);">'
+        + '<div style="display:flex;gap:10px;flex-wrap:wrap;color:var(--text3);"><b style="color:var(--text);">' + start.toLocaleDateString('fr-FR') + ' ' + start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</b>'
+        + '<span>' + s.pages.length + ' page' + (s.pages.length > 1 ? 's' : '') + '</span>' + (s.city ? '<span>' + esc(s.city) + '</span>' : '') + (s.referrer ? '<span>via ' + esc(s.referrer.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</span>' : '') + (s.lang ? '<span>' + esc(s.lang) + '</span>' : '') + '<span>réseau ' + esc(s.ip_trunc || '') + '</span></div>'
+        + '<div style="margin-top:3px;">' + s.pages.map(function (p) { return '<span style="display:inline-block;padding:2px 6px;border-radius:5px;background:var(--bg3);margin:2px 4px 0 0;">' + esc(p.path) + (p.dwell_ms ? ' <span style="color:var(--text3);">' + _visDwell(p.dwell_ms) + '</span>' : '') + '</span>'; }).join('→ ') + '</div>'
+        + '</div>';
+    }).join('');
+  } catch (e) { el.innerHTML = 'Erreur de chargement.'; }
+}
+async function _visLink(key) {
+  var acc = _visAccounts.find(function (a) { return a.account_key === key; });
+  var q = prompt('Lier « ' + (acc ? acc.org_name : key) + ' » à quelle société Scout ? Tape un nom (recherche dans Fabricants / Comptes) :', acc ? acc.org_name : '');
+  if (!q) return;
+  var list = (window.societes || []).filter(function (s) { return (s.name || '').toLowerCase().indexOf(q.toLowerCase()) >= 0; }).slice(0, 9);
+  if (!list.length) { alert('Aucune société ne correspond à « ' + q + ' ». Crée-la d\'abord dans Fabricants / Comptes.'); return; }
+  var choice = list.length === 1 ? '1' : prompt(list.map(function (s, i) { return (i + 1) + '. ' + s.name + (s.pays ? ' (' + s.pays + ')' : ''); }).join('\n') + '\n\nNuméro :', '1');
+  var s = list[parseInt(choice, 10) - 1]; if (!s) return;
+  var r = await fetch(API + '/v/accounts/link', { method: 'POST', headers: _visH(), body: JSON.stringify({ key: key, societe_id: s.id }) });
+  if (!r.ok) { alert('Erreur : ' + ((await r.json()).error || r.status)); return; }
+  renderVisitors();
+}
+async function _visHide(key, hidden) {
+  var r = await fetch(API + '/v/accounts/link', { method: 'POST', headers: _visH(), body: JSON.stringify({ key: key, hidden: hidden }) });
+  if (!r.ok) { alert('Erreur : ' + ((await r.json()).error || r.status)); return; }
+  renderVisitors();
+}
+async function _visToggleSettings(force) {
+  var el = document.getElementById('vis-settings'); if (!el) return;
+  var show = (force !== undefined) ? force : el.style.display === 'none';
+  el.style.display = show ? 'block' : 'none';
+  if (!show) return;
+  el.innerHTML = '<div style="padding:1rem;color:var(--text3);">Chargement…</div>';
+  try {
+    var r = await fetch(API + '/v/settings', { headers: _visH() }); _visSettings = await r.json();
+    var st = _visSettings;
+    var inp = 'width:100%;font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);box-sizing:border-box;';
+    el.innerHTML = '<div style="border:1px solid var(--border2);border-radius:10px;padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
+      + '<div style="grid-column:1/-1;"><div style="font-weight:700;margin-bottom:4px;">1. Snippet à installer sur elistair.com</div><div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Dans WordPress : plugin <b>WPCode</b> (ou Code Snippets) → nouveau snippet HTML, emplacement « Site Wide Header », ou via le thème (<code>wp_head</code>). Sans cookie, un seul appel par page. Version courte (recommandée, se met à jour toute seule) :</div>'
+      + '<textarea readonly id="vis-snippet-short" style="' + inp + 'height:48px;font-family:monospace;font-size:12px;">' + esc('<script src="' + st.snippet_url + '" async><' + '/script>') + '</textarea>'
+      + '<div style="display:flex;gap:8px;margin-top:6px;"><button type="button" data-act="copy" data-target="vis-snippet-short" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;">Copier</button><button type="button" data-act="snippet-full" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;">Voir la version inline</button></div>'
+      + '<textarea readonly id="vis-snippet-full" style="' + inp + 'height:160px;font-family:monospace;font-size:11px;display:none;margin-top:6px;">' + esc('<script>\n' + st.snippet + '\n<' + '/script>') + '</textarea></div>'
+      + '<div><div style="font-weight:700;margin-bottom:4px;">2. IP à ignorer (bureaux Elistair, VPN interne)</div><div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Une par ligne. Ton IP actuelle : <b>' + esc(st.your_ip || '?') + '</b> <button type="button" data-act="add-my-ip" data-ip="' + esc(st.your_ip || '') + '" style="font-size:11px;padding:2px 7px;border-radius:5px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">ajouter</button>. Un préfixe se termine par un point (ex : <code>82.64.12.</code>).</div><textarea id="vis-ignore-ips" style="' + inp + 'height:80px;">' + esc((st.ignore_ips || []).join('\n')) + '</textarea></div>'
+      + '<div><div style="font-weight:700;margin-bottom:4px;">3. Organisations à ignorer</div><div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Fragments de nom, un par ligne (ex : <code>Elistair</code>, un partenaire, ton agence web).</div><textarea id="vis-ignore-orgs" style="' + inp + 'height:80px;">' + esc((st.ignore_orgs || []).join('\n')) + '</textarea></div>'
+      + '<div><div style="font-weight:700;margin-bottom:4px;">4. Token ipinfo.io (optionnel, gratuit)</div><div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Compte gratuit sur ipinfo.io → 50 000 requêtes / mois : ajoute l\'ASN, la ville et un meilleur taux d\'identification. ' + (st.ipinfo_token_set ? '<b style="color:#16a34a;">Token configuré ✓</b>' : '<b style="color:#f59e0b;">Non configuré</b> (rDNS + RDAP seulement)') + '</div><input id="vis-ipinfo" type="password" placeholder="' + (st.ipinfo_token_set ? 'laisser vide pour conserver' : 'token ipinfo') + '" style="' + inp + '"></div>'
+      + '<div><div style="font-weight:700;margin-bottom:4px;">5. Webhook alerte ABM (optionnel)</div><div style="font-size:12px;color:var(--text2);margin-bottom:6px;">URL appelée en POST (JSON avec un champ <code>text</code>) à chaque visite d\'un compte ABM : Teams / Slack via Power Automate, Make, Zapier… ' + (st.alert_webhook_set ? '<b style="color:#16a34a;">Configuré ✓</b>' : '<b>Non configuré</b> (alertes visibles ici seulement)') + '</div><input id="vis-webhook" type="text" placeholder="' + (st.alert_webhook_set ? 'laisser vide pour conserver, « - » pour supprimer' : 'https://…') + '" style="' + inp + '"></div>'
+      + '<div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><button type="button" data-act="save-settings" style="font-size:13px;padding:8px 14px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:600;cursor:pointer;">Enregistrer</button>'
+      + '<button type="button" data-act="retry" style="font-size:12px;padding:8px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">Relancer les résolutions en erreur</button>'
+      + '<span style="font-size:11px;color:var(--text3);">Rétention : IP complète ' + st.retention.ip_days + ' j (puis pseudonymisée), pages vues ' + st.retention.visits_days + ' j. À mentionner dans la politique de confidentialité du site.</span>'
+      + '<span id="vis-settings-msg" style="font-size:12px;color:#16a34a;"></span></div>'
+      + '</div>';
+  } catch (e) { el.innerHTML = '<div style="padding:1rem;color:var(--text3);">Erreur de chargement des réglages.</div>'; }
+}
+async function _visSaveSettings() {
+  var body = { ignore_ips: (document.getElementById('vis-ignore-ips') || {}).value || '', ignore_orgs: (document.getElementById('vis-ignore-orgs') || {}).value || '' };
+  var tok = ((document.getElementById('vis-ipinfo') || {}).value || '').trim(); if (tok) body.ipinfo_token = tok;
+  var wh = ((document.getElementById('vis-webhook') || {}).value || '').trim(); if (wh) body.alert_webhook = wh === '-' ? '' : wh;
+  var r = await fetch(API + '/v/settings', { method: 'POST', headers: _visH(), body: JSON.stringify(body) });
+  var m = document.getElementById('vis-settings-msg');
+  if (m) m.textContent = r.ok ? 'Enregistré ✓' : 'Erreur ' + r.status;
+  if (r.ok) setTimeout(function () { _visToggleSettings(true); }, 600);
+}
+function _visSetNavBadge(n) {
+  ['nav-visitors-badge', 'bn-visitors-badge'].forEach(function (id) {
+    var b = document.getElementById(id); if (!b) return;
+    b.textContent = n > 9 ? '9+' : String(n); b.style.display = n ? 'inline-block' : 'none';
+  });
+}
+async function _visPollAlerts() {
+  try {
+    if (typeof window.getAuthHeaders !== 'function' || !window.getAuthHeaders().Authorization) return;
+    var r = await fetch(API + '/v/alerts', { headers: _visH() }); if (!r.ok) return;
+    var d = await r.json(); _visSetNavBadge(d.unseen || 0);
+  } catch (e) {}
+}
+(function () {
+  var panel = document.getElementById('panel-visitors'); if (!panel) return;
+  panel.addEventListener('click', async function (e) {
+    var b = e.target.closest('[data-act]'); if (!b || !panel.contains(b)) return;
+    var act = b.dataset.act, key = b.dataset.key;
+    e.stopImmediatePropagation();
+    if (act === 'toggle') { _visOpen[key] = !_visOpen[key]; _visRenderTable(); }
+    else if (act === 'open-societe') { go('societes'); setTimeout(function () { try { openSociete(b.dataset.id); } catch (err) { console.error(err); } }, 60); }
+    else if (act === 'link') _visLink(key);
+    else if (act === 'hide') _visHide(key, true);
+    else if (act === 'unhide') _visHide(key, false);
+    else if (act === 'alerts-seen') { await fetch(API + '/v/alerts/seen', { method: 'POST', headers: _visH(), body: '{}' }); renderVisitors(); }
+    else if (act === 'copy') { var ta = document.getElementById(b.dataset.target); if (ta) { ta.select(); try { await navigator.clipboard.writeText(ta.value); b.textContent = 'Copié ✓'; } catch (err) { document.execCommand('copy'); b.textContent = 'Copié ✓'; } } }
+    else if (act === 'snippet-full') { var f = document.getElementById('vis-snippet-full'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
+    else if (act === 'add-my-ip') { var ta2 = document.getElementById('vis-ignore-ips'); if (ta2 && b.dataset.ip && ta2.value.indexOf(b.dataset.ip) < 0) ta2.value = (ta2.value.trim() ? ta2.value.trim() + '\n' : '') + b.dataset.ip; }
+    else if (act === 'save-settings') _visSaveSettings();
+    else if (act === 'retry') { var r = await fetch(API + '/v/resolve/retry', { method: 'POST', headers: _visH(), body: '{}' }); var d = await r.json(); var m = document.getElementById('vis-settings-msg'); if (m) m.textContent = (d.queued || 0) + ' IP relancée(s)'; }
+  }, true);
+  document.querySelectorAll('#vis-period button').forEach(function (btn) { btn.addEventListener('click', function () { _visDays = +btn.dataset.days; renderVisitors(); }); });
+  ['vis-type', 'vis-abm', 'vis-hidden'].forEach(function (id) { var el = document.getElementById(id); if (el) el.addEventListener('change', renderVisitors); });
+  var s = document.getElementById('vis-search'); if (s) s.addEventListener('input', _visRenderTable);
+  var rf = document.getElementById('vis-refresh'); if (rf) rf.addEventListener('click', renderVisitors);
+  var sb = document.getElementById('vis-settings-btn'); if (sb) sb.addEventListener('click', function () { _visToggleSettings(); });
+  setTimeout(_visPollAlerts, 4000); setInterval(_visPollAlerts, 5 * 60 * 1000);
+})();
 
 // ===================== Suivi & relances =====================
 let _trackingScope = 'me', _trackingData = [];
