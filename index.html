@@ -9555,7 +9555,8 @@ async function _visSaveSettings() {
   var wh = ((document.getElementById('vis-webhook') || {}).value || '').trim(); if (wh) body.alert_webhook = wh === '-' ? '' : wh;
   var r = await fetch(API + '/v/settings', { method: 'POST', headers: _visH(), body: JSON.stringify(body) });
   var m = document.getElementById('vis-settings-msg');
-  if (m) m.textContent = r.ok ? 'Enregistré ✓' : 'Erreur ' + r.status;
+  var errTxt = ''; if (!r.ok) { try { errTxt = (await r.json()).error || ''; } catch (e) {} }
+  if (m) { m.textContent = r.ok ? 'Enregistré ✓' : ('Erreur : ' + (errTxt || r.status)); m.style.color = r.ok ? '#16a34a' : '#dc2626'; }
   if (r.ok) setTimeout(function () { _visToggleSettings(true); }, 600);
 }
 function _visSetNavBadge(n) {
