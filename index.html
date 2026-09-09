@@ -2721,6 +2721,7 @@ Réinitialiser tous les filtres
               <button type="button" id="chat-save-cfg" class="btn btn-primary" style="padding:6px 13px;font-size:12px;">Enregistrer</button>
               <span id="chat-cfg-msg" style="font-size:12px;color:var(--text3);"></span>
             </div>
+            <div id="chat-install" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border2);"></div>
             <div id="chat-limits" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border2);font-size:11.5px;color:var(--text3);line-height:1.6;"></div>
           </details>
         </div>
@@ -3080,7 +3081,7 @@ const NAV_GROUPS = [
       { panel: 'contacts',  label: 'Contacts' },
       { panel: 'end-users', label: 'Comptes' },
       { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' },
-      { panel: 'chat',      label: 'Chat' } ] },
+      { panel: 'chat',      label: 'Chat', badge: 'subnav-chat-badge' } ] },
   { id: 'marche', label: 'Marché', tabs: [
       { panel: 'societes',    label: 'Fabricants' },
       { panel: 'produits-db', label: 'Produits' },
@@ -3119,6 +3120,7 @@ function renderSubnav(activePanel) {
   setH(); setTimeout(setH, 60);
   if (!window.__subnavRO && window.ResizeObserver) { window.__subnavRO = new ResizeObserver(setH); window.__subnavRO.observe(el); }
   if (typeof _visPollAlerts === 'function') setTimeout(_visPollAlerts, 30);
+  if (typeof _chatPollLeads === 'function') setTimeout(_chatPollLeads, 40);
 }
 window.renderSubnav = renderSubnav;
 
@@ -10081,6 +10083,11 @@ async function _chatLoadCfg() {
     var m = document.getElementById('chat-model'); if (m) m.value = j.model || '';
     var hv = document.getElementById('chat-hunter'); if (hv) hv.checked = j.verify_hunter === true;
     var ge = document.getElementById('chat-greeting-en'); if (ge) ge.value = j.greeting_en || '';
+    var ins = document.getElementById('chat-install');
+    if (ins && j.snippet) ins.innerHTML = '<div style="font-size:12px;color:var(--text3);margin-bottom:6px;">'
+      + 'À poser sur elistair.com, via GTM ou WPCode, comme le snippet de suivi :</div>'
+      + '<code style="display:block;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 11px;'
+      + 'font-size:11.5px;color:var(--text2);word-break:break-all;">' + _chatEsc(j.snippet) + '</code>';
     var li = document.getElementById('chat-limits');
     if (li && j.limits) li.innerHTML = 'Garde-fous en place : ' + j.limits.max_turns + ' tours max par conversation, '
       + j.limits.max_input + ' caractères max par message, ' + j.limits.max_history + ' messages réinjectés au modèle, '
@@ -10200,6 +10207,7 @@ async function _chatLoadConvs() {
     _chatConvs = j.sessions || [];
     _chatRenderTiles(j.totals || {});
     _chatRenderConvs();
+    _chatSetNavBadge((j.totals && j.totals.a_traiter) || 0);
   } catch (e) {
     body.innerHTML = '<p style="padding:2rem;text-align:center;color:var(--text3);">Impossible de charger les conversations.</p>';
   }
@@ -10858,6 +10866,34 @@ function _visSetNavBadge(n) {
     b.setAttribute('aria-label', n + ' alerte(s) visiteurs');
   });
 }
+// Les alertes de chat restent dans Scout : une pastille sur l'onglet, avec le
+// nombre de leads qualifiés que personne n'a encore traités. Pas de webhook
+// nécessaire pour ne rien rater quand on ouvre Scout.
+function _chatSetNavBadge(n) {
+  ['nav-prospects-badge', 'bn-prospects-badge', 'subnav-chat-badge'].forEach(function (id) {
+    var b = document.getElementById(id); if (!b) return;
+    if (id === 'subnav-chat-badge') {
+      b.textContent = n > 9 ? '9+' : String(n);
+      b.style.display = n ? 'inline-block' : 'none';
+      b.setAttribute('aria-label', n + ' lead(s) de chat à traiter');
+    } else if (n) {
+      // les pastilles de groupe sont partagées avec les visiteurs : on ne les
+      // efface jamais, on ne fait que les allumer.
+      b.style.display = 'inline-block';
+      if (!b.textContent || b.textContent === '0') b.textContent = String(n > 9 ? '9+' : n);
+    }
+  });
+}
+async function _chatPollLeads() {
+  try {
+    if (typeof window.getAuthHeaders !== 'function' || !window.getAuthHeaders().Authorization) return;
+    var r = await fetch(API + '/v/chat/sessions?source=site&limit=1', { headers: _chatH() });
+    if (!r.ok) return;
+    var d = await r.json();
+    _chatSetNavBadge((d.totals && d.totals.a_traiter) || 0);
+  } catch (e) {}
+}
+
 async function _visPollAlerts() {
   try {
     if (typeof window.getAuthHeaders !== 'function' || !window.getAuthHeaders().Authorization) return;
@@ -10935,6 +10971,7 @@ async function _visPollAlerts() {
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
   setTimeout(_visPollAlerts, 4000); setInterval(_visPollAlerts, 5 * 60 * 1000);
+  setTimeout(_chatPollLeads, 5000); setInterval(_chatPollLeads, 5 * 60 * 1000);
 })();
 
 // ===================== Suivi & relances =====================
