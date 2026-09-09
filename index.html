@@ -9716,7 +9716,7 @@ var _chatInferred = {};       // pays / secteur, déduits et jamais demandés
 var _chatMail = null;         // résultat de la vérification d'adresse
 var _chatScore = 0, _chatScoreLabel = '';
 var _chatCfgLoaded = false;
-var _chatOpen = false;
+var _chatWidgetOpen = false;  // bulle visible ; ne pas confondre avec _chatOpen(id), qui rouvre une conversation
 
 var CHAT_PAGES = {
   khronos: { kicker: 'All in one dronebox ready for ISR and tactical comms', path: '/solutions/tethered-dronebox-khronos/', title: 'Khronos | Tethered DroneBox | Elistair',
@@ -9762,11 +9762,11 @@ function _chatRenderSite() {
 
 // Ouverture / fermeture de la bulle, comme sur un vrai site.
 function _chatToggle(open) {
-  _chatOpen = (open === undefined) ? !_chatOpen : !!open;
+  _chatWidgetOpen = (open === undefined) ? !_chatWidgetOpen : !!open;
   var w = document.getElementById('chat-widget'), l = document.getElementById('chat-launcher');
-  if (w) w.hidden = !_chatOpen;
-  if (l) { l.hidden = _chatOpen; l.setAttribute('aria-expanded', String(_chatOpen)); }
-  if (_chatOpen) { var i = document.getElementById('chat-text'); if (i) i.focus(); }
+  if (w) w.hidden = !_chatWidgetOpen;
+  if (l) { l.hidden = _chatWidgetOpen; l.setAttribute('aria-expanded', String(_chatWidgetOpen)); }
+  if (_chatWidgetOpen) { var i = document.getElementById('chat-text'); if (i) i.focus(); }
   else if (l) l.focus();
 }
 
@@ -9975,7 +9975,7 @@ function _chatWire() {
   var clo = document.getElementById('chat-close');
   if (clo) clo.addEventListener('click', function () { _chatToggle(false); });
   document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape' && _chatOpen && document.getElementById('panel-chat') && document.getElementById('panel-chat').classList.contains('active')) _chatToggle(false);
+    if (ev.key === 'Escape' && _chatWidgetOpen && document.getElementById('panel-chat') && document.getElementById('panel-chat').classList.contains('active')) _chatToggle(false);
   });
   var sel = document.getElementById('chat-page');
   if (sel) sel.addEventListener('change', function () { _chatRenderSite(); _chatNew(); });
