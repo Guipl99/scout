@@ -67,6 +67,9 @@ html.fs-grand  { zoom: 1.12; }
 html.fs-xgrand { zoom: 1.25; }
 
 /* ── Modale fiche contact (onglet Contacts) ── */
+#vis-drawer { position:fixed; top:0; right:0; bottom:0; width:min(560px, 100vw); background:var(--bg2); border-left:1px solid var(--border); box-shadow:-12px 0 40px rgba(0,0,0,.35); z-index:9999; overflow-y:auto; transform:translateX(105%); transition:transform .18s ease; }
+#vis-drawer.open { transform:translateX(0); }
+#vis-drawer .tag { vertical-align:middle; }
 #contact-detail-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100002; align-items:center; justify-content:center; padding:20px; }
 #contact-detail-modal.open { display:flex; }
 #contact-detail-modal .cd-content { background:var(--bg2); border:1px solid var(--border); border-radius:14px; width:100%; max-width:460px; max-height:85vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.4); }
@@ -2462,6 +2465,14 @@ Réinitialiser tous les filtres
         </select>
         <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="vis-abm"> Comptes ABM seulement</label>
         <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="vis-hidden"> Voir les ignorés</label>
+        <select id="vis-sort" title="Trier" style="font-size:13px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
+          <option value="score">Tri : intérêt</option>
+          <option value="last">Tri : dernière visite</option>
+          <option value="first">Tri : première visite</option>
+          <option value="pages">Tri : pages vues</option>
+          <option value="visits">Tri : visites</option>
+          <option value="name">Tri : nom</option>
+        </select>
         <input id="vis-search" type="text" placeholder="Filtrer (société, domaine, pays)…" style="flex:1;min-width:180px;font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
         <button type="button" id="vis-refresh" style="font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;">↻ Actualiser</button>
         <button type="button" id="vis-settings-btn" style="font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;">⚙️ Réglages &amp; snippet</button>
@@ -2469,6 +2480,7 @@ Réinitialiser tous les filtres
       <div id="vis-tiles" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;"></div>
       <div id="vis-settings" style="display:none;margin-bottom:14px;"></div>
       <div id="vis-body"></div>
+      <div id="vis-drawer" aria-label="Détail du compte"></div>
     </div>
 
     <!-- PROSPECTS CHAUDS -->
@@ -9363,7 +9375,7 @@ window.renderHotProspects = renderHotProspects;
 // ===================== Visiteurs web (Leadfeeder interne) =====================
 // Backend : scout-api/visitors.js (endpoints /v/*). Aucun onclick inline pour les actions
 // dynamiques : délégation d'événements sur #panel-visitors (data-act).
-var _visDays = 30, _visAccounts = [], _visStats = null, _visSettings = null, _visOpen = {}, _visLoading = false;
+var _visDays = 30, _visAccounts = [], _visStats = null, _visSettings = null, _visLoading = false;
 function _visH() { return Object.assign({ 'Content-Type': 'application/json' }, (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {}); }
 function _visTypeChip(t) {
   var m = { business: ['Entreprise', 'tag-accent'], government: ['Public / défense', 'tag-green'], education: ['Recherche / éduc.', 'tag-amber'], isp: ['FAI', 'tag-gray'], hosting: ['Hébergeur', 'tag-gray'], vpn: ['VPN / proxy', 'tag-gray'], unknown: ['Inconnu', 'tag-gray'] };
@@ -9405,7 +9417,7 @@ async function renderVisitors() {
       fetch(API + '/v/alerts', { headers: _visH() }).then(function (r) { return r.json(); })
     ]);
     _visStats = rs[0]; _visAccounts = rs[1].accounts || [];
-    _visRenderTiles(); _visRenderAlerts(rs[2].alerts || []); _visRenderTable();
+    _visRenderTiles(); _visRenderAlerts(rs[2].alerts || []); _visRenderTable(); _visRenderDrawer();
     _visSetNavBadge((rs[2].alerts || []).filter(function (a) { return !a.seen; }).length);
     var st = document.getElementById('vis-status');
     if (st) st.textContent = _visStats.last_hit ? ('dernière visite ' + _visAgo(_visStats.last_hit) + (_visStats.pending ? ' · ' + _visStats.pending + ' IP en cours de résolution' : '')) : 'aucune visite reçue — installe le snippet (⚙️)';
@@ -9444,9 +9456,18 @@ function _visRenderAlerts(alerts) {
 }
 function _visFiltered() {
   var q = ((document.getElementById('vis-search') || {}).value || '').toLowerCase().trim();
+  var sort = (document.getElementById('vis-sort') || {}).value || 'score';
   var list = _visAccounts.slice();
   if (q) list = list.filter(function (a) { return [a.org_name, a.org_domain, a.societe_name, a.country, a.as_name].filter(Boolean).join(' ').toLowerCase().indexOf(q) >= 0; });
-  list.sort(function (a, b) { return (b.score - a.score) || (new Date(b.last_seen) - new Date(a.last_seen)); });
+  var cmp = {
+    score: function (a, b) { return (b.score - a.score) || (new Date(b.last_seen) - new Date(a.last_seen)); },
+    last: function (a, b) { return new Date(b.last_seen) - new Date(a.last_seen); },
+    first: function (a, b) { return new Date(b.first_seen) - new Date(a.first_seen); },
+    pages: function (a, b) { return (b.pageviews - a.pageviews) || (b.score - a.score); },
+    visits: function (a, b) { return (b.visits - a.visits) || (b.score - a.score); },
+    name: function (a, b) { return String(a.societe_name || a.org_name || '').localeCompare(String(b.societe_name || b.org_name || ''), 'fr'); }
+  }[sort] || function () { return 0; };
+  list.sort(function (a, b) { if (!!a.starred !== !!b.starred) return a.starred ? -1 : 1; return cmp(a, b); });
   return list;
 }
 function _visScoreBar(score) {
@@ -9454,107 +9475,228 @@ function _visScoreBar(score) {
   var col = pct >= 60 ? '#16a34a' : pct >= 30 ? '#f59e0b' : 'var(--text3)';
   return '<div title="Score d\'intérêt (pages clés, visites répétées, ABM)" style="display:flex;align-items:center;gap:6px;"><div style="width:56px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:' + col + ';"></div></div><span style="font-size:11px;color:var(--text3);">' + score + '</span></div>';
 }
+function _visLogo(a, size) {
+  size = size || 18;
+  return a.org_domain ? '<img src="https://www.google.com/s2/favicons?domain=' + encodeURIComponent(a.org_domain) + '&sz=' + (size >= 24 ? 64 : 32) + '" alt="" width="' + size + '" height="' + size + '" loading="lazy" style="border-radius:4px;flex-shrink:0;background:#fff;" onerror="this.style.visibility=\'hidden\'">' : '<span style="display:inline-block;width:' + size + 'px;height:' + size + 'px;border-radius:4px;background:var(--bg3);flex-shrink:0;"></span>';
+}
+function _visStarBtn(a, big) {
+  return '<button type="button" data-act="star" data-key="' + esc(a.account_key) + '" data-on="' + (a.starred ? '1' : '0') + '" title="' + (a.starred ? 'Retirer des favoris' : 'Mettre en favori (remonte en tête de liste)') + '" style="font-size:' + (big ? 20 : 16) + 'px;line-height:1;background:transparent;border:none;cursor:pointer;padding:2px 4px;color:' + (a.starred ? '#f59e0b' : 'var(--border2)') + ';">' + (a.starred ? '★' : '☆') + '</button>';
+}
 function _visRenderTable() {
   var body = document.getElementById('vis-body'); if (!body) return;
   var list = _visFiltered();
   if (!list.length) { body.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3);">Aucune organisation identifiée sur cette période avec ces filtres.</div>'; return; }
   var rows = list.map(function (a) {
     var name = a.societe_name || a.org_name || '?';
-    var sub = [(a.societe_name && a.org_name !== a.societe_name) ? 'réseau : ' + a.org_name : null, a.city].filter(Boolean).join(' · ');
-    var pages = (a.top_pages || []).slice(0, 3).map(function (p) { return '<span style="display:inline-block;font-size:11px;padding:2px 6px;border-radius:5px;background:var(--bg3);color:var(--text2);margin:1px 2px 1px 0;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="' + esc(p.path) + '">' + esc(p.path) + (p.n > 1 ? ' ×' + p.n : '') + '</span>'; }).join('');
-    var sources = (a.top_sources || []).filter(function (x) { return x.src && x.src !== 'direct'; }).slice(0, 2).map(function (x) { return '<span style="display:inline-block;font-size:10px;padding:1px 5px;border-radius:4px;border:1px solid var(--border2);color:var(--text3);margin:2px 2px 0 0;" title="Source de trafic">↳ ' + esc(x.src) + (x.n > 1 ? ' ×' + x.n : '') + '</span>'; }).join('');
+    var pages = (a.top_pages || []).slice(0, 3).map(function (p) { return '<span style="display:inline-block;font-size:11px;padding:2px 6px;border-radius:5px;background:var(--bg3);color:var(--text2);margin:1px 2px 1px 0;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="' + esc(p.path) + '">' + esc(p.path) + (p.n > 1 ? ' ×' + p.n : '') + '</span>'; }).join('');
     var labels = (a.key_labels || []).map(function (l) { return '<span style="font-size:10px;color:#16a34a;margin-right:5px;">● ' + esc(l) + '</span>'; }).join('');
-    var seen = (a.contacts_seen || []).slice(0, 3).map(function (c) { return '<span data-act="open-contact" data-id="' + esc(c.id) + '" style="display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:rgba(108,99,255,.15);color:var(--accent2);margin:3px 3px 0 0;cursor:pointer;" title="Contact identifié via un lien d\'email Scout">👤 ' + esc(c.nom || c.id) + '</span>'; }).join('');
-    var logo = a.org_domain ? '<img src="https://www.google.com/s2/favicons?domain=' + encodeURIComponent(a.org_domain) + '&sz=32" alt="" width="18" height="18" loading="lazy" style="border-radius:4px;flex-shrink:0;background:#fff;" onerror="this.style.visibility=\'hidden\'">' : '<span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:var(--bg3);flex-shrink:0;"></span>';
-    var site = a.org_domain ? '<a href="https://' + esc(a.org_domain) + '" target="_blank" rel="noopener" style="color:var(--text3);text-decoration:none;font-size:11px;" title="Ouvrir le site">' + esc(a.org_domain) + ' ↗</a>' : '<span data-act="enrich" data-key="' + esc(a.account_key) + '" style="font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline dotted;" title="Chercher le domaine via Hunter">domaine ?</span>';
-    var open = !!_visOpen[a.account_key];
-    var summ = a.summary ? '<div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.4;max-width:520px;"><b style="color:' + (a.summary.cible ? '#16a34a' : 'var(--text3)') + ';">' + (a.summary.cible ? '✓ cible' : '○ hors cible') + '</b> ' + esc(a.summary.qui) + ' ' + esc(a.summary.pourquoi) + (a.summary.angle ? ' <i>Angle : ' + esc(a.summary.angle) + '</i>' : '') + '</div>' : '';
-    return '<tr data-key="' + esc(a.account_key) + '" style="border-top:1px solid var(--border2);' + (a.hidden ? 'opacity:.55;' : '') + '">'
-      + '<td style="padding:9px 10px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' + logo + '<b>' + esc(name) + '</b>'
+    var seen = (a.contacts_seen || []).length ? '<span title="' + esc((a.contacts_seen || []).map(function (c) { return c.nom; }).join(', ')) + '" style="font-size:11px;color:var(--accent2);">👤 ' + (a.contacts_seen || []).length + '</span>' : '';
+    var meta = [a.org_domain ? '<a href="https://' + esc(a.org_domain) + '" target="_blank" rel="noopener" data-noopen="1" style="color:var(--text3);text-decoration:none;" title="Ouvrir le site">' + esc(a.org_domain) + ' ↗</a>' : null, a.city ? esc(a.city) : null, a.summary && a.summary.qui ? esc(a.summary.qui) : null].filter(Boolean).join(' · ');
+    return '<tr data-act="open" data-key="' + esc(a.account_key) + '" style="border-top:1px solid var(--border2);cursor:pointer;' + (a.hidden ? 'opacity:.55;' : '') + '" title="Ouvrir le détail">'
+      + '<td style="padding:8px 4px 8px 8px;width:28px;">' + _visStarBtn(a) + '</td>'
+      + '<td style="padding:9px 10px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' + _visLogo(a) + '<b>' + esc(name) + '</b>'
       + (a.country ? '<span title="' + esc(a.country) + '">' + _visFlag(a.country) + '</span>' : '')
-      + (a.is_abm ? tagHtml('ABM', 'tag-green') : '') + _visTypeChip(a.org_type)
-      + (a.hidden ? tagHtml('ignoré', 'tag-red') : '') + '</div>'
-      + '<div style="font-size:11px;color:var(--text3);margin-top:2px;">' + site + (sub ? ' · ' + esc(sub) : '') + '</div>' + summ + seen + '</td>'
+      + (a.is_abm ? tagHtml('ABM', 'tag-green') : '') + _visTypeChip(a.org_type) + (a.societe_id ? '' : tagHtml('pas dans Scout', 'tag-gray'))
+      + (a.hidden ? tagHtml('ignoré', 'tag-red') : '') + seen + '</div>'
+      + (meta ? '<div style="font-size:11px;color:var(--text3);margin-top:2px;max-width:520px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + meta + '</div>' : '') + '</td>'
       + '<td style="padding:9px 10px;">' + _visScoreBar(a.score) + '<div style="margin-top:3px;">' + labels + '</div></td>'
-      + '<td style="padding:9px 10px;font-size:12px;white-space:nowrap;"><b>' + a.pageviews + '</b> pages · ' + a.visits + ' visite' + (a.visits > 1 ? 's' : '') + (a.dwell_ms ? '<div style="color:var(--text3);">' + _visDwell(a.dwell_ms) + ' cumulées</div>' : '') + '</td>'
-      + '<td style="padding:9px 10px;">' + pages + (sources ? '<div>' + sources + '</div>' : '') + '</td>'
+      + '<td style="padding:9px 10px;font-size:12px;white-space:nowrap;"><b>' + a.pageviews + '</b> pages · ' + a.visits + ' visite' + (a.visits > 1 ? 's' : '') + (a.dwell_ms ? '<div style="color:var(--text3);">' + _visDwell(a.dwell_ms) + '</div>' : '') + '</td>'
+      + '<td style="padding:9px 10px;">' + pages + '</td>'
       + '<td style="padding:9px 10px;font-size:12px;white-space:nowrap;">' + _visAgo(a.last_seen) + '<div style="color:var(--text3);">depuis ' + _visAgo(a.first_seen) + '</div></td>'
-      + '<td style="padding:9px 10px;white-space:nowrap;">'
-      + '<div style="display:flex;gap:4px;flex-wrap:wrap;max-width:260px;">'
-      + '<button type="button" data-act="toggle" data-key="' + esc(a.account_key) + '" style="font-size:12px;padding:6px 10px;border-radius:6px;cursor:pointer;color:var(--text2);background:var(--bg3);border:1px solid var(--border2);">' + (open ? '▾ Fermer' : '▸ Parcours') + '</button>'
-      + (a.societe_id ? '<button type="button" data-act="open-societe" data-id="' + esc(a.societe_id) + '" style="font-size:12px;padding:6px 10px;border-radius:6px;cursor:pointer;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;font-weight:600;">Fiche</button>'
-        : '<button type="button" data-act="create" data-key="' + esc(a.account_key) + '" title="Créer la société dans Scout (ou la retrouver si elle existe déjà)" style="font-size:12px;padding:6px 10px;border-radius:6px;cursor:pointer;color:#2563eb;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.4);font-weight:600;">+ Société</button>'
-          + '<button type="button" data-act="link" data-key="' + esc(a.account_key) + '" title="Lier manuellement à une société existante" style="font-size:12px;padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--text3);background:transparent;border:1px solid var(--border2);">Lier</button>')
-      + '<button type="button" data-act="contacts" data-key="' + esc(a.account_key) + '" title="Chercher 5 décideurs via Hunter et les ajouter dans Contacts (crée la société si besoin)" style="font-size:12px;padding:6px 10px;border-radius:6px;cursor:pointer;color:#16a34a;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);font-weight:600;">👥 Contacts</button>'
-      + (a.has_summary ? '' : '<button type="button" data-act="summary" data-key="' + esc(a.account_key) + '" title="Résumé IA : qui c\'est, lien avec les drones, pourquoi la visite, angle Elistair" style="font-size:12px;padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--text2);background:var(--bg3);border:1px solid var(--border2);">✨ Résumé</button>')
-      + '<button type="button" data-act="' + (a.hidden ? 'unhide' : 'hide') + '" data-key="' + esc(a.account_key) + '" title="' + (a.hidden ? 'Réafficher' : 'Ignorer cette organisation (ex : nous, un partenaire, un fournisseur)') + '" style="font-size:12px;padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--text3);background:transparent;border:1px solid var(--border2);">' + (a.hidden ? '👁' : '✕') + '</button>'
-      + '</div><div id="vis-msg-' + _visSlug(a.account_key) + '" style="font-size:11px;color:var(--text2);margin-top:4px;max-width:260px;white-space:normal;"></div>'
-      + '</td></tr>'
-      + (open ? '<tr data-detail="' + esc(a.account_key) + '"><td colspan="6" style="padding:0 10px 12px;background:var(--bg2);"><div id="vis-detail-' + _visSlug(a.account_key) + '" style="padding:10px;border:1px solid var(--border2);border-radius:8px;font-size:12px;color:var(--text2);">Chargement…</div></td></tr>' : '');
+      + '<td style="padding:9px 10px;white-space:nowrap;"><button type="button" data-act="open" data-key="' + esc(a.account_key) + '" style="font-size:12px;padding:6px 10px;border-radius:6px;cursor:pointer;color:var(--text2);background:var(--bg3);border:1px solid var(--border2);">Ouvrir ›</button></td>'
+      + '</tr>';
   }).join('');
   body.innerHTML = '<div style="border:1px solid var(--border2);border-radius:10px;overflow:hidden;overflow-x:auto;">'
     + '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="text-align:left;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:var(--bg2);">'
-    + '<th style="padding:9px 10px;font-weight:500;">Organisation</th><th style="padding:9px 10px;font-weight:500;">Intérêt</th><th style="padding:9px 10px;font-weight:500;">Activité</th><th style="padding:9px 10px;font-weight:500;">Pages vues</th><th style="padding:9px 10px;font-weight:500;">Dernière visite</th><th style="padding:9px 10px;font-weight:500;">Actions</th>'
+    + '<th></th><th style="padding:9px 10px;font-weight:500;">Organisation</th><th style="padding:9px 10px;font-weight:500;">Intérêt</th><th style="padding:9px 10px;font-weight:500;">Activité</th><th style="padding:9px 10px;font-weight:500;">Pages vues</th><th style="padding:9px 10px;font-weight:500;">Dernière visite</th><th></th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
     + '<div style="font-size:11px;color:var(--text3);margin-top:8px;">' + list.length + ' organisation(s). Identification par réseau : fiable pour les sièges, ministères, bases et grands comptes ; aveugle sur les box, le mobile et le télétravail.</div>';
-  Object.keys(_visOpen).forEach(function (k) { if (_visOpen[k]) _visLoadDetail(k); });
 }
 function _visSlug(k) { return String(k).replace(/[^a-z0-9]/gi, '_'); }
+
+// ── Panneau latéral d'un compte ──────────────────────────────────────────────
+// État conservé entre deux rafraîchissements de la liste (messages, candidats Hunter, sessions).
+var _visDrawer = { key: null, msg: {}, candidates: null, sessions: null, confirm: null, summaryLoading: false };
+function _visAcc(key) { return _visAccounts.find(function (a) { return a.account_key === key; }); }
+function _visDrawerSay(section, text, color) { _visDrawer.msg[section] = text ? { text: text, color: color || 'var(--text2)' } : null; _visRenderDrawer(); }
+function _visOpenDrawer(key) {
+  if (_visDrawer.key !== key) _visDrawer = { key: key, msg: {}, candidates: null, sessions: null, confirm: null, summaryLoading: false };
+  var el = document.getElementById('vis-drawer'); if (!el) return;
+  el.classList.add('open'); document.body.classList.add('vis-drawer-open');
+  _visRenderDrawer();
+  _visLoadDetail(key);
+}
+function _visCloseDrawer() {
+  var el = document.getElementById('vis-drawer'); if (el) el.classList.remove('open');
+  document.body.classList.remove('vis-drawer-open');
+  _visDrawer.key = null;
+}
+function _visBtn(act, key, label, style, extra) {
+  var base = 'font-size:12px;padding:7px 12px;border-radius:7px;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text);';
+  var styles = { primary: 'color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;font-weight:600;', green: 'color:#16a34a;background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.4);font-weight:600;', blue: 'color:#2563eb;background:rgba(37,99,235,.1);border-color:rgba(37,99,235,.4);font-weight:600;', ghost: 'color:var(--text3);background:transparent;', danger: 'color:#dc2626;background:rgba(220,38,38,.08);border-color:rgba(220,38,38,.35);' };
+  return '<button type="button" data-act="' + act + '" data-key="' + esc(key) + '"' + (extra || '') + ' style="' + base + (styles[style] || '') + '">' + label + '</button>';
+}
+function _visMsgHtml(section) { var m = _visDrawer.msg[section]; return m ? '<div style="font-size:12px;color:' + m.color + ';margin-top:8px;line-height:1.4;">' + esc(m.text) + '</div>' : ''; }
+function _visRenderDrawer() {
+  var el = document.getElementById('vis-drawer'); if (!el || !_visDrawer.key) return;
+  var a = _visAcc(_visDrawer.key);
+  if (!a) { el.innerHTML = '<div style="padding:20px;color:var(--text3);">Ce compte n\'est plus dans la liste (filtres ou période). <button type="button" data-act="close-drawer" style="margin-left:8px;font-size:12px;cursor:pointer;">Fermer</button></div>'; return; }
+  var name = a.societe_name || a.org_name || '?';
+  var sec = function (title, inner) { return '<div style="padding:14px 18px;border-top:1px solid var(--border2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px;">' + title + '</div>' + inner + '</div>'; };
+  var html = '';
+  // en-tête
+  html += '<div style="padding:16px 18px 12px;display:flex;gap:12px;align-items:flex-start;">' + _visLogo(a, 28)
+    + '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="font-size:16px;">' + esc(name) + '</b>' + (a.country ? '<span>' + _visFlag(a.country) + '</span>' : '') + (a.is_abm ? tagHtml('ABM', 'tag-green') : '') + _visTypeChip(a.org_type) + (a.hidden ? tagHtml('ignoré', 'tag-red') : '') + '</div>'
+    + '<div style="font-size:12px;color:var(--text3);margin-top:3px;">' + [a.org_domain ? '<a href="https://' + esc(a.org_domain) + '" target="_blank" rel="noopener" style="color:var(--accent2);text-decoration:none;">' + esc(a.org_domain) + ' ↗</a>' : '<span data-act="enrich" data-key="' + esc(a.account_key) + '" style="cursor:pointer;text-decoration:underline dotted;" title="Chercher le domaine via Hunter">domaine inconnu, chercher ?</span>', a.city ? esc(a.city) : null, (a.societe_name && a.org_name !== a.societe_name) ? 'réseau : ' + esc(a.org_name) : null].filter(Boolean).join(' · ') + _visMsgHtml('enrich') + '</div></div>'
+    + _visStarBtn(a, true) + '<button type="button" data-act="close-drawer" title="Fermer" style="font-size:20px;line-height:1;background:transparent;border:none;cursor:pointer;color:var(--text3);padding:2px 6px;">×</button></div>';
+  // activité
+  html += '<div style="padding:0 18px 12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;">'
+    + '<div style="background:var(--bg3);border-radius:8px;padding:8px 10px;"><div style="color:var(--text3);font-size:11px;">Intérêt</div>' + _visScoreBar(a.score) + '<div style="margin-top:3px;">' + (a.key_labels || []).map(function (l) { return '<span style="font-size:10px;color:#16a34a;margin-right:5px;">● ' + esc(l) + '</span>'; }).join('') + '</div></div>'
+    + '<div style="background:var(--bg3);border-radius:8px;padding:8px 10px;"><div style="color:var(--text3);font-size:11px;">Activité (' + _visDays + ' j)</div><b>' + a.pageviews + '</b> pages · ' + a.visits + ' visite' + (a.visits > 1 ? 's' : '') + (a.dwell_ms ? '<div style="color:var(--text3);">' + _visDwell(a.dwell_ms) + ' cumulées</div>' : '') + '</div>'
+    + '<div style="background:var(--bg3);border-radius:8px;padding:8px 10px;"><div style="color:var(--text3);font-size:11px;">Dernière visite</div>' + _visAgo(a.last_seen) + '<div style="color:var(--text3);">première ' + _visAgo(a.first_seen) + '</div></div></div>';
+  // résumé factuel
+  var s = a.summary;
+  html += sec('Fiche (résumé factuel, IA)', (s
+    ? (s.connu === false ? '<div style="font-size:12px;color:var(--text3);">Organisation non identifiée avec certitude par l\'IA : rien à afficher plutôt que d\'inventer.</div>'
+      : '<div style="font-size:13px;line-height:1.5;">' + esc(s.qui) + (s.activite ? ' ' + esc(s.activite) : '') + (s.drones ? '<div style="margin-top:4px;"><b>Drones / défense :</b> ' + esc(s.drones) + '</div>' : '') + (s.taille ? '<div style="color:var(--text3);font-size:12px;">' + esc(s.taille) + '</div>' : '') + '</div>')
+      + '<div style="margin-top:8px;">' + _visBtn('summary', a.account_key, 'Regénérer', 'ghost', ' data-force="1"') + '</div>'
+    : '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span style="font-size:12px;color:var(--text3);">Qui est cette organisation, ce qu\'elle fait, son lien connu avec les drones. Faits seulement, rien d\'inventé.</span>' + _visBtn('summary', a.account_key, _visDrawer.summaryLoading ? 'Génération…' : '✨ Générer', 'blue') + '</div>') + _visMsgHtml('summary'));
+  // société Scout
+  var socInner = '';
+  if (a.societe_id) socInner = '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span style="font-size:13px;">Rattaché à <b>' + esc(a.societe_name || a.societe_id) + '</b>' + (a.is_abm ? ' (compte ABM)' : '') + '</span>' + _visBtn('open-societe', a.account_key, 'Ouvrir la fiche', 'primary', ' data-id="' + esc(a.societe_id) + '"') + _visBtn('link', a.account_key, 'Changer', 'ghost') + '</div>';
+  else if (_visDrawer.confirm && _visDrawer.confirm.key === a.account_key) {
+    var c = _visDrawer.confirm;
+    socInner = c.existing
+      ? '<div style="font-size:13px;">Une société existe déjà dans Scout : <b>' + esc(c.existing.name) + '</b>. La rattacher ?</div><div style="margin-top:8px;display:flex;gap:8px;">' + _visBtn('create-confirm', a.account_key, 'Oui, rattacher', 'primary') + _visBtn('create-cancel', a.account_key, 'Annuler', 'ghost') + '</div>'
+      : '<div style="font-size:13px;">Créer dans Scout :</div><div style="font-size:12px;color:var(--text2);margin:6px 0;line-height:1.5;"><b>' + esc(c.proposed.name) + '</b><br>Site : ' + (c.proposed.domain ? esc(c.proposed.domain) : '<i>inconnu</i>') + ' · Pays : ' + esc(c.proposed.pays || '?') + ' · Type : ' + esc(c.proposed.type) + '<br><span style="color:var(--text3);">id ' + esc(c.proposed.id) + ', tag web_visitor</span></div><div style="display:flex;gap:8px;">' + _visBtn('create-confirm', a.account_key, 'Confirmer la création', 'primary') + _visBtn('create-cancel', a.account_key, 'Annuler', 'ghost') + '</div>';
+  } else socInner = '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span style="font-size:12px;color:var(--text3);">Pas encore dans Scout.</span>' + _visBtn('create', a.account_key, '+ Créer la société', 'blue') + _visBtn('link', a.account_key, 'Lier à une société existante', 'ghost') + '</div>';
+  html += sec('Société Scout', socInner + _visMsgHtml('societe'));
+  // contacts
+  var ctInner = '';
+  var seen = a.contacts_seen || [];
+  if (seen.length) ctInner += '<div style="font-size:12px;margin-bottom:8px;">Identifiés via un lien d\'email : ' + seen.map(function (c) { return '<span data-act="open-contact" data-id="' + esc(c.id) + '" style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(108,99,255,.15);color:var(--accent2);margin:2px 3px 0 0;cursor:pointer;">👤 ' + esc(c.nom || c.id) + '</span>'; }).join('') + '</div>';
+  var cand = _visDrawer.candidates;
+  if (cand && cand.key === a.account_key) {
+    if (!cand.list.length) ctInner += '<div style="font-size:12px;color:var(--text3);">' + esc(cand.message || 'Hunter ne connaît aucun email exploitable pour ' + (cand.domain || 'ce domaine') + '.') + '</div>';
+    else {
+      ctInner += '<div style="font-size:12px;color:var(--text3);margin-bottom:6px;">' + cand.found + ' emails connus de Hunter pour ' + esc(cand.domain) + (cand.pattern ? ' (format ' + esc(cand.pattern) + ')' : '') + '. Coche ceux à ajouter dans Contacts, ils seront vérifiés avant insertion.</div>';
+      ctInner += '<div style="max-height:260px;overflow:auto;border:1px solid var(--border2);border-radius:8px;">' + cand.list.map(function (c, i) {
+        var dis = !!c.existing_id;
+        return '<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 10px;border-top:' + (i ? '1px solid var(--border2)' : 'none') + ';font-size:12px;cursor:' + (dis ? 'default' : 'pointer') + ';' + (dis ? 'opacity:.55;' : '') + '"><input type="checkbox" class="vis-cand" data-email="' + esc(c.email) + '"' + (c.suggested && !dis ? ' checked' : '') + (dis ? ' disabled' : '') + ' style="margin-top:2px;">'
+          + '<span style="flex:1;"><b>' + esc((c.prenom + ' ' + c.nom).trim() || c.email) + '</b>' + (c.titre ? ' · ' + esc(c.titre) : '') + '<div style="color:var(--text3);">' + esc(c.email) + ' · confiance ' + c.confidence + (c.suggested ? ' · <span style="color:#16a34a;">suggéré</span>' : '') + (dis ? ' · <span data-act="open-contact" data-id="' + esc(c.existing_id) + '" style="color:var(--accent2);cursor:pointer;">déjà en base ↗</span>' : '') + '</div></span></label>';
+      }).join('') + '</div>';
+      ctInner += '<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">' + _visBtn('contacts-add', a.account_key, 'Ajouter la sélection dans Contacts', 'primary') + '<span style="font-size:11px;color:var(--text3);">' + (a.societe_id ? '' : 'La société sera créée dans Scout au passage.') + '</span></div>';
+    }
+  } else ctInner += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span style="font-size:12px;color:var(--text3);">Chercher des décideurs (drones, achats, BD, direction) via Hunter. Rien n\'est ajouté sans ta confirmation.</span>' + _visBtn('contacts-search', a.account_key, '👥 Proposer des contacts', 'green') + '</div>';
+  html += sec('Contacts', ctInner + _visMsgHtml('contacts'));
+  // parcours
+  var sess = _visDrawer.sessions;
+  var pInner = !sess ? '<div style="font-size:12px;color:var(--text3);">Chargement…</div>' : !sess.list.length ? '<div style="font-size:12px;color:var(--text3);">Aucune session détaillée.</div>'
+    : (sess.meta ? '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;">Identifié via ' + esc(sess.meta.source || '?') + ' (confiance ' + (sess.meta.confidence || 0) + ')' + (sess.meta.rdns ? ' · rDNS ' + esc(sess.meta.rdns) : '') + (sess.meta.as_name ? ' · AS ' + esc(sess.meta.as_name) : '') + '</div>' : '')
+      + sess.list.slice(0, 15).map(function (s) {
+        var start = new Date(s.start);
+        return '<div style="padding:6px 0;border-top:1px solid var(--border2);font-size:12px;">'
+          + '<div style="display:flex;gap:10px;flex-wrap:wrap;color:var(--text3);"><b style="color:var(--text);">' + start.toLocaleDateString('fr-FR') + ' ' + start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</b><span>' + s.pages.length + ' page' + (s.pages.length > 1 ? 's' : '') + '</span>' + (s.city ? '<span>' + esc(s.city) + '</span>' : '') + (s.referrer ? '<span>via ' + esc(s.referrer.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</span>' : '') + '<span>réseau ' + esc(s.ip_trunc || '') + '</span></div>'
+          + '<div style="margin-top:3px;">' + s.pages.map(function (p) { return '<span style="display:inline-block;padding:2px 6px;border-radius:5px;background:var(--bg3);margin:2px 4px 0 0;">' + esc(p.path) + (p.dwell_ms ? ' <span style="color:var(--text3);">' + _visDwell(p.dwell_ms) + '</span>' : '') + '</span>'; }).join('→ ') + '</div></div>';
+      }).join('');
+  html += sec('Parcours', pInner);
+  // sources
+  var src = (a.top_sources || []).filter(function (x) { return x.src; });
+  if (src.length) html += sec('Sources de trafic', src.slice(0, 6).map(function (x) { return '<span style="display:inline-block;font-size:12px;padding:3px 8px;border-radius:6px;border:1px solid var(--border2);margin:0 4px 4px 0;">' + esc(x.src) + ' <span style="color:var(--text3);">×' + x.n + '</span></span>'; }).join(''));
+  // pied
+  html += '<div style="padding:12px 18px;border-top:1px solid var(--border2);display:flex;gap:8px;">' + _visBtn(a.hidden ? 'unhide' : 'hide', a.account_key, a.hidden ? 'Réafficher ce compte' : 'Ignorer ce compte', a.hidden ? 'ghost' : 'danger') + '</div>';
+  el.innerHTML = html;
+}
 async function _visLoadDetail(key) {
-  var el = document.getElementById('vis-detail-' + _visSlug(key)); if (!el) return;
   try {
     var r = await fetch(API + '/v/accounts/detail?key=' + encodeURIComponent(key) + '&days=' + Math.max(_visDays, 90), { headers: _visH() });
     var d = await r.json();
-    if (!d.sessions || !d.sessions.length) { el.innerHTML = 'Aucune session détaillée.'; return; }
-    var meta = d.meta ? '<div style="margin-bottom:8px;color:var(--text3);">Identifié via ' + esc(d.meta.source || '?') + ' (confiance ' + (d.meta.confidence || 0) + ')' + (d.meta.rdns ? ' · rDNS ' + esc(d.meta.rdns) : '') + (d.meta.as_name ? ' · AS ' + esc(d.meta.as_name) : '') + '</div>' : '';
-    el.innerHTML = meta + d.sessions.slice(0, 15).map(function (s) {
-      var start = new Date(s.start);
-      return '<div style="padding:6px 0;border-top:1px solid var(--border2);">'
-        + '<div style="display:flex;gap:10px;flex-wrap:wrap;color:var(--text3);"><b style="color:var(--text);">' + start.toLocaleDateString('fr-FR') + ' ' + start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</b>'
-        + '<span>' + s.pages.length + ' page' + (s.pages.length > 1 ? 's' : '') + '</span>' + (s.city ? '<span>' + esc(s.city) + '</span>' : '') + (s.referrer ? '<span>via ' + esc(s.referrer.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</span>' : '') + (s.lang ? '<span>' + esc(s.lang) + '</span>' : '') + '<span>réseau ' + esc(s.ip_trunc || '') + '</span></div>'
-        + '<div style="margin-top:3px;">' + s.pages.map(function (p) { return '<span style="display:inline-block;padding:2px 6px;border-radius:5px;background:var(--bg3);margin:2px 4px 0 0;">' + esc(p.path) + (p.dwell_ms ? ' <span style="color:var(--text3);">' + _visDwell(p.dwell_ms) + '</span>' : '') + '</span>'; }).join('→ ') + '</div>'
-        + '</div>';
-    }).join('');
-  } catch (e) { el.innerHTML = 'Erreur de chargement.'; }
+    if (_visDrawer.key !== key) return;
+    _visDrawer.sessions = { list: d.sessions || [], meta: d.meta || null };
+  } catch (e) { _visDrawer.sessions = { list: [], meta: null }; }
+  _visRenderDrawer();
+}
+async function _visPost(path, body) {
+  var r = await fetch(API + path, { method: 'POST', headers: _visH(), body: JSON.stringify(body || {}) });
+  var d = null; try { d = await r.json(); } catch (e) { d = {}; }
+  if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+  return d;
+}
+async function _visReload() { await renderVisitors(); _visRenderDrawer(); }
+async function _visStar(key, on) {
+  var a = _visAcc(key); if (a) a.starred = on;
+  _visRenderTable(); _visRenderDrawer();
+  try { await _visPost('/v/accounts/star', { key: key, starred: on }); } catch (e) { if (a) a.starred = !on; _visRenderTable(); _visRenderDrawer(); }
+}
+async function _visSummary(key, force) {
+  _visDrawer.summaryLoading = true; _visDrawerSay('summary', 'Génération en cours…');
+  try { var d = await _visPost('/v/accounts/summary', { key: key, force: !!force }); var a = _visAcc(key); if (a) { a.summary = d.summary; a.has_summary = true; } _visDrawer.msg.summary = null; }
+  catch (e) { _visDrawer.msg.summary = { text: 'Erreur : ' + e.message, color: '#dc2626' }; }
+  _visDrawer.summaryLoading = false; _visRenderDrawer();
+}
+async function _visEnrich(key) {
+  _visDrawerSay('enrich', 'Recherche du domaine via Hunter…');
+  try { var d = await _visPost('/v/accounts/enrich', { key: key }); _visDrawer.msg.enrich = d.domain ? null : { text: 'Domaine introuvable via Hunter. Tu peux lier la société à la main.', color: '#f59e0b' }; if (d.domain) await _visReload(); else _visRenderDrawer(); }
+  catch (e) { _visDrawerSay('enrich', 'Erreur : ' + e.message, '#dc2626'); }
+}
+async function _visCreateAsk(key) {
+  _visDrawerSay('societe', 'Préparation…');
+  try {
+    var r = await fetch(API + '/v/accounts/preview-societe?key=' + encodeURIComponent(key), { headers: _visH() }); var d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+    _visDrawer.confirm = { key: key, existing: d.existing, proposed: d.proposed }; _visDrawer.msg.societe = null; _visRenderDrawer();
+  } catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
+}
+async function _visCreateConfirm(key) {
+  _visDrawer.confirm = null; _visDrawerSay('societe', 'Création…');
+  try {
+    var d = await _visPost('/v/accounts/create-societe', { key: key });
+    var a = _visAcc(key);
+    _visDrawer.msg.societe = { text: (d.created ? 'Société créée : ' : 'Société rattachée : ') + d.societe.name + (d.domain ? ' (' + d.domain + ')' : ''), color: '#16a34a' };
+    await renderVisitors();
+    // le compte peut avoir changé de clé (regroupement par société) : on suit
+    var na = _visAccounts.find(function (x) { return x.societe_id === d.societe.id; });
+    if (na && na.account_key !== key) { var old = _visDrawer; _visDrawer = { key: na.account_key, msg: old.msg, candidates: null, sessions: null, confirm: null, summaryLoading: false }; _visLoadDetail(na.account_key); }
+    _visRenderDrawer();
+  } catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
+}
+async function _visContactsSearch(key) {
+  _visDrawerSay('contacts', 'Recherche Hunter en cours (jusqu\'à 20 s)…');
+  try {
+    var d = await _visPost('/v/accounts/search-contacts', { key: key });
+    _visDrawer.candidates = { key: key, list: d.candidates || [], found: d.found || 0, domain: d.domain, pattern: d.pattern, message: d.message };
+    _visDrawer.msg.contacts = null; _visRenderDrawer();
+  } catch (e) { _visDrawerSay('contacts', 'Erreur : ' + e.message, '#dc2626'); }
+}
+async function _visContactsAdd(key) {
+  var emails = Array.prototype.slice.call(document.querySelectorAll('#vis-drawer input.vis-cand:checked')).map(function (i) { return i.dataset.email; });
+  if (!emails.length) { _visDrawerSay('contacts', 'Coche au moins un contact.', '#f59e0b'); return; }
+  _visDrawerSay('contacts', 'Vérification des emails et ajout (' + emails.length + ')…');
+  try {
+    var d = await _visPost('/v/accounts/add-contacts', { key: key, emails: emails });
+    var txt = d.contacts.length ? d.contacts.length + ' contact(s) dans Scout : ' + d.contacts.map(function (c) { return ((c.prenom || '') + ' ' + (c.nom || '')).trim() + (c.existing ? ' (déjà présent)' : ''); }).join(', ') + '.' : 'Aucun contact ajouté.';
+    if (d.skipped && d.skipped.length) txt += ' Écartés : ' + d.skipped.map(function (c) { return c.email + ' (' + c.status + ')'; }).join(', ') + '.';
+    _visDrawer.candidates = null; _visDrawer.msg.contacts = { text: txt, color: d.contacts.length ? '#16a34a' : '#f59e0b' };
+    await renderVisitors();
+    var na = _visAccounts.find(function (x) { return x.societe_id === d.societe.id; });
+    if (na && na.account_key !== key) { var old = _visDrawer; _visDrawer = { key: na.account_key, msg: old.msg, candidates: null, sessions: null, confirm: null, summaryLoading: false }; _visLoadDetail(na.account_key); }
+    _visRenderDrawer();
+  } catch (e) { _visDrawerSay('contacts', 'Erreur : ' + e.message, '#dc2626'); }
 }
 async function _visLink(key) {
-  var acc = _visAccounts.find(function (a) { return a.account_key === key; });
+  var acc = _visAcc(key);
   var q = prompt('Lier « ' + (acc ? acc.org_name : key) + ' » à quelle société Scout ? Tape un nom (recherche dans Fabricants / Comptes) :', acc ? acc.org_name : '');
   if (!q) return;
   var list = (window.societes || []).filter(function (s) { return (s.name || '').toLowerCase().indexOf(q.toLowerCase()) >= 0; }).slice(0, 9);
-  if (!list.length) { alert('Aucune société ne correspond à « ' + q + ' ». Crée-la d\'abord dans Fabricants / Comptes.'); return; }
+  if (!list.length) { _visDrawerSay('societe', 'Aucune société ne correspond à « ' + q + ' ». Crée-la d\'abord (bouton ci-dessus) ou dans Fabricants / Comptes.', '#f59e0b'); return; }
   var choice = list.length === 1 ? '1' : prompt(list.map(function (s, i) { return (i + 1) + '. ' + s.name + (s.pays ? ' (' + s.pays + ')' : ''); }).join('\n') + '\n\nNuméro :', '1');
   var s = list[parseInt(choice, 10) - 1]; if (!s) return;
-  var r = await fetch(API + '/v/accounts/link', { method: 'POST', headers: _visH(), body: JSON.stringify({ key: key, societe_id: s.id }) });
-  if (!r.ok) { alert('Erreur : ' + ((await r.json()).error || r.status)); return; }
-  renderVisitors();
-}
-// Actions d'enrichissement d'un compte (backend /v/accounts/*) : société, contacts Hunter, résumé IA, domaine
-async function _visAccountAction(act, key, btn) {
-  var msg = document.getElementById('vis-msg-' + _visSlug(key));
-  var say = function (t, col) { if (msg) { msg.textContent = t; msg.style.color = col || 'var(--text2)'; } };
-  var url = { create: '/v/accounts/create-societe', contacts: '/v/accounts/find-contacts', summary: '/v/accounts/summary', enrich: '/v/accounts/enrich' }[act];
-  var label = { create: 'Création de la société…', contacts: 'Recherche Hunter en cours (jusqu\'à 30 s)…', summary: 'Résumé en cours…', enrich: 'Recherche du domaine…' }[act];
-  if (btn && btn.tagName === 'BUTTON') { btn.disabled = true; btn.style.opacity = '.6'; }
-  say(label);
-  try {
-    var r = await fetch(API + url, { method: 'POST', headers: _visH(), body: JSON.stringify({ key: key }) });
-    var d = await r.json();
-    if (!r.ok) { say('Erreur : ' + (d.error || r.status), '#dc2626'); if (btn && btn.tagName === 'BUTTON') { btn.disabled = false; btn.style.opacity = ''; } return; }
-    if (act === 'create') say((d.created ? 'Société créée : ' : 'Société existante : ') + d.societe.name + (d.domain ? ' (' + d.domain + ')' : ''), '#16a34a');
-    else if (act === 'contacts') {
-      if (!d.contacts.length) say(d.message || ('Aucun décideur exploitable trouvé (' + (d.found || 0) + ' emails Hunter, filtrés par rôle / validité).'), '#f59e0b');
-      else say(d.contacts.length + ' contact(s) ajouté(s) : ' + d.contacts.map(function (c) { return (c.prenom || '') + ' ' + (c.nom || '') + (c.titre ? ' (' + c.titre + ')' : ''); }).join(', ') + '. Retrouve-les dans Contacts.', '#16a34a');
-    }
-    else if (act === 'summary') say('Résumé : ' + (d.summary.qui || ''), '#16a34a');
-    else if (act === 'enrich') say(d.domain ? 'Domaine trouvé : ' + d.domain : 'Domaine introuvable via Hunter. Tu peux lier la société à la main.', d.domain ? '#16a34a' : '#f59e0b');
-    setTimeout(renderVisitors, act === 'summary' || act === 'contacts' ? 1500 : 800);
-  } catch (e) { say('Erreur réseau', '#dc2626'); if (btn && btn.tagName === 'BUTTON') { btn.disabled = false; btn.style.opacity = ''; } }
+  try { await _visPost('/v/accounts/link', { key: key, societe_id: s.id }); _visDrawer.msg.societe = { text: 'Rattaché à ' + s.name + '.', color: '#16a34a' }; await renderVisitors(); var na = _visAccounts.find(function (x) { return x.societe_id === s.id; }); if (na && na.account_key !== key) { var old = _visDrawer; _visDrawer = { key: na.account_key, msg: old.msg, candidates: null, sessions: null, confirm: null, summaryLoading: false }; _visLoadDetail(na.account_key); } _visRenderDrawer(); }
+  catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
 }
 async function _visHide(key, hidden) {
-  var r = await fetch(API + '/v/accounts/link', { method: 'POST', headers: _visH(), body: JSON.stringify({ key: key, hidden: hidden }) });
-  if (!r.ok) { alert('Erreur : ' + ((await r.json()).error || r.status)); return; }
-  renderVisitors();
+  try { await _visPost('/v/accounts/link', { key: key, hidden: hidden }); await renderVisitors(); if (hidden && !(document.getElementById('vis-hidden') || {}).checked) _visCloseDrawer(); else _visRenderDrawer(); }
+  catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
 }
 async function _visToggleSettings(force) {
   var el = document.getElementById('vis-settings'); if (!el) return;
@@ -9618,14 +9760,24 @@ async function _visPollAlerts() {
 (function () {
   var panel = document.getElementById('panel-visitors'); if (!panel) return;
   panel.addEventListener('click', async function (e) {
+    if (e.target.closest('a[href]')) return;                       // liens (site) : comportement normal
+    if (e.target.closest('label') && !e.target.closest('[data-act]')) return;   // cases à cocher des candidats
     var b = e.target.closest('[data-act]'); if (!b || !panel.contains(b)) return;
     var act = b.dataset.act, key = b.dataset.key;
     e.stopImmediatePropagation();
-    if (act === 'toggle') { _visOpen[key] = !_visOpen[key]; _visRenderTable(); }
+    if (act === 'open') _visOpenDrawer(key);
+    else if (act === 'close-drawer') _visCloseDrawer();
+    else if (act === 'star') _visStar(key, b.dataset.on !== '1');
     else if (act === 'open-societe') { go('societes'); setTimeout(function () { try { openSociete(b.dataset.id); } catch (err) { console.error(err); } }, 60); }
-    else if (act === 'link') _visLink(key);
     else if (act === 'open-contact') { try { openContactDetail(b.dataset.id); } catch (err) { console.error(err); } }
-    else if (act === 'create' || act === 'contacts' || act === 'summary' || act === 'enrich') _visAccountAction(act, key, b);
+    else if (act === 'link') _visLink(key);
+    else if (act === 'enrich') _visEnrich(key);
+    else if (act === 'summary') _visSummary(key, b.dataset.force === '1');
+    else if (act === 'create') _visCreateAsk(key);
+    else if (act === 'create-confirm') _visCreateConfirm(key);
+    else if (act === 'create-cancel') { _visDrawer.confirm = null; _visRenderDrawer(); }
+    else if (act === 'contacts-search') _visContactsSearch(key);
+    else if (act === 'contacts-add') _visContactsAdd(key);
     else if (act === 'hide') _visHide(key, true);
     else if (act === 'unhide') _visHide(key, false);
     else if (act === 'alerts-seen') { await fetch(API + '/v/alerts/seen', { method: 'POST', headers: _visH(), body: '{}' }); renderVisitors(); }
@@ -9638,6 +9790,8 @@ async function _visPollAlerts() {
   document.querySelectorAll('#vis-period button').forEach(function (btn) { btn.addEventListener('click', function () { _visDays = +btn.dataset.days; renderVisitors(); }); });
   ['vis-type', 'vis-abm', 'vis-hidden'].forEach(function (id) { var el = document.getElementById(id); if (el) el.addEventListener('change', renderVisitors); });
   var s = document.getElementById('vis-search'); if (s) s.addEventListener('input', _visRenderTable);
+  var so = document.getElementById('vis-sort'); if (so) so.addEventListener('change', _visRenderTable);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && _visDrawer.key) _visCloseDrawer(); });
   var rf = document.getElementById('vis-refresh'); if (rf) rf.addEventListener('click', renderVisitors);
   var sb = document.getElementById('vis-settings-btn'); if (sb) sb.addEventListener('click', function () { _visToggleSettings(); });
   setTimeout(_visPollAlerts, 4000); setInterval(_visPollAlerts, 5 * 60 * 1000);
