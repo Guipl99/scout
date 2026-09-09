@@ -213,6 +213,34 @@ body.has-subnav .panel.active .topbar { margin-bottom: 0.6rem; }
 .chat-set textarea { resize:vertical; }
 .chat-set .chat-check { display:flex; gap:8px; align-items:flex-start; margin-top:12px; font-size:12px; color:var(--text2); line-height:1.5; }
 .chat-set .chat-check input { margin-top:2px; }
+/* .chat-grid pose display:grid, qui bat la règle [hidden] du navigateur. */
+#chat-site-view[hidden], #chat-sandbox-view[hidden] { display:none !important; }
+/* Vue « conversations du site » : liste plein cadre + fiche latérale */
+.chat-mode-site .chat-grid { grid-template-columns:1fr; }
+.chat-conv-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px; }
+.chat-tile { border:1px solid var(--border); border-radius:12px; background:var(--bg2); padding:13px 15px; }
+.chat-tile b { display:block; font-size:22px; color:var(--text); line-height:1.1; }
+.chat-tile span { font-size:11.5px; color:var(--text3); text-transform:uppercase; letter-spacing:.04em; }
+.chat-conv { width:100%; border-collapse:collapse; font-size:13px; }
+.chat-conv th { text-align:left; font-weight:500; color:var(--text3); padding:8px 10px; border-bottom:1px solid var(--border); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+.chat-conv td { padding:11px 10px; border-bottom:1px solid var(--border2); color:var(--text2); vertical-align:top; }
+.chat-conv tr { cursor:pointer; }
+.chat-conv tr:hover td { background:var(--bg3,rgba(255,255,255,.03)); }
+.chat-conv .who { color:var(--text); font-weight:500; }
+.chat-conv .sub { color:var(--text3); font-size:12px; }
+.chat-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#f59e0b; margin-right:6px; vertical-align:middle; }
+.chat-drawer { position:fixed; top:0; right:0; bottom:0; width:min(560px,100vw); background:var(--bg2); border-left:1px solid var(--border); box-shadow:-12px 0 40px rgba(0,0,0,.35); z-index:9999; overflow-y:auto; transform:translateX(105%); transition:transform .18s ease; }
+.chat-drawer.open { transform:translateX(0); }
+#chat-drawer-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9998; }
+#chat-drawer-backdrop.open { display:block; }
+.chat-dsec { padding:16px 18px; border-top:1px solid var(--border2); }
+.chat-dsec:first-child { border-top:none; }
+.chat-dsec h3 { margin:0 0 10px; font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--text); }
+.chat-thread { display:flex; flex-direction:column; gap:8px; }
+.chat-thread div { max-width:88%; padding:8px 11px; border-radius:10px; font-size:13px; line-height:1.55; white-space:pre-wrap; }
+.chat-thread .b { align-self:flex-start; background:var(--bg3,#22262b); color:var(--text); }
+.chat-thread .u { align-self:flex-end; background:var(--accent2,#3b82f6); color:#fff; }
+@media (prefers-reduced-motion: reduce) { .chat-drawer { transition:none; } }
 @media (max-width: 1080px) { .chat-grid { grid-template-columns:1fr; } .chat-site { min-height:500px; } }
 @media (prefers-reduced-motion: reduce) { .chat-typing i { animation:none; } }
 #contact-detail-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100002; align-items:center; justify-content:center; padding:20px; }
@@ -2605,8 +2633,21 @@ Réinitialiser tous les filtres
 <!-- CHAT DE QUALIFICATION (prototype) -->
     <div id="panel-chat" class="panel">
       <div class="topbar" style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;"><h1>Chat de qualification</h1><span id="chat-status" style="font-size:13px;color:var(--text2);"></span></div>
-      <p style="margin:0 0 14px;font-size:13px;color:var(--text2);max-width:78ch;">Prototype, rien n'est en ligne sur elistair.com. Le chat tourne ici pour voir ce que ça donnerait&nbsp;: l'IA répond à partir des fiches produit publiques et récupère au fil de la conversation prénom, nom, email et projet. Elle ne donne ni prix, ni délai, ni sujet contrôle export.</p>
-      <div class="chat-grid">
+      <p id="chat-intro" style="margin:0 0 14px;font-size:13px;color:var(--text2);max-width:78ch;"></p>
+      <div class="chat-pagebar" id="chat-modebar">
+        <label class="vis-field"><span>Afficher</span>
+          <select id="chat-mode">
+            <option value="site">Conversations du site</option>
+            <option value="sandbox">Bac à sable (test)</option>
+          </select>
+        </label>
+        <button type="button" id="chat-refresh" class="vis-icon-btn" title="Actualiser" aria-label="Actualiser">↻</button>
+      </div>
+      <div id="chat-site-view">
+        <div id="chat-conv-tiles" class="chat-conv-tiles"></div>
+        <div id="chat-conv-body"></div>
+      </div>
+      <div class="chat-grid" id="chat-sandbox-view">
         <div>
           <div class="chat-pagebar">
             <label class="vis-field"><span>Page simulée</span>
@@ -2684,6 +2725,8 @@ Réinitialiser tous les filtres
           </details>
         </div>
       </div>
+      <div id="chat-drawer" class="chat-drawer" role="dialog" aria-modal="true" aria-label="Conversation" tabindex="-1"></div>
+      <div id="chat-drawer-backdrop"></div>
     </div>
 
 <!-- RESELLERS PANEL -->
@@ -3037,7 +3080,7 @@ const NAV_GROUPS = [
       { panel: 'contacts',  label: 'Contacts' },
       { panel: 'end-users', label: 'Comptes' },
       { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' },
-      { panel: 'chat',      label: 'Chat (test)' } ] },
+      { panel: 'chat',      label: 'Chat' } ] },
   { id: 'marche', label: 'Marché', tabs: [
       { panel: 'societes',    label: 'Fabricants' },
       { panel: 'produits-db', label: 'Produits' },
@@ -3112,6 +3155,7 @@ function go(id, opts) {
   }
   renderSubnav(id);
   if (id !== 'visitors' && typeof _visCloseDrawer === 'function') { try { _visCloseDrawer(); } catch (e) {} }
+  if (id !== 'chat' && typeof _chatCloseDrawer === 'function') { try { _chatCloseDrawer(); } catch (e) {} }
   // Toggle body class for panel-specific styling (e.g. hide floating buttons over map)
   document.body.classList.toggle('on-resellers-panel', id === 'resellers');
 
@@ -10030,12 +10074,23 @@ function _chatWire() {
     if (inp) inp.value = '';
     _chatSend(t);
   });
+  var md = document.getElementById('chat-mode');
+  if (md) md.addEventListener('change', function () { _chatMode = md.value; _chatApplyMode(); });
+  var rf = document.getElementById('chat-refresh');
+  if (rf) rf.addEventListener('click', function () { if (_chatMode === 'site') _chatLoadConvs(); });
+  var bd = document.getElementById('chat-drawer-backdrop');
+  if (bd) bd.addEventListener('click', _chatCloseDrawer);
   var lau = document.getElementById('chat-launcher');
   if (lau) lau.addEventListener('click', function () { _chatToggle(true); });
   var clo = document.getElementById('chat-close');
   if (clo) clo.addEventListener('click', function () { _chatToggle(false); });
   document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape' && _chatWidgetOpen && document.getElementById('panel-chat') && document.getElementById('panel-chat').classList.contains('active')) _chatToggle(false);
+    if (ev.key !== 'Escape') return;
+    var pc = document.getElementById('panel-chat');
+    if (!pc || !pc.classList.contains('active')) return;
+    var dr = document.getElementById('chat-drawer');
+    if (dr && dr.classList.contains('open')) { _chatCloseDrawer(); return; }
+    if (_chatWidgetOpen) _chatToggle(false);
   });
   var sel = document.getElementById('chat-page');
   if (sel) sel.addEventListener('change', function () { _chatRenderSite(); _chatNew(); });
@@ -10057,12 +10112,198 @@ function _chatWire() {
   if (sv) sv.addEventListener('click', _chatSaveCfg);
 }
 
+
+// ─── Vue « conversations du site » ──────────────────────────────────────────
+// L'onglet a deux modes : le vrai trafic (par défaut) et le bac à sable qui
+// sert à essayer le bot. Le mode est retenu d'une visite à l'autre.
+var _chatMode = 'site';
+var _chatConvs = [];
+var _chatCur = null;      // conversation ouverte dans le tiroir
+
+var CHAT_INTRO = {
+  site: "Les conversations tenues par la bulle sur elistair.com. Un lead qualifié déclenche une alerte, mais rien n'entre dans Scout tant que tu ne l'as pas décidé : le bouton de la fiche crée la société et le contact. Rien ne part vers le CRM.",
+  sandbox: "Bac à sable, rien n'est en ligne. Le chat tourne ici pour essayer le bot : il répond à partir des fiches produit publiques et récupère prénom, nom, email et projet. Ni prix, ni délai, ni sujet contrôle export."
+};
+
+function _chatApplyMode() {
+  var panel = document.getElementById('panel-chat'); if (!panel) return;
+  var site = _chatMode === 'site';
+  var intro = document.getElementById('chat-intro');
+  if (intro) intro.textContent = CHAT_INTRO[site ? 'site' : 'sandbox'];
+  panel.classList.toggle('chat-mode-site', site);
+  var sv = document.getElementById('chat-site-view'), sb = document.getElementById('chat-sandbox-view');
+  if (sv) sv.hidden = !site;
+  if (sb) sb.hidden = site;
+  var sel = document.getElementById('chat-mode'); if (sel) sel.value = _chatMode;
+  try { localStorage.setItem('scout_chat_mode', _chatMode); } catch (e) {}
+  if (site) { _chatCloseDrawer(); _chatLoadConvs(); }
+  else { _chatRenderSite(); if (!_chatSession) _chatNew(); }
+}
+
+async function _chatLoadConvs() {
+  var body = document.getElementById('chat-conv-body'); if (!body) return;
+  try {
+    var r = await fetch(API + '/v/chat/sessions?source=site&limit=60', { headers: _chatH() });
+    var j = await r.json();
+    _chatConvs = j.sessions || [];
+    _chatRenderTiles(j.totals || {});
+    _chatRenderConvs();
+  } catch (e) {
+    body.innerHTML = '<p style="padding:2rem;text-align:center;color:var(--text3);">Impossible de charger les conversations.</p>';
+  }
+}
+
+function _chatRenderTiles(t) {
+  var el = document.getElementById('chat-conv-tiles'); if (!el) return;
+  var tiles = [
+    [t.site || 0, 'conversations'],
+    [t.qualifies || 0, 'qualifiées'],
+    [t.a_traiter || 0, 'à passer dans Scout']
+  ];
+  el.innerHTML = tiles.map(function (x) {
+    return '<div class="chat-tile"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>';
+  }).join('');
+}
+
+function _chatRenderConvs() {
+  var body = document.getElementById('chat-conv-body'); if (!body) return;
+  if (!_chatConvs.length) {
+    body.innerHTML = '<div style="padding:2.5rem 1rem;text-align:center;color:var(--text3);font-size:13px;line-height:1.7;">'
+      + 'Aucune conversation pour l\'instant.<br>La bulle n\'est pas encore posée sur elistair.com : '
+      + 'passe en « Bac à sable » pour essayer le bot.</div>';
+    return;
+  }
+  body.innerHTML = '<table class="chat-conv"><thead><tr>'
+    + '<th>Visiteur</th><th>Projet</th><th>Page</th><th>Score</th><th>Dans Scout</th><th></th>'
+    + '</tr></thead><tbody>' + _chatConvs.map(function (c) {
+      var L = c.lead || {}, I = c.inferred || {};
+      var who = [L.prenom, L.nom].filter(Boolean).join(' ') || L.email || 'Anonyme';
+      var sub = [L.societe, I.pays].filter(Boolean).join(' · ');
+      var cls = c.score_label === 'Fort' ? 'fort' : c.score_label === 'Moyen' ? 'moyen' : 'faible';
+      var neuf = c.status === 'qualified' && !c.contact_id;
+      return '<tr data-id="' + _chatEsc(c.id) + '">'
+        + '<td>' + (neuf ? '<i class="chat-dot" title="à traiter"></i>' : '')
+        + '<span class="who">' + _chatEsc(who) + '</span>'
+        + (sub ? '<br><span class="sub">' + _chatEsc(sub) + '</span>' : '') + '</td>'
+        + '<td>' + _chatEsc((L.besoin || '—').slice(0, 70)) + '</td>'
+        + '<td class="sub">' + _chatEsc((c.page || '—').slice(0, 34)) + '</td>'
+        + '<td><span class="chat-badge ' + cls + '">' + _chatEsc(c.score_label) + '</span></td>'
+        + '<td class="sub">' + (c.contact_id ? '✓ contact créé' : c.status === 'qualified' ? '—' : '') + '</td>'
+        + '<td class="sub" style="white-space:nowrap;">' + _chatEsc(_chatAgo(c.updated_at)) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  body.querySelectorAll('tr[data-id]').forEach(function (tr) {
+    tr.addEventListener('click', function () { _chatOpenConv(tr.getAttribute('data-id')); });
+  });
+}
+
+function _chatCloseDrawer() {
+  var d = document.getElementById('chat-drawer'), b = document.getElementById('chat-drawer-backdrop');
+  if (d) d.classList.remove('open');
+  if (b) b.classList.remove('open');
+  _chatCur = null;
+}
+
+async function _chatOpenConv(id) {
+  var d = document.getElementById('chat-drawer'), b = document.getElementById('chat-drawer-backdrop');
+  if (!d) return;
+  d.classList.add('open'); if (b) b.classList.add('open');
+  d.innerHTML = '<div class="chat-dsec">Chargement…</div>';
+  try {
+    var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(id), { headers: _chatH() });
+    var j = await r.json();
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    _chatCur = j;
+    _chatRenderDrawer();
+    d.focus();
+  } catch (e) {
+    d.innerHTML = '<div class="chat-dsec">Impossible d\'ouvrir cette conversation : ' + _chatEsc(e.message) + '</div>';
+  }
+}
+
+function _chatRenderDrawer(msg) {
+  var d = document.getElementById('chat-drawer'); if (!d || !_chatCur) return;
+  var j = _chatCur, L = j.lead || {}, I = j.inferred || {};
+  var who = [L.prenom, L.nom].filter(Boolean).join(' ') || L.email || 'Visiteur anonyme';
+  var cls = j.score_label === 'Fort' ? 'fort' : j.score_label === 'Moyen' ? 'moyen' : 'faible';
+
+  var lignes = [['Email', L.email], ['Société', L.societe], ['Fonction', L.role],
+    ['Produit', L.produit], ['Échéance', L.echeance], ['Projet', L.besoin]]
+    .filter(function (x) { return x[1]; })
+    .map(function (x) { return '<div class="chat-lead-row"><span>' + x[0] + '</span><b>' + _chatEsc(x[1]) + '</b></div>'; }).join('');
+
+  var deduit = (I.pays || I.industrie)
+    ? '<div class="chat-sub">Déduit <em>pas demandé au visiteur</em></div>'
+      + (I.pays ? '<div class="chat-lead-row"><span>Pays</span><b>' + _chatEsc(I.pays) + '</b></div>' : '')
+      + (I.industrie ? '<div class="chat-lead-row"><span>Secteur</span><b>' + _chatEsc(I.industrie) + '</b></div>' : '')
+    : '';
+
+  // L'organisation reconnue par IP : c'est ce qu'un formulaire ne donne pas.
+  var org = '';
+  if (j.org) {
+    org = '<div class="chat-dsec"><h3>Reconnu à l\'IP</h3><p style="margin:0;font-size:13px;color:var(--text2);line-height:1.6;">'
+      + '<b style="color:var(--text);">' + _chatEsc(j.org.org_name) + '</b>'
+      + (j.org.country ? ' · ' + _chatEsc(j.org.country) : '')
+      + '<br>' + j.org.pageviews + ' page' + (j.org.pageviews > 1 ? 's' : '') + ' vue' + (j.org.pageviews > 1 ? 's' : '')
+      + ' sur le site' + (j.org.is_abm ? ' · <span style="color:var(--accent2);">compte ABM</span>' : '') + '</p></div>';
+  }
+
+  var actions;
+  if (j.contact_id) {
+    actions = '<p style="margin:0;font-size:13px;color:#22c55e;">✓ Contact créé dans Scout.</p>';
+  } else if (!L.email) {
+    actions = '<p style="margin:0;font-size:13px;color:var(--text3);">Pas d\'adresse email : rien à créer pour l\'instant.</p>';
+  } else {
+    actions = '<button type="button" class="btn btn-primary" id="chat-mk-contact" style="padding:8px 14px;font-size:13px;">Créer le contact dans Scout</button>'
+      + '<p style="margin:8px 0 0;font-size:12px;color:var(--text3);line-height:1.5;">Crée la société si elle n\'existe pas, puis le contact avec ce que le visiteur a déclaré. Rien n\'est envoyé au CRM.</p>';
+  }
+
+  var fil = (j.messages || []).map(function (m) {
+    return '<div class="' + (m.role === 'user' ? 'u' : 'b') + '">' + _chatEsc(m.content) + '</div>';
+  }).join('');
+
+  d.innerHTML = '<div class="chat-dsec" style="display:flex;align-items:flex-start;gap:12px;">'
+    + '<div style="flex:1;"><h3 style="margin:0 0 6px;text-transform:none;font-size:17px;letter-spacing:0;">' + _chatEsc(who) + '</h3>'
+    + '<div style="font-size:12px;color:var(--text3);"><span class="chat-badge ' + cls + '">' + _chatEsc(j.score_label) + '</span> '
+    + 'score ' + (j.score || 0) + '/100 · ' + (j.turns || 0) + ' échange' + ((j.turns || 0) > 1 ? 's' : '')
+    + (j.page ? ' · ' + _chatEsc(j.page) : '') + '</div></div>'
+    + '<button type="button" id="chat-drawer-close" aria-label="Fermer" style="background:none;border:none;color:var(--text2);font-size:24px;line-height:1;cursor:pointer;">×</button></div>'
+    + (lignes || deduit ? '<div class="chat-dsec"><h3>Ce que le visiteur a dit</h3>' + lignes + deduit + '</div>' : '')
+    + org
+    + '<div class="chat-dsec"><h3>Suite à donner</h3>' + actions
+    + (msg ? '<p style="margin:10px 0 0;font-size:13px;color:var(--text2);">' + _chatEsc(msg) + '</p>' : '') + '</div>'
+    + '<div class="chat-dsec"><h3>La conversation</h3><div class="chat-thread">' + fil + '</div></div>';
+
+  var cl = document.getElementById('chat-drawer-close');
+  if (cl) cl.addEventListener('click', _chatCloseDrawer);
+  var mk = document.getElementById('chat-mk-contact');
+  if (mk) mk.addEventListener('click', _chatMakeContact);
+}
+
+async function _chatMakeContact() {
+  if (!_chatCur) return;
+  var btn = document.getElementById('chat-mk-contact');
+  if (btn) { btn.disabled = true; btn.textContent = 'Création…'; }
+  try {
+    var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(_chatCur.id) + '/contact',
+      { method: 'POST', headers: _chatH() });
+    var j = await r.json();
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    _chatCur.contact_id = j.contact_id;
+    _chatRenderDrawer(j.societe_created
+      ? 'Société « ' + (j.societe && j.societe.name || '') + ' » créée, contact ajouté.'
+      : 'Contact rattaché à la société « ' + (j.societe && j.societe.name || '') + ' » déjà connue.');
+    _chatLoadConvs();
+  } catch (e) {
+    _chatRenderDrawer('Échec : ' + e.message);
+  }
+}
+
 async function renderChat() {
   _chatWire();
-  _chatRenderSite();
   _chatLoadCfg();
+  try { _chatMode = localStorage.getItem('scout_chat_mode') || 'site'; } catch (e) { _chatMode = 'site'; }
+  _chatApplyMode();
   _chatLoadHistory();
-  if (!_chatSession) await _chatNew();
 }
 window.renderChat = renderChat;
 
