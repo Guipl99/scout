@@ -67,6 +67,23 @@ html.fs-grand  { zoom: 1.12; }
 html.fs-xgrand { zoom: 1.25; }
 
 /* ── Modale fiche contact (onglet Contacts) ── */
+/* ── Navigation par groupes : sous-onglets ────────────────────────────────── */
+#subnav { display: none; }
+#subnav.on { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: -1.5rem -1.5rem 1.25rem; padding: 1.25rem 1.5rem 10px; border-bottom: 1px solid var(--border2); position: sticky; top: -1.5rem; z-index: 6; background: var(--bg); }
+/* Resellers occupe toute la hauteur : on lui retire celle de la sous-nav pour éviter le débordement */
+.subnav-title { font-size: 20px; font-weight: 600; letter-spacing: -0.5px; margin: 0; }
+.subnav-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.subnav-tab { position: relative; font: inherit; font-size: 13px; padding: 7px 13px; border-radius: 999px; border: 1px solid transparent; background: transparent; color: var(--text2); cursor: pointer; white-space: nowrap; }
+.subnav-tab:hover { background: var(--bg3); color: var(--text); }
+.subnav-tab.active { background: var(--bg3); border-color: var(--border2); color: var(--accent2); font-weight: 600; }
+.subnav-badge { margin-left: 6px; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: #16a34a; color: #fff; }
+/* le titre de page vit dans la sous-nav : on évite de l'écrire deux fois */
+body.has-subnav .panel.active .topbar h1 { display: none; }
+/* la flèche « retour à l'accueil » fait doublon avec le menu à 4 entrées */
+body.has-subnav .btn-back-home { display: none; }
+body.has-subnav .panel.active .topbar:empty { display: none; }
+#subnav :focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+@media (max-width: 640px) { #subnav.on { gap: 10px; } .subnav-title { font-size: 17px; } .subnav-tab { font-size: 12px; padding: 6px 11px; } }
 /* ── Visiteurs web ─────────────────────────────────────────────────────────── */
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
 .vis-toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; }
@@ -143,7 +160,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* ── Panels ── */
 .panel { display: none; }
 .panel.active { display: block; }
-#panel-resellers.active { display: flex !important; }
+#panel-resellers.active { display: flex !important; height: calc(100% - var(--subnav-h, 0px)); }
 
 /* ── Topbar ── */
 .topbar { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 1.5rem; gap: 12px; flex-wrap: wrap; }
@@ -1661,57 +1678,28 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 </svg></div>
       <div class="logo-text">drone<span>.</span>scout</div>
     </div>
-    <div class="nav-section">Mon activité</div>
-    <div class="nav-item active" id="nav-dashboard" onclick="go('dashboard')" title="Vue d'ensemble de ton activité et du marché">
-      <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
-      Vue d'ensemble
+    <nav aria-label="Navigation principale">
+    <div class="nav-item active" id="nav-today" onclick="goGroup('today')" title="Ce qu'il y a à faire : relances, prospects chauds, visiteurs du site">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M5.5 1.5v2M10.5 1.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M5.5 10l1.6 1.6L10.8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Aujourd'hui
     </div>
-    <div class="nav-item" id="nav-tracking" onclick="go('tracking')" title="Les prospects que tu as contactés — suivi et relances">
-      <svg viewBox="0 0 16 16" fill="none"><rect x="3" y="2.5" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="5.5" y="1" width="5" height="2.6" rx="0.8" stroke="currentColor" stroke-width="1.3"/><path d="M5.6 7h4.8M5.6 10h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      Suivi &amp; relances
+    <div class="nav-item" id="nav-prospects" onclick="goGroup('prospects')" title="Contacts, comptes et organisations vues sur le site">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.6" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 13.5c0-2.8 2-4.6 4.5-4.6s4.5 1.8 4.5 4.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12.2" cy="6.6" r="1.9" stroke="currentColor" stroke-width="1.2"/><path d="M15 12.4c0-1.9-1.3-3.2-2.8-3.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Prospects <span id="nav-prospects-badge" style="display:none;margin-left:auto;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#16a34a;color:#fff;">0</span>
     </div>
-    <div class="nav-item" id="nav-hot" onclick="go('hot')" title="Prospects intéressés et VIP à traiter en priorité">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M8 1.6c1.4 2 3.4 3.1 3.4 5.9a3.4 3.4 0 1 1-6.8 0c0-1 .35-1.8 1-2.5.15 1 .7 1.5 1.2 1.7C6.4 5.4 6.9 3.6 8 1.6z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-      Prospects chauds
+    <div class="nav-item" id="nav-marche" onclick="goGroup('marche')" title="Fabricants, produits, contrats, appels d'offres, distributeurs">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M2 14V5.2L8 2l6 3.2V14" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M1 14h14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><rect x="6.2" y="8.6" width="3.6" height="5.4" stroke="currentColor" stroke-width="1.2"/></svg>
+      Marché
     </div>
-    <div class="nav-item" id="nav-visitors" onclick="go('visitors')" title="Les organisations qui visitent elistair.com (identification par réseau)">
-      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 8h13M8 1.5c2.2 2 2.2 11 0 13M8 1.5c-2.2 2-2.2 11 0 13" stroke="currentColor" stroke-width="1.2"/></svg>
-      Visiteurs web <span id="nav-visitors-badge" style="display:none;margin-left:auto;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#16a34a;color:#fff;">0</span>
-    </div>
-    <div class="nav-section">Bases de données</div>
-    <div class="nav-item" id="nav-societes" onclick="go('societes')">
-      <svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M1 14c0-2.8 2.2-5 5-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.3"/></svg>
-      Fabricants
-    </div>
-    <div class="nav-item" id="nav-produits-db" onclick="go('produits-db')">
-      <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
-      Produits
-    </div>
-    <div class="nav-item" id="nav-end-users" onclick="go('end-users')">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M15 13c0-1.66-1.34-3-3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Comptes
-    </div>
-    <div class="nav-item" id="nav-contacts" onclick="go('contacts')">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="2.6" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 13.5c0-3 2.46-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      Contacts
-    </div>
-    <div class="nav-item" id="nav-contracts" onclick="go('contracts')">
-      <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      Contrats & Tenders
-    </div>
-    <div class="nav-item" id="nav-resellers" onclick="go('resellers')">
-      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6.5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 2C5 2 3 4 3 6.5c0 3.5 5 7.5 5 7.5s5-4 5-7.5C13 4 11 2 8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/></svg>
-      Resellers
-    </div>
-
-    <div class="nav-section">Configuration</div>
-    <div class="nav-item" id="nav-config" onclick="go('config')">
+    <div class="nav-item" id="nav-config" onclick="goGroup('config')">
       <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       Paramètres
     </div>
+    </nav>
   </div>
 
   <div class="main">
+    <div id="subnav"></div>
 
     <!-- DASHBOARD -->
     <div id="panel-dashboard" class="panel active">
@@ -1949,8 +1937,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
         <!-- Sub-tab switcher -->
         <div style="display:flex;gap:8px;margin-bottom:1rem;align-items:center;border-bottom:1px solid var(--border2);padding-bottom:10px;">
-          <button id="soc-tab-comptes" onclick="setSocTab('comptes')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--accent);color:white;font-weight:600;transition:all 0.15s;">🏢 Fabricants</button>
-          <button id="soc-tab-contacts" onclick="setSocTab('contacts')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">👤 Contacts</button>
+          <button id="soc-tab-comptes" onclick="setSocTab('comptes')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--accent);color:white;font-weight:600;transition:all 0.15s;">🏢 Les sociétés</button>
+          <button id="soc-tab-contacts" onclick="setSocTab('contacts')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">👤 Leurs contacts</button>
           <span id="soc-count-badge" style="font-size:11px;color:var(--text2);background:var(--bg3);border-radius:10px;padding:2px 8px;margin-left:auto;"></span>
         </div>
 
@@ -2167,8 +2155,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <button class="btn-back-home" onclick="go('dashboard')" title="Retour à l'accueil" style="width:32px;height:32px;font-size:16px;">←</button>
           <!-- Toggle Buyers / Contacts -->
           <div style="display:flex;background:var(--bg3);border-radius:8px;padding:2px;gap:2px;">
-            <button id="eu-tab-comptes" onclick="setEuTab('comptes')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--accent);color:white;font-weight:600;transition:all 0.15s;">🏢 Comptes</button>
-            <button id="eu-tab-contacts" onclick="setEuTab('contacts')" style="display:none;font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">👤 Contacts</button>
+            <button id="eu-tab-comptes" onclick="setEuTab('comptes')" style="font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--accent);color:white;font-weight:600;transition:all 0.15s;">🏢 Les comptes</button>
+            <button id="eu-tab-contacts" onclick="setEuTab('contacts')" style="display:none;font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-weight:500;transition:all 0.15s;">👤 Leurs contacts</button>
           </div>
           <span id="eu-count-badge" style="font-size:11px;color:var(--text2);background:var(--bg3);border-radius:10px;padding:2px 8px;"></span>
           <button id="btn-my-pays" onclick="applyMyPaysFilter(euTab)" title="Filtrer sur mes pays cibles"
@@ -2517,19 +2505,8 @@ Réinitialiser tous les filtres
       <div id="vis-drawer-backdrop"></div>
     </div>
 
-    <!-- PROSPECTS CHAUDS -->
-    <div id="panel-hot" class="panel">
-      <div class="topbar"><h1>Prospects chauds</h1></div>
-      <div style="padding:0 0 8px;font-size:13px;color:var(--text2);">Les leads à traiter en priorité : ceux qui ont répondu, et tes contacts VIP pas encore approchés.</div>
-      <div id="hot-body"><div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div></div>
-    </div>
-
-
-  </div>
-</div>
-
 <!-- RESELLERS PANEL -->
-    <div id="panel-resellers" class="panel" style="display:none;flex-direction:column;height:100%;overflow:hidden;">
+    <div id="panel-resellers" class="panel" style="flex-direction:column;overflow:hidden;">
       <div class="topbar" style="margin-bottom:0;padding-bottom:12px;flex-shrink:0;display:flex;align-items:center;gap:12px;">
         <button class="btn-back-home" onclick="go('dashboard')" title="Retour à l'accueil">←</button>
         <h1 style="margin:0;">Resellers · Distributeurs officiels</h1>
@@ -2624,6 +2601,19 @@ Réinitialiser tous les filtres
       </style>
     </div>
 
+    <!-- PROSPECTS CHAUDS -->
+    <div id="panel-hot" class="panel">
+      <div class="topbar"><h1>Prospects chauds</h1></div>
+      <div style="padding:0 0 8px;font-size:13px;color:var(--text2);">Les leads à traiter en priorité : ceux qui ont répondu, et tes contacts VIP pas encore approchés.</div>
+      <div id="hot-body"><div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div></div>
+    </div>
+
+
+  </div>
+</div>
+
+
+
 <!-- BOUTON RETOUR GLOBAL -->
 <button id="nav-back-btn" onclick="navBack()" style="display:none;">← Retour</button>
 
@@ -2636,51 +2626,27 @@ Réinitialiser tous les filtres
 </div>
 
 <!-- BOTTOM NAV MOBILE -->
-<nav class="bottom-nav">
+<nav class="bottom-nav" aria-label="Navigation">
   <div class="bottom-nav-items">
     <div class="bn-item" id="bn-search" onclick="if(window.scoutGlobalSearch) window.scoutGlobalSearch.open();">
       <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       Rechercher
     </div>
-    <div class="bn-item active" id="bn-dashboard" onclick="go('dashboard')">
-      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
-      Accueil
+    <div class="bn-item active" id="bn-today" onclick="goGroup('today')">
+      <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M5.5 1.5v2M10.5 1.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M5.5 10l1.6 1.6L10.8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      Aujourd'hui
     </div>
-    <div class="bn-item bn-secondary" id="bn-societes" onclick="go('societes')">
-      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M1 14c0-2.8 2.2-5 5-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.3"/></svg>
-      Fabricants
+    <div class="bn-item" id="bn-prospects" onclick="goGroup('prospects')" style="position:relative;">
+      <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.6" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 13.5c0-2.8 2-4.6 4.5-4.6s4.5 1.8 4.5 4.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12.2" cy="6.6" r="1.9" stroke="currentColor" stroke-width="1.2"/><path d="M15 12.4c0-1.9-1.3-3.2-2.8-3.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+      Prospects<span id="bn-prospects-badge" style="display:none;position:absolute;top:2px;right:8px;font-size:9px;font-weight:700;padding:0 4px;border-radius:999px;background:#16a34a;color:#fff;">0</span>
     </div>
-    <div class="bn-item bn-secondary" id="bn-produits-db" onclick="go('produits-db')">
-      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
-      Produits
+    <div class="bn-item" id="bn-marche" onclick="goGroup('marche')">
+      <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><path d="M2 14V5.2L8 2l6 3.2V14" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M1 14h14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><rect x="6.2" y="8.6" width="3.6" height="5.4" stroke="currentColor" stroke-width="1.2"/></svg></span>
+      Marché
     </div>
-    <div class="bn-item" id="bn-contracts" onclick="go('contracts')">
-      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      Contrats
-    </div>
-    <div class="bn-item" id="bn-resellers" onclick="go('resellers')">
-      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6.5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 2C5 2 3 4 3 6.5c0 3.5 5 7.5 5 7.5s5-4 5-7.5C13 4 11 2 8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/></svg>
-      Resellers
-    </div>
-    <div class="bn-item" id="bn-end-users" onclick="go('end-users')">
-      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M15 13c0-1.66-1.34-3-3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Comptes
-    </div>
-    <div class="bn-item bn-secondary" id="bn-contacts" onclick="go('contacts')">
-      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="2.6" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 13.5c0-3 2.46-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      Contacts
-    </div>
-    <div class="bn-item bn-secondary" id="bn-hot" onclick="go('hot')">
-      <span class="bn-icon" style="font-size:15px;line-height:1;">🔥</span>
-      Chauds
-    </div>
-    <div class="bn-item bn-secondary" id="bn-visitors" onclick="go('visitors')" style="position:relative;">
-      <span class="bn-icon" style="font-size:15px;line-height:1;">🌐</span>
-      Visiteurs<span id="bn-visitors-badge" style="display:none;position:absolute;top:2px;right:8px;font-size:9px;font-weight:700;padding:0 4px;border-radius:999px;background:#16a34a;color:#fff;">0</span>
-    </div>
-    <div class="bn-item bn-secondary" id="bn-config" onclick="go('config')">
-      <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      Config
+    <div class="bn-item" id="bn-config" onclick="goGroup('config')">
+      <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+      Réglages
     </div>
   </div>
 </nav>
@@ -2878,6 +2844,59 @@ let editingSocieteId = null;
 let editingProduitId = null;
 
 // ── Navigation ────────────────────────────────────────────────
+// ── Navigation en 4 groupes ────────────────────────────────────────────────
+// Les panneaux et leurs fonctions de rendu ne changent pas : go('contacts') marche
+// exactement comme avant. Seule la couche de navigation regroupe les 11 panneaux.
+const NAV_GROUPS = [
+  { id: 'today', label: "Aujourd'hui", tabs: [
+      { panel: 'dashboard', label: 'Ma journée' },
+      { panel: 'tracking',  label: 'Suivi & relances' },
+      { panel: 'hot',       label: 'Prospects chauds' } ] },
+  { id: 'prospects', label: 'Prospects', tabs: [
+      { panel: 'contacts',  label: 'Contacts' },
+      { panel: 'end-users', label: 'Comptes' },
+      { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' } ] },
+  { id: 'marche', label: 'Marché', tabs: [
+      { panel: 'societes',    label: 'Fabricants' },
+      { panel: 'produits-db', label: 'Produits' },
+      { panel: 'contracts',   label: 'Contrats & appels d\'offres' },
+      { panel: 'resellers',   label: 'Distributeurs' } ] },
+  { id: 'config', label: 'Paramètres', tabs: [
+      { panel: 'config', label: 'Paramètres' } ] }
+];
+const _navGroupOf = {};
+NAV_GROUPS.forEach(function (g) { g.tabs.forEach(function (t) { _navGroupOf[t.panel] = g; }); });
+let _navLast = { today: 'dashboard', prospects: 'contacts', marche: 'societes', config: 'config' };
+try { const _st = JSON.parse(localStorage.getItem('scout_nav_last') || '{}'); Object.keys(_st).forEach(function (k) { if (_navLast[k] !== undefined && _navGroupOf[_st[k]]) _navLast[k] = _st[k]; }); } catch (e) {}
+
+// Clic sur une entrée du menu : revient sur le dernier onglet visité de ce groupe.
+function goGroup(gid) {
+  const g = NAV_GROUPS.find(function (x) { return x.id === gid; }); if (!g) return;
+  const panel = _navLast[gid] && _navGroupOf[_navLast[gid]] === g ? _navLast[gid] : g.tabs[0].panel;
+  go(panel);
+}
+window.goGroup = goGroup;
+
+function renderSubnav(activePanel) {
+  const el = document.getElementById('subnav'); if (!el) return;
+  const g = _navGroupOf[activePanel];
+  if (!g) { el.innerHTML = ''; el.classList.remove('on'); document.body.classList.remove('has-subnav'); return; }
+  el.classList.add('on'); document.body.classList.add('has-subnav');
+  el.innerHTML = '<h1 class="subnav-title">' + esc(g.label) + '</h1>'
+    + (g.tabs.length > 1 ? '<div class="subnav-tabs" role="tablist" aria-label="' + esc(g.label) + '">'
+      + g.tabs.map(function (t) {
+        const on = t.panel === activePanel;
+        return '<button type="button" role="tab" aria-selected="' + on + '" tabindex="' + (on ? '0' : '-1') + '"'
+          + ' class="subnav-tab' + (on ? ' active' : '') + '" data-panel="' + t.panel + '" onclick="go(\'' + t.panel + '\')">'
+          + esc(t.label) + (t.badge ? '<span id="' + t.badge + '" class="subnav-badge" style="display:none;">0</span>' : '') + '</button>';
+      }).join('') + '</div>' : '');
+  const setH = function () { document.documentElement.style.setProperty('--subnav-h', (el.offsetHeight ? el.offsetHeight + 4 : 0) + 'px'); };
+  setH(); setTimeout(setH, 60);
+  if (!window.__subnavRO && window.ResizeObserver) { window.__subnavRO = new ResizeObserver(setH); window.__subnavRO.observe(el); }
+  if (typeof _visPollAlerts === 'function') setTimeout(_visPollAlerts, 30);
+}
+window.renderSubnav = renderSubnav;
+
 function go(id, opts) {
   // Garde-fou : si le panel demande n'existe pas, ne rien casser (evite l'ecran noir
   // pour tout id inconnu). On verifie AVANT de desactiver les panels courants.
@@ -2902,10 +2921,15 @@ function go(id, opts) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.bn-item').forEach(n => n.classList.remove('active'));
   panelEl.classList.add('active');
-  const nav = document.getElementById('nav-' + id);
-  if (nav) nav.classList.add('active');
-  const bn = document.getElementById('bn-' + id);
-  if (bn) bn.classList.add('active');
+  const _g = _navGroupOf[id];
+  if (_g) {
+    _navLast[_g.id] = id;
+    try { localStorage.setItem('scout_nav_last', JSON.stringify(_navLast)); } catch (e) {}
+    const nav = document.getElementById('nav-' + _g.id); if (nav) nav.classList.add('active');
+    const bn = document.getElementById('bn-' + _g.id); if (bn) bn.classList.add('active');
+  }
+  renderSubnav(id);
+  if (id !== 'visitors' && typeof _visCloseDrawer === 'function') { try { _visCloseDrawer(); } catch (e) {} }
   // Toggle body class for panel-specific styling (e.g. hide floating buttons over map)
   document.body.classList.toggle('on-resellers-panel', id === 'resellers');
 
@@ -2984,7 +3008,11 @@ function go(id, opts) {
   }
   // Persister l'onglet dans le hash
   try { if (typeof _setCurrentView === 'function') _setCurrentView({ kind:'panel', id: id, tab: opts && opts.tab }); } catch(e){}
-  if (!opts?.silent) history.replaceState(null, '', '#' + id + (opts?.tab ? '/' + opts.tab : ''));
+  // Historique : une entrée par changement d'onglet, pour que le bouton Retour du navigateur marche.
+  if (!opts?.silent) {
+    const h = '#' + id + (opts?.tab ? '/' + opts.tab : '');
+    if (location.hash !== h) history.pushState(null, '', h); else history.replaceState(null, '', h);
+  }
 }
 
 // ── Dashboard deep-link filter helpers ─────────────────────────
@@ -6136,7 +6164,7 @@ if ('serviceWorker' in navigator) {
   const hash = window.location.hash.slice(1); // ex: "end-users/contacts"
   if (!hash) return;
   const [panel, tab] = hash.split('/');
-  const validPanels = ['dashboard','societes','produits-db','contracts','end-users','config','hot','contacts'];
+  const validPanels = ['dashboard','societes','produits-db','contracts','end-users','config','hot','contacts','tracking','visitors','resellers'];
   if (!validPanels.includes(panel)) return;
   // Attendre que le DOM soit prêt
   if (document.readyState === 'loading') {
@@ -6145,6 +6173,14 @@ if ('serviceWorker' in navigator) {
     go(panel, { tab, silent: true });
   }
 })();
+
+// ── Boutons Retour / Avant du navigateur ──────────────────────────────────
+window.addEventListener('popstate', function () {
+  const h = (location.hash || '').slice(1);
+  if (!h) return;
+  const [panel, tab] = h.split('/');
+  if (document.getElementById('panel-' + panel)) go(panel, { tab, silent: true });
+});
 
 // If already running as standalone PWA, mark button as installed
 if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -9911,7 +9947,7 @@ async function _visSaveSettings() {
   if (r.ok) setTimeout(function () { _visToggleSettings(true); }, 700);
 }
 function _visSetNavBadge(n) {
-  ['nav-visitors-badge', 'bn-visitors-badge'].forEach(function (id) {
+  ['nav-prospects-badge', 'bn-prospects-badge', 'subnav-visitors-badge'].forEach(function (id) {
     var b = document.getElementById(id); if (!b) return;
     b.textContent = n > 9 ? '9+' : String(n); b.style.display = n ? 'inline-block' : 'none';
     b.setAttribute('aria-label', n + ' alerte(s) visiteurs');
