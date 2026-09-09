@@ -9884,7 +9884,7 @@ async function _chatSend(text) {
     // La note d'incident vient AVANT la réponse, sinon elle raconte l'histoire à l'envers.
     if (j.abuse_kind) _chatBubble('error', (j.abuse_kind === 'injection'
       ? 'Tentative de détournement détectée, refusée sans appel à l\'IA'
-      : 'Demande hors sujet, refusée sans appel à l\'IA') + ' (' + j.abuse + '/3).');
+      : 'Demande hors sujet, refusée sans appel à l\'IA') + ' (' + j.abuse + '/' + (j.abuse_max || 6) + ').');
     if (j.capped) _chatBubble('error', 'Plafond journalier d\'appels IA atteint.');
     _chatBubble('assistant', j.reply);
     _chatLead = j.lead || {}; _chatInferred = j.inferred || {}; _chatMail = j.email_check || null;
@@ -9988,7 +9988,9 @@ async function _chatLoadCfg() {
     var li = document.getElementById('chat-limits');
     if (li && j.limits) li.innerHTML = 'Garde-fous en place : ' + j.limits.max_turns + ' tours max par conversation, '
       + j.limits.max_input + ' caractères max par message, ' + j.limits.max_history + ' messages réinjectés au modèle, '
-      + j.limits.max_abuse + ' tentatives de détournement avant blocage, ' + j.limits.sessions_per_ip_h + ' conversations et '
+      + j.limits.max_abuse + ' points d\'abus avant blocage (une injection en vaut '
+      + (j.limits.abuse_injection || 2) + ', un hors-sujet ' + (j.limits.abuse_offtopic || 1) + '), '
+      + j.limits.sessions_per_ip_h + ' conversations et '
       + j.limits.turns_per_ip_h + ' messages par IP et par heure, ' + j.limits.daily_cap + ' appels IA par jour maximum.'
       + '<br>Aujourd\'hui : ' + (j.today || 0) + ' appel' + ((j.today || 0) > 1 ? 's' : '') + '.';
     var st = document.getElementById('chat-status');
