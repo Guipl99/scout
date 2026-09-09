@@ -9822,9 +9822,10 @@ function _chatRenderLead() {
     var v = _chatLead[f[0]];
     var extra = '';
     if (f[0] === 'email' && _chatMail) {
-      extra = _chatMail.ok
-        ? '<span class="chat-mail-ok" title="' + _chatEsc(_chatMail.reason || '') + '">✓ vérifiée</span>'
-        : '';
+      extra = !_chatMail.ok ? ''
+        : _chatMail.status === 'dns_unknown'
+          ? '<span class="chat-mail-ok" style="color:var(--text3);" title="' + _chatEsc(_chatMail.reason || '') + '">non vérifiable</span>'
+          : '<span class="chat-mail-ok" title="' + _chatEsc(_chatMail.reason || '') + '">✓ vérifiée</span>';
     }
     return '<div class="chat-lead-row' + (v ? '' : ' chat-void') + '"><span>' + f[1] + '</span><b>' + _chatEsc(v || '—') + extra + '</b></div>';
   }).join('');
@@ -9992,7 +9993,8 @@ async function _chatLoadCfg() {
       + (j.limits.abuse_injection || 2) + ', un hors-sujet ' + (j.limits.abuse_offtopic || 1) + '), '
       + j.limits.sessions_per_ip_h + ' conversations et '
       + j.limits.turns_per_ip_h + ' messages par IP et par heure, ' + j.limits.daily_cap + ' appels IA par jour maximum.'
-      + '<br>Aujourd\'hui : ' + (j.today || 0) + ' appel' + ((j.today || 0) > 1 ? 's' : '') + '.';
+      + '<br>Aujourd\'hui : ' + (j.today || 0) + ' appel' + ((j.today || 0) > 1 ? 's' : '') + '.'
+      + (j.mx ? '<br>Vérification des domaines email : ' + _chatEsc(j.mx.detail || '') + '.' : '');
     var st = document.getElementById('chat-status');
     if (st && !j.has_key) st.textContent = 'clé Anthropic absente côté serveur';
     _chatCfgLoaded = true;
