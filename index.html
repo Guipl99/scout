@@ -10119,6 +10119,7 @@ function _chatWire() {
 var _chatMode = 'site';
 var _chatConvs = [];
 var _chatCur = null;      // conversation ouverte dans le tiroir
+var _chatPreview = null;  // aperçu en attente de confirmation
 
 var CHAT_INTRO = {
   site: "Les conversations tenues par la bulle sur elistair.com. Un lead qualifié déclenche une alerte, mais rien n'entre dans Scout tant que tu ne l'as pas décidé : le bouton de la fiche crée la société et le contact. Rien ne part vers le CRM.",
@@ -10200,7 +10201,7 @@ function _chatCloseDrawer() {
   var d = document.getElementById('chat-drawer'), b = document.getElementById('chat-drawer-backdrop');
   if (d) d.classList.remove('open');
   if (b) b.classList.remove('open');
-  _chatCur = null;
+  _chatCur = null; _chatPreview = null;
 }
 
 async function _chatOpenConv(id) {
@@ -10208,6 +10209,7 @@ async function _chatOpenConv(id) {
   if (!d) return;
   d.classList.add('open'); if (b) b.classList.add('open');
   d.innerHTML = '<div class="chat-dsec">Chargement…</div>';
+  _chatPreview = null;
   try {
     var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(id), { headers: _chatH() });
     var j = await r.json();
@@ -10252,9 +10254,26 @@ function _chatRenderDrawer(msg) {
     actions = '<p style="margin:0;font-size:13px;color:#22c55e;">✓ Contact créé dans Scout.</p>';
   } else if (!L.email) {
     actions = '<p style="margin:0;font-size:13px;color:var(--text3);">Pas d\'adresse email : rien à créer pour l\'instant.</p>';
+  } else if (_chatPreview) {
+    // Confirmation : on montre ce qui sera écrit, et dans quelle société, avant d'écrire.
+    var P = _chatPreview, C0 = P.contact || {}, S0 = P.societe || {};
+    var qui = [C0.prenom, C0.nom].filter(Boolean).join(' ') || C0.email;
+    actions = '<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;">'
+      + '<div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Ce qui va être écrit</div>'
+      + '<div class="chat-lead-row"><span>Contact</span><b>' + _chatEsc(qui) + (C0.titre ? ' — ' + _chatEsc(C0.titre) : '') + '</b></div>'
+      + '<div class="chat-lead-row"><span>Email</span><b>' + _chatEsc(C0.email || '') + '</b></div>'
+      + '<div class="chat-lead-row"><span>Société</span><b>' + _chatEsc(S0.name || '')
+        + (S0.nouvelle ? ' <span style="color:var(--text3);font-weight:400;">(sera créée)</span>'
+                       : ' <span style="color:#22c55e;font-weight:400;">(déjà dans Scout)</span>') + '</b></div>'
+      + (C0.secteur ? '<div class="chat-lead-row"><span>Secteur</span><b>' + _chatEsc(C0.secteur) + '</b></div>' : '')
+      + (C0.pays ? '<div class="chat-lead-row"><span>Pays</span><b>' + _chatEsc(C0.pays) + '</b></div>' : '')
+      + '</div>'
+      + '<div style="display:flex;gap:8px;">'
+      + '<button type="button" class="btn btn-primary" id="chat-mk-confirm" style="padding:8px 14px;font-size:13px;">Confirmer la création</button>'
+      + '<button type="button" class="btn btn-secondary" id="chat-mk-cancel" style="padding:8px 14px;font-size:13px;">Annuler</button></div>';
   } else {
     actions = '<button type="button" class="btn btn-primary" id="chat-mk-contact" style="padding:8px 14px;font-size:13px;">Créer le contact dans Scout</button>'
-      + '<p style="margin:8px 0 0;font-size:12px;color:var(--text3);line-height:1.5;">Crée la société si elle n\'existe pas, puis le contact avec ce que le visiteur a déclaré. Rien n\'est envoyé au CRM.</p>';
+      + '<p style="margin:8px 0 0;font-size:12px;color:var(--text3);line-height:1.5;">Tu verras ce qui sera écrit avant de valider. Rien n\'est envoyé au CRM.</p>';
   }
 
   var fil = (j.messages || []).map(function (m) {
@@ -10276,12 +10295,36 @@ function _chatRenderDrawer(msg) {
   var cl = document.getElementById('chat-drawer-close');
   if (cl) cl.addEventListener('click', _chatCloseDrawer);
   var mk = document.getElementById('chat-mk-contact');
-  if (mk) mk.addEventListener('click', _chatMakeContact);
+  if (mk) mk.addEventListener('click', _chatPreviewContact);
+  var cf = document.getElementById('chat-mk-confirm');
+  if (cf) cf.addEventListener('click', _chatMakeContact);
+  var cn = document.getElementById('chat-mk-cancel');
+  if (cn) cn.addEventListener('click', function () { _chatPreview = null; _chatRenderDrawer(); });
 }
 
-async function _chatMakeContact() {
+// Étape 1 : demander ce qui serait écrit, sans rien écrire.
+async function _chatPreviewContact() {
   if (!_chatCur) return;
   var btn = document.getElementById('chat-mk-contact');
+  if (btn) { btn.disabled = true; btn.textContent = 'Vérification…'; }
+  try {
+    var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(_chatCur.id) + '/contact-preview', { headers: _chatH() });
+    var j = await r.json();
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    if (!j.ok) { _chatRenderDrawer('Rien à créer : ' + (j.reason || 'lead incomplet')); return; }
+    if (j.already) { _chatCur.contact_id = j.contact_id; _chatRenderDrawer('Ce contact existait déjà.'); return; }
+    _chatPreview = j;
+    _chatRenderDrawer();
+  } catch (e) {
+    _chatPreview = null;
+    _chatRenderDrawer('Impossible de préparer la création : ' + e.message);
+  }
+}
+
+// Étape 2 : écrire, une fois confirmé.
+async function _chatMakeContact() {
+  if (!_chatCur) return;
+  var btn = document.getElementById('chat-mk-confirm');
   if (btn) { btn.disabled = true; btn.textContent = 'Création…'; }
   try {
     var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(_chatCur.id) + '/contact',
@@ -10289,11 +10332,13 @@ async function _chatMakeContact() {
     var j = await r.json();
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
     _chatCur.contact_id = j.contact_id;
+    _chatPreview = null;
     _chatRenderDrawer(j.societe_created
       ? 'Société « ' + (j.societe && j.societe.name || '') + ' » créée, contact ajouté.'
       : 'Contact rattaché à la société « ' + (j.societe && j.societe.name || '') + ' » déjà connue.');
     _chatLoadConvs();
   } catch (e) {
+    _chatPreview = null;
     _chatRenderDrawer('Échec : ' + e.message);
   }
 }
