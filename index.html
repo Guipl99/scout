@@ -2617,6 +2617,17 @@ Réinitialiser tous les filtres
                 <option value="home">Page d'accueil</option>
               </select>
             </label>
+            <label class="vis-field"><span>Langue du visiteur</span>
+              <select id="chat-lang">
+                <option value="">Celle de mon navigateur</option>
+                <option value="fr-FR">Français</option>
+                <option value="en-US">English</option>
+                <option value="de-DE">Deutsch</option>
+                <option value="es-ES">Español</option>
+                <option value="it-IT">Italiano</option>
+                <option value="pl-PL">Polski</option>
+              </select>
+            </label>
             <button type="button" id="chat-restart" class="btn btn-secondary" style="padding:7px 13px;font-size:13px;">Nouvelle conversation</button>
           </div>
           <div class="chat-site">
@@ -2658,6 +2669,8 @@ Réinitialiser tous les filtres
             <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text);">Réglages du bot</summary>
             <label for="chat-greeting">Message d'accueil</label>
             <textarea id="chat-greeting" rows="3"></textarea>
+            <label for="chat-greeting-en">Message d'accueil (anglais)</label>
+            <textarea id="chat-greeting-en" rows="3"></textarea>
             <label for="chat-extra">Consignes supplémentaires (ajoutées au prompt)</label>
             <textarea id="chat-extra" rows="4" placeholder="ex : ne parle jamais de la Ligh-T aux visiteurs défense"></textarea>
             <label for="chat-model">Modèle</label>
@@ -2667,6 +2680,7 @@ Réinitialiser tous les filtres
               <button type="button" id="chat-save-cfg" class="btn btn-primary" style="padding:6px 13px;font-size:12px;">Enregistrer</button>
               <span id="chat-cfg-msg" style="font-size:12px;color:var(--text3);"></span>
             </div>
+            <div id="chat-limits" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border2);font-size:11.5px;color:var(--text3);line-height:1.6;"></div>
           </details>
         </div>
       </div>
@@ -9716,6 +9730,8 @@ var _chatInferred = {};       // pays / secteur, déduits et jamais demandés
 var _chatMail = null;         // résultat de la vérification d'adresse
 var _chatScore = 0, _chatScoreLabel = '';
 var _chatCfgLoaded = false;
+var _chatBlocked = false;     // conversation close après trop de tentatives de détournement
+var _chatReplyLang = '';
 var _chatWidgetOpen = false;  // bulle visible ; ne pas confondre avec _chatOpen(id), qui rouvre une conversation
 
 var CHAT_PAGES = {
@@ -9833,15 +9849,20 @@ function _chatRenderLead() {
 async function _chatNew() {
   var log = document.getElementById('chat-log'); if (log) log.innerHTML = '';
   _chatLead = {}; _chatInferred = {}; _chatMail = null; _chatScore = 0; _chatScoreLabel = ''; _chatSession = null;
+  _chatBlocked = false; _chatReplyLang = '';
   _chatRenderLead();
   var p = _chatCurrentPage();
   try {
+    var langSel = document.getElementById('chat-lang');
+    var lang = (langSel && langSel.value) || navigator.language || 'fr-FR';
     var r = await fetch(API + '/v/chat/session', { method: 'POST', headers: _chatH(),
-      body: JSON.stringify({ source: 'test', page: p.path, page_title: p.title, lang: 'fr-FR' }) });
+      body: JSON.stringify({ source: 'test', page: p.path, page_title: p.title, lang: lang }) });
     var j = await r.json();
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
-    _chatSession = j.id;
+    _chatSession = j.id; _chatReplyLang = j.lang || '';
     _chatBubble('assistant', j.greeting);
+    _chatSetBlocked(false);
+    _chatStatus();
   } catch (e) {
     _chatBubble('error', "Impossible d'ouvrir la conversation : " + e.message);
   }
@@ -9860,9 +9881,17 @@ async function _chatSend(text) {
     var j = await r.json();
     _chatTyping(false);
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    // La note d'incident vient AVANT la réponse, sinon elle raconte l'histoire à l'envers.
+    if (j.abuse_kind) _chatBubble('error', (j.abuse_kind === 'injection'
+      ? 'Tentative de détournement détectée, refusée sans appel à l\'IA'
+      : 'Demande hors sujet, refusée sans appel à l\'IA') + ' (' + j.abuse + '/3).');
+    if (j.capped) _chatBubble('error', 'Plafond journalier d\'appels IA atteint.');
     _chatBubble('assistant', j.reply);
     _chatLead = j.lead || {}; _chatInferred = j.inferred || {}; _chatMail = j.email_check || null;
     _chatScore = j.score || 0; _chatScoreLabel = j.score_label || '';
+    if (j.lang) _chatReplyLang = j.lang;
+    _chatSetBlocked(!!j.blocked);
+    _chatStatus();
     _chatRenderLead();
     _chatLoadHistory();
   } catch (e) {
@@ -9872,6 +9901,23 @@ async function _chatSend(text) {
   _chatBusy = false;
   if (btn) btn.disabled = false;
   var inp = document.getElementById('chat-text'); if (inp) inp.focus();
+}
+
+// Conversation close : on coupe la saisie plutôt que de laisser croire qu'elle marche.
+function _chatSetBlocked(b) {
+  _chatBlocked = !!b;
+  var i = document.getElementById('chat-text'), s = document.getElementById('chat-send');
+  if (i) { i.disabled = _chatBlocked; i.placeholder = _chatBlocked ? 'Conversation terminée' : 'Écrire un message…'; }
+  if (s) s.disabled = _chatBlocked;
+}
+
+var CHAT_LANG_NAMES = { fr: 'français', en: 'anglais', de: 'allemand', es: 'espagnol', it: 'italien', pl: 'polonais' };
+function _chatStatus() {
+  var st = document.getElementById('chat-status'); if (!st) return;
+  var bits = [];
+  if (_chatReplyLang) bits.push('répond en ' + (CHAT_LANG_NAMES[_chatReplyLang] || _chatReplyLang));
+  if (_chatBlocked) bits.push('conversation bloquée');
+  st.textContent = bits.join(' · ');
 }
 
 function _chatAgo(ts) {
@@ -9919,10 +9965,12 @@ async function _chatOpen(id) {
     (j.messages || []).forEach(function (m) { _chatBubble(m.role === 'user' ? 'user' : 'assistant', m.content); });
     _chatSession = j.id; _chatLead = j.lead || {}; _chatInferred = j.inferred || {}; _chatMail = j.email_check || null;
     _chatScore = j.score || 0; _chatScoreLabel = j.score_label || '';
+    _chatReplyLang = j.reply_lang || '';
+    _chatSetBlocked(j.status === 'blocked');
+    _chatStatus();
     _chatRenderLead();
     _chatToggle(true);
-    var st = document.getElementById('chat-status');
-    if (st) st.textContent = 'conversation reprise · ' + (j.turns || 0) + ' échange' + ((j.turns || 0) > 1 ? 's' : '');
+
   } catch (e) { _chatBubble('error', 'Relecture impossible : ' + e.message); }
 }
 
@@ -9936,6 +9984,13 @@ async function _chatLoadCfg() {
     var e = document.getElementById('chat-extra'); if (e) e.value = j.prompt_extra || '';
     var m = document.getElementById('chat-model'); if (m) m.value = j.model || '';
     var hv = document.getElementById('chat-hunter'); if (hv) hv.checked = j.verify_hunter === true;
+    var ge = document.getElementById('chat-greeting-en'); if (ge) ge.value = j.greeting_en || '';
+    var li = document.getElementById('chat-limits');
+    if (li && j.limits) li.innerHTML = 'Garde-fous en place : ' + j.limits.max_turns + ' tours max par conversation, '
+      + j.limits.max_input + ' caractères max par message, ' + j.limits.max_history + ' messages réinjectés au modèle, '
+      + j.limits.max_abuse + ' tentatives de détournement avant blocage, ' + j.limits.sessions_per_ip_h + ' conversations et '
+      + j.limits.turns_per_ip_h + ' messages par IP et par heure, ' + j.limits.daily_cap + ' appels IA par jour maximum.'
+      + '<br>Aujourd\'hui : ' + (j.today || 0) + ' appel' + ((j.today || 0) > 1 ? 's' : '') + '.';
     var st = document.getElementById('chat-status');
     if (st && !j.has_key) st.textContent = 'clé Anthropic absente côté serveur';
     _chatCfgLoaded = true;
@@ -9948,6 +10003,7 @@ async function _chatSaveCfg() {
     var r = await fetch(API + '/v/chat/config', { method: 'POST', headers: _chatH(),
       body: JSON.stringify({
         greeting: (document.getElementById('chat-greeting') || {}).value || '',
+        greeting_en: (document.getElementById('chat-greeting-en') || {}).value || '',
         prompt_extra: (document.getElementById('chat-extra') || {}).value || '',
         model: (document.getElementById('chat-model') || {}).value || '',
         verify_hunter: !!(document.getElementById('chat-hunter') || {}).checked
@@ -9979,6 +10035,8 @@ function _chatWire() {
   });
   var sel = document.getElementById('chat-page');
   if (sel) sel.addEventListener('change', function () { _chatRenderSite(); _chatNew(); });
+  var lg = document.getElementById('chat-lang');
+  if (lg) lg.addEventListener('change', function () { _chatNew(); _chatToggle(true); });
   var rs = document.getElementById('chat-restart');
   if (rs) rs.addEventListener('click', function () {
     var st = document.getElementById('chat-status'); if (st) st.textContent = '';
