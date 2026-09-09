@@ -67,9 +67,44 @@ html.fs-grand  { zoom: 1.12; }
 html.fs-xgrand { zoom: 1.25; }
 
 /* ── Modale fiche contact (onglet Contacts) ── */
-#vis-drawer { position:fixed; top:0; right:0; bottom:0; width:min(560px, 100vw); background:var(--bg2); border-left:1px solid var(--border); box-shadow:-12px 0 40px rgba(0,0,0,.35); z-index:9999; overflow-y:auto; transform:translateX(105%); transition:transform .18s ease; }
+/* ── Visiteurs web ─────────────────────────────────────────────────────────── */
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+.vis-toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; }
+.vis-field { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--text2); }
+.vis-field > span { font-weight:500; }
+.vis-field select, .vis-field input { font-size:13px; padding:9px 10px; border-radius:var(--radius); border:1px solid var(--border2); background:var(--bg3); color:var(--text); min-height:38px; }
+.vis-field-grow { flex:1; min-width:190px; }
+.vis-field-grow input { width:100%; box-sizing:border-box; }
+.vis-icon-btn { font-size:15px; min-width:38px; height:38px; border-radius:var(--radius); border:1px solid var(--border2); background:var(--bg3); color:var(--text); cursor:pointer; }
+.vis-icon-btn:hover { background:var(--bg2); }
+.vis-tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+.vis-tile { background:var(--bg3); border:1px solid var(--border2); border-radius:10px; padding:10px 12px; }
+.vis-tile-lbl { font-size:12px; color:var(--text2); }
+.vis-tile-val { font-size:24px; font-weight:700; line-height:1.25; }
+.vis-tile-sub { font-size:12px; color:var(--text3); }
+#vis-table { width:100%; border-collapse:collapse; font-size:13px; }
+#vis-table th { text-align:left; font-weight:500; font-size:12px; color:var(--text2); padding:0; background:var(--bg2); }
+#vis-table th button { width:100%; text-align:left; font:inherit; color:inherit; background:transparent; border:none; padding:10px; cursor:pointer; }
+#vis-table th button:hover { color:var(--text); }
+#vis-table td { padding:10px; vertical-align:top; }
+#vis-table tbody tr { border-top:1px solid var(--border2); cursor:pointer; }
+#vis-table tbody tr:hover { background:var(--bg3); }
+.vis-name-btn { font:inherit; font-weight:700; font-size:14px; color:var(--text); background:transparent; border:none; padding:0; cursor:pointer; text-align:left; }
+.vis-name-btn:hover { color:var(--accent2); }
+.vis-star { font-size:18px; line-height:1; background:transparent; border:none; cursor:pointer; padding:2px 4px; color:var(--border2); }
+.vis-star[aria-pressed="true"] { color:#f59e0b; }
+.vis-star:hover { color:#f59e0b; }
+#vis-drawer-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9998; }
+#vis-drawer-backdrop.open { display:block; }
+#vis-drawer { position:fixed; top:0; right:0; bottom:0; width:min(560px,100vw); background:var(--bg2); border-left:1px solid var(--border); box-shadow:-12px 0 40px rgba(0,0,0,.35); z-index:9999; overflow-y:auto; transform:translateX(105%); transition:transform .18s ease; }
 #vis-drawer.open { transform:translateX(0); }
-#vis-drawer .tag { vertical-align:middle; }
+#panel-visitors :focus-visible, #vis-drawer :focus-visible { outline:2px solid var(--accent2); outline-offset:2px; border-radius:4px; }
+.vis-sec { padding:16px 18px; border-top:1px solid var(--border2); }
+.vis-sec h3 { margin:0 0 10px; font-size:13px; font-weight:600; color:var(--text); text-transform:uppercase; letter-spacing:.04em; }
+.vis-sec p { margin:0 0 10px; font-size:13px; color:var(--text2); line-height:1.55; }
+.vis-actions { display:flex; gap:8px; flex-wrap:wrap; }
+@media (max-width: 820px) { .vis-tiles { grid-template-columns:1fr; } .vis-col-opt { display:none; } }
+@media (prefers-reduced-motion: reduce) { #vis-drawer { transition:none; } }
 #contact-detail-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100002; align-items:center; justify-content:center; padding:20px; }
 #contact-detail-modal.open { display:flex; }
 #contact-detail-modal .cd-content { background:var(--bg2); border:1px solid var(--border); border-radius:14px; width:100%; max-width:460px; max-height:85vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.4); }
@@ -2449,38 +2484,37 @@ Réinitialiser tous les filtres
 
     <!-- VISITEURS WEB (Leadfeeder interne) -->
     <div id="panel-visitors" class="panel">
-      <div class="topbar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><h1>Visiteurs web</h1><span id="vis-status" style="font-size:12px;color:var(--text3);"></span></div>
-      <div style="padding:0 0 10px;font-size:13px;color:var(--text2);">Les organisations qui visitent elistair.com, identifiées par leur réseau (IP → société). Les comptes ABM remontent en alerte. Les box internet, mobiles et hébergeurs sont filtrés.</div>
-      <div id="vis-alerts" style="margin-bottom:12px;"></div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
-        <div style="display:inline-flex;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;" id="vis-period">
-          <button type="button" data-days="7"></button><button type="button" data-days="30"></button><button type="button" data-days="90"></button>
-        </div>
-        <select id="vis-type" style="font-size:13px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
-          <option value="business,government,education">Entreprises + public</option>
-          <option value="business">Entreprises</option>
-          <option value="government">Public / défense</option>
-          <option value="education">Recherche / éducation</option>
-          <option value="isp,hosting,vpn,unknown">Filtrés (FAI, hébergeurs, VPN)</option>
-        </select>
-        <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="vis-abm"> Comptes ABM seulement</label>
-        <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="vis-hidden"> Voir les ignorés</label>
-        <select id="vis-sort" title="Trier" style="font-size:13px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
-          <option value="score">Tri : intérêt</option>
-          <option value="last">Tri : dernière visite</option>
-          <option value="first">Tri : première visite</option>
-          <option value="pages">Tri : pages vues</option>
-          <option value="visits">Tri : visites</option>
-          <option value="name">Tri : nom</option>
-        </select>
-        <input id="vis-search" type="text" placeholder="Filtrer (société, domaine, pays)…" style="flex:1;min-width:180px;font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
-        <button type="button" id="vis-refresh" style="font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;">↻ Actualiser</button>
-        <button type="button" id="vis-settings-btn" style="font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;">⚙️ Réglages &amp; snippet</button>
+      <div class="topbar" style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;"><h1>Visiteurs web</h1><span id="vis-status" style="font-size:13px;color:var(--text2);"></span></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text2);max-width:70ch;">Qui vient sur elistair.com. On reconnaît le réseau des entreprises, administrations et universités. Les box internet, mobiles et VPN restent anonymes, c'est normal.</p>
+      <div id="vis-alerts" style="margin-bottom:14px;"></div>
+      <div class="vis-toolbar">
+        <label class="vis-field"><span>Afficher</span>
+          <select id="vis-view">
+            <option value="todo">Entreprises &amp; administrations</option>
+            <option value="fav">★ Mes favoris</option>
+            <option value="abm">🎯 Comptes ABM</option>
+            <option value="other">Visiteurs non identifiables</option>
+            <option value="hidden">Comptes ignorés</option>
+          </select>
+        </label>
+        <label class="vis-field"><span>Période</span>
+          <select id="vis-days">
+            <option value="7">7 derniers jours</option>
+            <option value="30" selected>30 derniers jours</option>
+            <option value="90">3 derniers mois</option>
+          </select>
+        </label>
+        <label class="vis-field vis-field-grow"><span>Rechercher</span>
+          <input id="vis-search" type="search" placeholder="Nom, domaine, pays…">
+        </label>
+        <button type="button" id="vis-refresh" class="vis-icon-btn" title="Actualiser" aria-label="Actualiser la liste">↻</button>
+        <button type="button" id="vis-settings-btn" class="vis-icon-btn" title="Réglages et snippet" aria-label="Réglages et installation du snippet" aria-expanded="false">⚙️</button>
       </div>
-      <div id="vis-tiles" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;"></div>
-      <div id="vis-settings" style="display:none;margin-bottom:14px;"></div>
+      <div id="vis-tiles" class="vis-tiles"></div>
+      <div id="vis-settings" style="display:none;margin-bottom:16px;"></div>
       <div id="vis-body"></div>
-      <div id="vis-drawer" aria-label="Détail du compte"></div>
+      <div id="vis-drawer" role="dialog" aria-modal="true" aria-labelledby="vis-drawer-title" tabindex="-1"></div>
+      <div id="vis-drawer-backdrop"></div>
     </div>
 
     <!-- PROSPECTS CHAUDS -->
@@ -9373,12 +9407,21 @@ async function renderHotProspects(){
 window.renderHotProspects = renderHotProspects;
 
 // ===================== Visiteurs web (Leadfeeder interne) =====================
-// Backend : scout-api/visitors.js (endpoints /v/*). Aucun onclick inline pour les actions
-// dynamiques : délégation d'événements sur #panel-visitors (data-act).
-var _visDays = 30, _visAccounts = [], _visStats = null, _visSettings = null, _visLoading = false;
+// Backend : scout-api/visitors.js (endpoints /v/*). Liste simple + panneau latéral par compte.
+// Aucun onclick inline : délégation d'événements sur #panel-visitors (data-act).
+var _visDays = 30, _visView = 'todo', _visSort = { by: 'score', dir: 'desc' };
+var _visAccounts = [], _visStats = null, _visLoading = false, _visLastFocus = null;
+var _visDrawer = { key: null, msg: {}, candidates: null, sessions: null, confirm: null, summaryLoading: false };
+
 function _visH() { return Object.assign({ 'Content-Type': 'application/json' }, (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {}); }
+async function _visPost(path, body) {
+  var r = await fetch(API + path, { method: 'POST', headers: _visH(), body: JSON.stringify(body || {}) });
+  var d = {}; try { d = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+  return d;
+}
 function _visTypeChip(t) {
-  var m = { business: ['Entreprise', 'tag-accent'], government: ['Public / défense', 'tag-green'], education: ['Recherche / éduc.', 'tag-amber'], isp: ['FAI', 'tag-gray'], hosting: ['Hébergeur', 'tag-gray'], vpn: ['VPN / proxy', 'tag-gray'], unknown: ['Inconnu', 'tag-gray'] };
+  var m = { business: ['Entreprise', 'tag-accent'], government: ['Administration / défense', 'tag-green'], education: ['Recherche / université', 'tag-amber'], isp: ['Box ou mobile', 'tag-gray'], hosting: ['Hébergeur', 'tag-gray'], vpn: ['VPN', 'tag-gray'], unknown: ['Inconnu', 'tag-gray'] };
   var x = m[t] || [t || '?', 'tag-gray'];
   return tagHtml(x[0], x[1]);
 }
@@ -9389,222 +9432,313 @@ function _visFlag(cc) {
 function _visAgo(ts) {
   if (!ts) return '—';
   var d = (Date.now() - new Date(ts).getTime()) / 60000;
-  if (d < 1) return 'à l\'instant';
-  if (d < 60) return Math.round(d) + ' min';
-  if (d < 48 * 60) return Math.round(d / 60) + ' h';
-  return Math.round(d / 1440) + ' j';
+  if (d < 1) return "à l'instant";
+  if (d < 60) return 'il y a ' + Math.round(d) + ' min';
+  if (d < 48 * 60) return 'il y a ' + Math.round(d / 60) + ' h';
+  return 'il y a ' + Math.round(d / 1440) + ' jours';
 }
 function _visDwell(ms) { if (!ms) return ''; var s = Math.round(ms / 1000); return s < 60 ? s + ' s' : Math.round(s / 60) + ' min'; }
-function _visPeriodStyle() {
-  document.querySelectorAll('#vis-period button').forEach(function (b) {
-    var on = +b.dataset.days === _visDays;
-    b.textContent = b.dataset.days + ' j';
-    b.style.cssText = 'font-size:13px;padding:8px 14px;border:none;cursor:pointer;' + (on ? 'background:var(--accent);color:#fff;font-weight:600;' : 'background:var(--bg3);color:var(--text2);');
-  });
+function _visInterest(score) {
+  var pct = Math.max(8, Math.min(100, Math.round(score * 3)));
+  if (score >= 25) return { label: 'Fort', color: '#16a34a', pct: pct };
+  if (score >= 12) return { label: 'Moyen', color: '#f59e0b', pct: pct };
+  return { label: 'Faible', color: 'var(--text3)', pct: pct };
 }
+function _visInterestHtml(a) {
+  var i = _visInterest(a.score);
+  return '<div style="display:flex;align-items:center;gap:7px;"><span style="font-size:13px;color:' + i.color + ';font-weight:600;">' + i.label + '</span>'
+    + '<span style="display:inline-block;width:46px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;"><span style="display:block;width:' + i.pct + '%;height:100%;background:' + i.color + ';"></span></span></div>'
+    + ((a.key_labels || []).length ? '<div style="font-size:12px;color:var(--text2);margin-top:3px;">' + (a.key_labels || []).map(esc).join(', ') + '</div>' : '');
+}
+function _visLogo(a, size) {
+  size = size || 20;
+  return a.org_domain
+    ? '<img src="https://www.google.com/s2/favicons?domain=' + encodeURIComponent(a.org_domain) + '&sz=' + (size >= 24 ? 64 : 32) + '" alt="" width="' + size + '" height="' + size + '" loading="lazy" style="border-radius:4px;flex-shrink:0;background:#fff;" onerror="this.style.visibility=\'hidden\'">'
+    : '<span aria-hidden="true" style="display:inline-block;width:' + size + 'px;height:' + size + 'px;border-radius:4px;background:var(--bg3);flex-shrink:0;"></span>';
+}
+function _visStarBtn(a, big) {
+  var name = esc(a.societe_name || a.org_name || '');
+  return '<button type="button" class="vis-star" data-act="star" data-key="' + esc(a.account_key) + '" aria-pressed="' + (a.starred ? 'true' : 'false') + '"'
+    + ' aria-label="' + (a.starred ? 'Retirer ' + name + ' des favoris' : 'Mettre ' + name + ' en favori') + '"'
+    + ' title="' + (a.starred ? 'Retirer des favoris' : 'Favori : garde ce compte en haut de la liste') + '"'
+    + (big ? ' style="font-size:22px;"' : '') + '>' + (a.starred ? '★' : '☆') + '</button>';
+}
+function _visAcc(key) { return _visAccounts.find(function (a) { return a.account_key === key; }); }
+
+// ── Chargement ───────────────────────────────────────────────────────────────
+var VIS_VIEWS = {
+  todo:   { types: 'business,government,education', abm: '0', hidden: '0', title: 'Entreprises & administrations' },
+  fav:    { types: 'business,government,education', abm: '0', hidden: '0', title: 'Favoris', star: true },
+  abm:    { types: 'business,government,education', abm: '1', hidden: '0', title: 'Comptes ABM' },
+  other:  { types: 'isp,hosting,vpn,unknown',       abm: '0', hidden: '0', title: 'Visiteurs non identifiables' },
+  hidden: { types: 'business,government,education,isp,hosting,vpn,unknown', abm: '0', hidden: '1', title: 'Comptes ignorés', onlyHidden: true }
+};
 async function renderVisitors() {
-  _visPeriodStyle();
   var body = document.getElementById('vis-body'); if (!body) return;
   if (_visLoading) return; _visLoading = true;
-  body.innerHTML = (typeof scoutSkeletonRows === 'function') ? scoutSkeletonRows(6) : '<div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div>';
-  var type = (document.getElementById('vis-type') || {}).value || 'business,government,education';
-  var abm = (document.getElementById('vis-abm') || {}).checked ? '1' : '0';
-  var hidden = (document.getElementById('vis-hidden') || {}).checked ? '1' : '0';
+  var v = VIS_VIEWS[_visView] || VIS_VIEWS.todo;
+  if (!_visAccounts.length) body.innerHTML = (typeof scoutSkeletonRows === 'function') ? scoutSkeletonRows(5) : '<p style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</p>';
   try {
     var rs = await Promise.all([
       fetch(API + '/v/stats?days=' + _visDays, { headers: _visH() }).then(function (r) { return r.json(); }),
-      fetch(API + '/v/accounts?days=' + _visDays + '&type=' + encodeURIComponent(type) + '&abm=' + abm + '&hidden=' + hidden, { headers: _visH() }).then(function (r) { return r.json(); }),
+      fetch(API + '/v/accounts?days=' + _visDays + '&type=' + encodeURIComponent(v.types) + '&abm=' + v.abm + '&hidden=' + v.hidden, { headers: _visH() }).then(function (r) { return r.json(); }),
       fetch(API + '/v/alerts', { headers: _visH() }).then(function (r) { return r.json(); })
     ]);
     _visStats = rs[0]; _visAccounts = rs[1].accounts || [];
     _visRenderTiles(); _visRenderAlerts(rs[2].alerts || []); _visRenderTable(); _visRenderDrawer();
     _visSetNavBadge((rs[2].alerts || []).filter(function (a) { return !a.seen; }).length);
     var st = document.getElementById('vis-status');
-    if (st) st.textContent = _visStats.last_hit ? ('dernière visite ' + _visAgo(_visStats.last_hit) + (_visStats.pending ? ' · ' + _visStats.pending + ' IP en cours de résolution' : '')) : 'aucune visite reçue — installe le snippet (⚙️)';
+    if (st) st.textContent = _visStats.last_hit
+      ? ('dernière visite ' + _visAgo(_visStats.last_hit) + (_visStats.pending ? ' · ' + _visStats.pending + ' en cours d\'identification' : ''))
+      : '';
   } catch (e) {
     console.error('renderVisitors', e);
-    body.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3);">Erreur de chargement. Le backend est-il à jour (module visiteurs) ?</div>';
+    body.innerHTML = '<p style="padding:2rem;text-align:center;color:var(--text3);">Impossible de charger les visiteurs. Réessaie dans un instant.</p>';
   }
   _visLoading = false;
 }
 window.renderVisitors = renderVisitors;
+
 function _visRenderTiles() {
   var t = document.getElementById('vis-tiles'); if (!t || !_visStats) return;
   var s = _visStats;
-  var rate = s.visitors ? Math.round(100 * s.identified_visitors / s.visitors) : 0;
-  var tile = function (lbl, val, col, sub) { return '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;"><div style="font-size:11px;color:var(--text3);">' + lbl + '</div><div style="font-size:22px;font-weight:700;color:' + col + ';">' + val + '</div>' + (sub ? '<div style="font-size:11px;color:var(--text3);">' + sub + '</div>' : '') + '</div>'; };
-  t.innerHTML = tile('Pages vues (' + s.days + ' j)', s.pageviews, 'var(--text)', s.visitors + ' visiteurs')
-    + tile('Organisations identifiées', s.accounts, 'var(--accent2)', rate + ' % des visiteurs')
-    + tile('Comptes ABM vus', s.abm_accounts, '#16a34a', s.unseen_alerts ? s.unseen_alerts + ' alerte(s) non lue(s)' : '')
-    + tile('Non identifiés', s.visitors - s.identified_visitors, 'var(--text2)', 'box, mobile, VPN, hébergeurs');
+  var newToScout = _visAccounts.filter(function (a) { return !a.societe_id && !a.hidden; }).length;
+  var tile = function (lbl, val, sub, col) {
+    return '<div class="vis-tile"><div class="vis-tile-lbl">' + lbl + '</div><div class="vis-tile-val"' + (col ? ' style="color:' + col + ';"' : '') + '>' + val + '</div>' + (sub ? '<div class="vis-tile-sub">' + sub + '</div>' : '') + '</div>';
+  };
+  t.innerHTML = tile('Organisations identifiées', s.accounts, 'sur ' + s.visitors + ' visiteur' + (s.visitors > 1 ? 's' : '') + ' au total')
+    + tile('Comptes ABM venus sur le site', s.abm_accounts, s.unseen_alerts ? s.unseen_alerts + ' alerte(s) à lire' : 'aucune alerte en attente', '#16a34a')
+    + tile('Pas encore dans Scout', newToScout, newToScout ? 'à créer en un clic depuis la fiche' : 'tout est rattaché', newToScout ? 'var(--accent2)' : null);
 }
+
 function _visRenderAlerts(alerts) {
   var el = document.getElementById('vis-alerts'); if (!el) return;
   var unseen = alerts.filter(function (a) { return !a.seen; });
   if (!unseen.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div style="border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.08);border-radius:10px;padding:10px 12px;">'
-    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-weight:700;color:#16a34a;">' + (unseen.some(function (a) { return a.kind !== 'hot'; }) ? '🎯 Comptes ABM' : '🔥 Comptes chauds') + ' sur le site</span><span style="font-size:12px;color:var(--text3);">' + unseen.length + '</span><span style="flex:1"></span><button type="button" data-act="alerts-seen" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">Marquer comme lu</button></div>'
+  el.innerHTML = '<section aria-label="Alertes" style="border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.08);border-radius:10px;padding:12px 14px;">'
+    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;"><b style="color:#16a34a;font-size:14px;">Comptes à regarder en priorité</b><span style="font-size:12px;color:var(--text2);">' + unseen.length + '</span><span style="flex:1"></span>'
+    + '<button type="button" data-act="alerts-seen" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">Tout marquer comme lu</button></div>'
     + unseen.slice(0, 8).map(function (a) {
-      return '<div style="display:flex;gap:10px;align-items:center;font-size:13px;padding:4px 0;border-top:1px solid var(--border2);">'
-        + '<span style="color:var(--text3);font-size:12px;white-space:nowrap;">' + _visAgo(a.ts) + '</span>'
-        + (a.kind === 'hot' ? '<span title="Compte chaud (score ' + (a.score || 0) + ')">🔥</span>' : '<span title="Compte ABM">🎯</span>')
-        + '<b>' + esc(a.societe_name || a.org_name) + '</b>' + (a.country ? ' <span style="font-size:12px;">' + _visFlag(a.country) + '</span>' : '')
-        + '<span style="color:var(--text2);font-size:12px;">' + esc(a.path || '') + '</span>'
-        + (a.societe_id ? '<button type="button" data-act="open-societe" data-id="' + esc(a.societe_id) + '" style="margin-left:auto;font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">Fiche</button>' : '')
+      return '<div style="display:flex;gap:10px;align-items:center;font-size:13px;padding:5px 0;border-top:1px solid var(--border2);flex-wrap:wrap;">'
+        + '<span aria-hidden="true">' + (a.kind === 'hot' ? '🔥' : '🎯') + '</span>'
+        + '<b>' + esc(a.societe_name || a.org_name) + '</b>' + (a.country ? '<span>' + _visFlag(a.country) + '</span>' : '')
+        + '<span style="color:var(--text2);">' + esc(a.path || '') + '</span>'
+        + '<span style="color:var(--text3);font-size:12px;">' + _visAgo(a.ts) + '</span>'
+        + (a.account_key || a.societe_id ? '<button type="button" data-act="open" data-key="' + esc(a.account_key || a.societe_id) + '" style="margin-left:auto;font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">Voir la fiche</button>' : '')
         + '</div>';
-    }).join('') + '</div>';
+    }).join('') + '</section>';
 }
+
+// ── Liste ────────────────────────────────────────────────────────────────────
 function _visFiltered() {
   var q = ((document.getElementById('vis-search') || {}).value || '').toLowerCase().trim();
-  var sort = (document.getElementById('vis-sort') || {}).value || 'score';
+  var v = VIS_VIEWS[_visView] || VIS_VIEWS.todo;
   var list = _visAccounts.slice();
+  if (v.star) list = list.filter(function (a) { return a.starred; });
+  if (v.onlyHidden) list = list.filter(function (a) { return a.hidden; });
   if (q) list = list.filter(function (a) { return [a.org_name, a.org_domain, a.societe_name, a.country, a.as_name].filter(Boolean).join(' ').toLowerCase().indexOf(q) >= 0; });
-  var cmp = {
-    score: function (a, b) { return (b.score - a.score) || (new Date(b.last_seen) - new Date(a.last_seen)); },
-    last: function (a, b) { return new Date(b.last_seen) - new Date(a.last_seen); },
-    first: function (a, b) { return new Date(b.first_seen) - new Date(a.first_seen); },
-    pages: function (a, b) { return (b.pageviews - a.pageviews) || (b.score - a.score); },
-    visits: function (a, b) { return (b.visits - a.visits) || (b.score - a.score); },
-    name: function (a, b) { return String(a.societe_name || a.org_name || '').localeCompare(String(b.societe_name || b.org_name || ''), 'fr'); }
-  }[sort] || function () { return 0; };
-  list.sort(function (a, b) { if (!!a.starred !== !!b.starred) return a.starred ? -1 : 1; return cmp(a, b); });
+  var by = _visSort.by, dir = _visSort.dir === 'asc' ? 1 : -1;
+  var val = {
+    name: function (a) { return String(a.societe_name || a.org_name || '').toLowerCase(); },
+    score: function (a) { return a.score; },
+    visits: function (a) { return a.pageviews; },
+    last: function (a) { return new Date(a.last_seen).getTime(); }
+  }[by] || function (a) { return a.score; };
+  list.sort(function (a, b) {
+    if (!!a.starred !== !!b.starred) return a.starred ? -1 : 1;      // favoris toujours en tête
+    var x = val(a), y = val(b);
+    if (x < y) return -1 * dir; if (x > y) return 1 * dir;
+    return new Date(b.last_seen) - new Date(a.last_seen);
+  });
   return list;
 }
-function _visScoreBar(score) {
-  var pct = Math.min(100, Math.round(score * 2.5));
-  var col = pct >= 60 ? '#16a34a' : pct >= 30 ? '#f59e0b' : 'var(--text3)';
-  return '<div title="Score d\'intérêt (pages clés, visites répétées, ABM)" style="display:flex;align-items:center;gap:6px;"><div style="width:56px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:' + col + ';"></div></div><span style="font-size:11px;color:var(--text3);">' + score + '</span></div>';
-}
-function _visLogo(a, size) {
-  size = size || 18;
-  return a.org_domain ? '<img src="https://www.google.com/s2/favicons?domain=' + encodeURIComponent(a.org_domain) + '&sz=' + (size >= 24 ? 64 : 32) + '" alt="" width="' + size + '" height="' + size + '" loading="lazy" style="border-radius:4px;flex-shrink:0;background:#fff;" onerror="this.style.visibility=\'hidden\'">' : '<span style="display:inline-block;width:' + size + 'px;height:' + size + 'px;border-radius:4px;background:var(--bg3);flex-shrink:0;"></span>';
-}
-function _visStarBtn(a, big) {
-  return '<button type="button" data-act="star" data-key="' + esc(a.account_key) + '" data-on="' + (a.starred ? '1' : '0') + '" title="' + (a.starred ? 'Retirer des favoris' : 'Mettre en favori (remonte en tête de liste)') + '" style="font-size:' + (big ? 20 : 16) + 'px;line-height:1;background:transparent;border:none;cursor:pointer;padding:2px 4px;color:' + (a.starred ? '#f59e0b' : 'var(--border2)') + ';">' + (a.starred ? '★' : '☆') + '</button>';
+function _visEmptyHtml() {
+  var s = _visStats || {};
+  var q = ((document.getElementById('vis-search') || {}).value || '').trim();
+  var box = function (title, text, btn) {
+    return '<div style="padding:2.2rem 1.5rem;text-align:center;border:1px dashed var(--border2);border-radius:10px;">'
+      + '<div style="font-size:15px;font-weight:600;margin-bottom:6px;">' + title + '</div>'
+      + '<p style="font-size:13px;color:var(--text2);max-width:52ch;margin:0 auto 12px;">' + text + '</p>' + (btn || '') + '</div>';
+  };
+  if (q) return box('Aucun résultat pour « ' + esc(q) + ' »', 'Essaie un autre nom, ou vide la recherche.');
+  if (!s.pageviews) return box('Aucune visite reçue pour l\'instant',
+    'Le petit script de mesure est peut-être absent du site, ou personne n\'est encore passé sur elistair.com depuis son installation.',
+    '<button type="button" data-act="open-settings" style="font-size:13px;padding:9px 14px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:600;cursor:pointer;">Voir le script à installer</button>');
+  if (_visView === 'fav') return box('Aucun favori', 'Clique sur l\'étoile d\'un compte pour le garder en haut de ta liste.');
+  if (_visView === 'abm') return box('Aucun compte ABM sur la période', 'Aucun des comptes cibles n\'est passé sur le site ces ' + _visDays + ' derniers jours.');
+  if (_visView === 'hidden') return box('Aucun compte ignoré', 'Les comptes que tu masques (Elistair, partenaires, fournisseurs) apparaîtront ici.');
+  return box('Aucune organisation identifiée sur la période',
+    s.visitors + ' visiteur(s) sont venus, mais tous depuis une box, un mobile ou un VPN, donc impossible de savoir de quelle organisation ils viennent. C\'est le cas d\'environ deux visiteurs sur trois.');
 }
 function _visRenderTable() {
   var body = document.getElementById('vis-body'); if (!body) return;
   var list = _visFiltered();
-  if (!list.length) { body.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3);">Aucune organisation identifiée sur cette période avec ces filtres.</div>'; return; }
+  if (!list.length) { body.innerHTML = _visEmptyHtml(); return; }
+  var th = function (key, label, cls) {
+    var on = _visSort.by === key;
+    var arrow = on ? (_visSort.dir === 'asc' ? ' ↑' : ' ↓') : '';
+    return '<th scope="col"' + (cls ? ' class="' + cls + '"' : '') + ' aria-sort="' + (on ? (_visSort.dir === 'asc' ? 'ascending' : 'descending') : 'none') + '">'
+      + '<button type="button" data-act="sort" data-by="' + key + '">' + label + '<span aria-hidden="true">' + arrow + '</span></button></th>';
+  };
   var rows = list.map(function (a) {
     var name = a.societe_name || a.org_name || '?';
-    var pages = (a.top_pages || []).slice(0, 3).map(function (p) { return '<span style="display:inline-block;font-size:11px;padding:2px 6px;border-radius:5px;background:var(--bg3);color:var(--text2);margin:1px 2px 1px 0;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="' + esc(p.path) + '">' + esc(p.path) + (p.n > 1 ? ' ×' + p.n : '') + '</span>'; }).join('');
-    var labels = (a.key_labels || []).map(function (l) { return '<span style="font-size:10px;color:#16a34a;margin-right:5px;">● ' + esc(l) + '</span>'; }).join('');
-    var seen = (a.contacts_seen || []).length ? '<span title="' + esc((a.contacts_seen || []).map(function (c) { return c.nom; }).join(', ')) + '" style="font-size:11px;color:var(--accent2);">👤 ' + (a.contacts_seen || []).length + '</span>' : '';
-    var meta = [a.org_domain ? '<a href="https://' + esc(a.org_domain) + '" target="_blank" rel="noopener" data-noopen="1" style="color:var(--text3);text-decoration:none;" title="Ouvrir le site">' + esc(a.org_domain) + ' ↗</a>' : null, a.city ? esc(a.city) : null, a.summary && a.summary.qui ? esc(a.summary.qui) : null].filter(Boolean).join(' · ');
-    return '<tr data-act="open" data-key="' + esc(a.account_key) + '" style="border-top:1px solid var(--border2);cursor:pointer;' + (a.hidden ? 'opacity:.55;' : '') + '" title="Ouvrir le détail">'
-      + '<td style="padding:8px 4px 8px 8px;width:28px;">' + _visStarBtn(a) + '</td>'
-      + '<td style="padding:9px 10px;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' + _visLogo(a) + '<b>' + esc(name) + '</b>'
+    var sub = [a.org_domain ? esc(a.org_domain) : null, a.city ? esc(a.city) : null, (a.societe_name && a.org_name !== a.societe_name) ? 'réseau ' + esc(a.org_name) : null].filter(Boolean).join(' · ');
+    var pages = (a.top_pages || []).slice(0, 2).map(function (p) { return esc(p.path) + (p.n > 1 ? ' ×' + p.n : ''); }).join(', ');
+    return '<tr data-act="open" data-key="' + esc(a.account_key) + '"' + (a.hidden ? ' style="opacity:.55;"' : '') + '>'
+      + '<td style="width:34px;padding-right:0;">' + _visStarBtn(a) + '</td>'
+      + '<td><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' + _visLogo(a)
+      + '<button type="button" class="vis-name-btn" data-act="open" data-key="' + esc(a.account_key) + '">' + esc(name) + '</button>'
       + (a.country ? '<span title="' + esc(a.country) + '">' + _visFlag(a.country) + '</span>' : '')
-      + (a.is_abm ? tagHtml('ABM', 'tag-green') : '') + _visTypeChip(a.org_type) + (a.societe_id ? '' : tagHtml('pas dans Scout', 'tag-gray'))
-      + (a.hidden ? tagHtml('ignoré', 'tag-red') : '') + seen + '</div>'
-      + (meta ? '<div style="font-size:11px;color:var(--text3);margin-top:2px;max-width:520px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + meta + '</div>' : '') + '</td>'
-      + '<td style="padding:9px 10px;">' + _visScoreBar(a.score) + '<div style="margin-top:3px;">' + labels + '</div></td>'
-      + '<td style="padding:9px 10px;font-size:12px;white-space:nowrap;"><b>' + a.pageviews + '</b> pages · ' + a.visits + ' visite' + (a.visits > 1 ? 's' : '') + (a.dwell_ms ? '<div style="color:var(--text3);">' + _visDwell(a.dwell_ms) + '</div>' : '') + '</td>'
-      + '<td style="padding:9px 10px;">' + pages + '</td>'
-      + '<td style="padding:9px 10px;font-size:12px;white-space:nowrap;">' + _visAgo(a.last_seen) + '<div style="color:var(--text3);">depuis ' + _visAgo(a.first_seen) + '</div></td>'
-      + '<td style="padding:9px 10px;white-space:nowrap;"><button type="button" data-act="open" data-key="' + esc(a.account_key) + '" style="font-size:12px;padding:6px 10px;border-radius:6px;cursor:pointer;color:var(--text2);background:var(--bg3);border:1px solid var(--border2);">Ouvrir ›</button></td>'
+      + (a.is_abm ? tagHtml('ABM', 'tag-green') : '')
+      + (a.societe_id ? '' : tagHtml('nouveau', 'tag-accent'))
+      + (a.hidden ? tagHtml('ignoré', 'tag-red') : '')
+      + ((a.contacts_seen || []).length ? '<span title="' + esc((a.contacts_seen || []).map(function (c) { return c.nom; }).join(', ')) + '" style="font-size:12px;color:var(--accent2);">👤 ' + a.contacts_seen.length + '</span>' : '')
+      + '</div>'
+      + (sub ? '<div style="font-size:12px;color:var(--text2);margin-top:2px;">' + sub + '</div>' : '')
+      + (pages ? '<div class="vis-col-opt" style="font-size:12px;color:var(--text3);margin-top:2px;">' + pages + '</div>' : '') + '</td>'
+      + '<td>' + _visInterestHtml(a) + '</td>'
+      + '<td class="vis-col-opt" style="white-space:nowrap;font-size:13px;"><b>' + a.pageviews + '</b> page' + (a.pageviews > 1 ? 's' : '') + '<div style="color:var(--text2);font-size:12px;">' + a.visits + ' visite' + (a.visits > 1 ? 's' : '') + (a.dwell_ms ? ' · ' + _visDwell(a.dwell_ms) : '') + '</div></td>'
+      + '<td style="white-space:nowrap;font-size:13px;">' + _visAgo(a.last_seen) + '</td>'
       + '</tr>';
   }).join('');
   body.innerHTML = '<div style="border:1px solid var(--border2);border-radius:10px;overflow:hidden;overflow-x:auto;">'
-    + '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="text-align:left;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:var(--bg2);">'
-    + '<th></th><th style="padding:9px 10px;font-weight:500;">Organisation</th><th style="padding:9px 10px;font-weight:500;">Intérêt</th><th style="padding:9px 10px;font-weight:500;">Activité</th><th style="padding:9px 10px;font-weight:500;">Pages vues</th><th style="padding:9px 10px;font-weight:500;">Dernière visite</th><th></th>'
+    + '<table id="vis-table"><caption class="sr-only">Organisations ayant visité elistair.com</caption><thead><tr>'
+    + '<th scope="col"><span class="sr-only">Favori</span></th>'
+    + th('name', 'Organisation') + th('score', 'Intérêt') + th('visits', 'Pages vues', 'vis-col-opt') + th('last', 'Dernière visite')
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
-    + '<div style="font-size:11px;color:var(--text3);margin-top:8px;">' + list.length + ' organisation(s). Identification par réseau : fiable pour les sièges, ministères, bases et grands comptes ; aveugle sur les box, le mobile et le télétravail.</div>';
+    + '<p style="font-size:12px;color:var(--text3);margin:8px 0 0;">' + list.length + ' organisation' + (list.length > 1 ? 's' : '') + '. Clique une ligne pour voir le détail et prospecter.</p>';
 }
-function _visSlug(k) { return String(k).replace(/[^a-z0-9]/gi, '_'); }
 
-// ── Panneau latéral d'un compte ──────────────────────────────────────────────
-// État conservé entre deux rafraîchissements de la liste (messages, candidats Hunter, sessions).
-var _visDrawer = { key: null, msg: {}, candidates: null, sessions: null, confirm: null, summaryLoading: false };
-function _visAcc(key) { return _visAccounts.find(function (a) { return a.account_key === key; }); }
+// ── Panneau latéral ──────────────────────────────────────────────────────────
 function _visDrawerSay(section, text, color) { _visDrawer.msg[section] = text ? { text: text, color: color || 'var(--text2)' } : null; _visRenderDrawer(); }
+function _visMsgHtml(section) {
+  var m = _visDrawer.msg[section];
+  return '<div role="status" aria-live="polite"' + (m ? ' style="font-size:13px;color:' + m.color + ';margin-top:10px;line-height:1.5;"' : '') + '>' + (m ? esc(m.text) : '') + '</div>';
+}
+function _visBtn(act, key, label, style, extra) {
+  var base = 'font-size:13px;padding:8px 13px;border-radius:8px;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text);min-height:36px;';
+  var styles = {
+    primary: 'color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;font-weight:600;',
+    green: 'color:#16a34a;background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.4);font-weight:600;',
+    ghost: 'color:var(--text2);background:transparent;',
+    danger: 'color:#dc2626;background:transparent;border-color:rgba(220,38,38,.35);'
+  };
+  return '<button type="button" data-act="' + act + '" data-key="' + esc(key) + '"' + (extra || '') + ' style="' + base + (styles[style] || '') + '">' + label + '</button>';
+}
 function _visOpenDrawer(key) {
-  if (_visDrawer.key !== key) _visDrawer = { key: key, msg: {}, candidates: null, sessions: null, confirm: null, summaryLoading: false };
   var el = document.getElementById('vis-drawer'); if (!el) return;
-  el.classList.add('open'); document.body.classList.add('vis-drawer-open');
+  if (_visDrawer.key !== key) _visDrawer = { key: key, msg: {}, candidates: null, sessions: null, confirm: null, summaryLoading: false };
+  _visLastFocus = document.activeElement;
+  el.classList.add('open');
+  var bd = document.getElementById('vis-drawer-backdrop'); if (bd) bd.classList.add('open');
   _visRenderDrawer();
+  setTimeout(function () { var c = el.querySelector('[data-act="close-drawer"]'); if (c) c.focus(); }, 60);
   _visLoadDetail(key);
 }
 function _visCloseDrawer() {
   var el = document.getElementById('vis-drawer'); if (el) el.classList.remove('open');
-  document.body.classList.remove('vis-drawer-open');
+  var bd = document.getElementById('vis-drawer-backdrop'); if (bd) bd.classList.remove('open');
   _visDrawer.key = null;
+  if (_visLastFocus && _visLastFocus.focus) { try { _visLastFocus.focus(); } catch (e) {} }
 }
-function _visBtn(act, key, label, style, extra) {
-  var base = 'font-size:12px;padding:7px 12px;border-radius:7px;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text);';
-  var styles = { primary: 'color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;font-weight:600;', green: 'color:#16a34a;background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.4);font-weight:600;', blue: 'color:#2563eb;background:rgba(37,99,235,.1);border-color:rgba(37,99,235,.4);font-weight:600;', ghost: 'color:var(--text3);background:transparent;', danger: 'color:#dc2626;background:rgba(220,38,38,.08);border-color:rgba(220,38,38,.35);' };
-  return '<button type="button" data-act="' + act + '" data-key="' + esc(key) + '"' + (extra || '') + ' style="' + base + (styles[style] || '') + '">' + label + '</button>';
-}
-function _visMsgHtml(section) { var m = _visDrawer.msg[section]; return m ? '<div style="font-size:12px;color:' + m.color + ';margin-top:8px;line-height:1.4;">' + esc(m.text) + '</div>' : ''; }
 function _visRenderDrawer() {
   var el = document.getElementById('vis-drawer'); if (!el || !_visDrawer.key) return;
   var a = _visAcc(_visDrawer.key);
-  if (!a) { el.innerHTML = '<div style="padding:20px;color:var(--text3);">Ce compte n\'est plus dans la liste (filtres ou période). <button type="button" data-act="close-drawer" style="margin-left:8px;font-size:12px;cursor:pointer;">Fermer</button></div>'; return; }
+  if (!a) { el.innerHTML = '<div class="vis-sec" style="border:none;"><p>Ce compte n\'apparaît plus avec les filtres actuels.</p>' + _visBtn('close-drawer', '', 'Fermer', 'ghost') + '</div>'; return; }
   var name = a.societe_name || a.org_name || '?';
-  var sec = function (title, inner) { return '<div style="padding:14px 18px;border-top:1px solid var(--border2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px;">' + title + '</div>' + inner + '</div>'; };
   var html = '';
-  // en-tête
-  html += '<div style="padding:16px 18px 12px;display:flex;gap:12px;align-items:flex-start;">' + _visLogo(a, 28)
-    + '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><b style="font-size:16px;">' + esc(name) + '</b>' + (a.country ? '<span>' + _visFlag(a.country) + '</span>' : '') + (a.is_abm ? tagHtml('ABM', 'tag-green') : '') + _visTypeChip(a.org_type) + (a.hidden ? tagHtml('ignoré', 'tag-red') : '') + '</div>'
-    + '<div style="font-size:12px;color:var(--text3);margin-top:3px;">' + [a.org_domain ? '<a href="https://' + esc(a.org_domain) + '" target="_blank" rel="noopener" style="color:var(--accent2);text-decoration:none;">' + esc(a.org_domain) + ' ↗</a>' : '<span data-act="enrich" data-key="' + esc(a.account_key) + '" style="cursor:pointer;text-decoration:underline dotted;" title="Chercher le domaine via Hunter">domaine inconnu, chercher ?</span>', a.city ? esc(a.city) : null, (a.societe_name && a.org_name !== a.societe_name) ? 'réseau : ' + esc(a.org_name) : null].filter(Boolean).join(' · ') + _visMsgHtml('enrich') + '</div></div>'
-    + _visStarBtn(a, true) + '<button type="button" data-act="close-drawer" title="Fermer" style="font-size:20px;line-height:1;background:transparent;border:none;cursor:pointer;color:var(--text3);padding:2px 6px;">×</button></div>';
-  // activité
-  html += '<div style="padding:0 18px 12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;">'
-    + '<div style="background:var(--bg3);border-radius:8px;padding:8px 10px;"><div style="color:var(--text3);font-size:11px;">Intérêt</div>' + _visScoreBar(a.score) + '<div style="margin-top:3px;">' + (a.key_labels || []).map(function (l) { return '<span style="font-size:10px;color:#16a34a;margin-right:5px;">● ' + esc(l) + '</span>'; }).join('') + '</div></div>'
-    + '<div style="background:var(--bg3);border-radius:8px;padding:8px 10px;"><div style="color:var(--text3);font-size:11px;">Activité (' + _visDays + ' j)</div><b>' + a.pageviews + '</b> pages · ' + a.visits + ' visite' + (a.visits > 1 ? 's' : '') + (a.dwell_ms ? '<div style="color:var(--text3);">' + _visDwell(a.dwell_ms) + ' cumulées</div>' : '') + '</div>'
-    + '<div style="background:var(--bg3);border-radius:8px;padding:8px 10px;"><div style="color:var(--text3);font-size:11px;">Dernière visite</div>' + _visAgo(a.last_seen) + '<div style="color:var(--text3);">première ' + _visAgo(a.first_seen) + '</div></div></div>';
-  // résumé factuel
+
+  // En-tête
+  html += '<div style="padding:16px 18px 14px;display:flex;gap:12px;align-items:flex-start;position:sticky;top:0;background:var(--bg2);border-bottom:1px solid var(--border2);z-index:1;">'
+    + _visLogo(a, 30)
+    + '<div style="flex:1;min-width:0;">'
+    + '<h2 id="vis-drawer-title" style="margin:0;font-size:17px;line-height:1.3;">' + esc(name) + '</h2>'
+    + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:5px;">' + (a.country ? '<span title="' + esc(a.country) + '">' + _visFlag(a.country) + '</span>' : '') + (a.is_abm ? tagHtml('compte ABM', 'tag-green') : '') + _visTypeChip(a.org_type) + (a.hidden ? tagHtml('ignoré', 'tag-red') : '') + '</div>'
+    + '<div style="font-size:13px;color:var(--text2);margin-top:5px;">'
+    + (a.org_domain ? '<a href="https://' + esc(a.org_domain) + '" target="_blank" rel="noopener" style="color:var(--accent2);">' + esc(a.org_domain) + ' ↗</a>' : '<button type="button" data-act="enrich" data-key="' + esc(a.account_key) + '" style="font-size:13px;background:none;border:none;padding:0;color:var(--accent2);cursor:pointer;text-decoration:underline;">Chercher le site web</button>')
+    + (a.city ? ' · ' + esc(a.city) : '') + (a.societe_name && a.org_name !== a.societe_name ? ' · réseau ' + esc(a.org_name) : '') + '</div>'
+    + _visMsgHtml('enrich') + '</div>'
+    + _visStarBtn(a, true)
+    + '<button type="button" data-act="close-drawer" aria-label="Fermer le panneau" title="Fermer (Échap)" style="font-size:22px;line-height:1;background:transparent;border:none;cursor:pointer;color:var(--text2);padding:2px 6px;">×</button></div>';
+
+  // Chiffres
+  var i = _visInterest(a.score);
+  html += '<div style="padding:14px 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">'
+    + '<div class="vis-tile"><div class="vis-tile-lbl">Intérêt</div><div style="font-size:17px;font-weight:700;color:' + i.color + ';">' + i.label + '</div><div class="vis-tile-sub">' + ((a.key_labels || []).join(', ') || 'pages générales') + '</div></div>'
+    + '<div class="vis-tile"><div class="vis-tile-lbl">Sur ' + _visDays + ' jours</div><div style="font-size:17px;font-weight:700;">' + a.pageviews + ' page' + (a.pageviews > 1 ? 's' : '') + '</div><div class="vis-tile-sub">' + a.visits + ' visite' + (a.visits > 1 ? 's' : '') + (a.dwell_ms ? ' · ' + _visDwell(a.dwell_ms) : '') + '</div></div>'
+    + '<div class="vis-tile"><div class="vis-tile-lbl">Dernière visite</div><div style="font-size:14px;font-weight:600;">' + _visAgo(a.last_seen) + '</div><div class="vis-tile-sub">1re visite ' + _visAgo(a.first_seen) + '</div></div></div>';
+
+  // Qui est-ce
   var s = a.summary;
-  html += sec('Fiche (résumé factuel, IA)', (s
-    ? (s.connu === false ? '<div style="font-size:12px;color:var(--text3);">Organisation non identifiée avec certitude par l\'IA : rien à afficher plutôt que d\'inventer.</div>'
-      : '<div style="font-size:13px;line-height:1.5;">' + esc(s.qui) + (s.activite ? ' ' + esc(s.activite) : '') + (s.drones ? '<div style="margin-top:4px;"><b>Drones / défense :</b> ' + esc(s.drones) + '</div>' : '') + (s.taille ? '<div style="color:var(--text3);font-size:12px;">' + esc(s.taille) + '</div>' : '') + '</div>')
-      + '<div style="margin-top:8px;">' + _visBtn('summary', a.account_key, 'Regénérer', 'ghost', ' data-force="1"') + '</div>'
-    : '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span style="font-size:12px;color:var(--text3);">Qui est cette organisation, ce qu\'elle fait, son lien connu avec les drones. Faits seulement, rien d\'inventé.</span>' + _visBtn('summary', a.account_key, _visDrawer.summaryLoading ? 'Génération…' : '✨ Générer', 'blue') + '</div>') + _visMsgHtml('summary'));
-  // société Scout
-  var socInner = '';
-  if (a.societe_id) socInner = '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span style="font-size:13px;">Rattaché à <b>' + esc(a.societe_name || a.societe_id) + '</b>' + (a.is_abm ? ' (compte ABM)' : '') + '</span>' + _visBtn('open-societe', a.account_key, 'Ouvrir la fiche', 'primary', ' data-id="' + esc(a.societe_id) + '"') + _visBtn('link', a.account_key, 'Changer', 'ghost') + '</div>';
-  else if (_visDrawer.confirm && _visDrawer.confirm.key === a.account_key) {
+  var quiInner = s
+    ? (s.connu === false
+      ? '<p>L\'IA ne connaît pas cette organisation avec certitude. Rien n\'est affiché plutôt que d\'inventer.</p>'
+      : '<p>' + esc(s.qui) + (s.activite ? ' ' + esc(s.activite) : '') + '</p>'
+        + (s.drones ? '<p><b>Drones, défense :</b> ' + esc(s.drones) + '</p>' : '')
+        + (s.taille ? '<p style="color:var(--text3);">' + esc(s.taille) + '</p>' : ''))
+      + '<div class="vis-actions">' + _visBtn('summary', a.account_key, 'Regénérer', 'ghost', ' data-force="1"') + '</div>'
+    : '<p>Une fiche courte et factuelle : nature de l\'organisation, activité, lien connu avec les drones. Aucune supposition.</p>'
+      + '<div class="vis-actions">' + _visBtn('summary', a.account_key, _visDrawer.summaryLoading ? 'Génération en cours…' : 'Générer la fiche', '') + '</div>';
+  html += '<section class="vis-sec"><h3>Qui est-ce ?</h3>' + quiInner + _visMsgHtml('summary') + '</section>';
+
+  // Prospecter : société puis contacts
+  var pros = '';
+  if (a.societe_id) {
+    pros += '<p><b>' + esc(a.societe_name || a.societe_id) + '</b> est déjà dans Scout.</p><div class="vis-actions">'
+      + _visBtn('open-societe', a.account_key, 'Ouvrir la fiche société', 'primary', ' data-id="' + esc(a.societe_id) + '"')
+      + _visBtn('link', a.account_key, 'Rattacher ailleurs', 'ghost') + '</div>';
+  } else if (_visDrawer.confirm && _visDrawer.confirm.key === a.account_key) {
     var c = _visDrawer.confirm;
-    socInner = c.existing
-      ? '<div style="font-size:13px;">Une société existe déjà dans Scout : <b>' + esc(c.existing.name) + '</b>. La rattacher ?</div><div style="margin-top:8px;display:flex;gap:8px;">' + _visBtn('create-confirm', a.account_key, 'Oui, rattacher', 'primary') + _visBtn('create-cancel', a.account_key, 'Annuler', 'ghost') + '</div>'
-      : '<div style="font-size:13px;">Créer dans Scout :</div><div style="font-size:12px;color:var(--text2);margin:6px 0;line-height:1.5;"><b>' + esc(c.proposed.name) + '</b><br>Site : ' + (c.proposed.domain ? esc(c.proposed.domain) : '<i>inconnu</i>') + ' · Pays : ' + esc(c.proposed.pays || '?') + ' · Type : ' + esc(c.proposed.type) + '<br><span style="color:var(--text3);">id ' + esc(c.proposed.id) + ', tag web_visitor</span></div><div style="display:flex;gap:8px;">' + _visBtn('create-confirm', a.account_key, 'Confirmer la création', 'primary') + _visBtn('create-cancel', a.account_key, 'Annuler', 'ghost') + '</div>';
-  } else socInner = '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span style="font-size:12px;color:var(--text3);">Pas encore dans Scout.</span>' + _visBtn('create', a.account_key, '+ Créer la société', 'blue') + _visBtn('link', a.account_key, 'Lier à une société existante', 'ghost') + '</div>';
-  html += sec('Société Scout', socInner + _visMsgHtml('societe'));
-  // contacts
-  var ctInner = '';
+    pros += c.existing
+      ? '<p>Une société correspond déjà dans Scout : <b>' + esc(c.existing.name) + '</b>. On la rattache à ce visiteur ?</p>'
+      : '<p>Voici ce qui sera créé dans Scout :</p><p style="background:var(--bg3);border-radius:8px;padding:10px 12px;"><b>' + esc(c.proposed.name) + '</b><br>Site : ' + (c.proposed.domain ? esc(c.proposed.domain) : 'inconnu') + '<br>Pays : ' + esc(c.proposed.pays || 'inconnu') + '<br>Type : ' + esc(c.proposed.type) + '</p>';
+    pros += '<div class="vis-actions">' + _visBtn('create-confirm', a.account_key, c.existing ? 'Oui, rattacher' : 'Créer la société', 'primary') + _visBtn('create-cancel', a.account_key, 'Annuler', 'ghost') + '</div>';
+  } else {
+    pros += '<p>Cette organisation n\'est pas encore dans Scout.</p><div class="vis-actions">'
+      + _visBtn('create', a.account_key, 'Ajouter à Scout', 'primary') + _visBtn('link', a.account_key, 'Rattacher à une société existante', 'ghost') + '</div>';
+  }
+  pros += _visMsgHtml('societe');
   var seen = a.contacts_seen || [];
-  if (seen.length) ctInner += '<div style="font-size:12px;margin-bottom:8px;">Identifiés via un lien d\'email : ' + seen.map(function (c) { return '<span data-act="open-contact" data-id="' + esc(c.id) + '" style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(108,99,255,.15);color:var(--accent2);margin:2px 3px 0 0;cursor:pointer;">👤 ' + esc(c.nom || c.id) + '</span>'; }).join('') + '</div>';
+  if (seen.length) pros += '<p style="margin-top:14px;">Ont cliqué depuis un email Scout : ' + seen.map(function (c) { return '<button type="button" data-act="open-contact" data-id="' + esc(c.id) + '" style="font-size:12px;padding:3px 9px;border-radius:999px;background:rgba(108,99,255,.15);color:var(--accent2);border:none;cursor:pointer;margin:2px 3px 0 0;">👤 ' + esc(c.nom || c.id) + '</button>'; }).join('') + '</p>';
   var cand = _visDrawer.candidates;
   if (cand && cand.key === a.account_key) {
-    if (!cand.list.length) ctInner += '<div style="font-size:12px;color:var(--text3);">' + esc(cand.message || 'Hunter ne connaît aucun email exploitable pour ' + (cand.domain || 'ce domaine') + '.') + '</div>';
+    if (!cand.list.length) pros += '<p style="margin-top:14px;">' + esc(cand.message || ('Aucun contact trouvé pour ' + (cand.domain || 'ce domaine') + '.')) + '</p>';
     else {
-      ctInner += '<div style="font-size:12px;color:var(--text3);margin-bottom:6px;">' + cand.found + ' emails connus de Hunter pour ' + esc(cand.domain) + (cand.pattern ? ' (format ' + esc(cand.pattern) + ')' : '') + '. Coche ceux à ajouter dans Contacts, ils seront vérifiés avant insertion.</div>';
-      ctInner += '<div style="max-height:260px;overflow:auto;border:1px solid var(--border2);border-radius:8px;">' + cand.list.map(function (c, i) {
+      pros += '<p style="margin-top:14px;">' + cand.found + ' adresses connues pour ' + esc(cand.domain) + '. Coche celles à ajouter, elles seront vérifiées avant l\'ajout.</p>';
+      pros += '<div style="max-height:280px;overflow:auto;border:1px solid var(--border2);border-radius:8px;">' + cand.list.map(function (c, n) {
         var dis = !!c.existing_id;
-        return '<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 10px;border-top:' + (i ? '1px solid var(--border2)' : 'none') + ';font-size:12px;cursor:' + (dis ? 'default' : 'pointer') + ';' + (dis ? 'opacity:.55;' : '') + '"><input type="checkbox" class="vis-cand" data-email="' + esc(c.email) + '"' + (c.suggested && !dis ? ' checked' : '') + (dis ? ' disabled' : '') + ' style="margin-top:2px;">'
-          + '<span style="flex:1;"><b>' + esc((c.prenom + ' ' + c.nom).trim() || c.email) + '</b>' + (c.titre ? ' · ' + esc(c.titre) : '') + '<div style="color:var(--text3);">' + esc(c.email) + ' · confiance ' + c.confidence + (c.suggested ? ' · <span style="color:#16a34a;">suggéré</span>' : '') + (dis ? ' · <span data-act="open-contact" data-id="' + esc(c.existing_id) + '" style="color:var(--accent2);cursor:pointer;">déjà en base ↗</span>' : '') + '</div></span></label>';
+        return '<label style="display:flex;gap:9px;align-items:flex-start;padding:9px 11px;border-top:' + (n ? '1px solid var(--border2)' : 'none') + ';font-size:13px;cursor:' + (dis ? 'default' : 'pointer') + ';' + (dis ? 'opacity:.6;' : '') + '">'
+          + '<input type="checkbox" class="vis-cand" data-email="' + esc(c.email) + '"' + (c.suggested && !dis ? ' checked' : '') + (dis ? ' disabled' : '') + ' style="margin-top:3px;">'
+          + '<span style="flex:1;"><b>' + esc((c.prenom + ' ' + c.nom).trim() || c.email) + '</b>' + (c.titre ? ' · ' + esc(c.titre) : '')
+          + '<span style="display:block;color:var(--text2);font-size:12px;">' + esc(c.email) + (c.suggested ? ' · <span style="color:#16a34a;">recommandé</span>' : '') + (dis ? ' · déjà dans Scout' : '') + '</span></span></label>';
       }).join('') + '</div>';
-      ctInner += '<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">' + _visBtn('contacts-add', a.account_key, 'Ajouter la sélection dans Contacts', 'primary') + '<span style="font-size:11px;color:var(--text3);">' + (a.societe_id ? '' : 'La société sera créée dans Scout au passage.') + '</span></div>';
+      pros += '<div class="vis-actions" style="margin-top:10px;">' + _visBtn('contacts-add', a.account_key, 'Ajouter les contacts cochés', 'primary') + _visBtn('contacts-cancel', a.account_key, 'Annuler', 'ghost') + '</div>';
+      if (!a.societe_id) pros += '<p style="font-size:12px;color:var(--text3);margin-top:6px;">La société sera créée dans Scout au passage.</p>';
     }
-  } else ctInner += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span style="font-size:12px;color:var(--text3);">Chercher des décideurs (drones, achats, BD, direction) via Hunter. Rien n\'est ajouté sans ta confirmation.</span>' + _visBtn('contacts-search', a.account_key, '👥 Proposer des contacts', 'green') + '</div>';
-  html += sec('Contacts', ctInner + _visMsgHtml('contacts'));
-  // parcours
+  } else {
+    pros += '<div class="vis-actions" style="margin-top:14px;">' + _visBtn('contacts-search', a.account_key, 'Chercher des contacts', 'green') + '</div>'
+      + '<p style="font-size:12px;color:var(--text3);margin-top:6px;">Décideurs drones, achats, direction. Rien n\'est ajouté sans ta validation.</p>';
+  }
+  pros += _visMsgHtml('contacts');
+  html += '<section class="vis-sec"><h3>Prospecter</h3>' + pros + '</section>';
+
+  // Ce qu'ils ont regardé
   var sess = _visDrawer.sessions;
-  var pInner = !sess ? '<div style="font-size:12px;color:var(--text3);">Chargement…</div>' : !sess.list.length ? '<div style="font-size:12px;color:var(--text3);">Aucune session détaillée.</div>'
-    : (sess.meta ? '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;">Identifié via ' + esc(sess.meta.source || '?') + ' (confiance ' + (sess.meta.confidence || 0) + ')' + (sess.meta.rdns ? ' · rDNS ' + esc(sess.meta.rdns) : '') + (sess.meta.as_name ? ' · AS ' + esc(sess.meta.as_name) : '') + '</div>' : '')
-      + sess.list.slice(0, 15).map(function (s) {
-        var start = new Date(s.start);
-        return '<div style="padding:6px 0;border-top:1px solid var(--border2);font-size:12px;">'
-          + '<div style="display:flex;gap:10px;flex-wrap:wrap;color:var(--text3);"><b style="color:var(--text);">' + start.toLocaleDateString('fr-FR') + ' ' + start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</b><span>' + s.pages.length + ' page' + (s.pages.length > 1 ? 's' : '') + '</span>' + (s.city ? '<span>' + esc(s.city) + '</span>' : '') + (s.referrer ? '<span>via ' + esc(s.referrer.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</span>' : '') + '<span>réseau ' + esc(s.ip_trunc || '') + '</span></div>'
-          + '<div style="margin-top:3px;">' + s.pages.map(function (p) { return '<span style="display:inline-block;padding:2px 6px;border-radius:5px;background:var(--bg3);margin:2px 4px 0 0;">' + esc(p.path) + (p.dwell_ms ? ' <span style="color:var(--text3);">' + _visDwell(p.dwell_ms) + '</span>' : '') + '</span>'; }).join('→ ') + '</div></div>';
+  var pInner = !sess ? '<p>Chargement…</p>' : !sess.list.length ? '<p>Aucun détail disponible.</p>'
+    : sess.list.slice(0, 12).map(function (x) {
+        var start = new Date(x.start);
+        return '<div style="padding:8px 0;border-top:1px solid var(--border2);">'
+          + '<div style="font-size:12px;color:var(--text2);">' + start.toLocaleDateString('fr-FR') + ' à ' + start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + ' · ' + x.pages.length + ' page' + (x.pages.length > 1 ? 's' : '') + (x.city ? ' · ' + esc(x.city) : '') + (x.referrer ? ' · via ' + esc(x.referrer.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) : '') + '</div>'
+          + '<div style="margin-top:4px;font-size:13px;">' + x.pages.map(function (p) { return '<span style="display:inline-block;padding:2px 7px;border-radius:5px;background:var(--bg3);margin:2px 4px 0 0;">' + esc(p.path) + (p.dwell_ms ? ' <span style="color:var(--text3);">' + _visDwell(p.dwell_ms) + '</span>' : '') + '</span>'; }).join(' ') + '</div></div>';
       }).join('');
-  html += sec('Parcours', pInner);
-  // sources
-  var src = (a.top_sources || []).filter(function (x) { return x.src; });
-  if (src.length) html += sec('Sources de trafic', src.slice(0, 6).map(function (x) { return '<span style="display:inline-block;font-size:12px;padding:3px 8px;border-radius:6px;border:1px solid var(--border2);margin:0 4px 4px 0;">' + esc(x.src) + ' <span style="color:var(--text3);">×' + x.n + '</span></span>'; }).join(''));
-  // pied
-  html += '<div style="padding:12px 18px;border-top:1px solid var(--border2);display:flex;gap:8px;">' + _visBtn(a.hidden ? 'unhide' : 'hide', a.account_key, a.hidden ? 'Réafficher ce compte' : 'Ignorer ce compte', a.hidden ? 'ghost' : 'danger') + '</div>';
+  var src = (a.top_sources || []).filter(function (x) { return x.src && x.src !== 'direct'; });
+  if (src.length) pInner += '<p style="margin-top:12px;">Arrivés depuis : ' + src.slice(0, 5).map(function (x) { return esc(x.src) + (x.n > 1 ? ' (×' + x.n + ')' : ''); }).join(', ') + '</p>';
+  if (sess && sess.meta) pInner += '<p style="font-size:12px;color:var(--text3);margin-top:10px;">Reconnu grâce à ' + esc(sess.meta.rdns || sess.meta.as_name || sess.meta.source || 'l\'adresse réseau') + '.</p>';
+  html += '<section class="vis-sec"><h3>Ce qu\'ils ont regardé</h3>' + pInner + '</section>';
+
+  // Pied
+  html += '<div class="vis-sec vis-actions">' + _visBtn(a.hidden ? 'unhide' : 'hide', a.account_key, a.hidden ? 'Ne plus ignorer' : 'Ignorer ce compte', a.hidden ? 'ghost' : 'danger')
+    + '<span style="font-size:12px;color:var(--text3);align-self:center;">' + (a.hidden ? '' : 'Pour nous, un partenaire ou un fournisseur.') + '</span></div>';
   el.innerHTML = html;
 }
 async function _visLoadDetail(key) {
@@ -9616,52 +9750,55 @@ async function _visLoadDetail(key) {
   } catch (e) { _visDrawer.sessions = { list: [], meta: null }; }
   _visRenderDrawer();
 }
-async function _visPost(path, body) {
-  var r = await fetch(API + path, { method: 'POST', headers: _visH(), body: JSON.stringify(body || {}) });
-  var d = null; try { d = await r.json(); } catch (e) { d = {}; }
-  if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
-  return d;
+
+// ── Actions ──────────────────────────────────────────────────────────────────
+function _visFollowKey(societeId, key) {
+  var na = _visAccounts.find(function (x) { return x.societe_id === societeId; });
+  if (na && na.account_key !== key) {
+    var old = _visDrawer;
+    _visDrawer = { key: na.account_key, msg: old.msg, candidates: null, sessions: null, confirm: null, summaryLoading: false };
+    _visLoadDetail(na.account_key);
+  }
 }
-async function _visReload() { await renderVisitors(); _visRenderDrawer(); }
-async function _visStar(key, on) {
-  var a = _visAcc(key); if (a) a.starred = on;
+async function _visStar(key) {
+  var a = _visAcc(key); if (!a) return;
+  var on = !a.starred; a.starred = on;
   _visRenderTable(); _visRenderDrawer();
-  try { await _visPost('/v/accounts/star', { key: key, starred: on }); } catch (e) { if (a) a.starred = !on; _visRenderTable(); _visRenderDrawer(); }
+  try { await _visPost('/v/accounts/star', { key: key, starred: on }); }
+  catch (e) { a.starred = !on; _visRenderTable(); _visRenderDrawer(); }
 }
 async function _visSummary(key, force) {
-  _visDrawer.summaryLoading = true; _visDrawerSay('summary', 'Génération en cours…');
+  _visDrawer.summaryLoading = true; _visDrawerSay('summary', 'Génération de la fiche…');
   try { var d = await _visPost('/v/accounts/summary', { key: key, force: !!force }); var a = _visAcc(key); if (a) { a.summary = d.summary; a.has_summary = true; } _visDrawer.msg.summary = null; }
-  catch (e) { _visDrawer.msg.summary = { text: 'Erreur : ' + e.message, color: '#dc2626' }; }
+  catch (e) { _visDrawer.msg.summary = { text: 'La fiche n\'a pas pu être générée : ' + e.message, color: '#dc2626' }; }
   _visDrawer.summaryLoading = false; _visRenderDrawer();
 }
 async function _visEnrich(key) {
-  _visDrawerSay('enrich', 'Recherche du domaine via Hunter…');
-  try { var d = await _visPost('/v/accounts/enrich', { key: key }); _visDrawer.msg.enrich = d.domain ? null : { text: 'Domaine introuvable via Hunter. Tu peux lier la société à la main.', color: '#f59e0b' }; if (d.domain) await _visReload(); else _visRenderDrawer(); }
-  catch (e) { _visDrawerSay('enrich', 'Erreur : ' + e.message, '#dc2626'); }
+  _visDrawerSay('enrich', 'Recherche du site web…');
+  try {
+    var d = await _visPost('/v/accounts/enrich', { key: key });
+    if (d.domain) { _visDrawer.msg.enrich = null; await renderVisitors(); }
+    else _visDrawerSay('enrich', 'Site introuvable. Tu peux rattacher le compte à une société à la main.', '#f59e0b');
+  } catch (e) { _visDrawerSay('enrich', 'Erreur : ' + e.message, '#dc2626'); }
 }
 async function _visCreateAsk(key) {
   _visDrawerSay('societe', 'Préparation…');
   try {
-    var r = await fetch(API + '/v/accounts/preview-societe?key=' + encodeURIComponent(key), { headers: _visH() }); var d = await r.json();
-    if (!r.ok) throw new Error(d.error || r.status);
+    var r = await fetch(API + '/v/accounts/preview-societe?key=' + encodeURIComponent(key), { headers: _visH() });
+    var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
     _visDrawer.confirm = { key: key, existing: d.existing, proposed: d.proposed }; _visDrawer.msg.societe = null; _visRenderDrawer();
   } catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
 }
 async function _visCreateConfirm(key) {
-  _visDrawer.confirm = null; _visDrawerSay('societe', 'Création…');
+  _visDrawer.confirm = null; _visDrawerSay('societe', 'Enregistrement…');
   try {
     var d = await _visPost('/v/accounts/create-societe', { key: key });
-    var a = _visAcc(key);
-    _visDrawer.msg.societe = { text: (d.created ? 'Société créée : ' : 'Société rattachée : ') + d.societe.name + (d.domain ? ' (' + d.domain + ')' : ''), color: '#16a34a' };
-    await renderVisitors();
-    // le compte peut avoir changé de clé (regroupement par société) : on suit
-    var na = _visAccounts.find(function (x) { return x.societe_id === d.societe.id; });
-    if (na && na.account_key !== key) { var old = _visDrawer; _visDrawer = { key: na.account_key, msg: old.msg, candidates: null, sessions: null, confirm: null, summaryLoading: false }; _visLoadDetail(na.account_key); }
-    _visRenderDrawer();
+    _visDrawer.msg.societe = { text: (d.created ? 'Société créée dans Scout : ' : 'Rattaché à ') + d.societe.name + '.', color: '#16a34a' };
+    await renderVisitors(); _visFollowKey(d.societe.id, key); _visRenderDrawer();
   } catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
 }
 async function _visContactsSearch(key) {
-  _visDrawerSay('contacts', 'Recherche Hunter en cours (jusqu\'à 20 s)…');
+  _visDrawerSay('contacts', 'Recherche des contacts en cours…');
   try {
     var d = await _visPost('/v/accounts/search-contacts', { key: key });
     _visDrawer.candidates = { key: key, list: d.candidates || [], found: d.found || 0, domain: d.domain, pattern: d.pattern, message: d.message };
@@ -9671,64 +9808,93 @@ async function _visContactsSearch(key) {
 async function _visContactsAdd(key) {
   var emails = Array.prototype.slice.call(document.querySelectorAll('#vis-drawer input.vis-cand:checked')).map(function (i) { return i.dataset.email; });
   if (!emails.length) { _visDrawerSay('contacts', 'Coche au moins un contact.', '#f59e0b'); return; }
-  _visDrawerSay('contacts', 'Vérification des emails et ajout (' + emails.length + ')…');
+  _visDrawerSay('contacts', 'Vérification et ajout de ' + emails.length + ' contact(s)…');
   try {
     var d = await _visPost('/v/accounts/add-contacts', { key: key, emails: emails });
-    var txt = d.contacts.length ? d.contacts.length + ' contact(s) dans Scout : ' + d.contacts.map(function (c) { return ((c.prenom || '') + ' ' + (c.nom || '')).trim() + (c.existing ? ' (déjà présent)' : ''); }).join(', ') + '.' : 'Aucun contact ajouté.';
-    if (d.skipped && d.skipped.length) txt += ' Écartés : ' + d.skipped.map(function (c) { return c.email + ' (' + c.status + ')'; }).join(', ') + '.';
-    _visDrawer.candidates = null; _visDrawer.msg.contacts = { text: txt, color: d.contacts.length ? '#16a34a' : '#f59e0b' };
-    await renderVisitors();
-    var na = _visAccounts.find(function (x) { return x.societe_id === d.societe.id; });
-    if (na && na.account_key !== key) { var old = _visDrawer; _visDrawer = { key: na.account_key, msg: old.msg, candidates: null, sessions: null, confirm: null, summaryLoading: false }; _visLoadDetail(na.account_key); }
-    _visRenderDrawer();
+    var txt = d.contacts.length
+      ? d.contacts.length + ' contact(s) ajouté(s) dans Scout : ' + d.contacts.map(function (c) { return ((c.prenom || '') + ' ' + (c.nom || '')).trim() + (c.existing ? ' (déjà présent)' : ''); }).join(', ') + '.'
+      : 'Aucun contact ajouté.';
+    if (d.skipped && d.skipped.length) txt += ' Écartés car non vérifiables : ' + d.skipped.map(function (c) { return c.email; }).join(', ') + '.';
+    _visDrawer.candidates = null;
+    _visDrawer.msg.contacts = { text: txt, color: d.contacts.length ? '#16a34a' : '#f59e0b' };
+    await renderVisitors(); _visFollowKey(d.societe.id, key); _visRenderDrawer();
   } catch (e) { _visDrawerSay('contacts', 'Erreur : ' + e.message, '#dc2626'); }
 }
 async function _visLink(key) {
   var acc = _visAcc(key);
-  var q = prompt('Lier « ' + (acc ? acc.org_name : key) + ' » à quelle société Scout ? Tape un nom (recherche dans Fabricants / Comptes) :', acc ? acc.org_name : '');
+  var q = prompt('Rattacher « ' + (acc ? acc.org_name : key) + ' » à quelle société de Scout ?', acc ? acc.org_name : '');
   if (!q) return;
   var list = (window.societes || []).filter(function (s) { return (s.name || '').toLowerCase().indexOf(q.toLowerCase()) >= 0; }).slice(0, 9);
-  if (!list.length) { _visDrawerSay('societe', 'Aucune société ne correspond à « ' + q + ' ». Crée-la d\'abord (bouton ci-dessus) ou dans Fabricants / Comptes.', '#f59e0b'); return; }
+  if (!list.length) { _visDrawerSay('societe', 'Aucune société ne correspond à « ' + q +' ». Utilise « Ajouter à Scout » pour la créer.', '#f59e0b'); return; }
   var choice = list.length === 1 ? '1' : prompt(list.map(function (s, i) { return (i + 1) + '. ' + s.name + (s.pays ? ' (' + s.pays + ')' : ''); }).join('\n') + '\n\nNuméro :', '1');
   var s = list[parseInt(choice, 10) - 1]; if (!s) return;
-  try { await _visPost('/v/accounts/link', { key: key, societe_id: s.id }); _visDrawer.msg.societe = { text: 'Rattaché à ' + s.name + '.', color: '#16a34a' }; await renderVisitors(); var na = _visAccounts.find(function (x) { return x.societe_id === s.id; }); if (na && na.account_key !== key) { var old = _visDrawer; _visDrawer = { key: na.account_key, msg: old.msg, candidates: null, sessions: null, confirm: null, summaryLoading: false }; _visLoadDetail(na.account_key); } _visRenderDrawer(); }
-  catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
+  try {
+    await _visPost('/v/accounts/link', { key: key, societe_id: s.id });
+    _visDrawer.msg.societe = { text: 'Rattaché à ' + s.name + '.', color: '#16a34a' };
+    await renderVisitors(); _visFollowKey(s.id, key); _visRenderDrawer();
+  } catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
 }
 async function _visHide(key, hidden) {
-  try { await _visPost('/v/accounts/link', { key: key, hidden: hidden }); await renderVisitors(); if (hidden && !(document.getElementById('vis-hidden') || {}).checked) _visCloseDrawer(); else _visRenderDrawer(); }
-  catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
+  try {
+    await _visPost('/v/accounts/link', { key: key, hidden: hidden });
+    await renderVisitors();
+    if (_visView !== 'hidden') _visCloseDrawer(); else _visRenderDrawer();
+  } catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
 }
+
+// ── Réglages ─────────────────────────────────────────────────────────────────
 async function _visToggleSettings(force) {
   var el = document.getElementById('vis-settings'); if (!el) return;
   var show = (force !== undefined) ? force : el.style.display === 'none';
   el.style.display = show ? 'block' : 'none';
+  var btn = document.getElementById('vis-settings-btn'); if (btn) btn.setAttribute('aria-expanded', show ? 'true' : 'false');
   if (!show) return;
-  el.innerHTML = '<div style="padding:1rem;color:var(--text3);">Chargement…</div>';
+  el.innerHTML = '<p style="padding:1rem;color:var(--text3);">Chargement…</p>';
   try {
-    var r = await fetch(API + '/v/settings', { headers: _visH() }); _visSettings = await r.json();
-    var st = _visSettings;
-    var inp = 'width:100%;font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);box-sizing:border-box;';
-    el.innerHTML = '<div style="border:1px solid var(--border2);border-radius:10px;padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
-      + '<div style="grid-column:1/-1;"><div style="font-weight:700;margin-bottom:4px;">1. Snippet à installer sur elistair.com</div><div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Dans WordPress : plugin <b>WPCode</b> (ou Code Snippets) → nouveau snippet HTML, emplacement « Site Wide Header », ou via le thème (<code>wp_head</code>). Sans cookie, un seul appel par page. Version courte (recommandée, se met à jour toute seule) :</div>'
-      + '<textarea readonly id="vis-snippet-short" style="' + inp + 'height:48px;font-family:monospace;font-size:12px;">' + esc('<script src="' + st.snippet_url + '" async><' + '/script>') + '</textarea>'
-      + '<div style="display:flex;gap:8px;margin-top:6px;"><button type="button" data-act="copy" data-target="vis-snippet-short" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;">Copier</button><button type="button" data-act="snippet-full" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;">Voir la version inline</button></div>'
-      + '<textarea readonly id="vis-snippet-full" style="' + inp + 'height:160px;font-family:monospace;font-size:11px;display:none;margin-top:6px;">' + esc('<script>\n' + st.snippet + '\n<' + '/script>') + '</textarea></div>'
-      + '<div><div style="font-weight:700;margin-bottom:4px;">2. IP à ignorer (bureaux Elistair, VPN interne)</div><div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Une par ligne. Ton IP actuelle : <b>' + esc(st.your_ip || '?') + '</b> <button type="button" data-act="add-my-ip" data-ip="' + esc(st.your_ip || '') + '" style="font-size:11px;padding:2px 7px;border-radius:5px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">ajouter</button>. Un préfixe se termine par un point (ex : <code>82.64.12.</code>).</div><textarea id="vis-ignore-ips" style="' + inp + 'height:80px;">' + esc((st.ignore_ips || []).join('\n')) + '</textarea></div>'
-      + '<div><div style="font-weight:700;margin-bottom:4px;">3. Organisations à ignorer</div><div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Fragments de nom, un par ligne (ex : <code>Elistair</code>, un partenaire, ton agence web).</div><textarea id="vis-ignore-orgs" style="' + inp + 'height:80px;">' + esc((st.ignore_orgs || []).join('\n')) + '</textarea></div>'
-      + '<div><div style="font-weight:700;margin-bottom:4px;">4. Token ipinfo.io (optionnel, gratuit)</div><div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Compte gratuit sur ipinfo.io → 50 000 requêtes / mois : ajoute l\'ASN, la ville et un meilleur taux d\'identification. ' + (st.ipinfo_token_set ? '<b style="color:#16a34a;">Token configuré ✓</b>' : '<b style="color:#f59e0b;">Non configuré</b> (rDNS + RDAP seulement)') + '</div><input id="vis-ipinfo" type="password" placeholder="' + (st.ipinfo_token_set ? 'laisser vide pour conserver' : 'token ipinfo') + '" style="' + inp + '"></div>'
-      + '<div><div style="font-weight:700;margin-bottom:4px;">5. Webhook alerte ABM (optionnel)</div><div style="font-size:12px;color:var(--text2);margin-bottom:6px;">URL appelée en POST (JSON avec un champ <code>text</code>) à chaque visite d\'un compte ABM : Teams / Slack via Power Automate, Make, Zapier… ' + (st.alert_webhook_set ? '<b style="color:#16a34a;">Configuré ✓</b>' : '<b>Non configuré</b> (alertes visibles ici seulement)') + '</div><input id="vis-webhook" type="text" placeholder="' + (st.alert_webhook_set ? 'laisser vide pour conserver, « - » pour supprimer' : 'https://…') + '" style="' + inp + '"></div>'
-      + '<div><div style="font-weight:700;margin-bottom:4px;">6. Alertes & enrichissement</div>'
-      + '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text2);margin-bottom:6px;cursor:pointer;"><input type="checkbox" id="vis-auto-domain"' + (st.auto_domain ? ' checked' : '') + '> <span>Retrouver automatiquement le domaine des organisations connues par nom seulement (1 requête Hunter par organisation, en cache). ' + (st.hunter_key_set ? '<b style="color:#16a34a;">Clé Hunter OK</b>' : '<b style="color:#f59e0b;">Clé Hunter absente</b>') + '</span></label>'
-      + '<div style="font-size:12px;color:var(--text2);margin-bottom:6px;">Alerte « compte chaud » quand le score sur 24 h dépasse : <input id="vis-min-score" type="number" min="0" max="100" value="' + (st.alert_min_score || 0) + '" style="width:64px;font-size:12px;padding:4px 6px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);"> <span style="color:var(--text3);">(0 = désactivé ; 12 ≈ page contact ou prix + une page produit)</span></div>'
-      + '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="vis-digest"' + (st.digest_weekly ? ' checked' : '') + '> <span>Digest hebdo (lundi matin) des 10 organisations les plus chaudes, envoyé sur le webhook ci-dessus.</span></label></div>'
-      + '<div><div style="font-weight:700;margin-bottom:4px;">7. Suivi par contact (emails Scout)</div>'
-      + '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="vis-contact-tracking"' + (st.contact_tracking ? ' checked' : '') + '> <span>Ajouter un lien de suivi dans les emails générés par Scout : quand le destinataire clique, sa visite est rattachée à sa fiche contact (badge 👤), même depuis le mobile ou le télétravail. Suivi individuel : à mentionner dans la politique de confidentialité (intérêt légitime B2B) et à valider avec ton juriste avant activation.</span></label></div>'
-      + '<div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><button type="button" data-act="save-settings" style="font-size:13px;padding:8px 14px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:600;cursor:pointer;">Enregistrer</button>'
-      + '<button type="button" data-act="retry" style="font-size:12px;padding:8px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">Relancer les résolutions en erreur</button>'
-      + '<span style="font-size:11px;color:var(--text3);">Rétention : IP complète ' + st.retention.ip_days + ' j (puis pseudonymisée), pages vues ' + st.retention.visits_days + ' j. À mentionner dans la politique de confidentialité du site.</span>'
-      + '<span id="vis-settings-msg" style="font-size:12px;color:#16a34a;"></span></div>'
+    var r = await fetch(API + '/v/settings', { headers: _visH() }); var st = await r.json();
+    var inp = 'width:100%;font-size:13px;padding:9px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);box-sizing:border-box;';
+    var block = function (title, inner) { return '<section style="padding:14px 16px;border-top:1px solid var(--border2);"><h3 style="margin:0 0 8px;font-size:13px;">' + title + '</h3>' + inner + '</section>'; };
+    el.innerHTML = '<div style="border:1px solid var(--border2);border-radius:10px;overflow:hidden;">'
+      + '<div style="padding:12px 16px;background:var(--bg3);display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><b style="font-size:14px;">Réglages</b><span style="flex:1"></span>'
+      + '<button type="button" data-act="close-settings" style="font-size:13px;padding:6px 12px;border-radius:7px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;">Fermer</button></div>'
+
+      + block('1. Le script à mettre sur elistair.com',
+        '<p style="font-size:13px;color:var(--text2);margin:0 0 8px;">À coller dans l\'en-tête du site (WordPress : plugin WPCode, emplacement « Site Wide Header »). Sans cookie, un seul appel par page.</p>'
+        + '<textarea readonly id="vis-snippet-short" aria-label="Script à installer" style="' + inp + 'height:44px;font-family:monospace;font-size:12px;">' + esc('<script src="' + st.snippet_url + '" async><' + '/script>') + '</textarea>'
+        + '<div class="vis-actions" style="margin-top:8px;"><button type="button" data-act="copy" data-target="vis-snippet-short" style="font-size:13px;padding:7px 12px;border-radius:7px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;">Copier</button>'
+        + '<button type="button" data-act="snippet-full" style="font-size:13px;padding:7px 12px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;">Version complète</button></div>'
+        + '<textarea readonly id="vis-snippet-full" aria-label="Script complet" style="' + inp + 'height:150px;font-family:monospace;font-size:11px;display:none;margin-top:8px;">' + esc('<script>\n' + st.snippet + '\n<' + '/script>') + '</textarea>')
+
+      + block('2. Ne pas compter nos propres visites',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
+        + '<div><label for="vis-ignore-ips" style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px;">Adresses IP à ignorer, une par ligne. La tienne : <b>' + esc(st.your_ip || '?') + '</b> <button type="button" data-act="add-my-ip" data-ip="' + esc(st.your_ip || '') + '" style="font-size:12px;padding:2px 8px;border-radius:5px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">ajouter</button></label>'
+        + '<textarea id="vis-ignore-ips" style="' + inp + 'height:78px;">' + esc((st.ignore_ips || []).join('\n')) + '</textarea></div>'
+        + '<div><label for="vis-ignore-orgs" style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px;">Noms d\'organisations à ignorer, un par ligne (Elistair, partenaires, agence web).</label>'
+        + '<textarea id="vis-ignore-orgs" style="' + inp + 'height:78px;">' + esc((st.ignore_orgs || []).join('\n')) + '</textarea></div></div>')
+
+      + block('3. Être prévenu',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
+        + '<div><label for="vis-webhook" style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px;">Adresse à prévenir (Teams, Slack, Make…) : ' + (st.alert_webhook_set ? '<b style="color:#16a34a;">configurée</b>' : '<b>non configurée</b>') + '</label>'
+        + '<input id="vis-webhook" type="text" placeholder="' + (st.alert_webhook_set ? 'laisser vide pour garder, « - » pour retirer' : 'https://…') + '" style="' + inp + '">'
+        + '<label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);margin-top:10px;cursor:pointer;"><input type="checkbox" id="vis-digest"' + (st.digest_weekly ? ' checked' : '') + '> <span>Résumé chaque lundi matin des 10 comptes les plus intéressants.</span></label></div>'
+        + '<div><label for="vis-min-score" style="font-size:13px;color:var(--text2);display:block;margin-bottom:5px;">Alerter aussi quand un visiteur dépasse ce niveau d\'intérêt en 24 h :</label>'
+        + '<select id="vis-min-score" style="' + inp + '"><option value="0"' + (!st.alert_min_score ? ' selected' : '') + '>Jamais (seulement les comptes ABM)</option>'
+        + '<option value="20"' + (st.alert_min_score >= 20 ? ' selected' : '') + '>Intérêt fort</option>'
+        + '<option value="12"' + (st.alert_min_score && st.alert_min_score < 20 ? ' selected' : '') + '>Intérêt moyen ou fort</option></select></div></div>')
+
+      + block('4. Options avancées',
+        '<label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="vis-auto-domain"' + (st.auto_domain ? ' checked' : '') + '> <span>Retrouver automatiquement le site web des organisations, via Hunter. ' + (st.hunter_key_set ? '' : '<b style="color:#f59e0b;">Clé Hunter absente.</b>') + '</span></label>'
+        + '<label for="vis-ipinfo" style="font-size:13px;color:var(--text2);display:block;margin:12px 0 5px;">Jeton ipinfo.io (gratuit, améliore l\'identification) : ' + (st.ipinfo_token_set ? '<b style="color:#16a34a;">configuré</b>' : '<b>non configuré</b>') + '</label>'
+        + '<input id="vis-ipinfo" type="password" placeholder="' + (st.ipinfo_token_set ? 'laisser vide pour garder' : 'jeton ipinfo') + '" style="' + inp + '">'
+        + '<label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);margin-top:12px;cursor:pointer;"><input type="checkbox" id="vis-contact-tracking"' + (st.contact_tracking ? ' checked' : '') + '> <span>Savoir qui clique : ajoute un lien de suivi dans les emails envoyés par Scout, pour rattacher la visite au contact. Suivi individuel, à faire valider par ton juriste avant activation.</span></label>')
+
+      + '<div style="padding:14px 16px;border-top:1px solid var(--border2);display:flex;gap:10px;align-items:center;flex-wrap:wrap;">'
+      + '<button type="button" data-act="save-settings" style="font-size:13px;padding:9px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:600;cursor:pointer;">Enregistrer</button>'
+      + '<button type="button" data-act="retry" style="font-size:13px;padding:9px 13px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">Relancer les identifications ratées</button>'
+      + '<span id="vis-settings-msg" role="status" aria-live="polite" style="font-size:13px;"></span>'
+      + '<span style="font-size:12px;color:var(--text3);flex-basis:100%;">Adresse IP complète gardée ' + st.retention.ip_days + ' jours puis effacée, pages vues ' + st.retention.visits_days + ' jours. À mentionner dans la politique de confidentialité du site.</span></div>'
       + '</div>';
-  } catch (e) { el.innerHTML = '<div style="padding:1rem;color:var(--text3);">Erreur de chargement des réglages.</div>'; }
+  } catch (e) { el.innerHTML = '<p style="padding:1rem;color:var(--text3);">Les réglages n\'ont pas pu être chargés.</p>'; }
 }
 async function _visSaveSettings() {
   var body = { ignore_ips: (document.getElementById('vis-ignore-ips') || {}).value || '', ignore_orgs: (document.getElementById('vis-ignore-orgs') || {}).value || '' };
@@ -9741,13 +9907,14 @@ async function _visSaveSettings() {
   var r = await fetch(API + '/v/settings', { method: 'POST', headers: _visH(), body: JSON.stringify(body) });
   var m = document.getElementById('vis-settings-msg');
   var errTxt = ''; if (!r.ok) { try { errTxt = (await r.json()).error || ''; } catch (e) {} }
-  if (m) { m.textContent = r.ok ? 'Enregistré ✓' : ('Erreur : ' + (errTxt || r.status)); m.style.color = r.ok ? '#16a34a' : '#dc2626'; }
-  if (r.ok) setTimeout(function () { _visToggleSettings(true); }, 600);
+  if (m) { m.textContent = r.ok ? 'Enregistré' : ('Erreur : ' + (errTxt || r.status)); m.style.color = r.ok ? '#16a34a' : '#dc2626'; }
+  if (r.ok) setTimeout(function () { _visToggleSettings(true); }, 700);
 }
 function _visSetNavBadge(n) {
   ['nav-visitors-badge', 'bn-visitors-badge'].forEach(function (id) {
     var b = document.getElementById(id); if (!b) return;
     b.textContent = n > 9 ? '9+' : String(n); b.style.display = n ? 'inline-block' : 'none';
+    b.setAttribute('aria-label', n + ' alerte(s) visiteurs');
   });
 }
 async function _visPollAlerts() {
@@ -9759,16 +9926,17 @@ async function _visPollAlerts() {
 }
 (function () {
   var panel = document.getElementById('panel-visitors'); if (!panel) return;
-  panel.addEventListener('click', async function (e) {
-    if (e.target.closest('a[href]')) return;                       // liens (site) : comportement normal
-    if (e.target.closest('label') && !e.target.closest('[data-act]')) return;   // cases à cocher des candidats
-    var b = e.target.closest('[data-act]'); if (!b || !panel.contains(b)) return;
+  var handler = async function (e) {
+    if (e.target.closest('a[href]')) return;                                    // liens externes
+    if (e.target.closest('label') && !e.target.closest('[data-act]')) return;    // cases à cocher
+    var b = e.target.closest('[data-act]'); if (!b) return;
     var act = b.dataset.act, key = b.dataset.key;
     e.stopImmediatePropagation();
     if (act === 'open') _visOpenDrawer(key);
     else if (act === 'close-drawer') _visCloseDrawer();
-    else if (act === 'star') _visStar(key, b.dataset.on !== '1');
-    else if (act === 'open-societe') { go('societes'); setTimeout(function () { try { openSociete(b.dataset.id); } catch (err) { console.error(err); } }, 60); }
+    else if (act === 'star') _visStar(key);
+    else if (act === 'sort') { var by = b.dataset.by; if (_visSort.by === by) _visSort.dir = _visSort.dir === 'asc' ? 'desc' : 'asc'; else _visSort = { by: by, dir: by === 'name' ? 'asc' : 'desc' }; _visRenderTable(); }
+    else if (act === 'open-societe') { _visCloseDrawer(); go('societes'); setTimeout(function () { try { openSociete(b.dataset.id); } catch (err) { console.error(err); } }, 60); }
     else if (act === 'open-contact') { try { openContactDetail(b.dataset.id); } catch (err) { console.error(err); } }
     else if (act === 'link') _visLink(key);
     else if (act === 'enrich') _visEnrich(key);
@@ -9778,22 +9946,39 @@ async function _visPollAlerts() {
     else if (act === 'create-cancel') { _visDrawer.confirm = null; _visRenderDrawer(); }
     else if (act === 'contacts-search') _visContactsSearch(key);
     else if (act === 'contacts-add') _visContactsAdd(key);
+    else if (act === 'contacts-cancel') { _visDrawer.candidates = null; _visRenderDrawer(); }
     else if (act === 'hide') _visHide(key, true);
     else if (act === 'unhide') _visHide(key, false);
     else if (act === 'alerts-seen') { await fetch(API + '/v/alerts/seen', { method: 'POST', headers: _visH(), body: '{}' }); renderVisitors(); }
-    else if (act === 'copy') { var ta = document.getElementById(b.dataset.target); if (ta) { ta.select(); try { await navigator.clipboard.writeText(ta.value); b.textContent = 'Copié ✓'; } catch (err) { document.execCommand('copy'); b.textContent = 'Copié ✓'; } } }
+    else if (act === 'open-settings') _visToggleSettings(true);
+    else if (act === 'close-settings') _visToggleSettings(false);
+    else if (act === 'copy') { var ta = document.getElementById(b.dataset.target); if (ta) { ta.select(); try { await navigator.clipboard.writeText(ta.value); b.textContent = 'Copié'; } catch (err) { document.execCommand('copy'); b.textContent = 'Copié'; } } }
     else if (act === 'snippet-full') { var f = document.getElementById('vis-snippet-full'); if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
     else if (act === 'add-my-ip') { var ta2 = document.getElementById('vis-ignore-ips'); if (ta2 && b.dataset.ip && ta2.value.indexOf(b.dataset.ip) < 0) ta2.value = (ta2.value.trim() ? ta2.value.trim() + '\n' : '') + b.dataset.ip; }
     else if (act === 'save-settings') _visSaveSettings();
-    else if (act === 'retry') { var r = await fetch(API + '/v/resolve/retry', { method: 'POST', headers: _visH(), body: '{}' }); var d = await r.json(); var m = document.getElementById('vis-settings-msg'); if (m) m.textContent = (d.queued || 0) + ' IP relancée(s)'; }
-  }, true);
-  document.querySelectorAll('#vis-period button').forEach(function (btn) { btn.addEventListener('click', function () { _visDays = +btn.dataset.days; renderVisitors(); }); });
-  ['vis-type', 'vis-abm', 'vis-hidden'].forEach(function (id) { var el = document.getElementById(id); if (el) el.addEventListener('change', renderVisitors); });
+    else if (act === 'retry') { var r = await fetch(API + '/v/resolve/retry', { method: 'POST', headers: _visH(), body: '{}' }); var d = await r.json(); var m = document.getElementById('vis-settings-msg'); if (m) { m.style.color = 'var(--text2)'; m.textContent = (d.queued || 0) + ' visiteur(s) en cours de ré-identification'; } }
+  };
+  panel.addEventListener('click', handler, true);
+  var drawer = document.getElementById('vis-drawer'); if (drawer) drawer.addEventListener('click', handler, true);
+  var bd = document.getElementById('vis-drawer-backdrop'); if (bd) bd.addEventListener('click', _visCloseDrawer);
+
+  var vw = document.getElementById('vis-view'); if (vw) vw.addEventListener('change', function () { _visView = vw.value; _visAccounts = []; _visCloseDrawer(); renderVisitors(); });
+  var dd = document.getElementById('vis-days'); if (dd) dd.addEventListener('change', function () { _visDays = +dd.value; renderVisitors(); });
   var s = document.getElementById('vis-search'); if (s) s.addEventListener('input', _visRenderTable);
-  var so = document.getElementById('vis-sort'); if (so) so.addEventListener('change', _visRenderTable);
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && _visDrawer.key) _visCloseDrawer(); });
-  var rf = document.getElementById('vis-refresh'); if (rf) rf.addEventListener('click', renderVisitors);
+  var rf = document.getElementById('vis-refresh'); if (rf) rf.addEventListener('click', function () { renderVisitors(); });
   var sb = document.getElementById('vis-settings-btn'); if (sb) sb.addEventListener('click', function () { _visToggleSettings(); });
+  // clavier : Échap ferme le panneau, Tab reste dedans quand il est ouvert
+  document.addEventListener('keydown', function (e) {
+    if (!_visDrawer.key) return;
+    if (e.key === 'Escape') { e.preventDefault(); _visCloseDrawer(); return; }
+    if (e.key !== 'Tab') return;
+    var el = document.getElementById('vis-drawer'); if (!el || !el.classList.contains('open')) return;
+    var f = el.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
   setTimeout(_visPollAlerts, 4000); setInterval(_visPollAlerts, 5 * 60 * 1000);
 })();
 
