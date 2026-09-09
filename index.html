@@ -124,47 +124,80 @@ body.has-subnav .panel.active .topbar { margin-bottom: 0.6rem; }
 .vis-actions { display:flex; gap:8px; flex-wrap:wrap; }
 @media (max-width: 820px) { .vis-tiles { grid-template-columns:1fr; } .vis-col-opt { display:none; } }
 @media (prefers-reduced-motion: reduce) { #vis-drawer { transition:none; } }
-/* ── Chat de qualification (prototype) ─────────────────────────────────────── */
+/* ── Chat de qualification (prototype) ───────────────────────────────────────
+   La bulle reprend la charte d'elistair.com : fond vert-noir #1A2A28, accent
+   bronze #85593E, angles droits, titres en capitales espacées.              */
+#panel-chat { --el-bronze:#85593E; --el-bronze-hi:#9C6B4C; --el-dark:#1A2A28; --el-ink:#121918; --el-line:rgba(255,255,255,.12); --el-grey:#939393; }
 .chat-grid { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(300px,.85fr); gap:18px; align-items:start; }
 .chat-pagebar { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px; }
-.chat-site { border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#fff; position:relative; min-height:520px; display:flex; flex-direction:column; }
+.chat-site { border:1px solid var(--border); overflow:hidden; background:#fff; position:relative; min-height:560px; display:flex; flex-direction:column; }
 .chat-site-chrome { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#e9ecef; border-bottom:1px solid #d6dade; }
 .chat-site-dot { width:10px; height:10px; border-radius:50%; background:#c8ced4; }
-.chat-site-url { flex:1; background:#fff; border-radius:6px; padding:4px 10px; font-size:12px; color:#555; font-family:ui-monospace,Menlo,monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.chat-site-page { flex:1; padding:26px 28px; color:#1a1d21; background:#fff; overflow:hidden; }
-.chat-site-brand { font-size:13px; letter-spacing:.22em; font-weight:700; color:#0b3d5c; margin-bottom:22px; }
-.chat-site-page h2 { margin:0 0 10px; font-size:26px; font-weight:700; color:#0b1116; line-height:1.15; }
-.chat-site-page p { margin:0 0 14px; font-size:13px; color:#5b636b; line-height:1.6; max-width:46ch; }
-.chat-site-specs { display:flex; gap:22px; flex-wrap:wrap; margin-top:18px; }
-.chat-site-specs div { font-size:12px; color:#5b636b; }
-.chat-site-specs b { display:block; font-size:17px; color:#0b1116; }
-.chat-site-fade { position:absolute; left:0; right:0; bottom:0; height:120px; background:linear-gradient(transparent,#fff); pointer-events:none; }
-.chat-widget { position:absolute; right:18px; bottom:18px; width:min(330px,calc(100% - 36px)); background:var(--bg2); border:1px solid var(--border); border-radius:14px; box-shadow:0 18px 50px rgba(0,0,0,.28); display:flex; flex-direction:column; overflow:hidden; z-index:2; }
-.chat-widget-head { display:flex; align-items:center; gap:9px; padding:11px 13px; background:var(--bg3,var(--bg2)); border-bottom:1px solid var(--border2); }
-.chat-widget-avatar { width:26px; height:26px; border-radius:50%; background:var(--accent2,#3b82f6); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
-.chat-widget-head b { font-size:13px; color:var(--text); }
-.chat-widget-head span { font-size:11px; color:var(--text3); display:block; }
-.chat-log { padding:12px 13px; display:flex; flex-direction:column; gap:9px; height:290px; overflow-y:auto; }
-.chat-msg { max-width:86%; padding:8px 11px; border-radius:12px; font-size:13px; line-height:1.5; white-space:pre-wrap; word-wrap:break-word; }
-.chat-msg.bot { align-self:flex-start; background:var(--bg3,#22262b); color:var(--text); border-bottom-left-radius:4px; }
-.chat-msg.me { align-self:flex-end; background:var(--accent2,#3b82f6); color:#fff; border-bottom-right-radius:4px; }
-.chat-msg.err { align-self:stretch; background:transparent; border:1px dashed var(--border); color:var(--text3); font-size:12px; }
-.chat-typing { align-self:flex-start; display:flex; gap:4px; padding:10px 12px; }
-.chat-typing i { width:6px; height:6px; border-radius:50%; background:var(--text3); animation:chatBounce 1s infinite; }
+.chat-site-url { flex:1; background:#fff; padding:4px 10px; font-size:12px; color:#555; font-family:ui-monospace,Menlo,monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* le site réel est sombre : on le reproduit pour juger la bulle en contexte */
+.chat-site-nav { display:flex; align-items:center; gap:22px; padding:0 22px; height:46px; background:var(--el-dark); flex-shrink:0; }
+.chat-site-nav b { color:#fff; font-size:13px; letter-spacing:.20em; font-weight:600; }
+.chat-site-nav span { color:rgba(255,255,255,.72); font-size:10.5px; letter-spacing:.10em; }
+.chat-site-nav .cta { margin-left:auto; background:var(--el-bronze); color:#fff; padding:6px 13px; font-size:10.5px; letter-spacing:.10em; }
+.chat-site-page { flex:1; padding:34px 30px; background:#1e1e1e; background-image:radial-gradient(120% 90% at 50% 0%, #2b2b2b 0%, #1a1a1a 70%); overflow:hidden; }
+.chat-site-kicker { color:#fff; font-size:12px; letter-spacing:.10em; text-transform:uppercase; margin-bottom:12px; opacity:.85; }
+.chat-site-page h2 { margin:0 0 8px; font-size:38px; font-weight:600; color:var(--el-bronze); line-height:1.05; text-transform:uppercase; letter-spacing:.055em; }
+.chat-site-page h2 small { display:block; font-size:15px; color:rgba(255,255,255,.66); letter-spacing:.10em; font-weight:400; margin-top:8px; }
+.chat-site-page p { margin:18px 0 0; font-size:13px; color:#939393; line-height:1.7; max-width:42ch; }
+.chat-site-specs { display:flex; gap:26px; flex-wrap:wrap; margin-top:26px; padding-top:20px; border-top:1px solid rgba(133,89,62,.4); }
+.chat-site-specs div { font-size:10.5px; color:#939393; letter-spacing:.06em; text-transform:uppercase; }
+.chat-site-specs b { display:block; font-size:20px; color:#fff; letter-spacing:.02em; text-transform:none; margin-bottom:2px; }
+
+/* Lanceur flottant */
+.chat-launcher { position:absolute; right:20px; bottom:20px; z-index:3; display:flex; align-items:center; gap:10px;
+  background:var(--el-bronze); color:#fff; border:none; cursor:pointer; padding:13px 17px; font:inherit;
+  font-size:11.5px; letter-spacing:.11em; text-transform:uppercase; box-shadow:0 10px 30px rgba(0,0,0,.45); }
+.chat-launcher:hover { background:var(--el-bronze-hi); }
+.chat-launcher svg { width:17px; height:17px; flex-shrink:0; }
+.chat-launcher[hidden] { display:none; }
+
+/* Panneau de conversation */
+.chat-widget { position:absolute; right:20px; bottom:20px; width:min(342px,calc(100% - 40px)); background:var(--el-ink);
+  border:1px solid var(--el-line); box-shadow:0 22px 60px rgba(0,0,0,.55); display:flex; flex-direction:column;
+  overflow:hidden; z-index:4; }
+.chat-widget[hidden] { display:none; }
+.chat-widget-head { display:flex; align-items:center; gap:10px; padding:13px 14px; background:var(--el-dark); border-bottom:1px solid var(--el-line); }
+.chat-widget-avatar { width:28px; height:28px; background:var(--el-bronze); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+.chat-widget-head b { font-size:11.5px; color:#fff; letter-spacing:.13em; text-transform:uppercase; font-weight:600; display:block; }
+.chat-widget-head span { font-size:10.5px; color:rgba(255,255,255,.55); display:block; margin-top:2px; letter-spacing:.03em; }
+.chat-widget-close { margin-left:auto; background:none; border:none; color:rgba(255,255,255,.65); font-size:20px; line-height:1; cursor:pointer; padding:2px 4px; }
+.chat-widget-close:hover { color:#fff; }
+.chat-log { padding:14px; display:flex; flex-direction:column; gap:10px; height:296px; overflow-y:auto; }
+.chat-msg { max-width:88%; padding:9px 12px; font-size:12.5px; line-height:1.6; white-space:pre-wrap; word-wrap:break-word; }
+.chat-msg.bot { align-self:flex-start; background:#20302D; color:#fff; border-left:2px solid var(--el-bronze); }
+.chat-msg.me { align-self:flex-end; background:var(--el-bronze); color:#fff; }
+.chat-msg.err { align-self:stretch; background:transparent; border:1px dashed rgba(255,255,255,.25); color:#939393; font-size:11.5px; }
+.chat-typing { align-self:flex-start; display:flex; gap:4px; padding:11px 13px; background:#20302D; border-left:2px solid var(--el-bronze); }
+.chat-typing i { width:5px; height:5px; border-radius:50%; background:var(--el-bronze); animation:chatBounce 1s infinite; }
 .chat-typing i:nth-child(2){ animation-delay:.15s; } .chat-typing i:nth-child(3){ animation-delay:.3s; }
 @keyframes chatBounce { 0%,60%,100%{ transform:translateY(0); opacity:.4; } 30%{ transform:translateY(-4px); opacity:1; } }
-.chat-input { display:flex; gap:7px; padding:10px 11px; border-top:1px solid var(--border2); }
-.chat-input input { flex:1; background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:8px 11px; font-size:13px; color:var(--text); }
-.chat-input button { border:none; border-radius:9px; width:34px; background:var(--accent2,#3b82f6); color:#fff; cursor:pointer; font-size:15px; }
-.chat-input button:disabled { opacity:.45; cursor:default; }
+.chat-input { display:flex; gap:8px; padding:11px 12px; border-top:1px solid var(--el-line); background:var(--el-ink); }
+.chat-input input { flex:1; background:transparent; border:1px solid var(--el-line); padding:9px 11px; font-size:12.5px; color:#fff; font-family:inherit; }
+.chat-input input::placeholder { color:#6d7573; }
+.chat-input input:focus { outline:none; border-color:var(--el-bronze); }
+.chat-input button { border:none; width:36px; background:var(--el-bronze); color:#fff; cursor:pointer; font-size:15px; }
+.chat-input button:hover:not(:disabled) { background:var(--el-bronze-hi); }
+.chat-input button:disabled { opacity:.4; cursor:default; }
+.chat-legal { padding:0 12px 10px; font-size:10px; color:#6d7573; background:var(--el-ink); line-height:1.5; }
+
+/* Colonne de droite : ce que l'IA a récupéré */
 .chat-card { border:1px solid var(--border); border-radius:12px; background:var(--bg2); padding:15px 16px; margin-bottom:14px; }
 .chat-card h3 { margin:0 0 4px; font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--text); }
 .chat-card .chat-hint { margin:0 0 12px; font-size:12px; color:var(--text3); line-height:1.5; }
+.chat-sub { margin:14px 0 6px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--text3); display:flex; align-items:center; gap:7px; }
+.chat-sub em { font-style:normal; font-size:10px; padding:1px 6px; border:1px solid var(--border); border-radius:999px; color:var(--text3); letter-spacing:.02em; text-transform:none; }
 .chat-lead-row { display:flex; gap:10px; padding:6px 0; border-bottom:1px solid var(--border2); font-size:13px; }
 .chat-lead-row:last-child { border-bottom:none; }
 .chat-lead-row span { width:88px; flex-shrink:0; color:var(--text3); font-size:12px; padding-top:1px; }
 .chat-lead-row b { font-weight:500; color:var(--text); word-break:break-word; }
-.chat-lead-row.empty b { color:var(--text3); font-weight:400; font-style:italic; }
+.chat-lead-row.chat-void b { color:var(--text3); font-weight:400; font-style:italic; }
+.chat-mail-ok { color:#22c55e; font-size:11px; margin-left:6px; white-space:nowrap; }
+.chat-mail-ko { color:#ef4444; font-size:11px; }
 .chat-badge { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; }
 .chat-badge.fort { background:rgba(34,197,94,.16); color:#22c55e; }
 .chat-badge.moyen { background:rgba(234,179,8,.16); color:#eab308; }
@@ -176,9 +209,11 @@ body.has-subnav .panel.active .topbar { margin-bottom: 0.6rem; }
 .chat-hist tr.clickable { cursor:pointer; }
 .chat-hist tr.clickable:hover td { background:var(--bg3,rgba(255,255,255,.03)); }
 .chat-set label { display:block; font-size:12px; color:var(--text3); margin:10px 0 4px; }
-.chat-set textarea, .chat-set input { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:12.5px; color:var(--text); font-family:inherit; box-sizing:border-box; }
+.chat-set textarea, .chat-set input[type=text] { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:12.5px; color:var(--text); font-family:inherit; box-sizing:border-box; }
 .chat-set textarea { resize:vertical; }
-@media (max-width: 1080px) { .chat-grid { grid-template-columns:1fr; } .chat-site { min-height:460px; } }
+.chat-set .chat-check { display:flex; gap:8px; align-items:flex-start; margin-top:12px; font-size:12px; color:var(--text2); line-height:1.5; }
+.chat-set .chat-check input { margin-top:2px; }
+@media (max-width: 1080px) { .chat-grid { grid-template-columns:1fr; } .chat-site { min-height:500px; } }
 @media (prefers-reduced-motion: reduce) { .chat-typing i { animation:none; } }
 #contact-detail-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100002; align-items:center; justify-content:center; padding:20px; }
 #contact-detail-modal.open { display:flex; }
@@ -2586,18 +2621,24 @@ Réinitialiser tous les filtres
           </div>
           <div class="chat-site">
             <div class="chat-site-chrome"><i class="chat-site-dot"></i><i class="chat-site-dot"></i><i class="chat-site-dot"></i><div class="chat-site-url" id="chat-url">elistair.com</div></div>
+            <div class="chat-site-nav"><b>ELISTAIR</b><span>SYSTEMS</span><span>MISSIONS</span><span>RESOURCES</span><span>ABOUT US</span><span class="cta">CONTACT US</span></div>
             <div class="chat-site-page" id="chat-sitepage"></div>
-            <div class="chat-site-fade"></div>
-            <div class="chat-widget">
+            <button type="button" class="chat-launcher" id="chat-launcher" aria-expanded="false" aria-controls="chat-widget">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.6 9.6 0 0 1-2.8-.4L3 21l1.6-4.6A8.3 8.3 0 0 1 3.6 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 8.4 8.4z"/></svg>
+              Une question ?
+            </button>
+            <div class="chat-widget" id="chat-widget" role="dialog" aria-label="Assistant Elistair" hidden>
               <div class="chat-widget-head">
                 <div class="chat-widget-avatar" aria-hidden="true">◆</div>
-                <div><b>Assistant Elistair</b><span>Répond tout de suite</span></div>
+                <div><b>Assistant Elistair</b><span>Réponse immédiate</span></div>
+                <button type="button" class="chat-widget-close" id="chat-close" title="Fermer" aria-label="Fermer le chat">×</button>
               </div>
               <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-label="Conversation"></div>
               <form class="chat-input" id="chat-form" autocomplete="off">
                 <input id="chat-text" type="text" placeholder="Écrire un message…" maxlength="1500" aria-label="Votre message">
                 <button type="submit" id="chat-send" title="Envoyer" aria-label="Envoyer">↑</button>
               </form>
+              <div class="chat-legal">Assistant automatique. Les informations que vous donnez sont transmises à l'équipe Elistair.</div>
             </div>
           </div>
         </div>
@@ -2621,6 +2662,7 @@ Réinitialiser tous les filtres
             <textarea id="chat-extra" rows="4" placeholder="ex : ne parle jamais de la Ligh-T aux visiteurs défense"></textarea>
             <label for="chat-model">Modèle</label>
             <input id="chat-model" type="text" spellcheck="false">
+            <label class="chat-check"><input type="checkbox" id="chat-hunter"><span>Vérifier chaque adresse avec Hunter, en plus du contrôle de domaine. Plus fiable, mais consomme un crédit Hunter par adresse et ajoute quelques secondes.</span></label>
             <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
               <button type="button" id="chat-save-cfg" class="btn btn-primary" style="padding:6px 13px;font-size:12px;">Enregistrer</button>
               <span id="chat-cfg-msg" style="font-size:12px;color:var(--text3);"></span>
@@ -9670,23 +9712,26 @@ window.renderVisitors = renderVisitors;
 var _chatSession = null;      // id de la conversation en cours
 var _chatBusy = false;
 var _chatLead = {};
+var _chatInferred = {};       // pays / secteur, déduits et jamais demandés
+var _chatMail = null;         // résultat de la vérification d'adresse
 var _chatScore = 0, _chatScoreLabel = '';
 var _chatCfgLoaded = false;
+var _chatOpen = false;
 
 var CHAT_PAGES = {
-  khronos: { path: '/solutions/tethered-dronebox-khronos/', title: 'Khronos | Tethered DroneBox | Elistair',
+  khronos: { kicker: 'All in one dronebox ready for ISR and tactical comms', path: '/solutions/tethered-dronebox-khronos/', title: 'Khronos | Tethered DroneBox | Elistair',
     h: 'KHRONOS', sub: 'Tethered DroneBox',
     p: "Boîtier drone automatisé pour missions mobiles. Décollage et atterrissage entièrement automatiques, déploiement depuis un véhicule sans en sortir.",
     specs: [['24 h', 'de vol continu'], ['60 m', "d'altitude"], ['32 kg', 'système complet'], ['< 2 min', 'avant décollage']] },
-  m400: { path: '/products/dji-m400/', title: 'Station filaire pour DJI M400 | Elistair',
+  m400: { kicker: 'Tethered station for DJI Matrice 400', path: '/products/dji-m400/', title: 'Station filaire pour DJI M400 | Elistair',
     h: 'SAFE-T 2.3', sub: 'pour DJI M400',
     p: "Station filaire dédiée au DJI M400. Alimentation illimitée par le câble, intégration Plug & Fly, vol statique prolongé sans changement de batterie.",
     specs: [['100 m', 'de vol statique'], ['2200 W', 'en continu'], ['110 m', 'de câble'], ['IP54', 'tout temps']] },
-  light: { path: '/solutions/tethering-station-ligh-t/', title: 'Ligh-T 4 | Station compacte | Elistair',
+  light: { kicker: 'Compact tethering station for first responders', path: '/solutions/tethering-station-ligh-t/', title: 'Ligh-T 4 | Station compacte | Elistair',
     h: 'LIGH-T 4', sub: 'Station compacte',
     p: "Station portable pour primo-intervenants. Mise en œuvre en moins de cinq minutes, poignée télescopique et roues, treuil électrique et manuel.",
     specs: [['1800 W', 'de puissance'], ['70 m', 'de câble'], ['20 kg', 'transportable'], ['< 5 min', 'de mise en œuvre']] },
-  home: { path: '/', title: 'Elistair | Tethered Drone Systems',
+  home: { kicker: 'The tethered drone company', path: '/', title: 'Elistair | Tethered Drone Systems',
     h: 'ELISTAIR', sub: 'Tethered drone systems',
     p: "Stations et systèmes de drones filaires pour la défense, les forces de l'ordre et la sécurité civile. Déployés dans plus de 70 pays.",
     specs: [['70+', 'pays'], ['24 h', 'de vol continu'], ['3', 'systèmes']] }
@@ -9707,12 +9752,22 @@ function _chatRenderSite() {
   var p = _chatCurrentPage();
   var url = document.getElementById('chat-url'); if (url) url.textContent = 'elistair.com' + p.path;
   var el = document.getElementById('chat-sitepage'); if (!el) return;
-  el.innerHTML = '<div class="chat-site-brand">ELISTAIR</div>'
-    + '<h2>' + _chatEsc(p.h) + '<br><span style="font-weight:400;color:#5b636b;font-size:19px;">' + _chatEsc(p.sub) + '</span></h2>'
+  el.innerHTML = '<div class="chat-site-kicker">' + _chatEsc(p.kicker || 'Tethered drone systems') + '</div>'
+    + '<h2>' + _chatEsc(p.h) + '<small>' + _chatEsc(p.sub) + '</small></h2>'
     + '<p>' + _chatEsc(p.p) + '</p>'
     + '<div class="chat-site-specs">' + p.specs.map(function (s) {
         return '<div><b>' + _chatEsc(s[0]) + '</b>' + _chatEsc(s[1]) + '</div>';
       }).join('') + '</div>';
+}
+
+// Ouverture / fermeture de la bulle, comme sur un vrai site.
+function _chatToggle(open) {
+  _chatOpen = (open === undefined) ? !_chatOpen : !!open;
+  var w = document.getElementById('chat-widget'), l = document.getElementById('chat-launcher');
+  if (w) w.hidden = !_chatOpen;
+  if (l) { l.hidden = _chatOpen; l.setAttribute('aria-expanded', String(_chatOpen)); }
+  if (_chatOpen) { var i = document.getElementById('chat-text'); if (i) i.focus(); }
+  else if (l) l.focus();
 }
 
 function _chatBubble(role, text) {
@@ -9738,20 +9793,46 @@ var CHAT_LEAD_LABELS = [['prenom', 'Prénom'], ['nom', 'Nom'], ['email', 'Email'
 
 function _chatRenderLead() {
   var el = document.getElementById('chat-lead'); if (!el) return;
-  var filled = CHAT_LEAD_LABELS.filter(function (f) { return _chatLead[f[0]]; }).length;
+  var shown = CHAT_LEAD_LABELS.filter(function (f) { return f[0] !== 'pays'; });
+  var filled = shown.filter(function (f) { return _chatLead[f[0]]; }).length;
   var cls = _chatScoreLabel === 'Fort' ? 'fort' : _chatScoreLabel === 'Moyen' ? 'moyen' : 'faible';
   var head = '<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">'
     + '<span class="chat-badge ' + cls + '">' + _chatEsc(_chatScoreLabel || 'Faible') + '</span>'
-    + '<span style="font-size:12px;color:var(--text3);">score ' + _chatScore + '/100 · ' + filled + ' champ' + (filled > 1 ? 's' : '') + ' sur ' + CHAT_LEAD_LABELS.length + '</span></div>';
-  el.innerHTML = head + CHAT_LEAD_LABELS.map(function (f) {
+    + '<span style="font-size:12px;color:var(--text3);">score ' + _chatScore + '/100 · ' + filled + ' champ' + (filled > 1 ? 's' : '') + ' sur ' + shown.length + '</span></div>';
+
+  var rows = CHAT_LEAD_LABELS.filter(function (f) {
+    return f[0] !== 'pays' || _chatLead.pays;   // le pays est déduit, pas demandé
+  }).map(function (f) {
     var v = _chatLead[f[0]];
-    return '<div class="chat-lead-row' + (v ? '' : ' empty') + '"><span>' + f[1] + '</span><b>' + _chatEsc(v || '—') + '</b></div>';
+    var extra = '';
+    if (f[0] === 'email' && _chatMail) {
+      extra = _chatMail.ok
+        ? '<span class="chat-mail-ok" title="' + _chatEsc(_chatMail.reason || '') + '">✓ vérifiée</span>'
+        : '';
+    }
+    return '<div class="chat-lead-row' + (v ? '' : ' chat-void') + '"><span>' + f[1] + '</span><b>' + _chatEsc(v || '—') + extra + '</b></div>';
   }).join('');
+
+  // Adresse refusée : elle n'est pas enregistrée, on montre pourquoi.
+  var mailKo = '';
+  if (_chatMail && !_chatMail.ok) {
+    mailKo = '<div class="chat-lead-row"><span>Adresse</span><b class="chat-mail-ko">'
+      + _chatEsc(_chatMail.email || '') + ' — refusée, ' + _chatEsc(_chatMail.reason || '') + '. Non enregistrée, le bot en redemande une.</b></div>';
+  }
+
+  // Pays et secteur : jamais demandés au visiteur, déduits de l'organisation.
+  var inf = '';
+  if (_chatInferred && (_chatInferred.pays || _chatInferred.industrie)) {
+    inf = '<div class="chat-sub">Déduit <em>pas demandé au visiteur</em></div>'
+      + '<div class="chat-lead-row"><span>Pays</span><b>' + _chatEsc(_chatInferred.pays || '—') + '</b></div>'
+      + '<div class="chat-lead-row"><span>Secteur</span><b>' + _chatEsc(_chatInferred.industrie || '—') + '</b></div>';
+  }
+  el.innerHTML = head + '<div class="chat-sub">Déclaré</div>' + rows + mailKo + inf;
 }
 
 async function _chatNew() {
   var log = document.getElementById('chat-log'); if (log) log.innerHTML = '';
-  _chatLead = {}; _chatScore = 0; _chatScoreLabel = ''; _chatSession = null;
+  _chatLead = {}; _chatInferred = {}; _chatMail = null; _chatScore = 0; _chatScoreLabel = ''; _chatSession = null;
   _chatRenderLead();
   var p = _chatCurrentPage();
   try {
@@ -9780,7 +9861,8 @@ async function _chatSend(text) {
     _chatTyping(false);
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
     _chatBubble('assistant', j.reply);
-    _chatLead = j.lead || {}; _chatScore = j.score || 0; _chatScoreLabel = j.score_label || '';
+    _chatLead = j.lead || {}; _chatInferred = j.inferred || {}; _chatMail = j.email_check || null;
+    _chatScore = j.score || 0; _chatScoreLabel = j.score_label || '';
     _chatRenderLead();
     _chatLoadHistory();
   } catch (e) {
@@ -9835,8 +9917,10 @@ async function _chatOpen(id) {
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
     var log = document.getElementById('chat-log'); if (log) log.innerHTML = '';
     (j.messages || []).forEach(function (m) { _chatBubble(m.role === 'user' ? 'user' : 'assistant', m.content); });
-    _chatSession = j.id; _chatLead = j.lead || {}; _chatScore = j.score || 0; _chatScoreLabel = j.score_label || '';
+    _chatSession = j.id; _chatLead = j.lead || {}; _chatInferred = j.inferred || {}; _chatMail = j.email_check || null;
+    _chatScore = j.score || 0; _chatScoreLabel = j.score_label || '';
     _chatRenderLead();
+    _chatToggle(true);
     var st = document.getElementById('chat-status');
     if (st) st.textContent = 'conversation reprise · ' + (j.turns || 0) + ' échange' + ((j.turns || 0) > 1 ? 's' : '');
   } catch (e) { _chatBubble('error', 'Relecture impossible : ' + e.message); }
@@ -9851,6 +9935,7 @@ async function _chatLoadCfg() {
     var g = document.getElementById('chat-greeting'); if (g) g.value = j.greeting || '';
     var e = document.getElementById('chat-extra'); if (e) e.value = j.prompt_extra || '';
     var m = document.getElementById('chat-model'); if (m) m.value = j.model || '';
+    var hv = document.getElementById('chat-hunter'); if (hv) hv.checked = j.verify_hunter === true;
     var st = document.getElementById('chat-status');
     if (st && !j.has_key) st.textContent = 'clé Anthropic absente côté serveur';
     _chatCfgLoaded = true;
@@ -9864,7 +9949,8 @@ async function _chatSaveCfg() {
       body: JSON.stringify({
         greeting: (document.getElementById('chat-greeting') || {}).value || '',
         prompt_extra: (document.getElementById('chat-extra') || {}).value || '',
-        model: (document.getElementById('chat-model') || {}).value || ''
+        model: (document.getElementById('chat-model') || {}).value || '',
+        verify_hunter: !!(document.getElementById('chat-hunter') || {}).checked
       }) });
     var j = await r.json();
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
@@ -9884,12 +9970,19 @@ function _chatWire() {
     if (inp) inp.value = '';
     _chatSend(t);
   });
+  var lau = document.getElementById('chat-launcher');
+  if (lau) lau.addEventListener('click', function () { _chatToggle(true); });
+  var clo = document.getElementById('chat-close');
+  if (clo) clo.addEventListener('click', function () { _chatToggle(false); });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && _chatOpen && document.getElementById('panel-chat') && document.getElementById('panel-chat').classList.contains('active')) _chatToggle(false);
+  });
   var sel = document.getElementById('chat-page');
   if (sel) sel.addEventListener('change', function () { _chatRenderSite(); _chatNew(); });
   var rs = document.getElementById('chat-restart');
   if (rs) rs.addEventListener('click', function () {
     var st = document.getElementById('chat-status'); if (st) st.textContent = '';
-    _chatNew();
+    _chatNew(); _chatToggle(true);
   });
   var pg = document.getElementById('chat-purge');
   if (pg) pg.addEventListener('click', async function () {
