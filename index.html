@@ -9904,7 +9904,8 @@ async function _chatNew() {
       body: JSON.stringify({ source: 'test', page: p.path, page_title: p.title, lang: lang }) });
     var j = await r.json();
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
-    _chatSession = j.id; _chatReplyLang = j.lang || '';
+    _chatSession = j.id; _chatReplyLang = j.lang || 'en';
+    _chatApplyLang();
     _chatBubble('assistant', j.greeting);
     _chatSetBlocked(false);
     _chatStatus();
@@ -9934,14 +9935,16 @@ async function _chatSend(text) {
     _chatBubble('assistant', j.reply);
     _chatLead = j.lead || {}; _chatInferred = j.inferred || {}; _chatMail = j.email_check || null;
     _chatScore = j.score || 0; _chatScoreLabel = j.score_label || '';
-    if (j.lang) _chatReplyLang = j.lang;
+    if (j.lang && j.lang !== _chatReplyLang) { _chatReplyLang = j.lang; _chatApplyLang(); }
     _chatSetBlocked(!!j.blocked);
     _chatStatus();
     _chatRenderLead();
     _chatLoadHistory();
   } catch (e) {
     _chatTyping(false);
-    _chatBubble('error', 'Erreur : ' + e.message);
+    // Message visiteur dans sa langue ; le détail technique reste dans la console.
+    console.error('chat', e);
+    _chatBubble('error', _chatUi().err);
   }
   _chatBusy = false;
   if (btn) btn.disabled = false;
@@ -9952,11 +9955,59 @@ async function _chatSend(text) {
 function _chatSetBlocked(b) {
   _chatBlocked = !!b;
   var i = document.getElementById('chat-text'), s = document.getElementById('chat-send');
-  if (i) { i.disabled = _chatBlocked; i.placeholder = _chatBlocked ? 'Conversation terminée' : 'Écrire un message…'; }
+  var t = _chatUi();
+  if (i) { i.disabled = _chatBlocked; i.placeholder = _chatBlocked ? t.ended : t.ph; }
   if (s) s.disabled = _chatBlocked;
 }
 
 var CHAT_LANG_NAMES = { fr: 'français', en: 'anglais', de: 'allemand', es: 'espagnol', it: 'italien', pl: 'polonais' };
+
+// L'habillage de la bulle suit la langue du visiteur, comme les réponses du bot :
+// un lanceur « Une question ? » sur un site consulté en anglais, ça fait bricolage.
+var CHAT_UI = {
+  fr: { launcher: 'Une question ?', sub: 'Réponse immédiate', ph: 'Écrire un message…', ended: 'Conversation terminée',
+        close: 'Fermer', send: 'Envoyer', legal: "Assistant automatique. Les informations que vous donnez sont transmises à l'équipe Elistair.",
+        err: "Une erreur est survenue, réessayez dans un instant." },
+  en: { launcher: 'Any questions?', sub: 'Instant reply', ph: 'Write a message…', ended: 'Conversation closed',
+        close: 'Close', send: 'Send', legal: 'Automated assistant. What you share is passed on to the Elistair team.',
+        err: 'Something went wrong, please try again.' },
+  de: { launcher: 'Eine Frage?', sub: 'Sofortige Antwort', ph: 'Nachricht schreiben…', ended: 'Gespräch beendet',
+        close: 'Schließen', send: 'Senden', legal: 'Automatischer Assistent. Ihre Angaben werden an das Elistair-Team weitergeleitet.',
+        err: 'Es ist ein Fehler aufgetreten, bitte erneut versuchen.' },
+  es: { launcher: '¿Alguna pregunta?', sub: 'Respuesta inmediata', ph: 'Escriba un mensaje…', ended: 'Conversación finalizada',
+        close: 'Cerrar', send: 'Enviar', legal: 'Asistente automático. Los datos que facilite se transmiten al equipo de Elistair.',
+        err: 'Se ha producido un error, inténtelo de nuevo.' },
+  it: { launcher: 'Una domanda?', sub: 'Risposta immediata', ph: 'Scrivi un messaggio…', ended: 'Conversazione terminata',
+        close: 'Chiudi', send: 'Invia', legal: "Assistente automatico. Le informazioni fornite vengono trasmesse al team Elistair.",
+        err: 'Si è verificato un errore, riprovare.' },
+  pl: { launcher: 'Masz pytanie?', sub: 'Natychmiastowa odpowiedź', ph: 'Napisz wiadomość…', ended: 'Rozmowa zakończona',
+        close: 'Zamknij', send: 'Wyślij', legal: 'Asystent automatyczny. Podane informacje są przekazywane zespołowi Elistair.',
+        err: 'Wystąpił błąd, spróbuj ponownie.' }
+};
+function _chatUi() { return CHAT_UI[_chatReplyLang] || CHAT_UI.en; }
+
+// Appliquée à l'ouverture d'une conversation, puis à chaque fois que le bot
+// change de langue parce que le visiteur a écrit dans une autre.
+function _chatApplyLang() {
+  var t = _chatUi();
+  var set = function (id, prop, val) { var e = document.getElementById(id); if (e) e[prop] = val; };
+  var lau = document.getElementById('chat-launcher');
+  if (lau) {
+    var svg = lau.querySelector('svg');
+    lau.textContent = '';
+    if (svg) lau.appendChild(svg);
+    lau.appendChild(document.createTextNode(' ' + t.launcher));
+  }
+  var sub = document.querySelector('#chat-widget .chat-widget-head span');
+  if (sub) sub.textContent = t.sub;
+  set('chat-text', 'placeholder', _chatBlocked ? t.ended : t.ph);
+  var cl = document.getElementById('chat-close');
+  if (cl) { cl.title = t.close; cl.setAttribute('aria-label', t.close); }
+  var sd = document.getElementById('chat-send');
+  if (sd) { sd.title = t.send; sd.setAttribute('aria-label', t.send); }
+  var lg = document.querySelector('#chat-widget .chat-legal');
+  if (lg) lg.textContent = t.legal;
+}
 function _chatStatus() {
   var st = document.getElementById('chat-status'); if (!st) return;
   var bits = [];
