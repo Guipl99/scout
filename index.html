@@ -213,6 +213,16 @@ body.has-subnav .panel.active .topbar { margin-bottom: 0.6rem; }
 .chat-set textarea { resize:vertical; }
 .chat-set .chat-check { display:flex; gap:8px; align-items:flex-start; margin-top:12px; font-size:12px; color:var(--text2); line-height:1.5; }
 .chat-set .chat-check input { margin-top:2px; }
+/* Interrupteur : il doit se voir et se cliquer sans réfléchir, y compris sur un téléphone. */
+.chat-kill { display:flex; align-items:center; gap:14px; flex-wrap:wrap; border-radius:12px; padding:13px 16px; border:1px solid var(--border); background:var(--bg2); }
+.chat-kill.on { border-color:rgba(34,197,94,.4); }
+.chat-kill.off { border-color:#ef4444; background:rgba(239,68,68,.09); }
+.chat-kill b { font-size:13px; color:var(--text); }
+.chat-kill span { font-size:12px; color:var(--text3); }
+.chat-kill button { margin-left:auto; border:none; border-radius:9px; padding:8px 15px; font-size:13px; font-weight:500; cursor:pointer; }
+.chat-kill .cut { background:#ef4444; color:#fff; }
+.chat-kill .restore { background:#22c55e; color:#08240f; }
+.chat-kill button:disabled { opacity:.5; cursor:default; }
 /* .chat-grid pose display:grid, qui bat la règle [hidden] du navigateur. */
 #chat-site-view[hidden], #chat-sandbox-view[hidden] { display:none !important; }
 /* Vue « conversations du site » : liste plein cadre + fiche latérale */
@@ -2633,6 +2643,7 @@ Réinitialiser tous les filtres
 <!-- CHAT DE QUALIFICATION (prototype) -->
     <div id="panel-chat" class="panel">
       <div class="topbar" style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;"><h1>Chat de qualification</h1><span id="chat-status" style="font-size:13px;color:var(--text2);"></span></div>
+      <div id="chat-kill" style="display:none;margin:0 0 14px;"></div>
       <p id="chat-intro" style="margin:0 0 14px;font-size:13px;color:var(--text2);max-width:78ch;"></p>
       <div class="chat-pagebar" id="chat-modebar">
         <label class="vis-field"><span>Afficher</span>
@@ -9778,6 +9789,7 @@ var _chatScore = 0, _chatScoreLabel = '';
 var _chatCfgLoaded = false;
 var _chatBlocked = false;     // conversation close après trop de tentatives de détournement
 var _chatReplyLang = '';
+var _chatEnabled = true;      // état de service de la bulle sur elistair.com
 var _chatWidgetOpen = false;  // bulle visible ; ne pas confondre avec _chatOpen(id), qui rouvre une conversation
 
 var CHAT_PAGES = {
@@ -10082,6 +10094,7 @@ async function _chatLoadCfg() {
     var e = document.getElementById('chat-extra'); if (e) e.value = j.prompt_extra || '';
     var m = document.getElementById('chat-model'); if (m) m.value = j.model || '';
     var hv = document.getElementById('chat-hunter'); if (hv) hv.checked = j.verify_hunter === true;
+    _chatEnabled = j.enabled !== false; _chatRenderKill();
     var ge = document.getElementById('chat-greeting-en'); if (ge) ge.value = j.greeting_en || '';
     var ins = document.getElementById('chat-install');
     if (ins && j.snippet) ins.innerHTML = '<div style="font-size:12px;color:var(--text3);margin-bottom:6px;">'
@@ -10101,6 +10114,38 @@ async function _chatLoadCfg() {
     if (st && !j.has_key) st.textContent = 'clé Anthropic absente côté serveur';
     _chatCfgLoaded = true;
   } catch (_) {}
+}
+
+// Interrupteur. Volontairement en haut de l'onglet et pas dans les réglages :
+// le jour où il sert, on ne cherche pas dans un panneau replié.
+function _chatRenderKill() {
+  var el = document.getElementById('chat-kill'); if (!el) return;
+  el.style.display = '';
+  el.innerHTML = '<div class="chat-kill ' + (_chatEnabled ? 'on' : 'off') + '">'
+    + (_chatEnabled
+        ? '<div><b>Bulle en service sur elistair.com</b><br><span>Les visiteurs peuvent lui parler.</span></div>'
+          + '<button type="button" class="cut" id="chat-kill-btn">Couper la bulle</button>'
+        : '<div><b>Bulle coupée</b><br><span>Plus rien ne s\'affiche sur le site. Le script reste en place, il ne fait rien.</span></div>'
+          + '<button type="button" class="restore" id="chat-kill-btn">Remettre en service</button>')
+    + '</div>';
+  var b = document.getElementById('chat-kill-btn');
+  if (b) b.addEventListener('click', _chatToggleKill);
+}
+
+async function _chatToggleKill() {
+  var b = document.getElementById('chat-kill-btn');
+  var vers = !_chatEnabled;
+  if (!vers && !confirm('Couper la bulle sur elistair.com ?\n\nElle disparaît du site en moins d\'une minute, et les conversations en cours sont interrompues.')) return;
+  if (b) { b.disabled = true; b.textContent = '…'; }
+  try {
+    var r = await fetch(API + '/v/chat/config', { method: 'POST', headers: _chatH(), body: JSON.stringify({ enabled: vers }) });
+    var j = await r.json();
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    _chatEnabled = vers;
+  } catch (e) {
+    alert('Échec : ' + e.message);
+  }
+  _chatRenderKill();
 }
 
 async function _chatSaveCfg() {
@@ -10404,6 +10449,7 @@ async function _chatMakeContact() {
 
 async function renderChat() {
   _chatWire();
+  _chatCfgLoaded = false;   // l'état de service doit être relu à chaque ouverture
   _chatLoadCfg();
   try { _chatMode = localStorage.getItem('scout_chat_mode') || 'site'; } catch (e) { _chatMode = 'site'; }
   _chatApplyMode();
