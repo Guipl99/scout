@@ -82,6 +82,8 @@ body.has-subnav .panel.active .topbar h1 { display: none; }
 /* la flèche « retour à l'accueil » fait doublon avec le menu à 4 entrées */
 body.has-subnav .btn-back-home { display: none; }
 body.has-subnav .panel.active .topbar:empty { display: none; }
+/* le titre étant dans la sous-nav, le reste du bandeau se resserre */
+body.has-subnav .panel.active .topbar { margin-bottom: 0.6rem; }
 #subnav :focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
 @media (max-width: 640px) { #subnav.on { gap: 10px; } .subnav-title { font-size: 17px; } .subnav-tab { font-size: 12px; padding: 6px 11px; } }
 /* ── Visiteurs web ─────────────────────────────────────────────────────────── */
@@ -2491,6 +2493,10 @@ Réinitialiser tous les filtres
             <option value="30" selected>30 derniers jours</option>
             <option value="90">3 derniers mois</option>
           </select>
+        </label>
+        <label class="vis-field"><span>Page vue</span>
+          <input id="vis-page" type="search" list="vis-pages-list" placeholder="Toutes les pages" autocomplete="off" style="min-width:210px;">
+          <datalist id="vis-pages-list"></datalist>
         </label>
         <label class="vis-field vis-field-grow"><span>Rechercher</span>
           <input id="vis-search" type="search" placeholder="Nom, domaine, pays…">
@@ -9447,6 +9453,7 @@ window.renderHotProspects = renderHotProspects;
 // Aucun onclick inline : délégation d'événements sur #panel-visitors (data-act).
 var _visDays = 30, _visView = 'todo', _visSort = { by: 'score', dir: 'desc' };
 var _visAccounts = [], _visStats = null, _visLoading = false, _visLastFocus = null;
+var _visPage = '', _visPages = [], _visPagesDays = null;
 var _visDrawer = { key: null, msg: {}, candidates: null, sessions: null, confirm: null, summaryLoading: false };
 
 function _visH() { return Object.assign({ 'Content-Type': 'application/json' }, (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {}); }
@@ -9517,11 +9524,12 @@ async function renderVisitors() {
   try {
     var rs = await Promise.all([
       fetch(API + '/v/stats?days=' + _visDays, { headers: _visH() }).then(function (r) { return r.json(); }),
-      fetch(API + '/v/accounts?days=' + _visDays + '&type=' + encodeURIComponent(v.types) + '&abm=' + v.abm + '&hidden=' + v.hidden, { headers: _visH() }).then(function (r) { return r.json(); }),
+      fetch(API + '/v/accounts?days=' + _visDays + '&type=' + encodeURIComponent(v.types) + '&abm=' + v.abm + '&hidden=' + v.hidden + (_visPage ? '&page=' + encodeURIComponent(_visPage) : ''), { headers: _visH() }).then(function (r) { return r.json(); }),
       fetch(API + '/v/alerts', { headers: _visH() }).then(function (r) { return r.json(); })
     ]);
     _visStats = rs[0]; _visAccounts = rs[1].accounts || [];
     _visRenderTiles(); _visRenderAlerts(rs[2].alerts || []); _visRenderTable(); _visRenderDrawer();
+    _visLoadPages();
     _visSetNavBadge((rs[2].alerts || []).filter(function (a) { return !a.seen; }).length);
     var st = document.getElementById('vis-status');
     if (st) st.textContent = _visStats.last_hit
@@ -9534,6 +9542,22 @@ async function renderVisitors() {
   _visLoading = false;
 }
 window.renderVisitors = renderVisitors;
+
+// Liste des pages du site sur la période, pour l'autocomplétion du champ « Page vue ».
+async function _visLoadPages() {
+  if (_visPagesDays === _visDays) return;
+  _visPagesDays = _visDays;
+  try {
+    const r = await fetch(API + '/v/pages?days=' + _visDays, { headers: _visH() });
+    const d = await r.json();
+    _visPages = d.pages || [];
+    const dl = document.getElementById('vis-pages-list');
+    if (dl) dl.innerHTML = _visPages.slice(0, 120).map(function (p) {
+      const label = (p.title ? p.title.replace(/\s*[|·–-]\s*Elistair.*$/i, '').trim() + ' — ' : '') + p.accounts + ' organisation' + (p.accounts > 1 ? 's' : '');
+      return '<option value="' + esc(p.path) + '">' + esc(label) + '</option>';
+    }).join('');
+  } catch (e) { _visPagesDays = null; }
+}
 
 function _visRenderTiles() {
   var t = document.getElementById('vis-tiles'); if (!t || !_visStats) return;
@@ -9578,6 +9602,7 @@ function _visFiltered() {
     name: function (a) { return String(a.societe_name || a.org_name || '').toLowerCase(); },
     score: function (a) { return a.score; },
     visits: function (a) { return a.pageviews; },
+    page: function (a) { return a.page_views || 0; },
     last: function (a) { return new Date(a.last_seen).getTime(); }
   }[by] || function (a) { return a.score; };
   list.sort(function (a, b) {
@@ -9596,6 +9621,9 @@ function _visEmptyHtml() {
       + '<div style="font-size:15px;font-weight:600;margin-bottom:6px;">' + title + '</div>'
       + '<p style="font-size:13px;color:var(--text2);max-width:52ch;margin:0 auto 12px;">' + text + '</p>' + (btn || '') + '</div>';
   };
+  if (_visPage) return box('Personne d\'identifiable sur « ' + esc(_visPage) + ' »',
+    'Soit aucune organisation reconnue n\'a ouvert cette page sur les ' + _visDays + ' derniers jours, soit l\'adresse ne correspond à aucune page. Tape un morceau d\'URL ou choisis dans la liste.',
+    '<button type="button" data-act="clear-page" style="font-size:13px;padding:9px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;">Retirer le filtre</button>');
   if (q) return box('Aucun résultat pour « ' + esc(q) + ' »', 'Essaie un autre nom, ou vide la recherche.');
   if (!s.pageviews) return box('Aucune visite reçue pour l\'instant',
     'Le petit script de mesure est peut-être absent du site, ou personne n\'est encore passé sur elistair.com depuis son installation.',
@@ -9610,6 +9638,7 @@ function _visRenderTable() {
   var body = document.getElementById('vis-body'); if (!body) return;
   var list = _visFiltered();
   if (!list.length) { body.innerHTML = _visEmptyHtml(); return; }
+  var pf = _visPage;
   var th = function (key, label, cls) {
     var on = _visSort.by === key;
     var arrow = on ? (_visSort.dir === 'asc' ? ' ↑' : ' ↓') : '';
@@ -9632,6 +9661,8 @@ function _visRenderTable() {
       + '</div>'
       + (sub ? '<div style="font-size:12px;color:var(--text2);margin-top:2px;">' + sub + '</div>' : '')
       + (pages ? '<div class="vis-col-opt" style="font-size:12px;color:var(--text3);margin-top:2px;">' + pages + '</div>' : '') + '</td>'
+      + (pf ? '<td style="white-space:nowrap;"><b style="font-size:15px;color:var(--accent2);">' + (a.page_views || 0) + '</b> vue' + ((a.page_views || 0) > 1 ? 's' : '')
+            + '<div style="font-size:12px;color:var(--text2);">' + (a.page_visits || 0) + ' visite' + ((a.page_visits || 0) > 1 ? 's' : '') + (a.page_dwell_ms ? ' · ' + _visDwell(a.page_dwell_ms) : '') + '</div></td>' : '')
       + '<td>' + _visInterestHtml(a) + '</td>'
       + '<td class="vis-col-opt" style="white-space:nowrap;font-size:13px;"><b>' + a.pageviews + '</b> page' + (a.pageviews > 1 ? 's' : '') + '<div style="color:var(--text2);font-size:12px;">' + a.visits + ' visite' + (a.visits > 1 ? 's' : '') + (a.dwell_ms ? ' · ' + _visDwell(a.dwell_ms) : '') + '</div></td>'
       + '<td style="white-space:nowrap;font-size:13px;">' + _visAgo(a.last_seen) + '</td>'
@@ -9640,9 +9671,23 @@ function _visRenderTable() {
   body.innerHTML = '<div style="border:1px solid var(--border2);border-radius:10px;overflow:hidden;overflow-x:auto;">'
     + '<table id="vis-table"><caption class="sr-only">Organisations ayant visité elistair.com</caption><thead><tr>'
     + '<th scope="col"><span class="sr-only">Favori</span></th>'
-    + th('name', 'Organisation') + th('score', 'Intérêt') + th('visits', 'Pages vues', 'vis-col-opt') + th('last', 'Dernière visite')
+    + th('name', 'Organisation') + (pf ? th('page', 'Sur cette page') : '') + th('score', 'Intérêt') + th('visits', 'Total pages vues', 'vis-col-opt') + th('last', 'Dernière visite')
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
     + '<p style="font-size:12px;color:var(--text3);margin:8px 0 0;">' + list.length + ' organisation' + (list.length > 1 ? 's' : '') + '. Clique une ligne pour voir le détail et prospecter.</p>';
+  if (pf) {
+    // le filtre est un morceau d'URL : on retrouve la page si elle est identifiable sans ambiguïté
+    var lf = pf.toLowerCase();
+    var cands = _visPages.filter(function (x) { return (x.path || '').toLowerCase().indexOf(lf) >= 0 || (x.title || '').toLowerCase().indexOf(lf) >= 0; });
+    var pInfo = _visPages.find(function (x) { return x.path === pf; }) || (cands.length === 1 ? cands[0] : null);
+    var titre = pInfo ? (pInfo.title ? pInfo.title.replace(/\s*[|·–-]\s*Elistair.*$/i, '').trim() : pInfo.path) : ('« ' + pf + ' »');
+    var vues = list.reduce(function (n, a) { return n + (a.page_views || 0); }, 0);
+    body.innerHTML = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.35);border-radius:10px;padding:10px 14px;margin-bottom:12px;">'
+      + '<b style="font-size:14px;">' + list.length + ' organisation' + (list.length > 1 ? 's' : '') + ' sur ' + esc(titre) + '</b>'
+      + '<span style="font-size:13px;color:var(--text2);">' + vues + ' vue' + (vues > 1 ? 's' : '') + ' sur ' + _visDays + ' jours' + (pInfo ? ' · ' + esc(pInfo.path) : '') + (cands.length > 1 ? ' · ' + cands.length + ' pages correspondent' : '') + '</span>'
+      + (pInfo ? '<a href="https://elistair.com' + esc(pInfo.path) + '" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent2);">voir la page ↗</a>' : '')
+      + '<button type="button" data-act="clear-page" style="margin-left:auto;font-size:12px;padding:6px 11px;border-radius:7px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;">Retirer le filtre</button></div>'
+      + body.innerHTML;
+  }
 }
 
 // ── Panneau latéral ──────────────────────────────────────────────────────────
@@ -9986,6 +10031,7 @@ async function _visPollAlerts() {
     else if (act === 'hide') _visHide(key, true);
     else if (act === 'unhide') _visHide(key, false);
     else if (act === 'alerts-seen') { await fetch(API + '/v/alerts/seen', { method: 'POST', headers: _visH(), body: '{}' }); renderVisitors(); }
+    else if (act === 'clear-page') { var el = document.getElementById('vis-page'); if (el) el.value = ''; _visPage = ''; _visSort = { by: 'score', dir: 'desc' }; _visAccounts = []; renderVisitors(); }
     else if (act === 'open-settings') _visToggleSettings(true);
     else if (act === 'close-settings') _visToggleSettings(false);
     else if (act === 'copy') { var ta = document.getElementById(b.dataset.target); if (ta) { ta.select(); try { await navigator.clipboard.writeText(ta.value); b.textContent = 'Copié'; } catch (err) { document.execCommand('copy'); b.textContent = 'Copié'; } } }
@@ -10001,6 +10047,19 @@ async function _visPollAlerts() {
   var vw = document.getElementById('vis-view'); if (vw) vw.addEventListener('change', function () { _visView = vw.value; _visAccounts = []; _visCloseDrawer(); renderVisitors(); });
   var dd = document.getElementById('vis-days'); if (dd) dd.addEventListener('change', function () { _visDays = +dd.value; renderVisitors(); });
   var s = document.getElementById('vis-search'); if (s) s.addEventListener('input', _visRenderTable);
+  var pg = document.getElementById('vis-page');
+  if (pg) {
+    var applyPage = function () {
+      var v = (pg.value || '').trim();
+      if (v === _visPage) return;
+      _visPage = v;
+      _visSort = v ? { by: 'page', dir: 'desc' } : { by: 'score', dir: 'desc' };
+      _visAccounts = []; _visCloseDrawer(); renderVisitors();
+    };
+    pg.addEventListener('change', applyPage);
+    pg.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); applyPage(); } });
+    pg.addEventListener('search', applyPage);   // clic sur la croix du champ
+  }
   var rf = document.getElementById('vis-refresh'); if (rf) rf.addEventListener('click', function () { renderVisitors(); });
   var sb = document.getElementById('vis-settings-btn'); if (sb) sb.addEventListener('click', function () { _visToggleSettings(); });
   // clavier : Échap ferme le panneau, Tab reste dedans quand il est ouvert
