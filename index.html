@@ -10859,31 +10859,28 @@ async function _visSaveSettings() {
   if (m) { m.textContent = r.ok ? 'Enregistré' : ('Erreur : ' + (errTxt || r.status)); m.style.color = r.ok ? '#16a34a' : '#dc2626'; }
   if (r.ok) setTimeout(function () { _visToggleSettings(true); }, 700);
 }
-function _visSetNavBadge(n) {
-  ['nav-prospects-badge', 'bn-prospects-badge', 'subnav-visitors-badge'].forEach(function (id) {
-    var b = document.getElementById(id); if (!b) return;
-    b.textContent = n > 9 ? '9+' : String(n); b.style.display = n ? 'inline-block' : 'none';
-    b.setAttribute('aria-label', n + ' alerte(s) visiteurs');
-  });
-}
+function _visSetNavBadge(n) { window.__navCounts.vis = n || 0; _navRenderBadges(); }
 // Les alertes de chat restent dans Scout : une pastille sur l'onglet, avec le
 // nombre de leads qualifiés que personne n'a encore traités. Pas de webhook
 // nécessaire pour ne rien rater quand on ouvre Scout.
-function _chatSetNavBadge(n) {
-  ['nav-prospects-badge', 'bn-prospects-badge', 'subnav-chat-badge'].forEach(function (id) {
+// Les pastilles du groupe « Prospects » sont partagées entre les visiteurs et
+// le chat. Sans compteur commun, chaque sondeur écrasait l'autre et le nombre
+// affiché était celui du dernier arrivé, pas la somme.
+window.__navCounts = window.__navCounts || { vis: 0, chat: 0 };
+function _navRenderBadges() {
+  var c = window.__navCounts, total = (c.vis || 0) + (c.chat || 0);
+  var set = function (id, n, label) {
     var b = document.getElementById(id); if (!b) return;
-    if (id === 'subnav-chat-badge') {
-      b.textContent = n > 9 ? '9+' : String(n);
-      b.style.display = n ? 'inline-block' : 'none';
-      b.setAttribute('aria-label', n + ' lead(s) de chat à traiter');
-    } else if (n) {
-      // les pastilles de groupe sont partagées avec les visiteurs : on ne les
-      // efface jamais, on ne fait que les allumer.
-      b.style.display = 'inline-block';
-      if (!b.textContent || b.textContent === '0') b.textContent = String(n > 9 ? '9+' : n);
-    }
-  });
+    b.textContent = n > 9 ? '9+' : String(n);
+    b.style.display = n ? 'inline-block' : 'none';
+    b.setAttribute('aria-label', n + ' ' + label);
+  };
+  set('subnav-visitors-badge', c.vis || 0, 'alerte(s) visiteurs');
+  set('subnav-chat-badge', c.chat || 0, 'lead(s) de chat à traiter');
+  set('nav-prospects-badge', total, 'élément(s) à traiter');
+  set('bn-prospects-badge', total, 'élément(s) à traiter');
 }
+function _chatSetNavBadge(n) { window.__navCounts.chat = n || 0; _navRenderBadges(); }
 async function _chatPollLeads() {
   try {
     if (typeof window.getAuthHeaders !== 'function' || !window.getAuthHeaders().Authorization) return;
