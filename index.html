@@ -9694,6 +9694,10 @@ var CHAT_PAGES = {
 
 function _chatEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
+// Tous les endpoints /v/chat/* exigent une session Scout (prototype) : sans le
+// jeton, requireSession répond 401. Même principe que _visH() côté visiteurs.
+function _chatH() { return Object.assign({ 'Content-Type': 'application/json' }, (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {}); }
+
 function _chatCurrentPage() {
   var sel = document.getElementById('chat-page');
   return CHAT_PAGES[(sel && sel.value) || 'khronos'] || CHAT_PAGES.khronos;
@@ -9751,7 +9755,7 @@ async function _chatNew() {
   _chatRenderLead();
   var p = _chatCurrentPage();
   try {
-    var r = await fetch(API + '/v/chat/session', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    var r = await fetch(API + '/v/chat/session', { method: 'POST', headers: _chatH(),
       body: JSON.stringify({ source: 'test', page: p.path, page_title: p.title, lang: 'fr-FR' }) });
     var j = await r.json();
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
@@ -9770,7 +9774,7 @@ async function _chatSend(text) {
   _chatBubble('user', text);
   _chatTyping(true);
   try {
-    var r = await fetch(API + '/v/chat/message', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    var r = await fetch(API + '/v/chat/message', { method: 'POST', headers: _chatH(),
       body: JSON.stringify({ session_id: _chatSession, text: text }) });
     var j = await r.json();
     _chatTyping(false);
@@ -9800,7 +9804,7 @@ function _chatAgo(ts) {
 async function _chatLoadHistory() {
   var el = document.getElementById('chat-history'); if (!el) return;
   try {
-    var r = await fetch(API + '/v/chat/sessions?limit=15');
+    var r = await fetch(API + '/v/chat/sessions?limit=15', { headers: _chatH() });
     var j = await r.json();
     var rows = j.sessions || [];
     if (!rows.length) { el.innerHTML = '<p style="margin:0;font-size:12.5px;color:var(--text3);">Aucune conversation pour le moment.</p>'; return; }
@@ -9826,7 +9830,7 @@ async function _chatLoadHistory() {
 
 async function _chatOpen(id) {
   try {
-    var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(id));
+    var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(id), { headers: _chatH() });
     var j = await r.json();
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
     var log = document.getElementById('chat-log'); if (log) log.innerHTML = '';
@@ -9841,7 +9845,7 @@ async function _chatOpen(id) {
 async function _chatLoadCfg() {
   if (_chatCfgLoaded) return;
   try {
-    var r = await fetch(API + '/v/chat/config');
+    var r = await fetch(API + '/v/chat/config', { headers: _chatH() });
     var j = await r.json();
     if (!r.ok) return;
     var g = document.getElementById('chat-greeting'); if (g) g.value = j.greeting || '';
@@ -9856,7 +9860,7 @@ async function _chatLoadCfg() {
 async function _chatSaveCfg() {
   var msg = document.getElementById('chat-cfg-msg');
   try {
-    var r = await fetch(API + '/v/chat/config', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    var r = await fetch(API + '/v/chat/config', { method: 'POST', headers: _chatH(),
       body: JSON.stringify({
         greeting: (document.getElementById('chat-greeting') || {}).value || '',
         prompt_extra: (document.getElementById('chat-extra') || {}).value || '',
@@ -9890,7 +9894,7 @@ function _chatWire() {
   var pg = document.getElementById('chat-purge');
   if (pg) pg.addEventListener('click', async function () {
     try {
-      await fetch(API + '/v/chat/purge-tests', { method: 'POST' });
+      await fetch(API + '/v/chat/purge-tests', { method: 'POST', headers: _chatH() });
       _chatLoadHistory();
     } catch (_) {}
   });
