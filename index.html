@@ -124,6 +124,62 @@ body.has-subnav .panel.active .topbar { margin-bottom: 0.6rem; }
 .vis-actions { display:flex; gap:8px; flex-wrap:wrap; }
 @media (max-width: 820px) { .vis-tiles { grid-template-columns:1fr; } .vis-col-opt { display:none; } }
 @media (prefers-reduced-motion: reduce) { #vis-drawer { transition:none; } }
+/* ── Chat de qualification (prototype) ─────────────────────────────────────── */
+.chat-grid { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(300px,.85fr); gap:18px; align-items:start; }
+.chat-pagebar { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px; }
+.chat-site { border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#fff; position:relative; min-height:520px; display:flex; flex-direction:column; }
+.chat-site-chrome { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#e9ecef; border-bottom:1px solid #d6dade; }
+.chat-site-dot { width:10px; height:10px; border-radius:50%; background:#c8ced4; }
+.chat-site-url { flex:1; background:#fff; border-radius:6px; padding:4px 10px; font-size:12px; color:#555; font-family:ui-monospace,Menlo,monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chat-site-page { flex:1; padding:26px 28px; color:#1a1d21; background:#fff; overflow:hidden; }
+.chat-site-brand { font-size:13px; letter-spacing:.22em; font-weight:700; color:#0b3d5c; margin-bottom:22px; }
+.chat-site-page h2 { margin:0 0 10px; font-size:26px; font-weight:700; color:#0b1116; line-height:1.15; }
+.chat-site-page p { margin:0 0 14px; font-size:13px; color:#5b636b; line-height:1.6; max-width:46ch; }
+.chat-site-specs { display:flex; gap:22px; flex-wrap:wrap; margin-top:18px; }
+.chat-site-specs div { font-size:12px; color:#5b636b; }
+.chat-site-specs b { display:block; font-size:17px; color:#0b1116; }
+.chat-site-fade { position:absolute; left:0; right:0; bottom:0; height:120px; background:linear-gradient(transparent,#fff); pointer-events:none; }
+.chat-widget { position:absolute; right:18px; bottom:18px; width:min(330px,calc(100% - 36px)); background:var(--bg2); border:1px solid var(--border); border-radius:14px; box-shadow:0 18px 50px rgba(0,0,0,.28); display:flex; flex-direction:column; overflow:hidden; z-index:2; }
+.chat-widget-head { display:flex; align-items:center; gap:9px; padding:11px 13px; background:var(--bg3,var(--bg2)); border-bottom:1px solid var(--border2); }
+.chat-widget-avatar { width:26px; height:26px; border-radius:50%; background:var(--accent2,#3b82f6); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.chat-widget-head b { font-size:13px; color:var(--text); }
+.chat-widget-head span { font-size:11px; color:var(--text3); display:block; }
+.chat-log { padding:12px 13px; display:flex; flex-direction:column; gap:9px; height:290px; overflow-y:auto; }
+.chat-msg { max-width:86%; padding:8px 11px; border-radius:12px; font-size:13px; line-height:1.5; white-space:pre-wrap; word-wrap:break-word; }
+.chat-msg.bot { align-self:flex-start; background:var(--bg3,#22262b); color:var(--text); border-bottom-left-radius:4px; }
+.chat-msg.me { align-self:flex-end; background:var(--accent2,#3b82f6); color:#fff; border-bottom-right-radius:4px; }
+.chat-msg.err { align-self:stretch; background:transparent; border:1px dashed var(--border); color:var(--text3); font-size:12px; }
+.chat-typing { align-self:flex-start; display:flex; gap:4px; padding:10px 12px; }
+.chat-typing i { width:6px; height:6px; border-radius:50%; background:var(--text3); animation:chatBounce 1s infinite; }
+.chat-typing i:nth-child(2){ animation-delay:.15s; } .chat-typing i:nth-child(3){ animation-delay:.3s; }
+@keyframes chatBounce { 0%,60%,100%{ transform:translateY(0); opacity:.4; } 30%{ transform:translateY(-4px); opacity:1; } }
+.chat-input { display:flex; gap:7px; padding:10px 11px; border-top:1px solid var(--border2); }
+.chat-input input { flex:1; background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:8px 11px; font-size:13px; color:var(--text); }
+.chat-input button { border:none; border-radius:9px; width:34px; background:var(--accent2,#3b82f6); color:#fff; cursor:pointer; font-size:15px; }
+.chat-input button:disabled { opacity:.45; cursor:default; }
+.chat-card { border:1px solid var(--border); border-radius:12px; background:var(--bg2); padding:15px 16px; margin-bottom:14px; }
+.chat-card h3 { margin:0 0 4px; font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--text); }
+.chat-card .chat-hint { margin:0 0 12px; font-size:12px; color:var(--text3); line-height:1.5; }
+.chat-lead-row { display:flex; gap:10px; padding:6px 0; border-bottom:1px solid var(--border2); font-size:13px; }
+.chat-lead-row:last-child { border-bottom:none; }
+.chat-lead-row span { width:88px; flex-shrink:0; color:var(--text3); font-size:12px; padding-top:1px; }
+.chat-lead-row b { font-weight:500; color:var(--text); word-break:break-word; }
+.chat-lead-row.empty b { color:var(--text3); font-weight:400; font-style:italic; }
+.chat-badge { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; }
+.chat-badge.fort { background:rgba(34,197,94,.16); color:#22c55e; }
+.chat-badge.moyen { background:rgba(234,179,8,.16); color:#eab308; }
+.chat-badge.faible { background:var(--bg3,#2a2f36); color:var(--text3); }
+.chat-hist { width:100%; border-collapse:collapse; font-size:12.5px; }
+.chat-hist th { text-align:left; font-weight:500; color:var(--text3); padding:5px 6px; border-bottom:1px solid var(--border2); font-size:11px; text-transform:uppercase; letter-spacing:.03em; }
+.chat-hist td { padding:7px 6px; border-bottom:1px solid var(--border2); color:var(--text2); vertical-align:top; }
+.chat-hist tr:last-child td { border-bottom:none; }
+.chat-hist tr.clickable { cursor:pointer; }
+.chat-hist tr.clickable:hover td { background:var(--bg3,rgba(255,255,255,.03)); }
+.chat-set label { display:block; font-size:12px; color:var(--text3); margin:10px 0 4px; }
+.chat-set textarea, .chat-set input { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:12.5px; color:var(--text); font-family:inherit; box-sizing:border-box; }
+.chat-set textarea { resize:vertical; }
+@media (max-width: 1080px) { .chat-grid { grid-template-columns:1fr; } .chat-site { min-height:460px; } }
+@media (prefers-reduced-motion: reduce) { .chat-typing i { animation:none; } }
 #contact-detail-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100002; align-items:center; justify-content:center; padding:20px; }
 #contact-detail-modal.open { display:flex; }
 #contact-detail-modal .cd-content { background:var(--bg2); border:1px solid var(--border); border-radius:14px; width:100%; max-width:460px; max-height:85vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.4); }
@@ -2511,6 +2567,69 @@ Réinitialiser tous les filtres
       <div id="vis-drawer-backdrop"></div>
     </div>
 
+<!-- CHAT DE QUALIFICATION (prototype) -->
+    <div id="panel-chat" class="panel">
+      <div class="topbar" style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;"><h1>Chat de qualification</h1><span id="chat-status" style="font-size:13px;color:var(--text2);"></span></div>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text2);max-width:78ch;">Prototype, rien n'est en ligne sur elistair.com. Le chat tourne ici pour voir ce que ça donnerait&nbsp;: l'IA répond à partir des fiches produit publiques et récupère au fil de la conversation prénom, nom, email et projet. Elle ne donne ni prix, ni délai, ni sujet contrôle export.</p>
+      <div class="chat-grid">
+        <div>
+          <div class="chat-pagebar">
+            <label class="vis-field"><span>Page simulée</span>
+              <select id="chat-page">
+                <option value="khronos">Khronos, Tethered DroneBox</option>
+                <option value="m400">Station filaire pour DJI M400</option>
+                <option value="light">Ligh-T 4, station compacte</option>
+                <option value="home">Page d'accueil</option>
+              </select>
+            </label>
+            <button type="button" id="chat-restart" class="btn btn-secondary" style="padding:7px 13px;font-size:13px;">Nouvelle conversation</button>
+          </div>
+          <div class="chat-site">
+            <div class="chat-site-chrome"><i class="chat-site-dot"></i><i class="chat-site-dot"></i><i class="chat-site-dot"></i><div class="chat-site-url" id="chat-url">elistair.com</div></div>
+            <div class="chat-site-page" id="chat-sitepage"></div>
+            <div class="chat-site-fade"></div>
+            <div class="chat-widget">
+              <div class="chat-widget-head">
+                <div class="chat-widget-avatar" aria-hidden="true">◆</div>
+                <div><b>Assistant Elistair</b><span>Répond tout de suite</span></div>
+              </div>
+              <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-label="Conversation"></div>
+              <form class="chat-input" id="chat-form" autocomplete="off">
+                <input id="chat-text" type="text" placeholder="Écrire un message…" maxlength="1500" aria-label="Votre message">
+                <button type="submit" id="chat-send" title="Envoyer" aria-label="Envoyer">↑</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="chat-card">
+            <h3>Ce que l'IA a récupéré</h3>
+            <p class="chat-hint">Uniquement ce que le visiteur a dit explicitement. Le score est calculé côté serveur, pas par l'IA.</p>
+            <div id="chat-lead"></div>
+          </div>
+          <div class="chat-card">
+            <h3>Conversations de test</h3>
+            <p class="chat-hint">Clique une ligne pour la relire.</p>
+            <div id="chat-history"></div>
+            <div style="margin-top:12px;"><button type="button" id="chat-purge" class="btn btn-secondary" style="padding:6px 11px;font-size:12px;">Effacer les tests</button></div>
+          </div>
+          <details class="chat-card chat-set">
+            <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--text);">Réglages du bot</summary>
+            <label for="chat-greeting">Message d'accueil</label>
+            <textarea id="chat-greeting" rows="3"></textarea>
+            <label for="chat-extra">Consignes supplémentaires (ajoutées au prompt)</label>
+            <textarea id="chat-extra" rows="4" placeholder="ex : ne parle jamais de la Ligh-T aux visiteurs défense"></textarea>
+            <label for="chat-model">Modèle</label>
+            <input id="chat-model" type="text" spellcheck="false">
+            <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+              <button type="button" id="chat-save-cfg" class="btn btn-primary" style="padding:6px 13px;font-size:12px;">Enregistrer</button>
+              <span id="chat-cfg-msg" style="font-size:12px;color:var(--text3);"></span>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+
 <!-- RESELLERS PANEL -->
     <div id="panel-resellers" class="panel" style="flex-direction:column;overflow:hidden;">
       <div class="topbar" style="margin-bottom:0;padding-bottom:12px;flex-shrink:0;display:flex;align-items:center;gap:12px;">
@@ -2861,7 +2980,8 @@ const NAV_GROUPS = [
   { id: 'prospects', label: 'Prospects', tabs: [
       { panel: 'contacts',  label: 'Contacts' },
       { panel: 'end-users', label: 'Comptes' },
-      { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' } ] },
+      { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' },
+      { panel: 'chat',      label: 'Chat (test)' } ] },
   { id: 'marche', label: 'Marché', tabs: [
       { panel: 'societes',    label: 'Fabricants' },
       { panel: 'produits-db', label: 'Produits' },
@@ -2976,6 +3096,7 @@ function go(id, opts) {
   if (id === 'resellers') { loadResellersMap(); }
   if (id === 'hot') { try { renderHotProspects(); } catch(e){ console.error('renderHotProspects', e); } }
   if (id === 'visitors') { try { renderVisitors(); } catch(e){ console.error('renderVisitors', e); } }
+  if (id === 'chat') { try { renderChat(); } catch(e){ console.error('renderChat', e); } }
   if (id === 'tracking') { try { renderTracking(); } catch(e){ console.error('renderTracking', e); } }
   if (id === 'config') {
     // Settings panel — peupler la liste des pays exclus et tous les champs.
@@ -6170,7 +6291,7 @@ if ('serviceWorker' in navigator) {
   const hash = window.location.hash.slice(1); // ex: "end-users/contacts"
   if (!hash) return;
   const [panel, tab] = hash.split('/');
-  const validPanels = ['dashboard','societes','produits-db','contracts','end-users','config','hot','contacts','tracking','visitors','resellers'];
+  const validPanels = ['dashboard','societes','produits-db','contracts','end-users','config','hot','contacts','tracking','visitors','resellers','chat'];
   if (!validPanels.includes(panel)) return;
   // Attendre que le DOM soit prêt
   if (document.readyState === 'loading') {
@@ -9542,6 +9663,249 @@ async function renderVisitors() {
   _visLoading = false;
 }
 window.renderVisitors = renderVisitors;
+
+// ─── Chat de qualification (prototype) ──────────────────────────────────────
+// Bulle de chat telle qu'elle apparaîtrait sur elistair.com. Rien n'est publié :
+// tout passe par /v/chat/*, qui exige une session Scout.
+var _chatSession = null;      // id de la conversation en cours
+var _chatBusy = false;
+var _chatLead = {};
+var _chatScore = 0, _chatScoreLabel = '';
+var _chatCfgLoaded = false;
+
+var CHAT_PAGES = {
+  khronos: { path: '/solutions/tethered-dronebox-khronos/', title: 'Khronos | Tethered DroneBox | Elistair',
+    h: 'KHRONOS', sub: 'Tethered DroneBox',
+    p: "Boîtier drone automatisé pour missions mobiles. Décollage et atterrissage entièrement automatiques, déploiement depuis un véhicule sans en sortir.",
+    specs: [['24 h', 'de vol continu'], ['60 m', "d'altitude"], ['32 kg', 'système complet'], ['< 2 min', 'avant décollage']] },
+  m400: { path: '/products/dji-m400/', title: 'Station filaire pour DJI M400 | Elistair',
+    h: 'SAFE-T 2.3', sub: 'pour DJI M400',
+    p: "Station filaire dédiée au DJI M400. Alimentation illimitée par le câble, intégration Plug & Fly, vol statique prolongé sans changement de batterie.",
+    specs: [['100 m', 'de vol statique'], ['2200 W', 'en continu'], ['110 m', 'de câble'], ['IP54', 'tout temps']] },
+  light: { path: '/solutions/tethering-station-ligh-t/', title: 'Ligh-T 4 | Station compacte | Elistair',
+    h: 'LIGH-T 4', sub: 'Station compacte',
+    p: "Station portable pour primo-intervenants. Mise en œuvre en moins de cinq minutes, poignée télescopique et roues, treuil électrique et manuel.",
+    specs: [['1800 W', 'de puissance'], ['70 m', 'de câble'], ['20 kg', 'transportable'], ['< 5 min', 'de mise en œuvre']] },
+  home: { path: '/', title: 'Elistair | Tethered Drone Systems',
+    h: 'ELISTAIR', sub: 'Tethered drone systems',
+    p: "Stations et systèmes de drones filaires pour la défense, les forces de l'ordre et la sécurité civile. Déployés dans plus de 70 pays.",
+    specs: [['70+', 'pays'], ['24 h', 'de vol continu'], ['3', 'systèmes']] }
+};
+
+function _chatEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function _chatCurrentPage() {
+  var sel = document.getElementById('chat-page');
+  return CHAT_PAGES[(sel && sel.value) || 'khronos'] || CHAT_PAGES.khronos;
+}
+
+function _chatRenderSite() {
+  var p = _chatCurrentPage();
+  var url = document.getElementById('chat-url'); if (url) url.textContent = 'elistair.com' + p.path;
+  var el = document.getElementById('chat-sitepage'); if (!el) return;
+  el.innerHTML = '<div class="chat-site-brand">ELISTAIR</div>'
+    + '<h2>' + _chatEsc(p.h) + '<br><span style="font-weight:400;color:#5b636b;font-size:19px;">' + _chatEsc(p.sub) + '</span></h2>'
+    + '<p>' + _chatEsc(p.p) + '</p>'
+    + '<div class="chat-site-specs">' + p.specs.map(function (s) {
+        return '<div><b>' + _chatEsc(s[0]) + '</b>' + _chatEsc(s[1]) + '</div>';
+      }).join('') + '</div>';
+}
+
+function _chatBubble(role, text) {
+  var log = document.getElementById('chat-log'); if (!log) return;
+  var d = document.createElement('div');
+  d.className = 'chat-msg ' + (role === 'user' ? 'me' : role === 'error' ? 'err' : 'bot');
+  d.textContent = text;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+function _chatTyping(on) {
+  var log = document.getElementById('chat-log'); if (!log) return;
+  var t = document.getElementById('chat-typing');
+  if (on && !t) {
+    t = document.createElement('div'); t.id = 'chat-typing'; t.className = 'chat-typing';
+    t.innerHTML = '<i></i><i></i><i></i>';
+    log.appendChild(t); log.scrollTop = log.scrollHeight;
+  } else if (!on && t) { t.remove(); }
+}
+
+var CHAT_LEAD_LABELS = [['prenom', 'Prénom'], ['nom', 'Nom'], ['email', 'Email'], ['societe', 'Société'],
+  ['pays', 'Pays'], ['role', 'Fonction'], ['produit', 'Produit'], ['echeance', 'Échéance'], ['besoin', 'Projet']];
+
+function _chatRenderLead() {
+  var el = document.getElementById('chat-lead'); if (!el) return;
+  var filled = CHAT_LEAD_LABELS.filter(function (f) { return _chatLead[f[0]]; }).length;
+  var cls = _chatScoreLabel === 'Fort' ? 'fort' : _chatScoreLabel === 'Moyen' ? 'moyen' : 'faible';
+  var head = '<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">'
+    + '<span class="chat-badge ' + cls + '">' + _chatEsc(_chatScoreLabel || 'Faible') + '</span>'
+    + '<span style="font-size:12px;color:var(--text3);">score ' + _chatScore + '/100 · ' + filled + ' champ' + (filled > 1 ? 's' : '') + ' sur ' + CHAT_LEAD_LABELS.length + '</span></div>';
+  el.innerHTML = head + CHAT_LEAD_LABELS.map(function (f) {
+    var v = _chatLead[f[0]];
+    return '<div class="chat-lead-row' + (v ? '' : ' empty') + '"><span>' + f[1] + '</span><b>' + _chatEsc(v || '—') + '</b></div>';
+  }).join('');
+}
+
+async function _chatNew() {
+  var log = document.getElementById('chat-log'); if (log) log.innerHTML = '';
+  _chatLead = {}; _chatScore = 0; _chatScoreLabel = ''; _chatSession = null;
+  _chatRenderLead();
+  var p = _chatCurrentPage();
+  try {
+    var r = await fetch(API + '/v/chat/session', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'test', page: p.path, page_title: p.title, lang: 'fr-FR' }) });
+    var j = await r.json();
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    _chatSession = j.id;
+    _chatBubble('assistant', j.greeting);
+  } catch (e) {
+    _chatBubble('error', "Impossible d'ouvrir la conversation : " + e.message);
+  }
+}
+
+async function _chatSend(text) {
+  if (!text || _chatBusy) return;
+  if (!_chatSession) { await _chatNew(); if (!_chatSession) return; }
+  _chatBusy = true;
+  var btn = document.getElementById('chat-send'); if (btn) btn.disabled = true;
+  _chatBubble('user', text);
+  _chatTyping(true);
+  try {
+    var r = await fetch(API + '/v/chat/message', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: _chatSession, text: text }) });
+    var j = await r.json();
+    _chatTyping(false);
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    _chatBubble('assistant', j.reply);
+    _chatLead = j.lead || {}; _chatScore = j.score || 0; _chatScoreLabel = j.score_label || '';
+    _chatRenderLead();
+    _chatLoadHistory();
+  } catch (e) {
+    _chatTyping(false);
+    _chatBubble('error', 'Erreur : ' + e.message);
+  }
+  _chatBusy = false;
+  if (btn) btn.disabled = false;
+  var inp = document.getElementById('chat-text'); if (inp) inp.focus();
+}
+
+function _chatAgo(ts) {
+  if (!ts) return '';
+  var d = (Date.now() - new Date(ts).getTime()) / 60000;
+  if (d < 1) return "à l'instant";
+  if (d < 60) return Math.round(d) + ' min';
+  if (d < 1440) return Math.round(d / 60) + ' h';
+  return Math.round(d / 1440) + ' j';
+}
+
+async function _chatLoadHistory() {
+  var el = document.getElementById('chat-history'); if (!el) return;
+  try {
+    var r = await fetch(API + '/v/chat/sessions?limit=15');
+    var j = await r.json();
+    var rows = j.sessions || [];
+    if (!rows.length) { el.innerHTML = '<p style="margin:0;font-size:12.5px;color:var(--text3);">Aucune conversation pour le moment.</p>'; return; }
+    el.innerHTML = '<table class="chat-hist"><thead><tr><th>Visiteur</th><th>Projet</th><th>Score</th><th></th></tr></thead><tbody>'
+      + rows.map(function (s) {
+          var L = s.lead || {};
+          var who = [L.prenom, L.nom].filter(Boolean).join(' ') || L.email || L.societe || 'Anonyme';
+          var cls = s.score_label === 'Fort' ? 'fort' : s.score_label === 'Moyen' ? 'moyen' : 'faible';
+          return '<tr class="clickable" data-id="' + _chatEsc(s.id) + '">'
+            + '<td><b style="color:var(--text);font-weight:500;">' + _chatEsc(who) + '</b>'
+            + (L.societe && who !== L.societe ? '<br><span style="color:var(--text3);">' + _chatEsc(L.societe) + '</span>' : '') + '</td>'
+            + '<td>' + _chatEsc((L.besoin || '—').slice(0, 60)) + '</td>'
+            + '<td><span class="chat-badge ' + cls + '">' + _chatEsc(s.score_label) + '</span></td>'
+            + '<td style="color:var(--text3);white-space:nowrap;">' + _chatEsc(_chatAgo(s.updated_at)) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    el.querySelectorAll('tr.clickable').forEach(function (tr) {
+      tr.addEventListener('click', function () { _chatOpen(tr.getAttribute('data-id')); });
+    });
+  } catch (e) {
+    el.innerHTML = '<p style="margin:0;font-size:12.5px;color:var(--text3);">Historique indisponible.</p>';
+  }
+}
+
+async function _chatOpen(id) {
+  try {
+    var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(id));
+    var j = await r.json();
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    var log = document.getElementById('chat-log'); if (log) log.innerHTML = '';
+    (j.messages || []).forEach(function (m) { _chatBubble(m.role === 'user' ? 'user' : 'assistant', m.content); });
+    _chatSession = j.id; _chatLead = j.lead || {}; _chatScore = j.score || 0; _chatScoreLabel = j.score_label || '';
+    _chatRenderLead();
+    var st = document.getElementById('chat-status');
+    if (st) st.textContent = 'conversation reprise · ' + (j.turns || 0) + ' échange' + ((j.turns || 0) > 1 ? 's' : '');
+  } catch (e) { _chatBubble('error', 'Relecture impossible : ' + e.message); }
+}
+
+async function _chatLoadCfg() {
+  if (_chatCfgLoaded) return;
+  try {
+    var r = await fetch(API + '/v/chat/config');
+    var j = await r.json();
+    if (!r.ok) return;
+    var g = document.getElementById('chat-greeting'); if (g) g.value = j.greeting || '';
+    var e = document.getElementById('chat-extra'); if (e) e.value = j.prompt_extra || '';
+    var m = document.getElementById('chat-model'); if (m) m.value = j.model || '';
+    var st = document.getElementById('chat-status');
+    if (st && !j.has_key) st.textContent = 'clé Anthropic absente côté serveur';
+    _chatCfgLoaded = true;
+  } catch (_) {}
+}
+
+async function _chatSaveCfg() {
+  var msg = document.getElementById('chat-cfg-msg');
+  try {
+    var r = await fetch(API + '/v/chat/config', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        greeting: (document.getElementById('chat-greeting') || {}).value || '',
+        prompt_extra: (document.getElementById('chat-extra') || {}).value || '',
+        model: (document.getElementById('chat-model') || {}).value || ''
+      }) });
+    var j = await r.json();
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    if (msg) msg.textContent = 'enregistré, effectif à la prochaine conversation';
+  } catch (e) { if (msg) msg.textContent = 'échec : ' + e.message; }
+}
+
+var _chatWired = false;
+function _chatWire() {
+  if (_chatWired) return; _chatWired = true;
+  var form = document.getElementById('chat-form');
+  if (form) form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var inp = document.getElementById('chat-text');
+    var t = (inp && inp.value || '').trim();
+    if (!t) return;
+    if (inp) inp.value = '';
+    _chatSend(t);
+  });
+  var sel = document.getElementById('chat-page');
+  if (sel) sel.addEventListener('change', function () { _chatRenderSite(); _chatNew(); });
+  var rs = document.getElementById('chat-restart');
+  if (rs) rs.addEventListener('click', function () {
+    var st = document.getElementById('chat-status'); if (st) st.textContent = '';
+    _chatNew();
+  });
+  var pg = document.getElementById('chat-purge');
+  if (pg) pg.addEventListener('click', async function () {
+    try {
+      await fetch(API + '/v/chat/purge-tests', { method: 'POST' });
+      _chatLoadHistory();
+    } catch (_) {}
+  });
+  var sv = document.getElementById('chat-save-cfg');
+  if (sv) sv.addEventListener('click', _chatSaveCfg);
+}
+
+async function renderChat() {
+  _chatWire();
+  _chatRenderSite();
+  _chatLoadCfg();
+  _chatLoadHistory();
+  if (!_chatSession) await _chatNew();
+}
+window.renderChat = renderChat;
 
 // Liste des pages du site sur la période, pour l'autocomplétion du champ « Page vue ».
 async function _visLoadPages() {
