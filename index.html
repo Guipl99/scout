@@ -10211,7 +10211,10 @@ function _chatWire() {
   var pg = document.getElementById('chat-purge');
   if (pg) pg.addEventListener('click', async function () {
     var st = document.getElementById('chat-status');
-    var dire = function (t) { if (st) { st.textContent = t; setTimeout(function () { if (st.textContent === t) st.textContent = ''; }, 4000); } };
+    // #chat-status est partagé avec _chatStatus() (« répond en anglais »,
+    // « conversation bloquée ») : on lui rend la main au lieu de vider la ligne,
+    // sinon l'indicateur de langue disparaît 4 s après un effacement.
+    var dire = function (t) { if (st) { st.textContent = t; setTimeout(function () { if (st.textContent === t) _chatStatus(); }, 4000); } };
     pg.disabled = true;
     try {
       var r = await fetch(API + '/v/chat/purge-tests', { method: 'POST', headers: _chatH() });
