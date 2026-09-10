@@ -10042,7 +10042,11 @@ function _chatAgo(ts) {
 async function _chatLoadHistory() {
   var el = document.getElementById('chat-history'); if (!el) return;
   try {
-    var r = await fetch(API + '/v/chat/sessions?limit=15', { headers: _chatH() });
+    // source=test : la carte s'appelle « Conversations de test » et le bouton
+    // « Effacer les tests » ne supprime que source='test'. Sans ce filtre, la
+    // liste montrait aussi le trafic du site, donc l'effacement semblait sans
+    // effet — les lignes qui restaient n'étaient pas des tests.
+    var r = await fetch(API + '/v/chat/sessions?source=test&limit=15', { headers: _chatH() });
     var j = await r.json();
     var rows = j.sessions || [];
     if (!rows.length) { el.innerHTML = '<p style="margin:0;font-size:12.5px;color:var(--text3);">Aucune conversation pour le moment.</p>'; return; }
@@ -10206,10 +10210,19 @@ function _chatWire() {
   });
   var pg = document.getElementById('chat-purge');
   if (pg) pg.addEventListener('click', async function () {
+    var st = document.getElementById('chat-status');
+    var dire = function (t) { if (st) { st.textContent = t; setTimeout(function () { if (st.textContent === t) st.textContent = ''; }, 4000); } };
+    pg.disabled = true;
     try {
-      await fetch(API + '/v/chat/purge-tests', { method: 'POST', headers: _chatH() });
-      _chatLoadHistory();
-    } catch (_) {}
+      var r = await fetch(API + '/v/chat/purge-tests', { method: 'POST', headers: _chatH() });
+      var j = await r.json().catch(function () { return {}; });
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      // Un bouton muet qui échoue en silence est indiscernable d'un bouton mort.
+      dire(j.deleted ? (j.deleted + ' conversation' + (j.deleted > 1 ? 's' : '') + ' de test effacée' + (j.deleted > 1 ? 's' : '')) : 'Aucune conversation de test à effacer.');
+      await _chatLoadHistory();
+    } catch (e) {
+      dire('Échec de l\'effacement : ' + e.message);
+    } finally { pg.disabled = false; }
   });
   var sv = document.getElementById('chat-save-cfg');
   if (sv) sv.addEventListener('click', _chatSaveCfg);
