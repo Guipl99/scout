@@ -10505,7 +10505,8 @@ function _visRenderTiles() {
   var tile = function (lbl, val, sub, col) {
     return '<div class="vis-tile"><div class="vis-tile-lbl">' + lbl + '</div><div class="vis-tile-val"' + (col ? ' style="color:' + col + ';"' : '') + '>' + val + '</div>' + (sub ? '<div class="vis-tile-sub">' + sub + '</div>' : '') + '</div>';
   };
-  t.innerHTML = tile('Organisations identifiées', s.accounts, 'sur ' + s.visitors + ' visiteur' + (s.visitors > 1 ? 's' : '') + ' au total')
+  var anon = Math.max(0, (+s.visitors || 0) - (+s.accounts || 0));
+  t.innerHTML = tile('Organisations identifiées', s.accounts, anon ? anon + ' visiteur' + (anon > 1 ? 's' : '') + ' anonymes (box / mobile / VPN, normal)' : 'sur ' + s.visitors + ' visiteur' + (s.visitors > 1 ? 's' : '') + ' au total')
     + tile('Comptes ABM venus sur le site', s.abm_accounts, s.unseen_alerts ? s.unseen_alerts + ' alerte(s) à lire' : 'aucune alerte en attente', '#16a34a')
     + tile('Pas encore dans Scout', newToScout, newToScout ? 'à créer en un clic depuis la fiche' : 'tout est rattaché', newToScout ? 'var(--accent2)' : null);
 }
