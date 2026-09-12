@@ -2609,11 +2609,11 @@ Réinitialiser tous les filtres
       <div class="vis-toolbar">
         <label class="vis-field"><span>Afficher</span>
           <select id="vis-view">
-            <option value="todo">Entreprises &amp; administrations</option>
-            <option value="ident">✓ Comptes identifiés</option>
+            <option value="ident" selected>✓ Vrais comptes (identifiés)</option>
             <option value="ident-site">✓ Identifiés par leur site</option>
-            <option value="fav">★ Mes favoris</option>
             <option value="abm">🎯 Comptes ABM</option>
+            <option value="fav">★ Mes favoris</option>
+            <option value="todo">Tout (dont non vérifiés)</option>
             <option value="other">Visiteurs non identifiables</option>
             <option value="hidden">Comptes ignorés</option>
           </select>
@@ -9687,7 +9687,7 @@ window.renderHotProspects = renderHotProspects;
 // ===================== Visiteurs web (Leadfeeder interne) =====================
 // Backend : scout-api/visitors.js (endpoints /v/*). Liste simple + panneau latéral par compte.
 // Aucun onclick inline : délégation d'événements sur #panel-visitors (data-act).
-var _visDays = 30, _visView = 'todo', _visSort = { by: 'score', dir: 'desc' };
+var _visDays = 30, _visView = 'ident', _visSort = { by: 'score', dir: 'desc' };
 var _visAccounts = [], _visStats = null, _visLoading = false, _visLastFocus = null;
 var _visPage = '', _visPages = [], _visPagesDays = null;
 var _visDrawer = { key: null, msg: {}, candidates: null, sessions: null, confirm: null, summaryLoading: false };
@@ -10707,6 +10707,7 @@ function _visRenderDrawer() {
   var quiInner = s
     ? (s.connu === false
       ? '<p>L\'IA ne connaît pas cette organisation avec certitude. Rien n\'est affiché plutôt que d\'inventer.</p>'
+        + (a.org_domain ? '<p style="font-size:13px;color:var(--text2);">Vérifie directement : <a href="https://' + esc(a.org_domain) + '" target="_blank" rel="noopener">' + esc(a.org_domain) + '</a>' + (a.descriptif ? ' — ' + esc(a.descriptif) : '') + '</p>' : '<p style="font-size:13px;color:var(--text3);">Aucun domaine connu : possible fournisseur d\'accès / hébergeur plutôt qu\'un client final.</p>')
       : '<p>' + esc(s.qui) + (s.activite ? ' ' + esc(s.activite) : '') + '</p>'
         + (s.drones ? '<p><b>Drones, défense :</b> ' + esc(s.drones) + '</p>' : '')
         + (s.taille ? '<p style="color:var(--text3);">' + esc(s.taille) + '</p>' : ''))
