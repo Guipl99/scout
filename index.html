@@ -9727,7 +9727,8 @@ function _visInterestHtml(a) {
   var i = _visInterest(a.score);
   return '<div style="display:flex;align-items:center;gap:7px;"><span style="font-size:13px;color:' + i.color + ';font-weight:600;">' + i.label + '</span>'
     + '<span style="display:inline-block;width:46px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;"><span style="display:block;width:' + i.pct + '%;height:100%;background:' + i.color + ';"></span></span></div>'
-    + ((a.key_labels || []).length ? '<div style="font-size:12px;color:var(--text2);margin-top:3px;">' + (a.key_labels || []).map(esc).join(', ') + '</div>' : '');
+    + ((a.key_labels || []).length ? '<div style="font-size:12px;color:var(--text2);margin-top:3px;">' + (a.key_labels || []).map(esc).join(', ') + '</div>' : '')
+    + (a.sales_angle ? '<div style="font-size:12px;color:var(--accent, #6366f1);margin-top:3px;display:flex;align-items:flex-start;gap:4px;"><span aria-hidden="true">🎯</span><span>' + esc(a.sales_angle) + '</span></div>' : '');
 }
 function _visLogo(a, size) {
   size = size || 20;
