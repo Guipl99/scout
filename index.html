@@ -2610,7 +2610,8 @@ Réinitialiser tous les filtres
         <label class="vis-field"><span>Afficher</span>
           <select id="vis-view">
             <option value="todo">Entreprises &amp; administrations</option>
-            <option value="ident">✓ Comptes identifiés par l'IA</option>
+            <option value="ident">✓ Comptes identifiés</option>
+            <option value="ident-site">✓ Identifiés par leur site</option>
             <option value="fav">★ Mes favoris</option>
             <option value="abm">🎯 Comptes ABM</option>
             <option value="other">Visiteurs non identifiables</option>
@@ -9748,7 +9749,10 @@ var VIS_VIEWS = {
   todo:   { types: 'business,government,education', abm: '0', hidden: '0', title: 'Entreprises & administrations' },
   // Comptes dont le nom vient d'une identification (lecture du site ou IA), par
   // opposition à ceux qui portent encore le nom brut du RDAP ou de l'ASN.
-  ident:  { types: 'business,government,education', abm: '0', hidden: '0', identifie: '1', title: 'Comptes identifiés par l\'IA' },
+  // « ident » : toute identification, site ou IA. « ident-site » : le nom a été
+  // LU sur la page d'accueil — le seul des deux qu'on puisse citer sans réserve.
+  ident:      { types: 'business,government,education', abm: '0', hidden: '0', identifie: '1',    title: 'Comptes identifiés' },
+  'ident-site': { types: 'business,government,education', abm: '0', hidden: '0', identifie: 'site', title: 'Identifiés par leur site' },
   fav:    { types: 'business,government,education', abm: '0', hidden: '0', title: 'Favoris', star: true },
   abm:    { types: 'business,government,education', abm: '1', hidden: '0', title: 'Comptes ABM' },
   other:  { types: 'isp,hosting,vpn,unknown',       abm: '0', hidden: '0', title: 'Visiteurs non identifiables' },
@@ -9762,7 +9766,7 @@ async function renderVisitors() {
   try {
     var rs = await Promise.all([
       fetch(API + '/v/stats?days=' + _visDays, { headers: _visH() }).then(function (r) { return r.json(); }),
-      fetch(API + '/v/accounts?days=' + _visDays + '&type=' + encodeURIComponent(v.types) + '&abm=' + v.abm + '&hidden=' + v.hidden + (v.identifie ? '&identifie=1' : '') + (_visPage ? '&page=' + encodeURIComponent(_visPage) : ''), { headers: _visH() }).then(function (r) { return r.json(); }),
+      fetch(API + '/v/accounts?days=' + _visDays + '&type=' + encodeURIComponent(v.types) + '&abm=' + v.abm + '&hidden=' + v.hidden + (v.identifie ? '&identifie=' + encodeURIComponent(v.identifie) : '') + (_visPage ? '&page=' + encodeURIComponent(_visPage) : ''), { headers: _visH() }).then(function (r) { return r.json(); }),
       fetch(API + '/v/alerts', { headers: _visH() }).then(function (r) { return r.json(); })
     ]);
     _visStats = rs[0]; _visAccounts = rs[1].accounts || [];
@@ -10524,6 +10528,16 @@ function _visRenderAlerts(alerts) {
 }
 
 // ── Liste ────────────────────────────────────────────────────────────────────
+// Provenance du nom affiché. « site » = nom LU sur la page d'accueil de
+// l'organisation ; « IA » = nom DÉDUIT par le filet, dont la confiance est
+// plafonnée à 65 côté API. Les deux arrivaient mélangés sous une seule
+// étiquette « identifiés par l'IA », alors qu'ils ne se valent pas du tout
+// pour quelqu'un qui décroche son téléphone derrière.
+function _visIdentTag(a) {
+  if (a.identifie_par === 'site') return '<span class="tag tag-green" title="Nom lu sur la page d\'accueil de l\'organisation">✓ site</span>';
+  if (a.identifie_par === 'ia') return '<span class="tag tag-amber" title="Nom déduit des signaux réseau par l\'IA, sans lecture du site — à confirmer">~ IA</span>';
+  return '';
+}
 function _visFiltered() {
   var q = ((document.getElementById('vis-search') || {}).value || '').toLowerCase().trim();
   var v = VIS_VIEWS[_visView] || VIS_VIEWS.todo;
@@ -10564,7 +10578,8 @@ function _visEmptyHtml() {
     '<button type="button" data-act="open-settings" style="font-size:13px;padding:9px 14px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:600;cursor:pointer;">Voir le script à installer</button>');
   if (_visView === 'fav') return box('Aucun favori', 'Clique sur l\'étoile d\'un compte pour le garder en haut de ta liste.');
   if (_visView === 'abm') return box('Aucun compte ABM sur la période', 'Aucun des comptes cibles n\'est passé sur le site ces ' + _visDays + ' derniers jours.');
-  if (_visView === 'ident') return box('Aucun compte identifié par l\'IA', 'Cette vue ne montre que les comptes dont le nom a été confirmé en ouvrant leur site. Les autres gardent le nom brut du registre réseau.');
+  if (_visView === 'ident') return box('Aucun compte identifié', 'Cette vue ne montre que les comptes dont le nom a été établi en ouvrant leur site (✓ site) ou déduit par l\'IA (~ IA). Les autres gardent le nom brut du registre réseau ou de l\'ASN.');
+  if (_visView === 'ident-site') return box('Aucun compte identifié par son site', 'Cette vue ne montre que les comptes dont le nom a été lu sur leur page d\'accueil. Les noms seulement déduits par l\'IA sont dans « Comptes identifiés ».');
   if (_visView === 'hidden') return box('Aucun compte ignoré', 'Les comptes que tu masques (Elistair, partenaires, fournisseurs) apparaîtront ici.');
   return box('Aucune organisation identifiée sur la période',
     s.visitors + ' visiteur(s) sont venus, mais tous depuis une box, un mobile ou un VPN, donc impossible de savoir de quelle organisation ils viennent. C\'est le cas d\'environ deux visiteurs sur trois.');
@@ -10590,6 +10605,7 @@ function _visRenderTable() {
       + '<button type="button" class="vis-name-btn" data-act="open" data-key="' + esc(a.account_key) + '">' + esc(name) + '</button>'
       + (a.country ? '<span title="' + esc(a.country) + '">' + _visFlag(a.country) + '</span>' : '')
       + (a.is_abm ? tagHtml('ABM', 'tag-green') : '')
+      + _visIdentTag(a)
       + (a.societe_id ? '' : tagHtml('nouveau', 'tag-accent'))
       + (a.hidden ? tagHtml('ignoré', 'tag-red') : '')
       + ((a.contacts_seen || []).length ? '<span title="' + esc((a.contacts_seen || []).map(function (c) { return c.nom; }).join(', ')) + '" style="font-size:12px;color:var(--accent2);">👤 ' + a.contacts_seen.length + '</span>' : '')
