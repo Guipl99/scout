@@ -2610,12 +2610,14 @@ Réinitialiser tous les filtres
         <label class="vis-field"><span>Afficher</span>
           <select id="vis-view">
             <option value="ident" selected>✓ Vrais comptes (identifiés)</option>
-            <option value="ident-site">✓ Identifiés par leur site</option>
             <option value="abm">🎯 Comptes ABM</option>
             <option value="fav">★ Mes favoris</option>
-            <option value="todo">Tout (dont non vérifiés)</option>
-            <option value="other">Visiteurs non identifiables</option>
-            <option value="hidden">Comptes ignorés</option>
+            <option value="todo">Tout</option>
+            <optgroup label="Avancé">
+              <option value="ident-site">Identifiés par leur site</option>
+              <option value="other">Visiteurs non identifiables</option>
+              <option value="hidden">Comptes ignorés</option>
+            </optgroup>
           </select>
         </label>
         <label class="vis-field"><span>Période</span>
