@@ -5060,7 +5060,7 @@ async function scrapeTenders() {
   btn.disabled = true; btn.textContent = '⏳ Scraping tenders...';
   try {
     const r = await fetch(API + '/admin/scrape-tenders', {
-      method: 'POST', headers: { 'x-secret': 'drone-scout-2026' }
+      method: 'POST', headers: window.getAuthHeaders()
     });
     const d = await r.json();
     btn.textContent = `✓ ${d.tenders_added} tenders ajoutés`;
@@ -5529,7 +5529,7 @@ async function aiFetchImages() {
     btn.textContent = `⏳ Batch ${batch+1}/12 en cours...`;
     try {
       const r = await fetch(API + '/admin/ai-fetch-images?batch=' + batch, {
-        method: 'POST', headers: {'x-secret':'drone-scout-2026'}
+        method: 'POST', headers: window.getAuthHeaders()
       });
       const d = await r.json();
       if (d.done) break;
@@ -5545,7 +5545,7 @@ async function fetchProductImages() {
   const btn = document.getElementById('btn-fetch-imgs');
   btn.disabled = true; btn.textContent = '⏳ Chargement images (30s)...';
   try {
-    const r = await fetch(API + '/admin/fetch-images', { method: 'POST', headers: { 'x-secret': 'drone-scout-2026' } });
+    const r = await fetch(API + '/admin/fetch-images', { method: 'POST', headers: window.getAuthHeaders() });
     const d = await r.json();
     btn.textContent = d.ok ? `✓ ${d.fetched} images chargées` : 'Erreur';
     setTimeout(() => { btn.textContent = '🖼 Charger images produits (Wikipedia)'; btn.disabled = false; }, 5000);
@@ -5556,7 +5556,7 @@ async function scrapeTethered() {
   const btn = event.target;
   btn.disabled = true; btn.textContent = '⏳ Scraping tethered (1-2 min)...';
   try {
-    const r = await fetch(API + '/admin/scrape-tethered', { method: 'POST', headers: { 'x-secret': 'drone-scout-2026' } });
+    const r = await fetch(API + '/admin/scrape-tethered', { method: 'POST', headers: window.getAuthHeaders() });
     const d = await r.json();
     btn.textContent = d.ok ? `✓ ${d.societes} fabricants, ${d.drones} drones ajoutés` : 'Erreur: ' + d.error;
     setTimeout(() => { btn.textContent = '🪁 Scraper tethered drones'; btn.disabled = false; }, 5000);
@@ -5570,7 +5570,7 @@ async function scrapeTendersFromConfig() {
   try {
     const r = await fetch(API + '/admin/scrape-tenders', {
       method: 'POST',
-      headers: { 'x-secret': 'drone-scout-2026' }
+      headers: window.getAuthHeaders()
     });
     const d = await r.json();
     btn.textContent = d.ok !== false
@@ -5588,9 +5588,9 @@ async function scrapeDefenseContracts() {
   btn.disabled = true; btn.textContent = '⏳ Scraping (2-3 min)...';
   try {
     // First clean civilian contracts
-    await fetch(API + '/admin/clean-defense', { method: 'POST', headers: { 'x-secret': 'drone-scout-2026' } });
+    await fetch(API + '/admin/clean-defense', { method: 'POST', headers: window.getAuthHeaders() });
     // Then scrape defense contracts
-    const r = await fetch(API + '/admin/scrape-contracts', { method: 'POST', headers: { 'x-secret': 'drone-scout-2026' } });
+    const r = await fetch(API + '/admin/scrape-contracts', { method: 'POST', headers: window.getAuthHeaders() });
     const d = await r.json();
     btn.textContent = `✓ ${d.added} contrats défense ajoutés`;
     setTimeout(() => { btn.textContent = '🔍 Scraper contrats défense'; btn.disabled = false; }, 5000);
@@ -5603,7 +5603,7 @@ async function cleanData() {
   const msg = document.getElementById('maint-msg');
   msg.textContent = 'Nettoyage en cours...';
   try {
-    const r = await fetch(API + '/admin/clean-data', { method:'POST', headers:{'x-secret':'drone-scout-2026'} });
+    const r = await fetch(API + '/admin/clean-data', { method:'POST', headers: window.getAuthHeaders() });
     const d = await r.json();
     msg.textContent = `✓ ${d.societes_cleaned} sociétés + ${d.produits_cleaned} drones nettoyés`;
     setTimeout(() => msg.textContent = '', 5000);
@@ -5614,7 +5614,7 @@ async function clearCache() {
   const msg = document.getElementById('maint-msg');
   msg.textContent = 'Vidage en cours...';
   try {
-    const r = await fetch(API + '/admin/clear-cache', { method:'POST', headers:{'x-secret':'drone-scout-2026'} });
+    const r = await fetch(API + '/admin/clear-cache', { method:'POST', headers: window.getAuthHeaders() });
     const d = await r.json();
     msg.textContent = '✓ Cache vidé — rechargement...';
     setTimeout(() => location.reload(), 1500);
@@ -5630,7 +5630,7 @@ async function initSeed() {
     // Seed via API - run seed script on server
     const r = await fetch(API + '/seed', {
       method: 'POST',
-      headers: { 'x-seed-secret': 'drone-scout-seed-2026', 'Content-Type': 'application/json' }
+      headers: Object.assign({ 'Content-Type': 'application/json' }, window.getAuthHeaders())
     });
     // Wait a moment then reload
     btn.textContent = 'Chargement...';
