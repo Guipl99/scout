@@ -10609,6 +10609,7 @@ function _visRenderTable() {
       + '<button type="button" class="vis-name-btn" data-act="open" data-key="' + esc(a.account_key) + '">' + esc(name) + '</button>'
       + (a.country ? '<span title="' + esc(a.country) + '">' + _visFlag(a.country) + '</span>' : '')
       + (a.is_abm ? tagHtml('ABM', 'tag-green') : '')
+      + (a.has_chat ? '<button type="button" class="tag tag-green" data-act="open-chat" data-chat="' + esc(a.last_chat_id || '') + '" title="Cette organisation a discuté avec le chatbot sur elistair.com" style="cursor:pointer;border:none;">💬 a chatté' + (a.chats > 1 ? ' ×' + a.chats : '') + '</button>' : '')
       + _visIdentTag(a)
       + (a.societe_id ? '' : tagHtml('nouveau', 'tag-accent'))
       + (a.hidden ? tagHtml('ignoré', 'tag-red') : '')
@@ -11024,6 +11025,7 @@ async function _visPollAlerts() {
     else if (act === 'hide') _visHide(key, true);
     else if (act === 'unhide') _visHide(key, false);
     else if (act === 'flag-isp') _visFlagIsp(key);
+    else if (act === 'open-chat') { var cid = b.getAttribute('data-chat'); if (cid && typeof go === 'function') { go('chat'); if (typeof _chatOpen === 'function') setTimeout(function(){ _chatOpen(cid); }, 250); } }
     else if (act === 'alerts-seen') { await fetch(API + '/v/alerts/seen', { method: 'POST', headers: _visH(), body: '{}' }); renderVisitors(); }
     else if (act === 'clear-page') { var el = document.getElementById('vis-page'); if (el) el.value = ''; _visPage = ''; _visSort = { by: 'score', dir: 'desc' }; _visAccounts = []; renderVisitors(); }
     else if (act === 'open-settings') _visToggleSettings(true);
