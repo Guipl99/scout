@@ -2656,6 +2656,14 @@ Réinitialiser tous les filtres
             <option value="sandbox">Bac à sable (test)</option>
           </select>
         </label>
+        <label class="vis-field" id="chat-view-field"><span>Vue</span>
+          <select id="chat-view">
+            <option value="todo" selected>🔥 À traiter</option>
+            <option value="distribution">🤝 Distribution / revendeur</option>
+            <option value="qualified">✓ Qualifiées</option>
+            <option value="all">Toutes</option>
+          </select>
+        </label>
         <button type="button" id="chat-refresh" class="vis-icon-btn" title="Actualiser" aria-label="Actualiser">↻</button>
       </div>
       <div id="chat-site-view">
@@ -10194,6 +10202,8 @@ function _chatWire() {
   });
   var md = document.getElementById('chat-mode');
   if (md) md.addEventListener('change', function () { _chatMode = md.value; _chatApplyMode(); });
+  var vv = document.getElementById('chat-view');
+  if (vv) vv.addEventListener('change', function () { _chatView = vv.value; _chatLoadConvs(); });
   var rf = document.getElementById('chat-refresh');
   if (rf) rf.addEventListener('click', function () { if (_chatMode === 'site') _chatLoadConvs(); });
   var bd = document.getElementById('chat-drawer-backdrop');
@@ -10247,6 +10257,7 @@ function _chatWire() {
 // L'onglet a deux modes : le vrai trafic (par défaut) et le bac à sable qui
 // sert à essayer le bot. Le mode est retenu d'une visite à l'autre.
 var _chatMode = 'site';
+var _chatView = 'todo';
 var _chatConvs = [];
 var _chatCur = null;      // conversation ouverte dans le tiroir
 var _chatPreview = null;  // aperçu en attente de confirmation
@@ -10266,6 +10277,7 @@ function _chatApplyMode() {
   if (sv) sv.hidden = !site;
   if (sb) sb.hidden = site;
   var sel = document.getElementById('chat-mode'); if (sel) sel.value = _chatMode;
+  var vf = document.getElementById('chat-view-field'); if (vf) vf.style.display = site ? '' : 'none';
   try { localStorage.setItem('scout_chat_mode', _chatMode); } catch (e) {}
   if (site) { _chatCloseDrawer(); _chatLoadConvs(); }
   else { _chatRenderSite(); if (!_chatSession) _chatNew(); }
@@ -10274,7 +10286,7 @@ function _chatApplyMode() {
 async function _chatLoadConvs() {
   var body = document.getElementById('chat-conv-body'); if (!body) return;
   try {
-    var r = await fetch(API + '/v/chat/sessions?source=site&limit=60', { headers: _chatH() });
+    var r = await fetch(API + '/v/chat/sessions?source=site&view=' + encodeURIComponent(_chatView || 'todo') + '&limit=60', { headers: _chatH() });
     var j = await r.json();
     _chatConvs = j.sessions || [];
     _chatRenderTiles(j.totals || {});
@@ -10287,21 +10299,26 @@ async function _chatLoadConvs() {
 
 function _chatRenderTiles(t) {
   var el = document.getElementById('chat-conv-tiles'); if (!el) return;
+  // KPI actionnables, façon page Visiteurs : ce qu'il faut traiter d'abord, la
+  // valeur (distribution), et une lecture honnête du bruit (conversations sans email).
   var tiles = [
-    [t.site || 0, 'conversations'],
-    [t.qualifies || 0, 'qualifiées'],
-    [t.a_traiter || 0, 'à passer dans Scout']
+    [t.a_traiter || 0, 'à traiter (qualifiées, pas dans Scout)', t.a_traiter ? '#16a34a' : ''],
+    [t.distribution || 0, 'distribution / revendeur', (t.distribution ? 'var(--accent2)' : '')],
+    [t.site || 0, (t.sans_email ? (t.sans_email + ' sans email (pas exploitables)') : 'conversations réelles'), '']
   ];
   el.innerHTML = tiles.map(function (x) {
-    return '<div class="chat-tile"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>';
+    return '<div class="chat-tile"><b' + (x[2] ? ' style="color:' + x[2] + ';"' : '') + '>' + x[0] + '</b><span>' + x[1] + '</span></div>';
   }).join('');
 }
 
 function _chatRenderConvs() {
   var body = document.getElementById('chat-conv-body'); if (!body) return;
   if (!_chatConvs.length) {
+    var vues = { todo: 'Rien à traiter pour l\'instant — aucun lead qualifié en attente.', distribution: 'Aucun lead distribution / revendeur pour l\'instant.', qualified: 'Aucune conversation qualifiée pour l\'instant.', all: 'Aucune conversation pour l\'instant.' };
+    var msg = vues[_chatView] || vues.all;
     body.innerHTML = '<div style="padding:2.5rem 1rem;text-align:center;color:var(--text3);font-size:13px;line-height:1.7;">'
-      + 'Aucune conversation pour l\'instant.<br>La bulle n\'est pas encore posée sur elistair.com : '
+      + _chatEsc(msg) + '<br>'
+      + (_chatView !== 'all' ? 'Bascule sur « Toutes » pour voir l\'ensemble des échanges, ou ' : '')
       + 'passe en « Bac à sable » pour essayer le bot.</div>';
     return;
   }
@@ -10313,11 +10330,15 @@ function _chatRenderConvs() {
       var sub = [L.societe, I.pays].filter(Boolean).join(' · ');
       var cls = c.score_label === 'Fort' ? 'fort' : c.score_label === 'Moyen' ? 'moyen' : 'faible';
       var neuf = c.status === 'qualified' && !c.contact_id;
+      // Badges de signal, façon page Visiteurs : distribution, langue étrangère.
+      var estDistrib = c.intent === 'revendeur' || /(revendeur|reseller|distribut|repr[eé]sent|representative|partenaire|partner|dealership)/i.test((L.besoin || '') + ' ' + (L.role || ''));
+      var badges = (estDistrib ? '<span class="chat-badge" style="background:rgba(139,92,246,.15);color:#8b5cf6;">🤝 distribution</span> ' : '')
+        + (c.reply_lang && c.reply_lang !== 'fr' ? '<span class="sub" style="text-transform:uppercase;font-size:10px;border:1px solid var(--border);border-radius:4px;padding:1px 4px;">' + _chatEsc(c.reply_lang) + '</span> ' : '');
       return '<tr data-id="' + _chatEsc(c.id) + '">'
         + '<td>' + (neuf ? '<i class="chat-dot" title="à traiter"></i>' : '')
         + '<span class="who">' + _chatEsc(who) + '</span>'
         + (sub ? '<br><span class="sub">' + _chatEsc(sub) + '</span>' : '') + '</td>'
-        + '<td>' + _chatEsc((L.besoin || '—').slice(0, 70)) + '</td>'
+        + '<td>' + badges + _chatEsc((L.besoin || '—').slice(0, 60)) + '</td>'
         + '<td class="sub">' + _chatEsc((c.page || '—').slice(0, 34)) + '</td>'
         + '<td><span class="chat-badge ' + cls + '">' + _chatEsc(c.score_label) + '</span></td>'
         + '<td class="sub">' + (c.contact_id ? '✓ contact créé' : c.status === 'qualified' ? '—' : '') + '</td>'
