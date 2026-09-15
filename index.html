@@ -10401,6 +10401,21 @@ function _chatShareTextDrawer() {
   return lignes.join('\n');
 }
 
+async function _chatReclass(to) {
+  if (!_chatCur) return;
+  var versTest = to === 'test';
+  if (versTest && !confirm('Déplacer cette conversation dans le bac à sable (test) ? Elle sortira des vraies conversations et des compteurs.')) return;
+  try {
+    var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(_chatCur.id) + '/reclass', {
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, _chatH()), body: JSON.stringify({ to: to })
+    });
+    if (!r.ok) throw new Error('reclass ' + r.status);
+    _chatCloseDrawer();
+    if (typeof _chatMode !== 'undefined' && _chatMode === 'sandbox' && typeof _chatLoadHistory === 'function') _chatLoadHistory();
+    else _chatLoadConvs();
+  } catch (e) { _chatRenderDrawer('Impossible de reclasser : ' + e.message); }
+}
+
 async function _chatShareDrawer() {
   if (!_chatCur) return;
   var L = _chatCur.lead || {};
@@ -10524,6 +10539,11 @@ function _chatRenderDrawer(msg) {
     actions = '<button type="button" class="btn btn-primary" id="chat-mk-contact" style="padding:8px 14px;font-size:13px;">Créer le contact dans Scout</button>'
       + '<p style="margin:8px 0 0;font-size:12px;color:var(--text3);line-height:1.5;">Tu verras ce qui sera écrit avant de valider. Rien n\'est envoyé au CRM.</p>';
   }
+  // Reclasser test ↔ trafic réel (un chat de test qui traîne dans le site = bruit).
+  var estTest = j.source === 'test';
+  actions += '<div style="margin-top:10px;border-top:1px solid var(--border2);padding-top:10px;">'
+    + '<button type="button" id="chat-reclass" data-to="' + (estTest ? 'site' : 'test') + '" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;text-decoration:underline;padding:0;">'
+    + (estTest ? '↩ Remettre dans le trafic du site' : '🧪 Marquer comme test (déplacer au bac à sable)') + '</button></div>';
 
   var fil = (j.messages || []).map(function (m) {
     return '<div class="' + (m.role === 'user' ? 'u' : 'b') + '">' + _chatEsc(m.content) + '</div>';
@@ -10548,6 +10568,8 @@ function _chatRenderDrawer(msg) {
   if (shd) shd.addEventListener('click', function (e) { e.stopPropagation(); _chatShareDrawer(); });
   var mk = document.getElementById('chat-mk-contact');
   if (mk) mk.addEventListener('click', _chatPreviewContact);
+  var rc = document.getElementById('chat-reclass');
+  if (rc) rc.addEventListener('click', function () { _chatReclass(rc.getAttribute('data-to')); });
   var cf = document.getElementById('chat-mk-confirm');
   if (cf) cf.addEventListener('click', _chatMakeContact);
   var cn = document.getElementById('chat-mk-cancel');
