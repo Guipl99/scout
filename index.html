@@ -2698,7 +2698,6 @@ Réinitialiser tous les filtres
               <div class="chat-widget-head">
                 <div class="chat-widget-avatar" aria-hidden="true">◆</div>
                 <div><b>Assistant Elistair</b><span>Réponse immédiate</span></div>
-                <button type="button" id="chat-share" title="Partager cette conversation" aria-label="Partager" hidden style="margin-left:auto;background:none;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:8px;padding:3px 9px;font-size:12px;cursor:pointer;">↗ Partager</button>
                 <button type="button" class="chat-widget-close" id="chat-close" title="Fermer" aria-label="Fermer le chat">×</button>
               </div>
               <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-label="Conversation"></div>
@@ -9795,7 +9794,6 @@ window.renderVisitors = renderVisitors;
 var _chatSession = null;      // id de la conversation en cours
 var _chatBusy = false;
 var _chatLead = {};
-var _chatShareData = null;
 var _chatInferred = {};       // pays / secteur, déduits et jamais demandés
 var _chatMail = null;         // résultat de la vérification d'adresse
 var _chatScore = 0, _chatScoreLabel = '';
@@ -9922,7 +9920,6 @@ async function _chatNew() {
   var log = document.getElementById('chat-log'); if (log) log.innerHTML = '';
   _chatLead = {}; _chatInferred = {}; _chatMail = null; _chatScore = 0; _chatScoreLabel = ''; _chatSession = null;
   _chatBlocked = false; _chatReplyLang = '';
-  _chatShareData = null; var _sb = document.getElementById('chat-share'); if (_sb) _sb.hidden = true;
   _chatRenderLead();
   var p = _chatCurrentPage();
   try {
@@ -10084,76 +10081,6 @@ async function _chatLoadHistory() {
   }
 }
 
-// Construit un résumé texte de la conversation ouverte, prêt à partager.
-function _chatShareText() {
-  var d = _chatShareData || {}; var L = _chatLead || {};
-  var qui = [L.prenom, L.nom].filter(Boolean).join(' ') || (d.org || 'Visiteur');
-  var lignes = [];
-  lignes.push('💬 Conversation chatbot — ' + qui + (d.org && d.org !== qui ? ' · ' + d.org : ''));
-  var meta = [];
-  if (_chatScoreLabel) meta.push('Score : ' + _chatScoreLabel + ' (' + _chatScore + '/100)');
-  if (d.page) meta.push('Page : ' + d.page);
-  if (meta.length) lignes.push(meta.join('  ·  '));
-  // Champs qualifiés
-  var champs = [['societe','Société'],['role','Fonction'],['email','Email'],['pays','Pays'],['produit','Produit'],['echeance','Échéance'],['besoin','Projet']]
-    .filter(function (f) { return L[f[0]]; }).map(function (f) { return f[1] + ' : ' + L[f[0]]; });
-  if (champs.length) { lignes.push(''); lignes.push(champs.join('\n')); }
-  // Transcript
-  lignes.push(''); lignes.push('— Échange —');
-  (d.messages || []).forEach(function (m) {
-    var who = m.role === 'user' ? 'Visiteur' : 'Bot';
-    lignes.push(who + ' : ' + (m.content || '').trim());
-  });
-  return lignes.join('\n');
-}
-
-function _chatShare() {
-  if (!_chatShareData) return;
-  var txt = _chatShareText();
-  var L = _chatLead || {};
-  var titre = 'Conversation chatbot Elistair' + (L.societe ? ' — ' + L.societe : (_chatShareData.org ? ' — ' + _chatShareData.org : ''));
-  // Petit menu : Slack (copie) / Email (mailto)
-  var old = document.getElementById('chat-share-menu'); if (old) old.remove();
-  var menu = document.createElement('div');
-  menu.id = 'chat-share-menu';
-  menu.style.cssText = 'position:absolute;top:44px;right:12px;z-index:30;background:var(--bg2,#1c2b29);border:1px solid var(--border,rgba(255,255,255,.15));border-radius:10px;padding:6px;min-width:210px;box-shadow:0 8px 24px rgba(0,0,0,.4);';
-  function item(label, sub) {
-    var b = document.createElement('button');
-    b.type = 'button';
-    b.style.cssText = 'display:block;width:100%;text-align:left;background:none;border:none;color:var(--text,#fff);padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;';
-    b.onmouseover = function(){ b.style.background = 'rgba(255,255,255,.07)'; };
-    b.onmouseout = function(){ b.style.background = 'none'; };
-    b.innerHTML = '<b>' + label + '</b>' + (sub ? '<br><span style="font-size:11px;color:var(--text3,#9aa);">' + sub + '</span>' : '');
-    return b;
-  }
-  var slack = item('Copier pour Slack', 'Colle dans ton canal');
-  slack.onclick = function () {
-    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () {
-      slack.querySelector('b').textContent = '✓ Copié !';
-      setTimeout(function () { menu.remove(); }, 900);
-    }).catch(function () {
-      // repli : sélection manuelle
-      window.prompt('Copie ce texte (Ctrl/Cmd+C) :', txt);
-      menu.remove();
-    });
-  };
-  var mail = item('Envoyer par email', 'Ouvre ta messagerie');
-  mail.onclick = function () {
-    var url = 'mailto:?subject=' + encodeURIComponent(titre) + '&body=' + encodeURIComponent(txt);
-    window.open(url, '_blank');
-    menu.remove();
-  };
-  menu.appendChild(slack); menu.appendChild(mail);
-  var host = document.getElementById('chat-widget') || document.body;
-  host.appendChild(menu);
-  // fermer au clic ailleurs
-  setTimeout(function () {
-    document.addEventListener('click', function h(e) {
-      if (!menu.contains(e.target) && e.target.id !== 'chat-share') { menu.remove(); document.removeEventListener('click', h); }
-    });
-  }, 0);
-}
-
 async function _chatOpen(id) {
   try {
     var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(id), { headers: _chatH() });
@@ -10168,9 +10095,6 @@ async function _chatOpen(id) {
     _chatStatus();
     _chatRenderLead();
     _chatToggle(true);
-    // Mémoriser de quoi partager cette conversation (transcript + contexte).
-    _chatShareData = { id: j.id, messages: j.messages || [], org: (j.org && j.org.org_name) || null, page: j.page_title || j.page || null, created_at: j.created_at || null };
-    var sb = document.getElementById('chat-share'); if (sb) sb.hidden = false;
 
   } catch (e) { _chatBubble('error', 'Relecture impossible : ' + e.message); }
 }
@@ -10278,8 +10202,6 @@ function _chatWire() {
   if (lau) lau.addEventListener('click', function () { _chatToggle(true); });
   var clo = document.getElementById('chat-close');
   if (clo) clo.addEventListener('click', function () { _chatToggle(false); });
-  var shb = document.getElementById('chat-share');
-  if (shb) shb.addEventListener('click', function (e) { e.stopPropagation(); _chatShare(); });
   document.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Escape') return;
     var pc = document.getElementById('panel-chat');
@@ -10431,6 +10353,67 @@ async function _chatOpenConv(id) {
   }
 }
 
+// Résumé texte de la conversation ouverte dans le tiroir, prêt à partager.
+function _chatShareTextDrawer() {
+  var j = _chatCur || {}, L = j.lead || {}, I = j.inferred || {};
+  var qui = [L.prenom, L.nom].filter(Boolean).join(' ') || L.email || (j.org && j.org.org_name) || 'Visiteur';
+  var lignes = [];
+  lignes.push('💬 Conversation chatbot Elistair — ' + qui);
+  var meta = [];
+  if (j.score_label) meta.push('Score : ' + j.score_label + ' (' + (j.score || 0) + '/100)');
+  if (j.org && j.org.org_name) meta.push('Reconnu à l\'IP : ' + j.org.org_name + (j.org.is_abm ? ' [ABM]' : ''));
+  if (j.page) meta.push('Page : ' + j.page);
+  if (meta.length) lignes.push(meta.join('  ·  '));
+  var champs = [['societe','Société'],['role','Fonction'],['email','Email'],['produit','Produit'],['echeance','Échéance'],['besoin','Projet']]
+    .filter(function (f) { return L[f[0]]; }).map(function (f) { return f[1] + ' : ' + L[f[0]]; });
+  if (I.pays) champs.push('Pays (déduit) : ' + I.pays);
+  if (champs.length) { lignes.push(''); lignes.push(champs.join('\n')); }
+  lignes.push(''); lignes.push('— Échange —');
+  (j.messages || []).forEach(function (m) {
+    lignes.push((m.role === 'user' ? 'Visiteur' : 'Bot') + ' : ' + (m.content || '').trim());
+  });
+  return lignes.join('\n');
+}
+
+function _chatShareDrawer() {
+  if (!_chatCur) return;
+  var txt = _chatShareTextDrawer();
+  var L = _chatCur.lead || {};
+  var titre = 'Conversation chatbot Elistair' + (L.societe ? ' — ' + L.societe : (_chatCur.org && _chatCur.org.org_name ? ' — ' + _chatCur.org.org_name : ''));
+  var old = document.getElementById('chat-share-menu'); if (old) old.remove();
+  var menu = document.createElement('div');
+  menu.id = 'chat-share-menu';
+  menu.style.cssText = 'position:fixed;top:56px;right:24px;z-index:10001;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:220px;box-shadow:0 10px 30px rgba(0,0,0,.45);';
+  function item(label, sub) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.style.cssText = 'display:block;width:100%;text-align:left;background:none;border:none;color:var(--text);padding:9px 11px;border-radius:7px;cursor:pointer;font-size:13px;';
+    b.onmouseover = function(){ b.style.background = 'var(--bg3,rgba(255,255,255,.06))'; };
+    b.onmouseout = function(){ b.style.background = 'none'; };
+    b.innerHTML = '<b>' + label + '</b>' + (sub ? '<br><span style="font-size:11px;color:var(--text3);">' + sub + '</span>' : '');
+    return b;
+  }
+  var slack = item('Copier pour Slack', 'Colle dans ton canal');
+  slack.onclick = function () {
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () {
+      slack.querySelector('b').textContent = '✓ Copié !';
+      setTimeout(function () { menu.remove(); }, 900);
+    }).catch(function () { window.prompt('Copie ce texte (Ctrl/Cmd+C) :', txt); menu.remove(); });
+  };
+  var mail = item('Envoyer par email', 'Ouvre ta messagerie');
+  mail.onclick = function () {
+    window.open('mailto:?subject=' + encodeURIComponent(titre) + '&body=' + encodeURIComponent(txt), '_blank');
+    menu.remove();
+  };
+  menu.appendChild(slack); menu.appendChild(mail);
+  document.body.appendChild(menu);
+  setTimeout(function () {
+    document.addEventListener('click', function h(e) {
+      if (!menu.contains(e.target) && e.target.id !== 'chat-drawer-share') { menu.remove(); document.removeEventListener('click', h); }
+    });
+  }, 0);
+}
+
 function _chatRenderDrawer(msg) {
   var d = document.getElementById('chat-drawer'); if (!d || !_chatCur) return;
   var j = _chatCur, L = j.lead || {}, I = j.inferred || {};
@@ -10494,6 +10477,7 @@ function _chatRenderDrawer(msg) {
     + '<div style="font-size:12px;color:var(--text3);"><span class="chat-badge ' + cls + '">' + _chatEsc(j.score_label) + '</span> '
     + 'score ' + (j.score || 0) + '/100 · ' + (j.turns || 0) + ' échange' + ((j.turns || 0) > 1 ? 's' : '')
     + (j.page ? ' · ' + _chatEsc(j.page) : '') + '</div></div>'
+    + '<button type="button" id="chat-drawer-share" style="background:none;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:5px 10px;font-size:12.5px;cursor:pointer;white-space:nowrap;">↗ Partager</button>'
     + '<button type="button" id="chat-drawer-close" aria-label="Fermer" style="background:none;border:none;color:var(--text2);font-size:24px;line-height:1;cursor:pointer;">×</button></div>'
     + (lignes || deduit ? '<div class="chat-dsec"><h3>Ce que le visiteur a dit</h3>' + lignes + deduit + '</div>' : '')
     + org
@@ -10503,6 +10487,8 @@ function _chatRenderDrawer(msg) {
 
   var cl = document.getElementById('chat-drawer-close');
   if (cl) cl.addEventListener('click', _chatCloseDrawer);
+  var shd = document.getElementById('chat-drawer-share');
+  if (shd) shd.addEventListener('click', function (e) { e.stopPropagation(); _chatShareDrawer(); });
   var mk = document.getElementById('chat-mk-contact');
   if (mk) mk.addEventListener('click', _chatPreviewContact);
   var cf = document.getElementById('chat-mk-confirm');
