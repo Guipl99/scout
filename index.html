@@ -10356,12 +10356,17 @@ async function _chatOpenConv(id) {
 // Résumé texte de la conversation ouverte dans le tiroir, prêt à partager.
 function _chatShareTextDrawer() {
   var j = _chatCur || {}, L = j.lead || {}, I = j.inferred || {};
-  var qui = [L.prenom, L.nom].filter(Boolean).join(' ') || L.email || (j.org && j.org.org_name) || 'Visiteur';
+  var orgReelle = (j.org && j.org.org_name && ['isp','hosting','vpn'].indexOf(j.org.org_type) === -1) ? j.org.org_name : null;
+  var qui = [L.prenom, L.nom].filter(Boolean).join(' ') || L.email || orgReelle || 'Visiteur';
   var lignes = [];
   lignes.push('💬 Conversation chatbot Elistair — ' + qui);
   var meta = [];
   if (j.score_label) meta.push('Score : ' + j.score_label + ' (' + (j.score || 0) + '/100)');
-  if (j.org && j.org.org_name) meta.push('Reconnu à l\'IP : ' + j.org.org_name + (j.org.is_abm ? ' [ABM]' : ''));
+  if (j.org && j.org.org_name) {
+    var estFaiOrg = ['isp','hosting','vpn'].indexOf(j.org.org_type) !== -1;
+    meta.push(estFaiOrg ? ('Accès internet : ' + j.org.org_name + ' (FAI/hébergeur, pas le compte)')
+                        : ('Reconnu à l\'IP : ' + j.org.org_name + (j.org.is_abm ? ' [ABM]' : '')));
+  }
   if (j.page) meta.push('Page : ' + j.page);
   if (meta.length) lignes.push(meta.join('  ·  '));
   var champs = [['societe','Société'],['role','Fonction'],['email','Email'],['produit','Produit'],['echeance','Échéance'],['besoin','Projet']]
@@ -10453,11 +10458,23 @@ function _chatRenderDrawer(msg) {
   // L'organisation reconnue par IP : c'est ce qu'un formulaire ne donne pas.
   var org = '';
   if (j.org) {
-    org = '<div class="chat-dsec"><h3>Reconnu à l\'IP</h3><p style="margin:0;font-size:13px;color:var(--text2);line-height:1.6;">'
-      + '<b style="color:var(--text);">' + _chatEsc(j.org.org_name) + '</b>'
-      + (j.org.country ? ' · ' + _chatEsc(j.org.country) : '')
-      + '<br>' + j.org.pageviews + ' page' + (j.org.pageviews > 1 ? 's' : '') + ' vue' + (j.org.pageviews > 1 ? 's' : '')
-      + ' sur le site' + (j.org.is_abm ? ' · <span style="color:var(--accent2);">compte ABM</span>' : '') + '</p></div>';
+    var estFai = ['isp', 'hosting', 'vpn'].indexOf(j.org.org_type) !== -1;
+    if (estFai) {
+      // L'IP est reconnue, mais c'est le FOURNISSEUR D'ACCÈS (ex. Streamyx = ADSL de
+      // Telekom Malaysia), pas l'organisation du visiteur. On ne le présente donc PAS
+      // comme un compte : ce serait trompeur.
+      org = '<div class="chat-dsec"><h3>Accès internet</h3><p style="margin:0;font-size:13px;color:var(--text3);line-height:1.6;">'
+        + 'Connecté via <b style="color:var(--text2);">' + _chatEsc(j.org.org_name) + '</b>'
+        + (j.org.country ? ' · ' + _chatEsc(j.org.country) : '')
+        + ' — c\'est un fournisseur d\'accès / hébergeur, <b>pas le compte du visiteur</b>. '
+        + 'Fie-toi à ce que le visiteur a dit ci-dessus.</p></div>';
+    } else {
+      org = '<div class="chat-dsec"><h3>Reconnu à l\'IP</h3><p style="margin:0;font-size:13px;color:var(--text2);line-height:1.6;">'
+        + '<b style="color:var(--text);">' + _chatEsc(j.org.org_name) + '</b>'
+        + (j.org.country ? ' · ' + _chatEsc(j.org.country) : '')
+        + '<br>' + j.org.pageviews + ' page' + (j.org.pageviews > 1 ? 's' : '') + ' vue' + (j.org.pageviews > 1 ? 's' : '')
+        + ' sur le site' + (j.org.is_abm ? ' · <span style="color:var(--accent2);">compte ABM</span>' : '') + '</p></div>';
+    }
   }
 
   var actions;
