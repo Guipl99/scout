@@ -2698,6 +2698,7 @@ Réinitialiser tous les filtres
               <div class="chat-widget-head">
                 <div class="chat-widget-avatar" aria-hidden="true">◆</div>
                 <div><b>Assistant Elistair</b><span>Réponse immédiate</span></div>
+                <button type="button" id="chat-share" title="Partager cette conversation" aria-label="Partager" hidden style="margin-left:auto;background:none;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:8px;padding:3px 9px;font-size:12px;cursor:pointer;">↗ Partager</button>
                 <button type="button" class="chat-widget-close" id="chat-close" title="Fermer" aria-label="Fermer le chat">×</button>
               </div>
               <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-label="Conversation"></div>
@@ -9794,6 +9795,7 @@ window.renderVisitors = renderVisitors;
 var _chatSession = null;      // id de la conversation en cours
 var _chatBusy = false;
 var _chatLead = {};
+var _chatShareData = null;
 var _chatInferred = {};       // pays / secteur, déduits et jamais demandés
 var _chatMail = null;         // résultat de la vérification d'adresse
 var _chatScore = 0, _chatScoreLabel = '';
@@ -9920,6 +9922,7 @@ async function _chatNew() {
   var log = document.getElementById('chat-log'); if (log) log.innerHTML = '';
   _chatLead = {}; _chatInferred = {}; _chatMail = null; _chatScore = 0; _chatScoreLabel = ''; _chatSession = null;
   _chatBlocked = false; _chatReplyLang = '';
+  _chatShareData = null; var _sb = document.getElementById('chat-share'); if (_sb) _sb.hidden = true;
   _chatRenderLead();
   var p = _chatCurrentPage();
   try {
@@ -10081,6 +10084,76 @@ async function _chatLoadHistory() {
   }
 }
 
+// Construit un résumé texte de la conversation ouverte, prêt à partager.
+function _chatShareText() {
+  var d = _chatShareData || {}; var L = _chatLead || {};
+  var qui = [L.prenom, L.nom].filter(Boolean).join(' ') || (d.org || 'Visiteur');
+  var lignes = [];
+  lignes.push('💬 Conversation chatbot — ' + qui + (d.org && d.org !== qui ? ' · ' + d.org : ''));
+  var meta = [];
+  if (_chatScoreLabel) meta.push('Score : ' + _chatScoreLabel + ' (' + _chatScore + '/100)');
+  if (d.page) meta.push('Page : ' + d.page);
+  if (meta.length) lignes.push(meta.join('  ·  '));
+  // Champs qualifiés
+  var champs = [['societe','Société'],['role','Fonction'],['email','Email'],['pays','Pays'],['produit','Produit'],['echeance','Échéance'],['besoin','Projet']]
+    .filter(function (f) { return L[f[0]]; }).map(function (f) { return f[1] + ' : ' + L[f[0]]; });
+  if (champs.length) { lignes.push(''); lignes.push(champs.join('\n')); }
+  // Transcript
+  lignes.push(''); lignes.push('— Échange —');
+  (d.messages || []).forEach(function (m) {
+    var who = m.role === 'user' ? 'Visiteur' : 'Bot';
+    lignes.push(who + ' : ' + (m.content || '').trim());
+  });
+  return lignes.join('\n');
+}
+
+function _chatShare() {
+  if (!_chatShareData) return;
+  var txt = _chatShareText();
+  var L = _chatLead || {};
+  var titre = 'Conversation chatbot Elistair' + (L.societe ? ' — ' + L.societe : (_chatShareData.org ? ' — ' + _chatShareData.org : ''));
+  // Petit menu : Slack (copie) / Email (mailto)
+  var old = document.getElementById('chat-share-menu'); if (old) old.remove();
+  var menu = document.createElement('div');
+  menu.id = 'chat-share-menu';
+  menu.style.cssText = 'position:absolute;top:44px;right:12px;z-index:30;background:var(--bg2,#1c2b29);border:1px solid var(--border,rgba(255,255,255,.15));border-radius:10px;padding:6px;min-width:210px;box-shadow:0 8px 24px rgba(0,0,0,.4);';
+  function item(label, sub) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.style.cssText = 'display:block;width:100%;text-align:left;background:none;border:none;color:var(--text,#fff);padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;';
+    b.onmouseover = function(){ b.style.background = 'rgba(255,255,255,.07)'; };
+    b.onmouseout = function(){ b.style.background = 'none'; };
+    b.innerHTML = '<b>' + label + '</b>' + (sub ? '<br><span style="font-size:11px;color:var(--text3,#9aa);">' + sub + '</span>' : '');
+    return b;
+  }
+  var slack = item('Copier pour Slack', 'Colle dans ton canal');
+  slack.onclick = function () {
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () {
+      slack.querySelector('b').textContent = '✓ Copié !';
+      setTimeout(function () { menu.remove(); }, 900);
+    }).catch(function () {
+      // repli : sélection manuelle
+      window.prompt('Copie ce texte (Ctrl/Cmd+C) :', txt);
+      menu.remove();
+    });
+  };
+  var mail = item('Envoyer par email', 'Ouvre ta messagerie');
+  mail.onclick = function () {
+    var url = 'mailto:?subject=' + encodeURIComponent(titre) + '&body=' + encodeURIComponent(txt);
+    window.open(url, '_blank');
+    menu.remove();
+  };
+  menu.appendChild(slack); menu.appendChild(mail);
+  var host = document.getElementById('chat-widget') || document.body;
+  host.appendChild(menu);
+  // fermer au clic ailleurs
+  setTimeout(function () {
+    document.addEventListener('click', function h(e) {
+      if (!menu.contains(e.target) && e.target.id !== 'chat-share') { menu.remove(); document.removeEventListener('click', h); }
+    });
+  }, 0);
+}
+
 async function _chatOpen(id) {
   try {
     var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(id), { headers: _chatH() });
@@ -10095,6 +10168,9 @@ async function _chatOpen(id) {
     _chatStatus();
     _chatRenderLead();
     _chatToggle(true);
+    // Mémoriser de quoi partager cette conversation (transcript + contexte).
+    _chatShareData = { id: j.id, messages: j.messages || [], org: (j.org && j.org.org_name) || null, page: j.page_title || j.page || null, created_at: j.created_at || null };
+    var sb = document.getElementById('chat-share'); if (sb) sb.hidden = false;
 
   } catch (e) { _chatBubble('error', 'Relecture impossible : ' + e.message); }
 }
@@ -10202,6 +10278,8 @@ function _chatWire() {
   if (lau) lau.addEventListener('click', function () { _chatToggle(true); });
   var clo = document.getElementById('chat-close');
   if (clo) clo.addEventListener('click', function () { _chatToggle(false); });
+  var shb = document.getElementById('chat-share');
+  if (shb) shb.addEventListener('click', function (e) { e.stopPropagation(); _chatShare(); });
   document.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Escape') return;
     var pc = document.getElementById('panel-chat');
