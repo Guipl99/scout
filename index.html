@@ -10375,43 +10375,62 @@ function _chatShareTextDrawer() {
   return lignes.join('\n');
 }
 
-function _chatShareDrawer() {
+async function _chatShareDrawer() {
   if (!_chatCur) return;
-  var txt = _chatShareTextDrawer();
   var L = _chatCur.lead || {};
-  var titre = 'Conversation chatbot Elistair' + (L.societe ? ' — ' + L.societe : (_chatCur.org && _chatCur.org.org_name ? ' — ' + _chatCur.org.org_name : ''));
+  var titre = 'Synthèse conversation chatbot' + (L.societe ? ' — ' + L.societe : (_chatCur.org && _chatCur.org.org_name ? ' — ' + _chatCur.org.org_name : ''));
   var old = document.getElementById('chat-share-menu'); if (old) old.remove();
   var menu = document.createElement('div');
   menu.id = 'chat-share-menu';
-  menu.style.cssText = 'position:fixed;top:56px;right:24px;z-index:10001;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:220px;box-shadow:0 10px 30px rgba(0,0,0,.45);';
-  function item(label, sub) {
-    var b = document.createElement('button');
-    b.type = 'button';
-    b.style.cssText = 'display:block;width:100%;text-align:left;background:none;border:none;color:var(--text);padding:9px 11px;border-radius:7px;cursor:pointer;font-size:13px;';
-    b.onmouseover = function(){ b.style.background = 'var(--bg3,rgba(255,255,255,.06))'; };
-    b.onmouseout = function(){ b.style.background = 'none'; };
-    b.innerHTML = '<b>' + label + '</b>' + (sub ? '<br><span style="font-size:11px;color:var(--text3);">' + sub + '</span>' : '');
-    return b;
-  }
-  var slack = item('Copier pour Slack', 'Colle dans ton canal');
-  slack.onclick = function () {
-    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () {
-      slack.querySelector('b').textContent = '✓ Copié !';
-      setTimeout(function () { menu.remove(); }, 900);
-    }).catch(function () { window.prompt('Copie ce texte (Ctrl/Cmd+C) :', txt); menu.remove(); });
-  };
-  var mail = item('Envoyer par email', 'Ouvre ta messagerie');
-  mail.onclick = function () {
-    window.open('mailto:?subject=' + encodeURIComponent(titre) + '&body=' + encodeURIComponent(txt), '_blank');
-    menu.remove();
-  };
-  menu.appendChild(slack); menu.appendChild(mail);
+  menu.style.cssText = 'position:fixed;top:56px;right:24px;z-index:10001;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;width:min(420px,calc(100vw - 40px));box-shadow:0 10px 30px rgba(0,0,0,.45);';
+  menu.innerHTML = '<div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Génération de la synthèse…</div>';
   document.body.appendChild(menu);
   setTimeout(function () {
     document.addEventListener('click', function h(e) {
       if (!menu.contains(e.target) && e.target.id !== 'chat-drawer-share') { menu.remove(); document.removeEventListener('click', h); }
     });
   }, 0);
+
+  // Synthèse structurée par l'IA. Repli sur la version déterministe si indispo.
+  var synthese = null;
+  try {
+    var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(_chatCur.id) + '/synthese', { method: 'POST', headers: _chatH() });
+    var j = await r.json();
+    if (r.ok && j.synthese) synthese = j.synthese;
+  } catch (e) {}
+  if (!synthese) synthese = _chatShareTextDrawer();  // repli
+  else synthese = titre + '\n\n' + synthese;  // en-tête sur la version IA
+
+  menu.innerHTML = '';
+  var head = document.createElement('div');
+  head.style.cssText = 'font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:6px;';
+  head.textContent = 'Synthèse à partager';
+  var ta = document.createElement('textarea');
+  ta.value = synthese;
+  ta.rows = Math.min(16, synthese.split('\n').length + 1);
+  ta.style.cssText = 'width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text2);padding:9px 11px;font-size:12.5px;line-height:1.5;resize:vertical;margin-bottom:10px;';
+  var actions = document.createElement('div');
+  actions.style.cssText = 'display:flex;gap:8px;';
+  function mkBtn(label, primary) {
+    var b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+    b.style.cssText = 'flex:1;padding:8px 10px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid var(--border);'
+      + (primary ? 'background:var(--accent,#6366f1);color:#fff;border-color:transparent;' : 'background:none;color:var(--text);');
+    return b;
+  }
+  var slack = mkBtn('Copier pour Slack', true);
+  slack.onclick = function () {
+    var t = ta.value;
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () {
+      slack.textContent = '✓ Copié !'; setTimeout(function () { menu.remove(); }, 900);
+    }).catch(function () { ta.select(); document.execCommand && document.execCommand('copy'); slack.textContent = '✓ Copié !'; });
+  };
+  var mail = mkBtn('Email', false);
+  mail.onclick = function () {
+    window.open('mailto:?subject=' + encodeURIComponent(titre) + '&body=' + encodeURIComponent(ta.value), '_blank');
+    menu.remove();
+  };
+  actions.appendChild(slack); actions.appendChild(mail);
+  menu.appendChild(head); menu.appendChild(ta); menu.appendChild(actions);
 }
 
 function _chatRenderDrawer(msg) {
