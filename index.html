@@ -10258,6 +10258,7 @@ function _chatWire() {
 // sert à essayer le bot. Le mode est retenu d'une visite à l'autre.
 var _chatMode = 'site';
 var _chatView = 'todo';
+var _chatSort = { by: '', dir: 'desc' };  // vide = ordre serveur (chaleur)
 var _chatConvs = [];
 var _chatCur = null;      // conversation ouverte dans le tiroir
 var _chatPreview = null;  // aperçu en attente de confirmation
@@ -10322,9 +10323,18 @@ function _chatRenderConvs() {
       + 'passe en « Bac à sable » pour essayer le bot.</div>';
     return;
   }
+  // Tri par colonne (clic sur l'en-tête). Par défaut : chaleur (score décroissant),
+  // le lead à traiter en tête — ordre déjà appliqué côté serveur.
+  var sortedConvs = _chatSortConvs(_chatConvs.slice());
+  function th(label, key) {
+    var on = _chatSort.by === key;
+    var arrow = on ? (_chatSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    return '<th data-sort="' + key + '" style="cursor:pointer;user-select:none;white-space:nowrap;"'
+      + (on ? ' class="sorted"' : '') + '>' + label + arrow + '</th>';
+  }
   body.innerHTML = '<table class="chat-conv"><thead><tr>'
-    + '<th>Visiteur</th><th>Projet</th><th>Page</th><th>Score</th><th>Dans Scout</th><th></th>'
-    + '</tr></thead><tbody>' + _chatConvs.map(function (c) {
+    + th('Visiteur', 'who') + th('Projet', 'besoin') + th('Page', 'page') + th('Score', 'score') + th('Dans Scout', 'scout') + th('', 'date')
+    + '</tr></thead><tbody>' + sortedConvs.map(function (c) {
       var L = c.lead || {}, I = c.inferred || {};
       var who = [L.prenom, L.nom].filter(Boolean).join(' ') || L.email || 'Anonyme';
       var sub = [L.societe, I.pays].filter(Boolean).join(' · ');
@@ -10341,11 +10351,41 @@ function _chatRenderConvs() {
         + '<td>' + badges + _chatEsc((L.besoin || '—').slice(0, 60)) + '</td>'
         + '<td class="sub">' + _chatEsc((c.page || '—').slice(0, 34)) + '</td>'
         + '<td><span class="chat-badge ' + cls + '">' + _chatEsc(c.score_label) + '</span></td>'
-        + '<td class="sub">' + (c.contact_id ? '✓ contact créé' : c.status === 'qualified' ? '—' : '') + '</td>'
+        + '<td class="sub">' + (c.contact_id ? '✓ contact créé' : c.handled_at ? '✓ traité' : c.status === 'qualified' ? '—' : '') + '</td>'
         + '<td class="sub" style="white-space:nowrap;">' + _chatEsc(_chatAgo(c.updated_at)) + '</td></tr>';
     }).join('') + '</tbody></table>';
   body.querySelectorAll('tr[data-id]').forEach(function (tr) {
     tr.addEventListener('click', function () { _chatOpenConv(tr.getAttribute('data-id')); });
+  });
+  body.querySelectorAll('th[data-sort]').forEach(function (th) {
+    th.addEventListener('click', function () {
+      var k = th.getAttribute('data-sort');
+      if (_chatSort.by === k) _chatSort.dir = _chatSort.dir === 'asc' ? 'desc' : 'asc';
+      else { _chatSort.by = k; _chatSort.dir = (k === 'score' || k === 'date') ? 'desc' : 'asc'; }
+      _chatRenderConvs();
+    });
+  });
+}
+
+// Tri local des conversations selon la colonne cliquée.
+function _chatSortConvs(list) {
+  var by = _chatSort.by, dir = _chatSort.dir === 'asc' ? 1 : -1;
+  if (!by) return list;
+  function val(c) {
+    var L = c.lead || {}, I = c.inferred || {};
+    switch (by) {
+      case 'who': return ([L.prenom, L.nom].filter(Boolean).join(' ') || L.email || 'zzz').toLowerCase();
+      case 'besoin': return (L.besoin || 'zzz').toLowerCase();
+      case 'page': return (c.page || 'zzz').toLowerCase();
+      case 'score': return c.score || 0;
+      case 'scout': return c.contact_id ? 2 : c.handled_at ? 1 : 0;
+      case 'date': return new Date(c.updated_at || 0).getTime();
+      default: return 0;
+    }
+  }
+  return list.sort(function (a, b) {
+    var va = val(a), vb = val(b);
+    if (va < vb) return -1 * dir; if (va > vb) return 1 * dir; return 0;
   });
 }
 
@@ -10399,6 +10439,18 @@ function _chatShareTextDrawer() {
     lignes.push((m.role === 'user' ? 'Visiteur' : 'Bot') + ' : ' + (m.content || '').trim());
   });
   return lignes.join('\n');
+}
+
+async function _chatHandled(undo) {
+  if (!_chatCur) return;
+  try {
+    var r = await fetch(API + '/v/chat/session/' + encodeURIComponent(_chatCur.id) + '/handled', {
+      method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, _chatH()), body: JSON.stringify({ undo: !!undo })
+    });
+    if (!r.ok) throw new Error('handled ' + r.status);
+    _chatCloseDrawer();
+    _chatLoadConvs();
+  } catch (e) { _chatRenderDrawer('Impossible : ' + e.message); }
 }
 
 async function _chatReclass(to) {
@@ -10536,8 +10588,13 @@ function _chatRenderDrawer(msg) {
       + '<button type="button" class="btn btn-primary" id="chat-mk-confirm" style="padding:8px 14px;font-size:13px;">Confirmer la création</button>'
       + '<button type="button" class="btn btn-secondary" id="chat-mk-cancel" style="padding:8px 14px;font-size:13px;">Annuler</button></div>';
   } else {
-    actions = '<button type="button" class="btn btn-primary" id="chat-mk-contact" style="padding:8px 14px;font-size:13px;">Créer le contact dans Scout</button>'
-      + '<p style="margin:8px 0 0;font-size:12px;color:var(--text3);line-height:1.5;">Tu verras ce qui sera écrit avant de valider. Rien n\'est envoyé au CRM.</p>';
+    var estATraiter = j.status === 'qualified' && !j.contact_id;
+    actions = '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      + '<button type="button" class="btn btn-primary" id="chat-mk-contact" style="padding:8px 14px;font-size:13px;">Créer le contact dans Scout</button>'
+      + (estATraiter && !j.handled_at ? '<button type="button" class="btn btn-secondary" id="chat-mk-handled" style="padding:8px 14px;font-size:13px;">✓ Marquer traité</button>' : '')
+      + (j.handled_at ? '<button type="button" class="btn btn-secondary" id="chat-mk-unhandled" style="padding:8px 14px;font-size:13px;">↩ Rouvrir (non traité)</button>' : '')
+      + '</div>'
+      + '<p style="margin:8px 0 0;font-size:12px;color:var(--text3);line-height:1.5;">' + (j.handled_at ? 'Marqué traité — sorti de « À traiter ». ' : '') + 'Tu verras ce qui sera écrit avant de valider. Rien n\'est envoyé au CRM.</p>';
   }
   // Reclasser test ↔ trafic réel (un chat de test qui traîne dans le site = bruit).
   var estTest = j.source === 'test';
@@ -10570,6 +10627,10 @@ function _chatRenderDrawer(msg) {
   if (mk) mk.addEventListener('click', _chatPreviewContact);
   var rc = document.getElementById('chat-reclass');
   if (rc) rc.addEventListener('click', function () { _chatReclass(rc.getAttribute('data-to')); });
+  var mh = document.getElementById('chat-mk-handled');
+  if (mh) mh.addEventListener('click', function () { _chatHandled(false); });
+  var uh = document.getElementById('chat-mk-unhandled');
+  if (uh) uh.addEventListener('click', function () { _chatHandled(true); });
   var cf = document.getElementById('chat-mk-confirm');
   if (cf) cf.addEventListener('click', _chatMakeContact);
   var cn = document.getElementById('chat-mk-cancel');
