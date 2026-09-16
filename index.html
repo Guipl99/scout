@@ -10979,9 +10979,14 @@ function _visRenderDrawer() {
   html += '<section class="vis-sec"><h3>Ce qu\'ils ont regardé</h3>' + pInner + '</section>';
 
   // Pied
+  var estFai = ['isp', 'hosting', 'vpn'].indexOf(a.org_type) !== -1;
   html += '<div class="vis-sec vis-actions">' + _visBtn(a.hidden ? 'unhide' : 'hide', a.account_key, a.hidden ? 'Ne plus ignorer' : 'Ignorer ce compte', a.hidden ? 'ghost' : 'danger')
-    + (a.hidden ? '' : _visBtn('flag-isp', a.account_key, 'C\'est un FAI / opérateur', 'danger'))
-    + '<span style="font-size:12px;color:var(--text3);align-self:center;">' + (a.hidden ? '' : 'Ignorer = partenaire/fournisseur. FAI = fournisseur d\'accès, hébergeur (sort définitivement des vrais comptes).') + '</span></div>';
+    + (a.hidden ? '' : (estFai
+        ? _visBtn('flag-real', a.account_key, '✓ C\'est un vrai compte', 'primary')
+        : _visBtn('flag-isp', a.account_key, 'C\'est un FAI / opérateur', 'danger')))
+    + '<span style="font-size:12px;color:var(--text3);align-self:center;">' + (a.hidden ? '' : (estFai
+        ? 'Écarté comme fournisseur d\'accès ? Le remettre dans les vrais comptes.'
+        : 'Ignorer = partenaire/fournisseur. FAI = fournisseur d\'accès, hébergeur (sort des vrais comptes).')) + '</span></div>';
   el.innerHTML = html;
 }
 async function _visLoadDetail(key) {
@@ -11084,6 +11089,19 @@ async function _visHide(key, hidden) {
     if (_visView !== 'hidden') _visCloseDrawer(); else _visRenderDrawer();
   } catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
 }
+async function _visFlagReal(key) {
+  // Récupère un compte écarté à tort (classé isp) et le remet dans les vrais
+  // comptes : org_type='business' mémorisé dans web_org_links, donc il reste
+  // identifié même re-résolu. C'est le pendant du bouton FAI, pour les faux
+  // négatifs (vrai prospect visitant depuis une IP grand public sans domaine).
+  if (!confirm('Remettre ce compte dans les vrais comptes ? Il réapparaîtra dans la liste des prospects.')) return;
+  try {
+    await _visPost('/v/accounts/link', { key: key, org_type: 'business' });
+    await renderVisitors();
+    _visCloseDrawer();
+  } catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
+}
+
 async function _visFlagIsp(key) {
   // Marque le compte comme FAI/opérateur : requalifié en 'isp' et mémorisé dans
   // web_org_links (org_type), donc il ne reviendra jamais dans les vrais comptes,
@@ -11229,6 +11247,7 @@ async function _visPollAlerts() {
     else if (act === 'hide') _visHide(key, true);
     else if (act === 'unhide') _visHide(key, false);
     else if (act === 'flag-isp') _visFlagIsp(key);
+    else if (act === 'flag-real') _visFlagReal(key);
     else if (act === 'open-chat') { var cid = b.getAttribute('data-chat'); if (cid && typeof go === 'function') { go('chat'); if (typeof _chatOpen === 'function') setTimeout(function(){ _chatOpen(cid); }, 250); } }
     else if (act === 'alerts-seen') { await fetch(API + '/v/alerts/seen', { method: 'POST', headers: _visH(), body: '{}' }); renderVisitors(); }
     else if (act === 'clear-page') { var el = document.getElementById('vis-page'); if (el) el.value = ''; _visPage = ''; _visSort = { by: 'score', dir: 'desc' }; _visAccounts = []; renderVisitors(); }
