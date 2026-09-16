@@ -10984,6 +10984,7 @@ function _visRenderDrawer() {
     + (a.hidden ? '' : (estFai
         ? _visBtn('flag-real', a.account_key, '✓ C\'est un vrai compte', 'primary')
         : _visBtn('flag-isp', a.account_key, 'C\'est un FAI / opérateur', 'danger')))
+    + (a.hidden ? '' : _visBtn('rename', a.account_key, '✏️ Renommer', 'ghost'))
     + '<span style="font-size:12px;color:var(--text3);align-self:center;">' + (a.hidden ? '' : (estFai
         ? 'Écarté comme fournisseur d\'accès ? Le remettre dans les vrais comptes.'
         : 'Ignorer = partenaire/fournisseur. FAI = fournisseur d\'accès, hébergeur (sort des vrais comptes).')) + '</span></div>';
@@ -11089,6 +11090,23 @@ async function _visHide(key, hidden) {
     if (_visView !== 'hidden') _visCloseDrawer(); else _visRenderDrawer();
   } catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
 }
+async function _visRename(key) {
+  // Affiche le nom que l'équipe reconnaît à la place du nom brut du registre réseau
+  // (ex. « ESG Elektroniksystem… » → « Hensoldt »). Mémorisé dans web_org_links
+  // (display_name), donc persiste à la re-résolution. N'altère pas le nom stocké brut.
+  var a = _visAcc(key);
+  var actuel = a ? (a.org_name || '') : '';
+  var nom = window.prompt('Nom à afficher pour ce compte :', actuel);
+  if (nom === null) return;               // annulé
+  nom = nom.trim();
+  if (!nom || nom === actuel) return;     // vide ou inchangé
+  try {
+    await _visPost('/v/accounts/link', { key: key, display_name: nom });
+    await renderVisitors();
+    _visCloseDrawer();
+  } catch (e) { _visDrawerSay('societe', 'Erreur : ' + e.message, '#dc2626'); }
+}
+
 async function _visFlagReal(key) {
   // Récupère un compte écarté à tort (classé isp) et le remet dans les vrais
   // comptes : org_type='business' mémorisé dans web_org_links, donc il reste
@@ -11248,6 +11266,7 @@ async function _visPollAlerts() {
     else if (act === 'unhide') _visHide(key, false);
     else if (act === 'flag-isp') _visFlagIsp(key);
     else if (act === 'flag-real') _visFlagReal(key);
+    else if (act === 'rename') _visRename(key);
     else if (act === 'open-chat') { var cid = b.getAttribute('data-chat'); if (cid && typeof go === 'function') { go('chat'); if (typeof _chatOpen === 'function') setTimeout(function(){ _chatOpen(cid); }, 250); } }
     else if (act === 'alerts-seen') { await fetch(API + '/v/alerts/seen', { method: 'POST', headers: _visH(), body: '{}' }); renderVisitors(); }
     else if (act === 'clear-page') { var el = document.getElementById('vis-page'); if (el) el.value = ''; _visPage = ''; _visSort = { by: 'score', dir: 'desc' }; _visAccounts = []; renderVisitors(); }
