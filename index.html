@@ -2613,6 +2613,7 @@ Réinitialiser tous les filtres
             <option value="abm">🎯 Comptes ABM</option>
             <option value="fav">★ Mes favoris</option>
             <option value="todo">Tout</option>
+            <option value="fai">📡 FAI / opérateurs</option>
             <optgroup label="Avancé">
               <option value="ident-site">Identifiés par leur site</option>
               <option value="other">Visiteurs non identifiables</option>
@@ -9757,7 +9758,7 @@ function _visAcc(key) { return _visAccounts.find(function (a) { return a.account
 
 // ── Chargement ───────────────────────────────────────────────────────────────
 var VIS_VIEWS = {
-  todo:   { types: 'business,government,education', abm: '0', hidden: '0', title: 'Entreprises & administrations' },
+  todo:   { types: 'business,government,education,isp,hosting,vpn,unknown', abm: '0', hidden: '0', title: 'Tout le trafic web' },
   // Comptes dont le nom vient d'une identification (lecture du site ou IA), par
   // opposition à ceux qui portent encore le nom brut du RDAP ou de l'ASN.
   // « ident » : toute identification, site ou IA. « ident-site » : le nom a été
@@ -9766,6 +9767,7 @@ var VIS_VIEWS = {
   'ident-site': { types: 'business,government,education', abm: '0', hidden: '0', identifie: 'site', title: 'Identifiés par leur site' },
   fav:    { types: 'business,government,education', abm: '0', hidden: '0', title: 'Favoris', star: true },
   abm:    { types: 'business,government,education', abm: '1', hidden: '0', title: 'Comptes ABM' },
+  fai:    { types: 'isp,hosting,vpn',               abm: '0', hidden: '0', title: 'FAI / opérateurs' },
   other:  { types: 'isp,hosting,vpn,unknown',       abm: '0', hidden: '0', title: 'Visiteurs non identifiables' },
   hidden: { types: 'business,government,education,isp,hosting,vpn,unknown', abm: '0', hidden: '1', title: 'Comptes ignorés', onlyHidden: true }
 };
@@ -10788,6 +10790,7 @@ function _visEmptyHtml() {
   if (_visView === 'abm') return box('Aucun compte ABM sur la période', 'Aucun des comptes cibles n\'est passé sur le site ces ' + _visDays + ' derniers jours.');
   if (_visView === 'ident') return box('Aucun compte identifié', 'Cette vue ne montre que les comptes dont le nom a été établi en ouvrant leur site (✓ site) ou déduit par l\'IA (~ IA). Les autres gardent le nom brut du registre réseau ou de l\'ASN.');
   if (_visView === 'ident-site') return box('Aucun compte identifié par son site', 'Cette vue ne montre que les comptes dont le nom a été lu sur leur page d\'accueil. Les noms seulement déduits par l\'IA sont dans « Comptes identifiés ».');
+  if (_visView === 'fai') return box('Aucun FAI / opérateur sur la période', 'Les visiteurs venus depuis une box, un mobile, un hébergeur ou un VPN apparaissent ici. Utilise « Marquer comme FAI / opérateur » sur un compte pour l\'y ranger.');
   if (_visView === 'hidden') return box('Aucun compte ignoré', 'Les comptes que tu masques (Elistair, partenaires, fournisseurs) apparaîtront ici.');
   return box('Aucune organisation identifiée sur la période',
     s.visitors + ' visiteur(s) sont venus, mais tous depuis une box, un mobile ou un VPN, donc impossible de savoir de quelle organisation ils viennent. C\'est le cas d\'environ deux visiteurs sur trois.');
