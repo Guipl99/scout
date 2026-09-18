@@ -10984,7 +10984,7 @@ function _visRenderDrawer() {
   html += '<div class="vis-sec vis-actions">' + _visBtn(a.hidden ? 'unhide' : 'hide', a.account_key, a.hidden ? 'Ne plus ignorer' : 'Ignorer ce compte', a.hidden ? 'ghost' : 'danger')
     + (a.hidden ? '' : (estFai
         ? _visBtn('flag-real', a.account_key, 'Ce n\'est pas un FAI / opérateur', 'primary')
-        : _visBtn('flag-isp', a.account_key, 'C\'est un FAI / opérateur', 'danger')))
+        : _visBtn('flag-isp', a.account_key, 'Marquer comme FAI / opérateur', 'danger')))
     + '<span style="font-size:12px;color:var(--text3);align-self:center;">' + (a.hidden ? '' : (estFai
         ? 'Mal classé comme fournisseur d\'accès ? Le remettre dans les vrais comptes.'
         : 'Ignorer = partenaire/fournisseur. FAI = fournisseur d\'accès, hébergeur (sort des vrais comptes).')) + '</span></div>';
