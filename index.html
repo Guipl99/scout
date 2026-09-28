@@ -2315,6 +2315,9 @@ Mes pays
               <select id="ct-pays-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
                 <option value="">🌍 Pays</option>
               </select>
+              <select id="ct-etat-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()" title="Filtrer les contacts US par état (déduit du nom d'organisation et des notes)">
+                <option value="">🇺🇸 État US</option>
+              </select>
               
               <select id="ct-drone-type-filter" style="font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);" onchange="filterCurrentTab()">
                 <option value="">🚁 Type de drone</option>
@@ -6526,9 +6529,66 @@ function filterCurrentTab() {
   else filterContactsGrid();
 }
 
+// ── Filtre État US (déduit du texte : pas de colonne état en base) ─────────
+const US_STATES = {
+  'Alabama':'AL','Alaska':'AK','Arizona':'AZ','Arkansas':'AR','California':'CA',
+  'Colorado':'CO','Connecticut':'CT','Delaware':'DE','Florida':'FL','Georgia':'GA',
+  'Hawaii':'HI','Idaho':'ID','Illinois':'IL','Indiana':'IN','Iowa':'IA','Kansas':'KS',
+  'Kentucky':'KY','Louisiana':'LA','Maine':'ME','Maryland':'MD','Massachusetts':'MA',
+  'Michigan':'MI','Minnesota':'MN','Mississippi':'MS','Missouri':'MO','Montana':'MT',
+  'Nebraska':'NE','Nevada':'NV','New Hampshire':'NH','New Jersey':'NJ','New Mexico':'NM',
+  'New York':'NY','North Carolina':'NC','North Dakota':'ND','Ohio':'OH','Oklahoma':'OK',
+  'Oregon':'OR','Pennsylvania':'PA','Rhode Island':'RI','South Carolina':'SC',
+  'South Dakota':'SD','Tennessee':'TN','Texas':'TX','Utah':'UT','Vermont':'VT',
+  'Virginia':'VA','Washington':'WA','West Virginia':'WV','Wisconsin':'WI','Wyoming':'WY',
+  'District of Columbia':'DC'
+};
+const _US_PAYS = new Set(['usa','us','u.s.','u.s.a.','united states','united states of america','états-unis','etats-unis']);
+const _US_NAMES = Object.keys(US_STATES).sort((a,b)=>b.length-a.length);
+const _US_CODE2NAME = {}; Object.keys(US_STATES).forEach(n=>{ _US_CODE2NAME[US_STATES[n]]=n; });
+window._usStateCache = window._usStateCache || {};
+function isUSContact(ct){ return !!(ct && ct.pays && _US_PAYS.has(String(ct.pays).trim().toLowerCase())); }
+function detectUSState(ct){
+  if (!isUSContact(ct)) return '';
+  const id = ct.id || ((ct.prenom||'')+'|'+(ct.nom||'')+'|'+(ct.organisation||''));
+  if (window._usStateCache[id] !== undefined) return window._usStateCache[id];
+  const hay = [ct.organisation, ct.notes, ct.titre].filter(Boolean).join('  ');
+  let res = '';
+  if (hay) {
+    if (/\bwashington\s*,?\s*d\.?c\.?\b/i.test(hay) || /\bdistrict of columbia\b/i.test(hay)) {
+      res = 'District of Columbia';
+    } else {
+      for (const name of _US_NAMES) {
+        const re = new RegExp('(^|[^A-Za-z])' + name.replace(/ /g,'\\s+') + '($|[^A-Za-z])','i');
+        if (re.test(hay)) { res = name; break; }
+      }
+      if (!res) {
+        const re2 = /(?:,\s*|[A-Za-z]{2,}\.?\s+)([A-Z]{2})(?=$|[^A-Za-z])/g;
+        let m;
+        while ((m = re2.exec(hay))) { if (_US_CODE2NAME[m[1]]) { res = _US_CODE2NAME[m[1]]; break; } }
+      }
+    }
+  }
+  window._usStateCache[id] = res;
+  return res;
+}
+function populateEtatUSFilter() {
+  const sel = document.getElementById('ct-etat-filter');
+  if (!sel || !window.allContacts) return;
+  window._usStateCache = {};
+  const counts = {};
+  allContacts.forEach(ct => { if (!ct.end_user_id) return; const st = detectUSState(ct); if (st) counts[st] = (counts[st]||0)+1; });
+  const states = Object.keys(counts).sort();
+  const saved = (loadSavedFilters().contacts||{}).etat || sel.value || '';
+  sel.innerHTML = '<option value="">🇺🇸 État US</option>' +
+    states.map(st => `<option value="${st}">${st} (${counts[st]})</option>`).join('');
+  if (saved && counts[saved]) sel.value = saved;
+}
+
 function filterContactsGrid() {
   const q = (document.getElementById('eu-contact-search')?.value || '').toLowerCase();
   const pays = document.getElementById('ct-pays-filter')?.value || '';
+  const etat = document.getElementById('ct-etat-filter')?.value || '';
   const droneType = document.getElementById('ct-drone-type-filter')?.value || '';
   const fabricant = document.getElementById('ct-fabricant-filter')?.value || '';
   // Toolbar outreach filter: 'contacted' / 'not_contacted' / '' (all)
@@ -6553,6 +6613,7 @@ function filterContactsGrid() {
     // Blacklist pays (Paramètres)
     if (excluded.length && ct.pays && excluded.includes(ct.pays)) return false;
     if (pays && ct.pays !== pays) return false;
+    if (etat && detectUSState(ct) !== etat) return false;
     if (q) {
       const hay = [ct.prenom, ct.nom, ct.titre, ct.organisation, ct.domaine, ct.notes, ct.pays].join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
@@ -6826,6 +6887,7 @@ function populateEuDroneFilters() {
       ctPaysSel.innerHTML = '<option value="">🌍 Pays</option>' +
         [...ctPays].sort().map(p => `<option value="${p}">${p}</option>`).join('');
     }
+    populateEtatUSFilter();
     const ctDtSel = document.getElementById('ct-drone-type-filter');
     if (ctDtSel) {
       ctDtSel.innerHTML = '<option value="">🚁 Type de drone</option>' +
@@ -7422,6 +7484,7 @@ function saveCurrentFilters() {
   };
   f.contacts = {
     pays:      document.getElementById('ct-pays-filter')?.value || '',
+    etat:      document.getElementById('ct-etat-filter')?.value || '',
     drone:     document.getElementById('ct-drone-type-filter')?.value || '',
     fabricant: document.getElementById('ct-fabricant-filter')?.value || '',
   };
@@ -7445,6 +7508,7 @@ function restoreSavedFilters(panel) {
   if (panel === 'contacts' && f.contacts) {
     const ct = f.contacts;
     if (ct.pays)      { const el = document.getElementById('ct-pays-filter');          if (el) el.value = ct.pays; }
+    if (ct.etat)      { const el = document.getElementById('ct-etat-filter');          if (el) el.value = ct.etat; }
     if (ct.drone)     { const el = document.getElementById('ct-drone-type-filter');    if (el) el.value = ct.drone; }
     if (ct.fabricant) { const el = document.getElementById('ct-fabricant-filter');     if (el) el.value = ct.fabricant; }
   }
@@ -7453,7 +7517,7 @@ function restoreSavedFilters(panel) {
 function resetAllFilters() {
   localStorage.removeItem(FILTERS_KEY);
   ['eu-pays-filter','eu-drone-type-filter','eu-fabricant-filter',
-   'ct-pays-filter','ct-drone-type-filter','ct-fabricant-filter',
+   'ct-pays-filter','ct-etat-filter','ct-drone-type-filter','ct-fabricant-filter',
    'eu-contact-search'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
