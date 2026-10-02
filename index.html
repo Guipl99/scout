@@ -1204,6 +1204,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   window.teamReset=async function(id){ const pw=prompt('Nouveau mot de passe pour ce commercial (min 6) :'); if(!pw) return; if(pw.length<6){alert('Minimum 6 caractères');return;} try{ const r=await fetch(API+'/team/'+id+'/password',{method:'POST',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({password:pw})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} alert('Mot de passe réinitialisé.'); window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
   window.teamToggle=async function(id,active){ try{ const r=await fetch(API+'/team/'+id,{method:'PATCH',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({active:active})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
   window.addTeamMember=async function(){ const name=prompt('Prénom du nouveau commercial :'); if(!name) return; try{ const r=await fetch(API+'/team',{method:'POST',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({name:name.trim()})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} alert('Profil créé. Il se connecte avec le mot de passe d\'équipe, puis crée son mot de passe perso.'); window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
+  window.teamUnlock=async function(){
+    if(!confirm('Débloquer les connexions récemment verrouillées (« trop de tentatives ») ?\n\nÀ utiliser quand un commercial est bloqué après plusieurs mauvais mots de passe.')) return;
+    try{
+      const r=await fetch(API+'/admin/clear-auth-lock',{method:'POST',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({})});
+      const d=await r.json();
+      if(!r.ok||!d.ok){alert(d.error||'Erreur');return;}
+      alert('Verrou levé \u2705 ('+(d.cleared||0)+' blocage(s) effacé(s)). La personne peut se reconnecter tout de suite.');
+    }catch(e){alert('Erreur réseau');}
+  };
   async function restoreSessionOrShowGate() {
     const raw = localStorage.getItem(LS_SESSION);
     if (!raw) { showAuthGate(); return; }
@@ -2377,7 +2386,10 @@ Mes pays
             <div id="cfg-team-admin" style="display:none;border-top:1px dashed var(--border);padding-top:12px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                 <label style="font-size:12px;color:var(--text3);">👥 Gestion de l'équipe (admin)</label>
-                <button type="button" onclick="if(window.addTeamMember)window.addTeamMember()" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;cursor:pointer;">+ Ajouter un commercial</button>
+                <div style="display:flex;gap:6px;">
+                  <button type="button" onclick="if(window.teamUnlock)window.teamUnlock()" title="Lève le verrou anti-bruteforce quand un commercial est bloqué après plusieurs mauvais mots de passe" style="font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;cursor:pointer;">🔓 Débloquer connexions</button>
+                  <button type="button" onclick="if(window.addTeamMember)window.addTeamMember()" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;cursor:pointer;">+ Ajouter un commercial</button>
+                </div>
               </div>
               <div id="cfg-team-list" style="display:flex;flex-direction:column;gap:6px;"></div>
             </div>
