@@ -768,12 +768,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     background: linear-gradient(135deg, #0f172a, #1e3a8a);
     z-index: 100000;
     display: flex; align-items: center; justify-content: center;
+    overflow-y: auto; padding: 20px 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
   #scout-auth-gate.hidden { display: none !important; }
   .scout-auth-card {
     background: white; border-radius: 16px;
     padding: 40px; width: 400px; max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 40px); overflow-y: auto; margin: auto;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
   }
   .scout-auth-card h1 {
@@ -954,6 +956,28 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div id="scout-auth-err" class="scout-auth-err" style="display:none;"></div>
     </form>
     <div class="scout-auth-hint">1re connexion : mot de passe d'équipe, puis crée ton mot de passe perso</div>
+    <button type="button" id="scout-auth-forgot" style="background:none;border:none;color:#2563eb;font-size:12px;cursor:pointer;text-decoration:underline;padding:0;width:auto;margin:12px auto 0;display:block;font-weight:500;">Mot de passe oublié ?</button>
+    <div id="scout-auth-reset" style="display:none;margin-top:14px;padding-top:16px;border-top:1px solid #e5e7eb;text-align:left;">
+      <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.5;">Réinitialise ton mot de passe toi-même. Il te faut le <b>mot de passe d'équipe</b> (le partagé), puis tu choisis ton nouveau mot de passe perso.</div>
+      <div class="scout-field">
+        <label for="scout-reset-firstname">Ton prénom</label>
+        <input id="scout-reset-firstname" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Ton prénom" />
+      </div>
+      <div class="scout-field">
+        <label for="scout-reset-team">Mot de passe d'équipe</label>
+        <input id="scout-reset-team" type="password" autocomplete="off" placeholder="le mot de passe partagé" />
+      </div>
+      <div class="scout-field">
+        <label for="scout-reset-new">Nouveau mot de passe perso</label>
+        <input id="scout-reset-new" type="password" autocomplete="new-password" placeholder="min. 6 caractères" />
+      </div>
+      <div class="scout-field">
+        <label for="scout-reset-new2">Confirme le nouveau</label>
+        <input id="scout-reset-new2" type="password" autocomplete="new-password" placeholder="retape-le" />
+      </div>
+      <button type="button" id="scout-reset-submit">Réinitialiser mon mot de passe</button>
+      <div id="scout-reset-msg" style="display:none;font-size:13px;margin-top:12px;padding:10px 12px;border-radius:8px;"></div>
+    </div>
   </div>
 </div>
 
@@ -1130,6 +1154,57 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       authSubmit.textContent = 'Se connecter';
     }
   });
+
+  // ── Libre-service : « Mot de passe oublié ? » ──
+  (function(){
+    const forgot = document.getElementById('scout-auth-forgot');
+    const panel  = document.getElementById('scout-auth-reset');
+    const rFirst = document.getElementById('scout-reset-firstname');
+    const rTeam  = document.getElementById('scout-reset-team');
+    const rNew   = document.getElementById('scout-reset-new');
+    const rNew2  = document.getElementById('scout-reset-new2');
+    const rBtn   = document.getElementById('scout-reset-submit');
+    const rMsg   = document.getElementById('scout-reset-msg');
+    if(!forgot || !panel || !rBtn) return;
+    function showMsg(txt, ok){
+      rMsg.style.display='block'; rMsg.textContent=txt;
+      rMsg.style.background = ok ? '#f0fdf4' : '#fef2f2';
+      rMsg.style.color = ok ? '#166534' : '#991b1b';
+    }
+    forgot.addEventListener('click', ()=>{
+      const open = panel.style.display !== 'none';
+      if(open){ panel.style.display='none'; forgot.textContent='Mot de passe oublié ?'; return; }
+      panel.style.display='block'; forgot.textContent='Masquer';
+      if(authFirstname && authFirstname.value && !rFirst.value) rFirst.value = authFirstname.value.trim();
+      rFirst.focus();
+    });
+    rBtn.addEventListener('click', async ()=>{
+      const firstName=(rFirst.value||'').trim(), team=rTeam.value||'', pw=rNew.value||'', pw2=rNew2.value||'';
+      rMsg.style.display='none';
+      if(!firstName) return showMsg('Indique ton prénom.', false);
+      if(!team) return showMsg('Entre le mot de passe d\'équipe.', false);
+      if(pw.length<6) return showMsg('Le nouveau mot de passe doit faire au moins 6 caractères.', false);
+      if(pw!==pw2) return showMsg('Les deux mots de passe ne correspondent pas.', false);
+      rBtn.disabled=true; rBtn.textContent='Réinitialisation…';
+      try{
+        const r = await fetch(API + '/chat/reset-password', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ first_name:firstName, team_password:team, new_password:pw })
+        });
+        const data = await r.json().catch(()=>({}));
+        if(r.ok && data.ok){
+          showMsg('Mot de passe réinitialisé. Connecte-toi maintenant avec ton nouveau mot de passe.', true);
+          if(authFirstname) authFirstname.value = firstName;
+          if(authPassword){ authPassword.value=''; }
+          rTeam.value=''; rNew.value=''; rNew2.value='';
+          setTimeout(()=>{ panel.style.display='none'; forgot.textContent='Mot de passe oublié ?'; rMsg.style.display='none'; if(authPassword) authPassword.focus(); }, 2500);
+        } else {
+          showMsg(data.error || 'Échec de la réinitialisation.', false);
+        }
+      }catch(e){ showMsg('Erreur réseau : '+e.message, false); }
+      finally{ rBtn.disabled=false; rBtn.textContent='Réinitialiser mon mot de passe'; }
+    });
+  })();
 
   function _authH(){ return session && session.token ? {'Authorization':'Bearer '+session.token} : {}; }
   async function applyServerProfile(){
