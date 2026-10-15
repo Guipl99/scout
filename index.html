@@ -956,26 +956,35 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div id="scout-auth-err" class="scout-auth-err" style="display:none;"></div>
     </form>
     <div class="scout-auth-hint">1re connexion : mot de passe d'équipe, puis crée ton mot de passe perso</div>
-    <button type="button" id="scout-auth-forgot" style="background:none;border:none;color:#2563eb;font-size:12px;cursor:pointer;text-decoration:underline;padding:0;width:auto;margin:12px auto 0;display:block;font-weight:500;">Mot de passe oublié ?</button>
+    <button type="button" id="scout-auth-forgot" style="background:none;border:none;color:#2563eb;font-size:12px;cursor:pointer;text-decoration:underline;padding:0;width:auto;margin:12px auto 0;display:block;font-weight:500;">Première connexion / mot de passe oublié ?</button>
     <div id="scout-auth-reset" style="display:none;margin-top:14px;padding-top:16px;border-top:1px solid #e5e7eb;text-align:left;">
-      <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.5;">Réinitialise ton mot de passe toi-même. Il te faut le <b>mot de passe d'équipe</b> (le partagé), puis tu choisis ton nouveau mot de passe perso.</div>
-      <div class="scout-field">
-        <label for="scout-reset-firstname">Ton prénom</label>
-        <input id="scout-reset-firstname" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Ton prénom" />
+      <!-- Étape 1 : demander un code sur l'adresse @elistair.com -->
+      <div id="scout-code-step1">
+        <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.5;">On t'envoie un code sur ton adresse <b>@elistair.com</b>. Tu t'en sers pour définir ton mot de passe perso.</div>
+        <div class="scout-field">
+          <label for="scout-code-email">Ton email @elistair.com</label>
+          <input id="scout-code-email" type="email" autocomplete="email" spellcheck="false" placeholder="prenom.nom@elistair.com" />
+        </div>
+        <button type="button" id="scout-code-send">Recevoir un code par email</button>
       </div>
-      <div class="scout-field">
-        <label for="scout-reset-team">Mot de passe d'équipe</label>
-        <input id="scout-reset-team" type="password" autocomplete="off" placeholder="le mot de passe partagé" />
+      <!-- Étape 2 : saisir le code + le nouveau mot de passe -->
+      <div id="scout-code-step2" style="display:none;">
+        <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.5;">Code envoyé à <b id="scout-code-dest"></b>. Regarde ta boîte mail (et les spams).</div>
+        <div class="scout-field">
+          <label for="scout-code-code">Code reçu (6 chiffres)</label>
+          <input id="scout-code-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="------" />
+        </div>
+        <div class="scout-field">
+          <label for="scout-code-new">Ton mot de passe perso</label>
+          <input id="scout-code-new" type="password" autocomplete="new-password" placeholder="min. 6 caractères" />
+        </div>
+        <div class="scout-field">
+          <label for="scout-code-new2">Confirme</label>
+          <input id="scout-code-new2" type="password" autocomplete="new-password" placeholder="retape-le" />
+        </div>
+        <button type="button" id="scout-code-validate">Valider et me connecter</button>
+        <button type="button" id="scout-code-back" style="background:none;border:none;color:#6b7280;font-size:12px;cursor:pointer;text-decoration:underline;padding:0;width:auto;margin:10px auto 0;display:block;">Changer d'adresse</button>
       </div>
-      <div class="scout-field">
-        <label for="scout-reset-new">Nouveau mot de passe perso</label>
-        <input id="scout-reset-new" type="password" autocomplete="new-password" placeholder="min. 6 caractères" />
-      </div>
-      <div class="scout-field">
-        <label for="scout-reset-new2">Confirme le nouveau</label>
-        <input id="scout-reset-new2" type="password" autocomplete="new-password" placeholder="retape-le" />
-      </div>
-      <button type="button" id="scout-reset-submit">Réinitialiser mon mot de passe</button>
       <div id="scout-reset-msg" style="display:none;font-size:13px;margin-top:12px;padding:10px 12px;border-radius:8px;"></div>
     </div>
   </div>
@@ -1155,54 +1164,81 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     }
   });
 
-  // ── Libre-service : « Mot de passe oublié ? » ──
+  // ── Première connexion / mot de passe oublié : code par email @elistair.com ──
   (function(){
     const forgot = document.getElementById('scout-auth-forgot');
     const panel  = document.getElementById('scout-auth-reset');
-    const rFirst = document.getElementById('scout-reset-firstname');
-    const rTeam  = document.getElementById('scout-reset-team');
-    const rNew   = document.getElementById('scout-reset-new');
-    const rNew2  = document.getElementById('scout-reset-new2');
-    const rBtn   = document.getElementById('scout-reset-submit');
+    const step1  = document.getElementById('scout-code-step1');
+    const step2  = document.getElementById('scout-code-step2');
+    const emailI = document.getElementById('scout-code-email');
+    const sendB  = document.getElementById('scout-code-send');
+    const dest   = document.getElementById('scout-code-dest');
+    const codeI  = document.getElementById('scout-code-code');
+    const newI   = document.getElementById('scout-code-new');
+    const new2I  = document.getElementById('scout-code-new2');
+    const valB   = document.getElementById('scout-code-validate');
+    const backB  = document.getElementById('scout-code-back');
     const rMsg   = document.getElementById('scout-reset-msg');
-    if(!forgot || !panel || !rBtn) return;
+    if(!forgot || !panel || !sendB || !valB) return;
+    const LABEL = 'Première connexion / mot de passe oublié ?';
     function showMsg(txt, ok){
       rMsg.style.display='block'; rMsg.textContent=txt;
       rMsg.style.background = ok ? '#f0fdf4' : '#fef2f2';
       rMsg.style.color = ok ? '#166534' : '#991b1b';
     }
+    function toStep1(){ step1.style.display='block'; step2.style.display='none'; }
     forgot.addEventListener('click', ()=>{
       const open = panel.style.display !== 'none';
-      if(open){ panel.style.display='none'; forgot.textContent='Mot de passe oublié ?'; return; }
-      panel.style.display='block'; forgot.textContent='Masquer';
-      if(authFirstname && authFirstname.value && !rFirst.value) rFirst.value = authFirstname.value.trim();
-      rFirst.focus();
+      if(open){ panel.style.display='none'; forgot.textContent=LABEL; return; }
+      panel.style.display='block'; forgot.textContent='Masquer'; rMsg.style.display='none'; toStep1(); emailI.focus();
     });
-    rBtn.addEventListener('click', async ()=>{
-      const firstName=(rFirst.value||'').trim(), team=rTeam.value||'', pw=rNew.value||'', pw2=rNew2.value||'';
+    backB.addEventListener('click', ()=>{ rMsg.style.display='none'; toStep1(); emailI.focus(); });
+    // Étape 1 : envoyer le code
+    sendB.addEventListener('click', async ()=>{
+      const email=(emailI.value||'').trim().toLowerCase();
       rMsg.style.display='none';
-      if(!firstName) return showMsg('Indique ton prénom.', false);
-      if(!team) return showMsg('Entre le mot de passe d\'équipe.', false);
-      if(pw.length<6) return showMsg('Le nouveau mot de passe doit faire au moins 6 caractères.', false);
-      if(pw!==pw2) return showMsg('Les deux mots de passe ne correspondent pas.', false);
-      rBtn.disabled=true; rBtn.textContent='Réinitialisation…';
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showMsg('Entre une adresse email valide.', false);
+      if(!email.endsWith('@elistair.com')) return showMsg('Utilise ton adresse @elistair.com.', false);
+      sendB.disabled=true; sendB.textContent='Envoi…';
       try{
-        const r = await fetch(API + '/chat/reset-password', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ first_name:firstName, team_password:team, new_password:pw })
-        });
+        const r = await fetch(API + '/chat/request-code', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
         const data = await r.json().catch(()=>({}));
         if(r.ok && data.ok){
-          showMsg('Mot de passe réinitialisé. Connecte-toi maintenant avec ton nouveau mot de passe.', true);
-          if(authFirstname) authFirstname.value = firstName;
-          if(authPassword){ authPassword.value=''; }
-          rTeam.value=''; rNew.value=''; rNew2.value='';
-          setTimeout(()=>{ panel.style.display='none'; forgot.textContent='Mot de passe oublié ?'; rMsg.style.display='none'; if(authPassword) authPassword.focus(); }, 2500);
+          dest.textContent = email;
+          step1.style.display='none'; step2.style.display='block'; rMsg.style.display='none';
+          codeI.value=''; newI.value=''; new2I.value=''; codeI.focus();
         } else {
-          showMsg(data.error || 'Échec de la réinitialisation.', false);
+          showMsg(data.error || 'Impossible d\'envoyer le code pour le moment.', false);
         }
       }catch(e){ showMsg('Erreur réseau : '+e.message, false); }
-      finally{ rBtn.disabled=false; rBtn.textContent='Réinitialiser mon mot de passe'; }
+      finally{ sendB.disabled=false; sendB.textContent='Recevoir un code par email'; }
+    });
+    // Étape 2 : vérifier le code + définir le mot de passe
+    valB.addEventListener('click', async ()=>{
+      const email=(emailI.value||'').trim().toLowerCase();
+      const code=(codeI.value||'').trim(), pw=newI.value||'', pw2=new2I.value||'';
+      rMsg.style.display='none';
+      if(!/^\d{6}$/.test(code)) return showMsg('Le code fait 6 chiffres.', false);
+      if(pw.length<6) return showMsg('Le mot de passe doit faire au moins 6 caractères.', false);
+      if(pw!==pw2) return showMsg('Les deux mots de passe ne correspondent pas.', false);
+      valB.disabled=true; valB.textContent='Vérification…';
+      try{
+        const r = await fetch(API + '/chat/verify-code', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, code, new_password:pw }) });
+        const data = await r.json().catch(()=>({}));
+        if(r.ok && data.session_token){
+          // Connexion directe
+          session = {token: data.session_token, first_name: data.first_name || '', role: data.role || 'commercial'};
+          localStorage.setItem(LS_SESSION, JSON.stringify(session));
+          localStorage.setItem(LS_NAME, session.first_name);
+          window.scoutSession = session;
+          showMsg('Connecté. Bienvenue '+(session.first_name||'')+' !', true);
+          hideAuthGate();
+          try { if (typeof applyServerProfile==='function') applyServerProfile(); } catch(e){}
+        } else {
+          showMsg(data.error || 'Code invalide.', false);
+        }
+      }catch(e){ showMsg('Erreur réseau : '+e.message, false); }
+      finally{ valB.disabled=false; valB.textContent='Valider et me connecter'; }
     });
   })();
 
