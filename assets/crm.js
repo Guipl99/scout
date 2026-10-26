@@ -1,4 +1,4 @@
-/* Scout CRM : avant-CRM account-based (portefeuille, comptes, contacts, tâches).
+/* Scout : prospection account-based (portefeuille, comptes, contacts, tâches). Dynamics reste le CRM.
    Chargé après le script principal (index.html). Expose window.scoutCrm.
    Données : API /crm/* (scout-api/crm.js). */
 (function () {
