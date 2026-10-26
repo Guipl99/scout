@@ -754,7 +754,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<link rel="stylesheet" href="assets/crm.css?v=172">
+<link rel="stylesheet" href="assets/crm.css?v=173">
 </head>
 <body>
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -2513,11 +2513,14 @@ Mes pays
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Onglet par défaut au démarrage</label>
               <select id="cfg-default-tab" onchange="saveSettings()"
                 style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);">
-                <option value="dashboard">Accueil</option>
+                <option value="home">Accueil · Ma journée</option>
+                <option value="tasks">Accueil · À faire</option>
+                <option value="accounts">Prospects · Comptes</option>
+                <option value="people">Prospects · Contacts</option>
+                <option value="dashboard">Statistiques</option>
                 <option value="societes">Fabricants</option>
                 <option value="produits-db">Systèmes</option>
                 <option value="contracts">Contrats & Tenders</option>
-                <option value="end-users">Comptes</option>
               </select>
             </div>
             <div>
@@ -3203,10 +3206,10 @@ let editingProduitId = null;
 // exactement comme avant. Seule la couche de navigation regroupe les 11 panneaux.
 const NAV_GROUPS = [
   { id: 'today', label: "Accueil", tabs: [
-      { panel: 'home',      label: 'Mon portefeuille' },
-      { panel: 'tasks',     label: 'Mes tâches', badge: 'subnav-tasks-badge' },
-      { panel: 'tracking',  label: 'Suivi & relances' },
-      { panel: 'dashboard', label: 'Mon activité' } ] },
+      { panel: 'home',      label: 'Ma journée' },
+      { panel: 'tasks',     label: 'À faire', badge: 'subnav-tasks-badge' },
+      { panel: 'dashboard', label: 'Statistiques' },
+      { panel: 'tracking',  label: 'Relances', hidden: true, alias: 'tasks' } ] },
   { id: 'prospects', label: 'Prospects', tabs: [
       { panel: 'accounts',  label: 'Comptes' },
       { panel: 'people',    label: 'Contacts' },
@@ -7288,7 +7291,7 @@ function saveSettings() {
     excludedPays: prev.excludedPays || [],
     secteurs:    [...document.querySelectorAll('#cfg-secteurs input[type=checkbox]')]
                    .filter(el => el.checked).map(el => el.dataset.secteur),
-    defaultTab:  document.getElementById('cfg-default-tab')?.value || 'dashboard',
+    defaultTab:  document.getElementById('cfg-default-tab')?.value || 'home',
     defaultSubtab: document.querySelector('input[name="cfg-default-subtab"]:checked')?.value || 'comptes',
     density:     document.querySelector('input[name="cfg-density"]:checked')?.value || 'normal',
     theme:       document.querySelector('input[name="cfg-theme"]:checked')?.value || 'dark',
@@ -7326,7 +7329,7 @@ function applySettings() {
   });
   // Onglet par défaut
   const tabEl = document.getElementById('cfg-default-tab');
-  if (tabEl && s.defaultTab) tabEl.value = s.defaultTab;
+  if (tabEl && s.defaultTab) tabEl.value = (s.defaultTab === 'dashboard' ? 'home' : (s.defaultTab === 'end-users' ? 'accounts' : s.defaultTab));
   // Sous-onglet
   const sub = document.querySelector(`input[name="cfg-default-subtab"][value="${s.defaultSubtab || 'comptes'}"]`);
   if (sub) sub.checked = true;
@@ -7662,8 +7665,12 @@ function renderFiltersSummary() {
 document.addEventListener('DOMContentLoaded', () => {
   const s = loadSettings();
   // Appliquer l'onglet par défaut si pas de hash
-  if (!window.location.hash && s.defaultTab) {
-    go(s.defaultTab, { tab: s.defaultSubtab || 'comptes', silent: true });
+  // Onglet d'arrivée : « Ma journée » par défaut (l'ancien « Accueil » = dashboard y est redirigé)
+  if (!window.location.hash) {
+    var _dt = s.defaultTab;
+    if (!_dt || _dt === 'dashboard') _dt = document.getElementById('panel-home') ? 'home' : 'dashboard';
+    if (_dt === 'end-users' && document.getElementById('panel-accounts')) _dt = 'accounts';
+    go(_dt, { silent: true });
   }
   // Appliquer settings UI quand on arrive sur config
   document.getElementById('nav-config')?.addEventListener('click', () => {
@@ -11928,6 +11935,6 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=172"></script>
+<script src="assets/crm.js?v=173"></script>
 </body>
 </html>
