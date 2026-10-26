@@ -151,13 +151,85 @@
   }
 
   // ═════════════════════════════════════════════════════════════════════════
-  // ACCUEIL : PORTEFEUILLE
+  // ACCUEIL : MA JOURNÉE (une seule page) + FILE « À FAIRE » (tâches, relances, réponses)
   // ═════════════════════════════════════════════════════════════════════════
+  // File unifiée : tâches Scout (crm_tasks) + relances dues (/me/tracking) + réponses positives
+  // pas encore transmises à Dynamics. Chaque élément a une échéance et une action principale.
+  function loadQueue(scope) {
+    var team = scope === 'team';
+    return Promise.all([
+      api('/crm/tasks?scope=' + (team ? 'team' : 'me') + '&state=open').catch(function () { return { tasks: [] }; }),
+      api('/me/tracking?scope=' + (team ? 'team' : 'me')).catch(function () { return { tracking: [] }; })
+    ]).then(function (r) {
+      var items = [];
+      (r[0].tasks || []).forEach(function (t) {
+        items.push({ kind: 'task', id: 'task-' + t.id, due: t.due_date || null, title: t.title, task: t,
+          who: t.owner_name, contact_id: t.contact_id, contact_name: t.contact_name, account_id: t.end_user_id, account_nom: t.account_nom });
+      });
+      (r[1].tracking || []).forEach(function (x) {
+        var name = personName(x);
+        if (x.status === 'waiting' && (x.urgency === 'overdue' || x.urgency === 'due' || x.urgency === 'future') && x.next_relance) {
+          items.push({ kind: 'relance', id: 'rel-' + x.id, due: String(x.next_relance).slice(0, 10), title: (x.stage === '1er mail' ? 'Relance 1' : 'Relance 2') + ' : ' + name,
+            sub: x.titre, who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x });
+        } else if (x.status === 'interested') {
+          items.push({ kind: 'reply', id: 'rep-' + x.id, due: x.last_action_at ? String(x.last_action_at).slice(0, 10) : null, title: 'Réponse positive : ' + name,
+            sub: 'À qualifier puis transmettre au CRM', who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x });
+        }
+      });
+      items.sort(function (a, b) { return (a.due || '9999') < (b.due || '9999') ? -1 : ((a.due || '9999') > (b.due || '9999') ? 1 : 0); });
+      return items;
+    });
+  }
+  var KIND_LABEL = { task: 'Tâche', relance: 'Relance', reply: 'Réponse' };
+
+  function queueItemHtml(it, opts) {
+    opts = opts || {};
+    var t = todayStr();
+    var dueCls = it.due ? (it.due < t ? 'crm-late' : (it.due === t ? 'crm-today' : '')) : '';
+    var dueTxt = it.due ? (it.due < t ? 'En retard · ' + fmtDate(it.due) : (it.due === t ? "Aujourd'hui" : fmtDate(it.due))) : 'Sans échéance';
+    if (it.kind === 'reply') dueTxt = it.due ? 'Reçue le ' + fmtDate(it.due) : 'Reçue';
+    var sub = [];
+    if (it.kind === 'reply') dueCls = 'crm-today';
+    sub.push('<span class="' + dueCls + '">' + esc(dueTxt) + '</span>');
+    if (it.account_nom) sub.push(it.account_id ? '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>' : esc(it.account_nom));
+    if (it.kind === 'task' && it.contact_name) sub.push('<button type="button" class="crm-link" data-qct="' + esc(it.contact_id) + '">' + esc(it.contact_name) + '</button>');
+    if (opts.showWho && it.who) sub.push(esc(it.who));
+    var lead = it.kind === 'task'
+      ? '<input type="checkbox" data-task="' + esc(it.task.id) + '" aria-label="Terminer : ' + esc(it.title) + '">'
+      : '<span class="crm-q-ic k-' + it.kind + '" aria-hidden="true">' + (it.kind === 'relance' ? ICON.mail : ICON.check) + '</span>';
+    var actions = '';
+    if (it.kind === 'relance') actions = '<button type="button" class="crm-btn sm primary" data-qrel="' + esc(it.contact_id) + '">Préparer la relance</button>';
+    if (it.kind === 'reply') actions = '<button type="button" class="crm-btn sm" data-qct="' + esc(it.contact_id) + '">Qualifier</button><button type="button" class="crm-btn sm primary" data-qtx="' + esc(it.contact_id) + '">Transmettre au CRM</button>';
+    if (it.kind === 'task') actions = '<button type="button" class="del" data-deltask="' + esc(it.task.id) + '" title="Supprimer" aria-label="Supprimer la tâche">×</button>';
+    return '<div class="crm-q k-' + it.kind + '">' + lead + '<div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
+      + (it.kind === 'task' ? esc(it.title) : '<button type="button" class="crm-link strong" data-qct="' + esc(it.contact_id) + '">' + esc(it.title) + '</button>')
+      + '</div><div class="s">' + sub.join(' · ') + '</div></div><div class="crm-q-a">' + actions + '</div></div>';
+  }
+
+  function bindQueue(root, after) {
+    bindTasks(root, after);
+    root.querySelectorAll('[data-qacc]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); openAccount(b.getAttribute('data-qacc')); }; });
+    root.querySelectorAll('[data-qct]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); openContact(b.getAttribute('data-qct')); }; });
+    root.querySelectorAll('[data-qrel]').forEach(function (b) {
+      b.onclick = function () { if (typeof window.trkRelance === 'function') { S.afterRelance = after; window.trkRelance(b.getAttribute('data-qrel')); } else openContact(b.getAttribute('data-qrel')); };
+    });
+    root.querySelectorAll('[data-qtx]').forEach(function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        api('/action/transmit-crm', { method: 'POST', body: { contact_id: b.getAttribute('data-qtx') } })
+          .then(function () { toast('Transmis au CRM'); after(); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
+      };
+    });
+  }
+
   function onHomePanel() {
     var p = document.getElementById('panel-home'); if (!p) return;
-    p.innerHTML = '<div class="crm-wrap crm-home"><div class="crm-row" style="justify-content:space-between;margin-bottom:14px;">'
-      + '<div><h2 class="crm-h2" id="crm-home-title">Mon portefeuille</h2><div class="crm-meta">Les comptes à travailler en priorité, mis à jour en continu.</div></div>'
-      + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-hs="me">Mes comptes</button><button type="button" class="crm-chip" data-hs="team">Toute l’équipe</button></div></div>'
+    var me = (window.scoutSession && window.scoutSession.first_name) || '';
+    var dateTxt = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    dateTxt = dateTxt.charAt(0).toUpperCase() + dateTxt.slice(1);
+    p.innerHTML = '<div class="crm-wrap crm-home"><div class="crm-row crm-home-head">'
+      + '<div><h2 class="crm-h2" id="crm-home-title">Bonjour' + (me ? ' ' + esc(me) : '') + '</h2><div class="crm-meta">' + esc(dateTxt) + '</div></div>'
+      + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-hs="me">Moi</button><button type="button" class="crm-chip" data-hs="team">Équipe</button></div></div>'
       + '<div id="crm-home-body"><div class="crm-empty">Chargement…</div></div></div>';
     p.querySelectorAll('[data-hs]').forEach(function (b) { b.onclick = function () { S.homeScope = b.getAttribute('data-hs'); loadHome(); }; });
     loadFacets().then(loadHome).catch(function (e) { document.getElementById('crm-home-body').innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
@@ -168,48 +240,95 @@
     p.querySelectorAll('[data-hs]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-hs') === S.homeScope); });
     var body = document.getElementById('crm-home-body');
     var team = S.homeScope === 'team';
-    Promise.all([api('/crm/home?owner=' + (team ? 'team' : 'me')), api('/crm/tasks?scope=' + (team ? 'team' : 'me') + '&state=open')]).then(function (r) {
-      var d = r[0], tasks = (r[1].tasks || []).filter(function (t) { return !t.due_date || t.due_date <= addDays(1); }).slice(0, 8);
+    Promise.all([
+      api('/crm/home?owner=' + (team ? 'team' : 'me')),
+      loadQueue(S.homeScope),
+      api('/me/stats').catch(function () { return {}; })
+    ]).then(function (r) {
+      var d = r[0], queue = r[1], st = r[2] || {};
+      var t = todayStr();
+      if (!team) updateBadge(queue);
+      var dueNow = queue.filter(function (x) { return x.kind === 'reply' || (x.due && x.due <= t); });
+      var nLate = queue.filter(function (x) { return x.kind !== 'reply' && x.due && x.due < t; }).length;
+      var nReply = queue.filter(function (x) { return x.kind === 'reply'; }).length;
       var k = d.kpi || {};
       var ownerF = team ? {} : { owner: 'me' };
-      var tile = function (val, label, filters, cls) {
-        return '<button type="button" class="crm-kpi ' + (cls || '') + '" data-kf=\'' + esc(JSON.stringify(Object.assign({}, ownerF, filters))) + '\'><b>' + esc(val) + '</b><span>' + esc(label) + '</span></button>';
-      };
       var html = '';
+
+      // 1. Bandeau d'actions
+      html += '<div class="crm-hero">'
+        + '<button type="button" class="crm-hero-card main" id="crm-hero-next"><span class="ic">' + ICON.send + '</span><span><b>Prochaine action</b><small>Traiter le prochain contact suggéré</small></span><span class="go">→</span></button>'
+        + '<button type="button" class="crm-hero-card" data-goq="due"><b class="' + (nLate ? 'crm-late' : '') + '">' + dueNow.length + '</b><span>à faire aujourd’hui' + (nLate ? '<small class="crm-late">dont ' + nLate + ' en retard</small>' : '') + '</span></button>'
+        + '<button type="button" class="crm-hero-card" data-goq="reply"><b' + (nReply ? ' class="crm-today"' : '') + '>' + nReply + '</b><span>réponse' + (nReply > 1 ? 's' : '') + ' positive' + (nReply > 1 ? 's' : '') + ' à transmettre</span></button>'
+        + '<button type="button" class="crm-hero-card" data-kf=\'' + esc(JSON.stringify(Object.assign({}, ownerF, { heat: 'chaud,tiede' }))) + '\'><b>' + (k.engaged || 0) + '</b><span>compte' + (k.engaged > 1 ? 's' : '') + ' engagé' + (k.engaged > 1 ? 's' : '') + ' (90 j)</span></button>'
+        + '</div>';
+
+      html += '<div class="crm-home-cols"><div class="crm-home-main">';
+      // 2. À faire aujourd'hui
+      html += '<div class="crm-card"><h3>À faire aujourd’hui <button type="button" class="crm-link" data-goto="tasks">Toute la file →</button></h3>'
+        + (dueNow.length ? dueNow.slice(0, 10).map(function (x) { return queueItemHtml(x, { showWho: team }); }).join('')
+          + (dueNow.length > 10 ? '<div class="crm-meta" style="padding-top:8px">+ ' + (dueNow.length - 10) + ' autres dans la file</div>' : '')
+          : '<div class="crm-empty" style="padding:18px">Rien d’urgent aujourd’hui. Lancez « Prochaine action » ou travaillez vos comptes Tier 1.</div>')
+        + '</div>';
+      // 3. Portefeuille
       if (!team && !k.n) {
         html += '<div class="crm-card crm-callout"><b>Aucun compte ne vous est encore attribué.</b> Ouvrez <button type="button" class="crm-link" data-goto-acc=\'{"owner":"none","contacts":"with"}\'>les comptes sans propriétaire</button>, filtrez par pays, sélectionnez et assignez-vous les vôtres en une fois.</div>';
       }
-      html += '<div class="crm-kpis">'
-        + tile(k.n || 0, team ? 'Comptes suivis' : 'Mes comptes', {})
-        + tile((k.t1 || 0) + ' · ' + (k.t2 || 0) + ' · ' + (k.t3 || 0), 'Tier 1 · 2 · 3', { tier: '1,2,3' })
-        + tile(k.hot || 0, 'Comptes chauds', { heat: 'chaud' }, k.hot ? 'good' : '')
-        + tile(k.stale || 0, 'Tier 1–2 sans activité 30 j', { tier: '1,2', activity: 'stale30' }, k.stale ? 'warn' : '')
-        + tile(k.gaps || 0, 'Comités incomplets (T1–2)', { tier: '1,2', coverage: 'incomplete' }, k.gaps ? 'warn' : '')
-        + tile(k.overdue || 0, 'Comptes avec tâche en retard', { tasks: 'overdue' }, k.overdue ? 'bad' : '')
-        + '</div>';
+      var tile = function (val, label, filters, cls) {
+        return '<button type="button" class="crm-kpi ' + (cls || '') + '" data-kf=\'' + esc(JSON.stringify(Object.assign({}, ownerF, filters))) + '\'><b>' + esc(val) + '</b><span>' + esc(label) + '</span></button>';
+      };
       var accList = function (rows, empty, extra) {
         if (!rows.length) return '<div class="crm-meta" style="padding:6px 0">' + empty + '</div>';
-        return rows.map(function (a) {
+        return rows.slice(0, 5).map(function (a) {
           return '<button type="button" class="crm-mini" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier)
-            + '<span class="m"><b>' + esc(a.nom) + '</b><span>' + esc([a.pays, extra(a)].filter(Boolean).join(' · ')) + '</span></span>'
-            + heatBadge(a.score, a.heat) + '</button>';
+            + '<span class="m"><b>' + esc(a.nom) + '</b><span>' + esc([a.pays, extra(a)].filter(Boolean).join(' · ')) + '</span></span>' + heatBadge(a.score, a.heat) + '</button>';
         }).join('');
       };
-      html += '<div class="crm-home-grid">'
-        + '<div class="crm-card"><h3>Comptes chauds <span class="crm-meta">engagement 90 j</span></h3>' + accList(d.hot, 'Aucun compte engagé ces 90 derniers jours.', function (a) { return a.last_activity_at ? 'activité ' + relTime(a.last_activity_at) : ''; }) + '</div>'
-        + '<div class="crm-card"><h3>Tier 1–2 à relancer <span class="crm-meta">rien depuis 30 j</span></h3>' + accList(d.stale, 'Tous les comptes prioritaires ont eu une activité récente.', function (a) { return a.last_activity_at ? 'dernière activité ' + relTime(a.last_activity_at) : 'jamais contacté'; }) + '</div>'
-        + '<div class="crm-card"><h3>Comités à compléter <span class="crm-meta">Tier 1–2</span></h3>' + (d.gaps.length ? d.gaps.map(function (a) {
-          var miss = KEY_ROLES.filter(function (r) { return (a.roles || []).indexOf(r) < 0; }).map(function (r) { return ROLE_LABEL[r].toLowerCase(); });
+      html += '<div class="crm-card"><h3>' + (team ? 'Portefeuille de l’équipe' : 'Mon portefeuille') + ' <button type="button" class="crm-link" data-kf=\'' + esc(JSON.stringify(ownerF)) + '\'>Tous ' + (team ? 'les' : 'mes') + ' comptes →</button></h3>'
+        + '<div class="crm-kpis">'
+        + tile(k.n || 0, 'Comptes', {})
+        + tile((k.t1 || 0) + ' · ' + (k.t2 || 0) + ' · ' + (k.t3 || 0), 'Tier 1 · 2 · 3', { tier: '1,2,3' })
+        + tile(k.stale || 0, 'Tier 1–2 sans activité 30 j', { tier: '1,2', activity: 'stale30' }, k.stale ? 'warn' : '')
+        + tile(k.gaps || 0, 'Comités incomplets (T1–2)', { tier: '1,2', coverage: 'incomplete' }, k.gaps ? 'warn' : '')
+        + '</div><div class="crm-home-lists">'
+        + '<div><h4>Engagés</h4>' + accList(d.hot, 'Aucun compte engagé ces 90 derniers jours.', function (a) { return a.last_activity_at ? relTime(a.last_activity_at) : ''; }) + '</div>'
+        + '<div><h4>Tier 1–2 à relancer</h4>' + accList(d.stale, 'Tous les comptes prioritaires ont eu une activité récente.', function (a) { return a.last_activity_at ? 'rien depuis ' + relTime(a.last_activity_at).replace('il y a ', '') : 'jamais contacté'; }) + '</div>'
+        + '<div><h4>Comités à compléter</h4>' + (d.gaps.length ? d.gaps.slice(0, 5).map(function (a) {
+          var miss = KEY_ROLES.filter(function (rr) { return (a.roles || []).indexOf(rr) < 0; }).map(function (rr) { return ROLE_LABEL[rr].toLowerCase(); });
           return '<button type="button" class="crm-mini" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier) + '<span class="m"><b>' + esc(a.nom) + '</b><span>Manque : ' + esc(miss.join(', ')) + '</span></span>' + coverageDots(a.roles) + '</button>';
         }).join('') : '<div class="crm-meta" style="padding:6px 0">Les comités des comptes prioritaires sont couverts.</div>') + '</div>'
-        + '<div class="crm-card"><h3>Tâches du jour <button type="button" class="crm-link" data-goto="tasks">Tout voir</button></h3>' + (tasks.length ? tasks.map(taskHtml).join('') : '<div class="crm-meta" style="padding:6px 0">Rien d’urgent.</div>') + '</div>'
-        + '<div class="crm-card"><h3>Visites sur elistair.com <span class="crm-meta">90 j</span></h3>' + accList(d.web, 'Aucune visite rattachée à vos comptes. Le rattachement se fait par le domaine du compte.', function (a) { return a.web_pages_90d + ' page' + (a.web_pages_90d > 1 ? 's' : '') + (a.last_visit ? ', ' + relTime(a.last_visit) : ''); }) + '</div>'
+        + '</div></div>';
+      html += '</div><aside class="crm-home-side">';
+      // 4. Ma semaine
+      if (st && st.ok) {
+        html += '<div class="crm-card"><h3>Ma semaine <button type="button" class="crm-link" data-goto="dashboard">Statistiques →</button></h3>'
+          + '<div class="crm-week">'
+          + '<div><b>' + (st.emails_7d || 0) + '</b><span>emails envoyés</span></div>'
+          + '<div><b>' + (st.relances_7d || 0) + '</b><span>relances</span></div>'
+          + '<div><b>' + (st.actions_7d || 0) + '</b><span>actions</span></div>'
+          + '<div><b>' + (st.interested || 0) + '</b><span>intéressés (total)</span></div></div>'
+          + (st.leaderboard && st.leaderboard.length > 1 ? '<div class="crm-lead"><span class="crm-meta">Emails 7 j :</span> ' + st.leaderboard.map(function (l) { return '<span' + (l.name === st.me ? ' class="me"' : '') + '>' + esc(l.name) + ' <b>' + l.emails + '</b></span>'; }).join('') + '</div>' : '')
+          + '</div>';
+      }
+      // 5. Visites web
+      html += '<div class="crm-card"><h3>Visites sur elistair.com <button type="button" class="crm-link" data-goto="visitors">Signaux →</button></h3>'
+        + accList(d.web, 'Aucune visite rattachée à ' + (team ? 'des' : 'vos') + ' comptes ces 90 jours. Le rattachement se fait par le domaine du compte.', function (a) { return a.web_pages_90d + ' page' + (a.web_pages_90d > 1 ? 's' : '') + (a.last_visit ? ', ' + relTime(a.last_visit) : ''); })
         + '</div>';
+      // 6. Prochaines échéances (au-delà d'aujourd'hui)
+      var next = queue.filter(function (x) { return x.kind !== 'reply' && x.due && x.due > t; }).slice(0, 5);
+      html += '<div class="crm-card"><h3>Prochains jours</h3>' + (next.length ? next.map(function (x) {
+        return '<div class="crm-next"><span class="d">' + esc(fmtDate(x.due)) + '</span><span class="crm-q-kind k-' + x.kind + '">' + KIND_LABEL[x.kind] + '</span><span class="t">' + esc(x.kind === 'task' ? x.title : (x.contact_name + (x.account_nom ? ' · ' + x.account_nom : ''))) + '</span></div>';
+      }).join('') : '<div class="crm-meta">Rien de planifié.</div>') + '</div>';
+      html += '</aside></div>';
+
       body.innerHTML = html;
+      var nx = document.getElementById('crm-hero-next');
+      nx.onclick = function () { if (window.scoutAction && window.scoutAction.open) window.scoutAction.open(); else go('dashboard'); };
+      body.querySelectorAll('[data-goq]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-goq') === 'reply' ? 'reply' : 'all'; S.taskScope = S.homeScope; go('tasks'); }; });
       body.querySelectorAll('[data-kf]').forEach(function (b) { b.onclick = function () { openAccountsWith(JSON.parse(b.getAttribute('data-kf'))); }; });
       body.querySelectorAll('[data-goto-acc]').forEach(function (b) { b.onclick = function () { openAccountsWith(JSON.parse(b.getAttribute('data-goto-acc'))); }; });
       body.querySelectorAll('[data-goto]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-goto')); }; });
-      bindTasks(body, loadHome);
+      bindQueue(body, loadHome);
       body.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); openAccount(b.getAttribute('data-acc')); }; });
     }).catch(function (e) { body.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
   }
@@ -1113,22 +1232,25 @@
   }
 
   // ═════════════════════════════════════════════════════════════════════════
-  // MES TÂCHES
+  // À FAIRE : file unifiée (tâches, relances, réponses)
   // ═════════════════════════════════════════════════════════════════════════
   function onTasksPanel() {
     var p = document.getElementById('panel-tasks'); if (!p) return;
     if (!document.getElementById('crm-tasks')) {
-      p.innerHTML = '<div class="crm-wrap" id="crm-tasks"><div class="crm-row" style="justify-content:space-between;margin-bottom:12px;">'
-        + '<div class="crm-views" style="margin:0" role="tablist"><button type="button" class="crm-chip" data-scope="me">Mes tâches</button><button type="button" class="crm-chip" data-scope="team">Équipe</button></div>'
-        + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-state="open">À faire</button><button type="button" class="crm-chip" data-state="done">Terminées (30 j)</button></div></div>'
+      p.innerHTML = '<div class="crm-wrap" id="crm-tasks"><div class="crm-row" style="justify-content:space-between;margin-bottom:12px;gap:10px">'
+        + '<div class="crm-views" style="margin:0" role="tablist">' + [['all', 'Tout'], ['task', 'Tâches'], ['relance', 'Relances'], ['reply', 'Réponses']].map(function (x) { return '<button type="button" class="crm-chip" data-qf="' + x[0] + '">' + x[1] + '<span class="n" data-qn="' + x[0] + '"></span></button>'; }).join('') + '</div>'
+        + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-scope="me">Moi</button><button type="button" class="crm-chip" data-scope="team">Équipe</button>'
+        + '<button type="button" class="crm-chip" data-state="done">Terminées (30 j)</button></div></div>'
         + '<div class="crm-newtask"><input class="crm-input" id="crm-nt-title" maxlength="300" placeholder="Nouvelle tâche, ex. Préparer la démo pour le SDIS 69" aria-label="Nouvelle tâche">'
         + '<input class="crm-input" type="date" id="crm-nt-due" aria-label="Échéance" value="' + addDays(1) + '">'
         + '<select class="crm-input" id="crm-nt-owner" aria-label="Attribuer à"></select>'
         + '<button class="crm-btn primary" type="button" id="crm-nt-save">Ajouter</button></div>'
-        + '<div class="crm-meta" style="margin:-8px 0 16px">Pour rattacher une tâche à un compte ou un contact, créez-la depuis sa fiche.</div>'
+        + '<div class="crm-meta" style="margin:-8px 0 16px">Les relances dues (cadence J+14 / J+28 après le 1er email) et les réponses positives arrivent ici automatiquement. <button type="button" class="crm-link" id="crm-trk-link">Vue détaillée des relances</button></div>'
         + '<div id="crm-tasks-list"></div></div>';
-      p.querySelectorAll('[data-scope]').forEach(function (b) { b.onclick = function () { S.taskScope = b.getAttribute('data-scope'); loadTasks(); }; });
-      p.querySelectorAll('[data-state]').forEach(function (b) { b.onclick = function () { S.taskState = b.getAttribute('data-state'); loadTasks(); }; });
+      p.querySelectorAll('[data-scope]').forEach(function (b) { b.onclick = function () { S.taskScope = b.getAttribute('data-scope'); S.taskState = 'open'; loadTasks(); }; });
+      p.querySelectorAll('[data-qf]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-qf'); S.taskState = 'open'; loadTasks(); }; });
+      p.querySelector('[data-state="done"]').onclick = function () { S.taskState = S.taskState === 'done' ? 'open' : 'done'; loadTasks(); };
+      document.getElementById('crm-trk-link').onclick = function () { go('tracking', { legacy: true }); };
       var save = document.getElementById('crm-nt-save');
       save.onclick = function () {
         var t = document.getElementById('crm-nt-title').value.trim(); if (!t) { document.getElementById('crm-nt-title').focus(); return; }
@@ -1149,48 +1271,57 @@
   function loadTasks() {
     var p = document.getElementById('crm-tasks'); if (!p) return;
     S.inTasksPanel = true;
+    S.qFilter = S.qFilter || 'all';
     p.querySelectorAll('[data-scope]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-scope') === S.taskScope); });
-    p.querySelectorAll('[data-state]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-state') === S.taskState); });
+    p.querySelectorAll('[data-qf]').forEach(function (b) { b.classList.toggle('on', S.taskState === 'open' && b.getAttribute('data-qf') === S.qFilter); });
+    p.querySelector('[data-state="done"]').classList.toggle('on', S.taskState === 'done');
     var list = document.getElementById('crm-tasks-list');
     list.innerHTML = '<div class="crm-empty">Chargement…</div>';
-    api('/crm/tasks?scope=' + S.taskScope + '&state=' + S.taskState).then(function (d) {
-      var tasks = d.tasks || [];
-      if (S.taskState === 'open' && S.taskScope === 'me') updateBadge(tasks);
-      if (!tasks.length) { list.innerHTML = '<div class="crm-empty">' + (S.taskState === 'open' ? 'Rien à faire. Les tâches créées depuis une fiche arrivent ici.' : 'Aucune tâche terminée ces 30 derniers jours.') + '</div>'; return; }
-      var html = '';
-      if (S.taskState === 'done') html = '<div class="crm-card">' + tasks.map(taskHtml).join('') + '</div>';
-      else {
-        var t = todayStr(), w = addDays(7);
-        [
-          { k: 'late', label: 'En retard', test: function (x) { return x.due_date && x.due_date < t; } },
-          { k: 'today', label: "Aujourd'hui", test: function (x) { return x.due_date === t; } },
-          { k: 'week', label: '7 prochains jours', test: function (x) { return x.due_date > t && x.due_date <= w; } },
-          { k: 'later', label: 'Plus tard', test: function (x) { return x.due_date > w; } },
-          { k: 'none', label: 'Sans échéance', test: function (x) { return !x.due_date; } }
-        ].forEach(function (g) {
-          var items = tasks.filter(g.test); if (!items.length) return;
-          html += '<div class="crm-tasks-sec"><h4 class="' + (g.k === 'late' ? 'late' : '') + '">' + g.label + ' · ' + items.length + '</h4><div class="crm-card" style="padding-top:4px;padding-bottom:4px">' + items.map(taskHtml).join('') + '</div></div>';
-        });
-      }
+    if (S.taskState === 'done') {
+      api('/crm/tasks?scope=' + S.taskScope + '&state=done').then(function (d) {
+        var tasks = d.tasks || [];
+        list.innerHTML = tasks.length ? '<div class="crm-card">' + tasks.map(taskHtml).join('') + '</div>' : '<div class="crm-empty">Aucune tâche terminée ces 30 derniers jours.</div>';
+        bindTasks(list, loadTasks);
+      }).catch(function (e) { list.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+      return;
+    }
+    loadQueue(S.taskScope).then(function (items) {
+      if (S.taskScope === 'me') updateBadge(items);
+      var counts = { all: items.length, task: 0, relance: 0, reply: 0 }; items.forEach(function (x) { counts[x.kind]++; });
+      p.querySelectorAll('[data-qn]').forEach(function (n) { var c = counts[n.getAttribute('data-qn')]; n.textContent = c ? ' ' + c : ''; });
+      var shown = S.qFilter === 'all' ? items : items.filter(function (x) { return x.kind === S.qFilter; });
+      if (!shown.length) { list.innerHTML = '<div class="crm-empty">Rien dans cette file. Les tâches créées depuis une fiche, les relances dues et les réponses positives arrivent ici.</div>'; return; }
+      var t = todayStr(), w = addDays(7), html = '';
+      [
+        { k: 'reply', label: 'Réponses à traiter', test: function (x) { return x.kind === 'reply'; } },
+        { k: 'late', label: 'En retard', test: function (x) { return x.kind !== 'reply' && x.due && x.due < t; } },
+        { k: 'today', label: "Aujourd'hui", test: function (x) { return x.kind !== 'reply' && x.due === t; } },
+        { k: 'week', label: '7 prochains jours', test: function (x) { return x.kind !== 'reply' && x.due > t && x.due <= w; } },
+        { k: 'later', label: 'Plus tard', test: function (x) { return x.kind !== 'reply' && x.due > w; } },
+        { k: 'none', label: 'Sans échéance', test: function (x) { return x.kind !== 'reply' && !x.due; } }
+      ].forEach(function (g) {
+        var its = shown.filter(g.test); if (!its.length) return;
+        html += '<div class="crm-tasks-sec"><h4 class="' + (g.k === 'late' ? 'late' : '') + '">' + g.label + ' · ' + its.length + '</h4><div class="crm-card" style="padding-top:4px;padding-bottom:4px">'
+          + its.map(function (x) { return queueItemHtml(x, { showWho: S.taskScope === 'team' }); }).join('') + '</div></div>';
+      });
       list.innerHTML = html;
-      bindTasks(list, loadTasks);
+      bindQueue(list, loadTasks);
     }).catch(function (e) { list.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
   }
 
-  function updateBadge(tasks) {
+  function updateBadge(items) {
     var t = todayStr();
-    S.badgeCount = (tasks || []).filter(function (x) { return x.due_date && x.due_date <= t; }).length;
+    S.badgeCount = (items || []).filter(function (x) { return x.kind === 'reply' || (x.due && x.due <= t); }).length;
     paintBadge();
   }
   function paintBadge() {
     var b = document.getElementById('subnav-tasks-badge');
-    if (b && typeof S.badgeCount === 'number') { b.textContent = S.badgeCount; b.style.display = S.badgeCount ? '' : 'none'; }
+    if (b && typeof S.badgeCount === 'number') { b.textContent = S.badgeCount > 99 ? '99+' : S.badgeCount; b.style.display = S.badgeCount ? '' : 'none'; }
   }
   function refreshBadge() {
     if (!(window.getAuthHeaders && window.getAuthHeaders().Authorization)) return;
-    api('/crm/tasks?scope=me&state=open').then(function (d) { updateBadge(d.tasks); }).catch(function () {});
+    loadQueue('me').then(updateBadge).catch(function () {});
   }
-
   // ── branchement ───────────────────────────────────────────────────────────
   function onPanel(id, opts) {
     try {
@@ -1223,6 +1354,17 @@
       return r;
     };
     try { openContactDetail = window.openContactDetail; } catch (e) {}
+  }
+
+  // Relance envoyée depuis la file : rafraîchir la file / l'accueil
+  if (typeof window.trkMarkRelanceSent === 'function' && !window._legacyTrkMarkRelanceSent) {
+    window._legacyTrkMarkRelanceSent = window.trkMarkRelanceSent;
+    window.trkMarkRelanceSent = function () {
+      var r = window._legacyTrkMarkRelanceSent.apply(this, arguments);
+      Promise.resolve(r).then(function () { if (S.afterRelance) { var f = S.afterRelance; S.afterRelance = null; f(); } refreshBadge(); });
+      return r;
+    };
+    try { trkMarkRelanceSent = window.trkMarkRelanceSent; } catch (e) {}
   }
 
   window.scoutCrm = { onPanel: onPanel, openAccount: openAccount, openContact: openContact, refreshBadge: refreshBadge };

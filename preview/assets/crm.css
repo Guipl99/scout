@@ -299,3 +299,70 @@ body.theme-light .crm-role.r-technique { color: #0f766e; }
   .crm-form-2 { grid-template-columns: 1fr; }
   .crm-rec-kpis { gap: 12px; }
 }
+
+/* ── Accueil « Ma journée » et file « À faire » ── */
+.crm-home-head { justify-content: space-between; align-items: flex-end; margin-bottom: 14px; }
+.crm-hero { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.crm-hero-card { font: inherit; text-align: left; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--bg2); color: var(--text); cursor: pointer; }
+.crm-hero-card:hover { border-color: var(--accent); }
+.crm-hero-card b { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+.crm-hero-card > span { display: flex; flex-direction: column; font-size: 12.5px; color: var(--text2); line-height: 1.3; }
+.crm-hero-card small { font-size: 11.5px; margin-top: 2px; }
+.crm-hero-card.main { background: var(--accent); border-color: var(--accent); color: #fff; }
+.crm-hero-card.main > span { color: rgba(255,255,255,.85); }
+.crm-hero-card.main b { font-size: 15px; color: #fff; }
+.crm-hero-card.main .ic { width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center; flex: none; }
+.crm-hero-card.main .ic svg { width: 16px; height: 16px; }
+.crm-hero-card.main .go { margin-left: auto; font-size: 18px; font-weight: 700; color: #fff; }
+.crm-home-cols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.crm-home-cols .crm-card { margin-bottom: 14px; }
+.crm-home-lists { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.crm-home-lists h4 { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text3); margin: 0 0 4px; }
+.crm-home-cols .crm-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 0; }
+.crm-home-cols .crm-kpi { background: var(--bg); }
+.crm-q { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.crm-q:last-child { border-bottom: 0; }
+.crm-q input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex: none; margin: 0 5px; }
+.crm-q-ic { flex: none; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--bg3); }
+.crm-q-ic svg { width: 13px; height: 13px; }
+.crm-q-ic.k-relance { color: #60a5fa; }
+.crm-q-ic.k-reply { color: var(--green); }
+.crm-q-b { flex: 1; min-width: 0; }
+.crm-q-b .t { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.crm-q-b .s { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.crm-q-a { display: flex; gap: 6px; flex: none; align-items: center; }
+.crm-q-a .del { background: none; border: 0; color: var(--text3); cursor: pointer; font-size: 15px; }
+.crm-q-a .del:hover { color: var(--red); }
+.crm-q-kind { font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 1px 6px; border-radius: 5px; background: var(--bg3); color: var(--text2); }
+.crm-q-kind.k-relance { color: #60a5fa; }
+.crm-q-kind.k-reply { color: var(--green); }
+body.theme-light .crm-q-kind.k-relance, body.theme-light .crm-q-ic.k-relance { color: #2563eb; }
+body.theme-light .crm-q-kind.k-reply, body.theme-light .crm-q-ic.k-reply { color: #15803d; }
+.crm-btn.sm { font-size: 12px; padding: 5px 10px; }
+.crm-link.strong { font-weight: 600; color: var(--text); }
+.crm-link.strong:hover { color: var(--accent2); }
+.crm-chip .n { font-weight: 800; margin-left: 2px; opacity: .8; }
+.crm-week { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.crm-week div { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; }
+.crm-week b { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.crm-week span { font-size: 12px; color: var(--text2); }
+.crm-lead { margin-top: 10px; font-size: 12px; display: flex; gap: 10px; flex-wrap: wrap; color: var(--text2); }
+.crm-lead .me { color: var(--accent2); font-weight: 700; }
+.crm-next { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.crm-next:last-child { border-bottom: 0; }
+.crm-next .d { width: 54px; flex: none; color: var(--text2); font-variant-numeric: tabular-nums; }
+.crm-next .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 1280px) {
+  .crm-home-cols { grid-template-columns: minmax(0, 1fr); }
+  .crm-home-side { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .crm-home-side .crm-card { margin: 0; }
+  .crm-hero { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 860px) {
+  .crm-home-lists { grid-template-columns: minmax(0, 1fr); }
+  .crm-home-cols .crm-kpis { grid-template-columns: 1fr 1fr; }
+  .crm-hero-card b { font-size: 22px; }
+  .crm-q { flex-wrap: wrap; }
+  .crm-q-a { width: 100%; justify-content: flex-end; }
+  .crm-q-a:empty { display: none; }
+}
