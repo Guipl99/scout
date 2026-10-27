@@ -946,8 +946,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div class="scout-auth-subtitle">Accès équipe</div>
     <form id="scout-auth-form">
       <div class="scout-field">
-        <label for="scout-auth-firstname">Ton prénom</label>
-        <input id="scout-auth-firstname" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Ton prénom" required style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#111827;font-size:14px;" />
+        <label for="scout-auth-firstname">Prénom ou e-mail @elistair.com</label>
+        <input id="scout-auth-firstname" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Prénom ou prenom.nom@elistair.com" required style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#111827;font-size:14px;" />
       </div>
       <div class="scout-field">
         <label for="scout-auth-password">Mot de passe</label>
@@ -956,27 +956,45 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <button type="submit" id="scout-auth-submit">Se connecter</button>
       <div id="scout-auth-err" class="scout-auth-err" style="display:none;"></div>
     </form>
-    <div class="scout-auth-hint">1re connexion : mot de passe d'équipe, puis crée ton mot de passe perso</div>
-    <button type="button" id="scout-auth-forgot" style="background:none;border:none;color:#2563eb;font-size:12px;cursor:pointer;text-decoration:underline;padding:0;width:auto;margin:12px auto 0;display:block;font-weight:500;">Mot de passe oublié ?</button>
+    <div class="scout-auth-hint" id="scout-auth-hint">1re connexion : mot de passe d'équipe, puis crée ton mot de passe perso</div>
+    <button type="button" id="scout-auth-forgot" style="background:none;border:none;color:#2563eb;font-size:12px;cursor:pointer;text-decoration:underline;padding:0;width:auto;margin:12px auto 0;display:block;font-weight:500;">Première connexion / mot de passe oublié ?</button>
     <div id="scout-auth-reset" style="display:none;margin-top:14px;padding-top:16px;border-top:1px solid #e5e7eb;text-align:left;">
-      <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.5;">Réinitialise ton mot de passe toi-même. Il te faut le <b>mot de passe d'équipe</b> (le partagé), puis tu choisis ton nouveau mot de passe perso.</div>
-      <div class="scout-field">
-        <label for="scout-reset-firstname">Ton prénom</label>
-        <input id="scout-reset-firstname" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Ton prénom" />
+      <!-- Étape 1 : demander un code sur l'adresse @elistair.com -->
+      <div id="scout-code-step1">
+        <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.5;">On t'envoie un code sur ton adresse <b>@elistair.com</b>. Tu t'en sers pour définir ton mot de passe perso.</div>
+        <div class="scout-field">
+          <label for="scout-code-email">Ton email @elistair.com</label>
+          <input id="scout-code-email" type="email" autocomplete="email" spellcheck="false" placeholder="prenom.nom@elistair.com" />
+        </div>
+        <button type="button" id="scout-code-send">Recevoir un code par email</button>
       </div>
-      <div class="scout-field">
-        <label for="scout-reset-team">Mot de passe d'équipe</label>
-        <input id="scout-reset-team" type="password" autocomplete="off" placeholder="le mot de passe partagé" />
+      <!-- Étape 2 : saisir le code + le nouveau mot de passe -->
+      <div id="scout-code-step2" style="display:none;">
+        <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.5;">Code envoyé à <b id="scout-code-dest"></b>. Regarde ta boîte mail (et les spams).</div>
+        <div class="scout-field">
+          <label for="scout-code-code">Code reçu (6 chiffres)</label>
+          <input id="scout-code-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="------" />
+        </div>
+        <div class="scout-field">
+          <label for="scout-code-new">Ton mot de passe perso</label>
+          <input id="scout-code-new" type="password" autocomplete="new-password" placeholder="min. 6 caractères" />
+        </div>
+        <div class="scout-field">
+          <label for="scout-code-new2">Confirme</label>
+          <input id="scout-code-new2" type="password" autocomplete="new-password" placeholder="retape-le" />
+        </div>
+        <button type="button" id="scout-code-validate">Valider et me connecter</button>
+        <button type="button" id="scout-code-back" style="background:none;border:none;color:#6b7280;font-size:12px;cursor:pointer;text-decoration:underline;padding:0;width:auto;margin:10px auto 0;display:block;">Changer d'adresse</button>
       </div>
-      <div class="scout-field">
-        <label for="scout-reset-new">Nouveau mot de passe perso</label>
-        <input id="scout-reset-new" type="password" autocomplete="new-password" placeholder="min. 6 caractères" />
+      <!-- Repli tant que l'envoi d'e-mails n'est pas branché : réinitialisation avec le mot de passe d'équipe -->
+      <div id="scout-team-reset" style="display:none;">
+        <div style="font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.5;">Réinitialise ton mot de passe toi-même avec le <b>mot de passe d'équipe</b>. (Les profils admin passent par un autre admin.)</div>
+        <div class="scout-field"><label for="scout-tr-first">Ton prénom</label><input id="scout-tr-first" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Ton prénom" /></div>
+        <div class="scout-field"><label for="scout-tr-team">Mot de passe d'équipe</label><input id="scout-tr-team" type="password" autocomplete="off" placeholder="le mot de passe partagé" /></div>
+        <div class="scout-field"><label for="scout-tr-new">Nouveau mot de passe perso</label><input id="scout-tr-new" type="password" autocomplete="new-password" placeholder="min. 6 caractères" /></div>
+        <div class="scout-field"><label for="scout-tr-new2">Confirme</label><input id="scout-tr-new2" type="password" autocomplete="new-password" placeholder="retape-le" /></div>
+        <button type="button" id="scout-tr-submit">Réinitialiser mon mot de passe</button>
       </div>
-      <div class="scout-field">
-        <label for="scout-reset-new2">Confirme le nouveau</label>
-        <input id="scout-reset-new2" type="password" autocomplete="new-password" placeholder="retape-le" />
-      </div>
-      <button type="button" id="scout-reset-submit">Réinitialiser mon mot de passe</button>
       <div id="scout-reset-msg" style="display:none;font-size:13px;margin-top:12px;padding:10px 12px;border-radius:8px;"></div>
     </div>
   </div>
@@ -1161,54 +1179,118 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     }
   });
 
-  // ── Libre-service : « Mot de passe oublié ? » ──
+  // ── Première connexion / mot de passe oublié : code par email @elistair.com ──
   (function(){
     const forgot = document.getElementById('scout-auth-forgot');
     const panel  = document.getElementById('scout-auth-reset');
-    const rFirst = document.getElementById('scout-reset-firstname');
-    const rTeam  = document.getElementById('scout-reset-team');
-    const rNew   = document.getElementById('scout-reset-new');
-    const rNew2  = document.getElementById('scout-reset-new2');
-    const rBtn   = document.getElementById('scout-reset-submit');
+    const step1  = document.getElementById('scout-code-step1');
+    const step2  = document.getElementById('scout-code-step2');
+    const emailI = document.getElementById('scout-code-email');
+    const sendB  = document.getElementById('scout-code-send');
+    const dest   = document.getElementById('scout-code-dest');
+    const codeI  = document.getElementById('scout-code-code');
+    const newI   = document.getElementById('scout-code-new');
+    const new2I  = document.getElementById('scout-code-new2');
+    const valB   = document.getElementById('scout-code-validate');
+    const backB  = document.getElementById('scout-code-back');
     const rMsg   = document.getElementById('scout-reset-msg');
-    if(!forgot || !panel || !rBtn) return;
+    if(!forgot || !panel || !sendB || !valB) return;
+    const LABEL = 'Première connexion / mot de passe oublié ?';
     function showMsg(txt, ok){
       rMsg.style.display='block'; rMsg.textContent=txt;
       rMsg.style.background = ok ? '#f0fdf4' : '#fef2f2';
       rMsg.style.color = ok ? '#166534' : '#991b1b';
     }
+    // Mode selon le serveur : code par e-mail si l'envoi est branché, sinon repli mot de passe d'équipe.
+    const teamBox = document.getElementById('scout-team-reset');
+    const hint = document.getElementById('scout-auth-hint');
+    let codeMode = false;
+    fetch(API + '/chat/auth-options').then(r => r.json()).then(o => {
+      codeMode = !!(o && o.code_login);
+      if (hint) hint.textContent = codeMode
+        ? '1re connexion : clique ci-dessous et reçois un code sur ton adresse @elistair.com'
+        : '1re connexion : mot de passe d\'équipe, puis crée ton mot de passe perso';
+      if (!codeMode) forgot.textContent = 'Mot de passe oublié ?';
+    }).catch(() => {});
+    function toStep1(){
+      step2.style.display='none';
+      step1.style.display = codeMode ? 'block' : 'none';
+      if (teamBox) teamBox.style.display = codeMode ? 'none' : 'block';
+    }
+    const trBtn = document.getElementById('scout-tr-submit');
+    if (trBtn) trBtn.addEventListener('click', async () => {
+      const g = id => (document.getElementById(id).value || '');
+      const firstName = g('scout-tr-first').trim(), team = g('scout-tr-team'), pw = g('scout-tr-new'), pw2 = g('scout-tr-new2');
+      rMsg.style.display = 'none';
+      if (!firstName) return showMsg('Indique ton prénom.', false);
+      if (!team) return showMsg('Entre le mot de passe d\'équipe.', false);
+      if (pw.length < 6) return showMsg('Le nouveau mot de passe doit faire au moins 6 caractères.', false);
+      if (pw !== pw2) return showMsg('Les deux mots de passe ne correspondent pas.', false);
+      trBtn.disabled = true; trBtn.textContent = 'Réinitialisation…';
+      try {
+        const r = await fetch(API + '/chat/reset-password', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ first_name:firstName, team_password:team, new_password:pw }) });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok && data.ok) {
+          showMsg('Mot de passe réinitialisé. Connecte-toi avec ton nouveau mot de passe.', true);
+          if (authFirstname) authFirstname.value = firstName;
+          ['scout-tr-team','scout-tr-new','scout-tr-new2'].forEach(id => { document.getElementById(id).value = ''; });
+        } else showMsg(data.error || 'Échec de la réinitialisation.', false);
+      } catch (e) { showMsg('Erreur réseau : ' + e.message, false); }
+      finally { trBtn.disabled = false; trBtn.textContent = 'Réinitialiser mon mot de passe'; }
+    });
     forgot.addEventListener('click', ()=>{
       const open = panel.style.display !== 'none';
-      if(open){ panel.style.display='none'; forgot.textContent='Mot de passe oublié ?'; return; }
-      panel.style.display='block'; forgot.textContent='Masquer';
-      if(authFirstname && authFirstname.value && !rFirst.value) rFirst.value = authFirstname.value.trim();
-      rFirst.focus();
+      if(open){ panel.style.display='none'; forgot.textContent=codeMode?LABEL:'Mot de passe oublié ?'; return; }
+      panel.style.display='block'; forgot.textContent='Masquer'; rMsg.style.display='none'; toStep1(); emailI.focus();
     });
-    rBtn.addEventListener('click', async ()=>{
-      const firstName=(rFirst.value||'').trim(), team=rTeam.value||'', pw=rNew.value||'', pw2=rNew2.value||'';
+    backB.addEventListener('click', ()=>{ rMsg.style.display='none'; toStep1(); emailI.focus(); });
+    // Étape 1 : envoyer le code
+    sendB.addEventListener('click', async ()=>{
+      const email=(emailI.value||'').trim().toLowerCase();
       rMsg.style.display='none';
-      if(!firstName) return showMsg('Indique ton prénom.', false);
-      if(!team) return showMsg('Entre le mot de passe d\'équipe.', false);
-      if(pw.length<6) return showMsg('Le nouveau mot de passe doit faire au moins 6 caractères.', false);
-      if(pw!==pw2) return showMsg('Les deux mots de passe ne correspondent pas.', false);
-      rBtn.disabled=true; rBtn.textContent='Réinitialisation…';
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showMsg('Entre une adresse email valide.', false);
+      if(!email.endsWith('@elistair.com')) return showMsg('Utilise ton adresse @elistair.com.', false);
+      sendB.disabled=true; sendB.textContent='Envoi…';
       try{
-        const r = await fetch(API + '/chat/reset-password', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ first_name:firstName, team_password:team, new_password:pw })
-        });
+        const r = await fetch(API + '/chat/request-code', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
         const data = await r.json().catch(()=>({}));
         if(r.ok && data.ok){
-          showMsg('Mot de passe réinitialisé. Connecte-toi maintenant avec ton nouveau mot de passe.', true);
-          if(authFirstname) authFirstname.value = firstName;
-          if(authPassword){ authPassword.value=''; }
-          rTeam.value=''; rNew.value=''; rNew2.value='';
-          setTimeout(()=>{ panel.style.display='none'; forgot.textContent='Mot de passe oublié ?'; rMsg.style.display='none'; if(authPassword) authPassword.focus(); }, 2500);
+          dest.textContent = email;
+          step1.style.display='none'; step2.style.display='block'; rMsg.style.display='none';
+          codeI.value=''; newI.value=''; new2I.value=''; codeI.focus();
         } else {
-          showMsg(data.error || 'Échec de la réinitialisation.', false);
+          showMsg(data.error || 'Impossible d\'envoyer le code pour le moment.', false);
         }
       }catch(e){ showMsg('Erreur réseau : '+e.message, false); }
-      finally{ rBtn.disabled=false; rBtn.textContent='Réinitialiser mon mot de passe'; }
+      finally{ sendB.disabled=false; sendB.textContent='Recevoir un code par email'; }
+    });
+    // Étape 2 : vérifier le code + définir le mot de passe
+    valB.addEventListener('click', async ()=>{
+      const email=(emailI.value||'').trim().toLowerCase();
+      const code=(codeI.value||'').trim(), pw=newI.value||'', pw2=new2I.value||'';
+      rMsg.style.display='none';
+      if(!/^\d{6}$/.test(code)) return showMsg('Le code fait 6 chiffres.', false);
+      if(pw.length<6) return showMsg('Le mot de passe doit faire au moins 6 caractères.', false);
+      if(pw!==pw2) return showMsg('Les deux mots de passe ne correspondent pas.', false);
+      valB.disabled=true; valB.textContent='Vérification…';
+      try{
+        const r = await fetch(API + '/chat/verify-code', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, code, new_password:pw }) });
+        const data = await r.json().catch(()=>({}));
+        if(r.ok && data.session_token){
+          // Connexion directe
+          session = {token: data.session_token, first_name: data.first_name || '', role: data.role || 'commercial'};
+          localStorage.setItem(LS_SESSION, JSON.stringify(session));
+          localStorage.setItem(LS_NAME, session.first_name);
+          window.scoutSession = session;
+          showMsg('Connecté. Bienvenue '+(session.first_name||'')+' !', true);
+          try { if (authFirstname) authFirstname.value = email; } catch(e){}
+          hideAuthGate();
+          try { if (typeof applyServerProfile==='function') applyServerProfile(); } catch(e){}
+        } else {
+          showMsg(data.error || 'Code invalide.', false);
+        }
+      }catch(e){ showMsg('Erreur réseau : '+e.message, false); }
+      finally{ valB.disabled=false; valB.textContent='Valider et me connecter'; }
     });
   })();
 
@@ -1275,7 +1357,9 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
         const pw=u.has_password?'<span style="font-size:10px;color:#16a34a;">🔒 perso</span>':'<span style="font-size:10px;color:#f59e0b;">mdp équipe</span>';
         const op=u.active?'':'opacity:.5;';
         return `<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 8px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;${op}">`
-          + `<span style="font-weight:600;flex:1;min-width:0;">${esc(u.name)}${badge}</span>${pw}`
+          + `<span style="flex:1;min-width:0;"><span style="font-weight:600;">${esc(u.name)}${badge}</span><br><span style="font-size:11px;color:var(--text3);">${u.email?esc(u.email):'pas d\'e-mail'}</span></span>${pw}`
+          + `<button type="button" onclick="window.teamEmail(${u.id})" data-email="${esc(u.email||'')}" style="font-size:11px;color:var(--text2);background:transparent;border:1px solid var(--border2);border-radius:5px;padding:3px 8px;cursor:pointer;">E-mail</button>`
+          + `<button type="button" onclick="window.teamRole(${u.id},'${u.role==='admin'?'commercial':'admin'}')" style="font-size:11px;color:var(--text2);background:transparent;border:1px solid var(--border2);border-radius:5px;padding:3px 8px;cursor:pointer;">${u.role==='admin'?'Retirer admin':'Passer admin'}</button>`
           + `<button type="button" onclick="window.teamReset(${u.id})" style="font-size:11px;color:var(--accent);background:transparent;border:1px solid var(--border2);border-radius:5px;padding:3px 8px;cursor:pointer;">Réinit. mdp</button>`
           + `<button type="button" onclick="window.teamToggle(${u.id},${u.active?'false':'true'})" style="font-size:11px;color:var(--text2);background:transparent;border:1px solid var(--border2);border-radius:5px;padding:3px 8px;cursor:pointer;">${u.active?'Désactiver':'Activer'}</button>`
           + `</div>`;
@@ -1283,6 +1367,8 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     }catch(e){ box.innerHTML='<div style="font-size:12px;color:#ef4444;">Erreur réseau</div>'; }
   };
   window.teamReset=async function(id){ const pw=prompt('Nouveau mot de passe pour ce commercial (min 6) :'); if(!pw) return; if(pw.length<6){alert('Minimum 6 caractères');return;} try{ const r=await fetch(API+'/team/'+id+'/password',{method:'POST',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({password:pw})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} alert('Mot de passe réinitialisé.'); window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
+  window.teamEmail=async function(id){ const btn=document.querySelector('[onclick="window.teamEmail('+id+')"]'); const cur=btn?btn.getAttribute('data-email'):''; const em=prompt('Adresse @elistair.com de ce profil (vide pour retirer) :', cur||''); if(em===null) return; try{ const r=await fetch(API+'/team/'+id,{method:'PATCH',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({email:em.trim()})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
+  window.teamRole=async function(id,role){ if(!confirm(role==='admin'?'Donner les droits admin à ce profil ?':'Retirer les droits admin de ce profil ?')) return; try{ const r=await fetch(API+'/team/'+id,{method:'PATCH',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({role:role})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
   window.teamToggle=async function(id,active){ try{ const r=await fetch(API+'/team/'+id,{method:'PATCH',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({active:active})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
   window.addTeamMember=async function(){ const name=prompt('Prénom du nouveau commercial :'); if(!name) return; try{ const r=await fetch(API+'/team',{method:'POST',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({name:name.trim()})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} alert('Profil créé. Il se connecte avec le mot de passe d\'équipe, puis crée son mot de passe perso.'); window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
   window.teamUnlock=async function(){

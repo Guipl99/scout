@@ -40,6 +40,8 @@
 
   // ── utilitaires ────────────────────────────────────────────────────────────
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  // Lien sûr : http(s) uniquement, schéma ajouté si absent, sinon lien neutre.
+  function safeUrl(u) { u = String(u == null ? '' : u).trim(); if (!u) return '#'; if (!/^https?:\/\//i.test(u)) { if (/^[a-z][a-z0-9+.-]*:/i.test(u)) return '#'; u = 'https://' + u.replace(/^\/+/, ''); } return esc(u); }
   function headers(json) {
     var h = (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {};
     if (json) h = Object.assign({ 'Content-Type': 'application/json' }, h);
@@ -475,9 +477,9 @@
   }
 
   var fetchSeq = 0;
-  function fetchAccounts(more) {
+  function fetchAccounts(more, keepSel) {
     var seq = ++fetchSeq;
-    if (!more) { S.rows = []; S.selected = {}; renderBulk(); }
+    if (!more) { S.rows = []; if (!keepSel) S.selected = {}; renderBulk(); }
     var tb = document.querySelector('#crm-table tbody');
     if (!more && tb) tb.innerHTML = '<tr><td colspan="10" class="crm-empty">Chargement…</td></tr>';
     return api('/crm/accounts?' + queryString(more ? S.rows.length : 0)).then(function (d) {
@@ -567,7 +569,7 @@
       + '<button class="crm-btn ghost" type="button" id="crm-bulk-clear" style="margin-left:auto">Désélectionner</button></div>';
     var run = function (body, label) {
       api('/crm/accounts/bulk', { method: 'POST', body: Object.assign({ ids: ids }, body) }).then(function (d) {
-        toast(label + ' : ' + d.updated + ' compte' + (d.updated > 1 ? 's' : '')); fetchAccounts();
+        toast(label + ' : ' + d.updated + ' compte' + (d.updated > 1 ? 's' : '')); fetchAccounts(false, true);
       }).catch(function (e) { toast('Erreur : ' + e.message); });
     };
     document.getElementById('crm-bulk-owner').onchange = function (e) { var v = e.target.value; if (v) run({ owner_user_id: v === '__none' ? null : v }, 'Propriétaire mis à jour'); };
@@ -739,7 +741,7 @@
       { k: 'type', label: 'Type', type: 'select', value: a.type || '', options: [['', '—'], ['Gouvernement', 'Gouvernement'], ['Militaire', 'Militaire'], ['Civil', 'Civil'], ['ONG', 'ONG']] },
       { k: 'budget_estime', label: 'Budget', type: 'text', value: a.budget_estime, placeholder: 'Ajouter' },
       { k: 'quantite_estimee', label: 'Flotte / quantité', type: 'text', value: a.quantite_estimee, placeholder: 'Ajouter' },
-      { k: 'linkedin_url', label: 'LinkedIn', type: 'text', value: a.linkedin_url, display: a.linkedin_url ? '<a class="crm-link" href="' + esc(a.linkedin_url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Page LinkedIn</a>' : null, placeholder: 'Ajouter' },
+      { k: 'linkedin_url', label: 'LinkedIn', type: 'text', value: a.linkedin_url, display: a.linkedin_url ? '<a class="crm-link" href="' + safeUrl(a.linkedin_url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Page LinkedIn</a>' : null, placeholder: 'Ajouter' },
       { k: 'dynamics_id', label: 'ID Dynamics', type: 'text', value: a.dynamics_id, placeholder: 'Pas encore lié' },
       { k: 'description', label: 'Description', type: 'textarea', value: a.description, placeholder: 'Ajouter' }
     ];
@@ -1182,7 +1184,7 @@
       { k: 'nom', label: 'Nom', type: 'text', value: c.nom },
       { k: 'email', label: 'Email', type: 'text', value: c.email, display: c.email ? '<span class="crm-dot ' + esc(R.email_status || '') + '" title="' + esc(R.email_status || 'non vérifié') + '"></span>' + esc(c.email) : null, placeholder: 'Ajouter' },
       { k: 'telephone', label: 'Téléphone', type: 'text', value: c.telephone, placeholder: 'Ajouter' },
-      { k: 'linkedin', label: 'LinkedIn', type: 'text', value: c.linkedin, display: c.linkedin ? '<a class="crm-link" href="' + esc(c.linkedin) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Profil LinkedIn</a>' : null, placeholder: 'Ajouter' },
+      { k: 'linkedin', label: 'LinkedIn', type: 'text', value: c.linkedin, display: c.linkedin ? '<a class="crm-link" href="' + safeUrl(c.linkedin) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Profil LinkedIn</a>' : null, placeholder: 'Ajouter' },
       { k: 'pays', label: 'Pays', type: 'text', value: c.pays },
       { k: 'notes', label: 'Notes internes', type: 'textarea', value: c.notes, placeholder: 'Ajouter' }
     ];
