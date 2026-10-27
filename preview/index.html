@@ -755,7 +755,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<link rel="stylesheet" href="assets/crm.css?v=176">
+<link rel="stylesheet" href="assets/crm.css?v=177">
 </head>
 <body>
 <div style="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99999;background:#f59e0b;color:#111;font:600 12px/1 system-ui;padding:6px 12px;border-radius:0 0 8px 8px;">Aperçu Scout account-based · <a href="../" style="color:#111">revenir à Scout</a></div>
@@ -1031,13 +1031,15 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 </div>
 
 <script>
+// Adresse de l'API : une seule définition pour toute la page.
+window.SCOUT_API_URL = window.SCOUT_API_URL || 'https://scout-api-production-fa8d.up.railway.app';
 // Échappement HTML et liens sûrs, disponibles pour tous les scripts de la page.
 function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailto:/i.test(u)) return esc(u); if(!/^https?:\/\//i.test(u)){ if(/^[a-z][a-z0-9+.-]*:/i.test(u)) return '#'; u='https://'+u.replace(/^\/+/,''); } return esc(u); }
 </script>
 <script>
 (function(){
-  const API = (typeof window !== 'undefined' && window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
+  const API = window.SCOUT_API_URL;
   const LS_SESSION = 'scout_chat_session';
   // SECURITY: injecte automatiquement le token de session sur TOUS les appels à l'API
   // (le backend exige désormais une session pour lire les données). Couvre les appels qui
@@ -1413,9 +1415,7 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     return { cls: 'scout-priority-low', label: 'Standard' };
   }
 
-  function escapeHtml(s) {
-    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
-  }
+  function escapeHtml(s) { return esc(s); } // échappement commun (esc)
 
   async function fetchNextContact() {
     actionBody.innerHTML = '<div class="scout-loading">Recherche du meilleur contact…</div>';
@@ -1433,7 +1433,29 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
         return;
       }
       if (!r.ok || !data.contact) {
-        actionBody.innerHTML = `<div class="scout-loading">${escapeHtml(data.message || 'Aucun contact disponible.')}</div>`;
+        // Jamais un cul-de-sac : on dit pourquoi et on propose la suite.
+        const segOn = !!segQS;
+        let rel = 0, late = 0;
+        try { const rc = await fetch(API + '/me/counters?scope=me', { headers: {'Authorization': 'Bearer ' + session.token} }); const c = await rc.json(); rel = (c.relances_late||0) + (c.relances_today||0) + (c.tasks_late||0) + (c.tasks_today||0); late = (c.relances_late||0) + (c.tasks_late||0); } catch(e){}
+        const why = segOn
+          ? 'Aucun contact ne correspond aux segments choisis dans Paramètres.'
+          : 'Tous les contacts prioritaires sont déjà pris, en pause ou traités pour le moment.';
+        const btn = (id, label, primary) => `<button type="button" id="${id}" style="padding:9px 14px;border-radius:8px;border:1px solid ${primary?'transparent':'#cbd5e1'};background:${primary?'#6366f1':'#fff'};color:${primary?'#fff':'#1e293b'};font-weight:600;cursor:pointer;">${label}</button>`;
+        actionBody.innerHTML = `<div style="padding:18px 6px;text-align:center;">
+            <div style="font-size:15px;font-weight:700;margin-bottom:6px;color:#0f172a;">Pas de nouveau contact à proposer</div>
+            <div style="font-size:13px;color:#475569;margin-bottom:16px;">${escapeHtml(why)}</div>
+            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+              ${rel ? btn('scout-na-todo', 'Traiter ma file : ' + rel + ' à faire' + (late ? ' (' + late + ' en retard)' : ''), true) : ''}
+              ${segOn ? btn('scout-na-seg', 'Modifier mes segments', !rel) : ''}
+              ${btn('scout-na-acc', 'Travailler mes comptes Tier 1', !rel && !segOn)}
+            </div></div>`;
+        const close = () => { try { actionModal.classList.remove('open'); } catch(e){} };
+        const todo = document.getElementById('scout-na-todo');
+        if (todo) todo.onclick = () => { close(); if (document.getElementById('panel-tasks')) go('tasks'); else go('tracking'); };
+        const seg = document.getElementById('scout-na-seg');
+        if (seg) seg.onclick = () => { close(); go('config'); };
+        const acc = document.getElementById('scout-na-acc');
+        if (acc) acc.onclick = () => { close(); if (document.getElementById('panel-accounts') && window.scoutCrm && window.scoutCrm.openAccounts) window.scoutCrm.openAccounts({ owner: 'me', tier: '1' }); else if (document.getElementById('panel-accounts')) go('accounts'); else go('end-users'); };
         return;
       }
       currentContact = data.contact;
@@ -1493,7 +1515,7 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     try {
       const clear = (stars === null || stars === undefined);
       let tok = null; for (const k of Object.keys(localStorage)) { try { const v = JSON.parse(localStorage.getItem(k)); if (v && v.token) { tok = v.token; break; } } catch (e) {} }
-      const API_P = (window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
+      const API_P = window.SCOUT_API_URL;
       const r = await fetch(API_P + '/action/set-priority', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok }, body: JSON.stringify({ contact_id: id, stars: clear ? null : stars }) });
       const d = await r.json();
       if (!r.ok) { alert('Erreur priorit\u00e9 : ' + (d.error || r.status)); return; }
@@ -2432,7 +2454,7 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
         <!-- Tabs Contrats / Live Tenders -->
         <div style="display:flex;gap:6px;margin-bottom:0.75rem;border-bottom:1px solid var(--border2);padding-bottom:0.5rem;">
           <button id="ctab-contracts" class="tag tag-accent" onclick="setContractTypeTab('contracts')" style="cursor:pointer;border:none;">📋 Contrats attribués</button>
-          <button id="ctab-live" class="tag tag-gray" onclick="setContractTypeTab('live')" style="cursor:pointer;border:none;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 2s infinite;"></span>Live Tenders</button>
+          <button id="ctab-live" class="tag tag-gray" onclick="setContractTypeTab('live')" style="cursor:pointer;border:none;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 2s infinite;"></span>Appels d'offres en cours</button>
         </div>
 
         <!-- Live tenders panel -->
@@ -2621,7 +2643,7 @@ Mes pays
               <input id="cfg-relance-days" type="number" min="1" max="90" value="14" onchange="saveSettings();if(typeof renderDashboardCockpit==='function')renderDashboardCockpit();" style="width:90px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);outline:none;">
             </div>
             <div style="display:none;">
-              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Sous-onglet par défaut dans Buyers</label>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Sous-onglet par défaut dans Comptes</label>
               <div style="display:flex;gap:8px;">
                 <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
                   <input type="radio" name="cfg-default-subtab" value="comptes" onchange="saveSettings()" style="accent-color:var(--accent);"> Comptes
@@ -3229,7 +3251,7 @@ const SEED_PRODUITS = [
   {id:'wave_glider',name:'Wave Glider SV3',societe_name:'Liquid Robotics (Boeing)',type_drone:'USV',badge:'Militaire',prix:'Sur contrat',description:'USV propulsion vague 0 carburant 1 an autonomie — US Navy ASW.'},
   {id:'bluebottle',name:'Bluebottle USV',societe_name:'Ocius Technology',type_drone:'USV',badge:'Militaire',prix:'Sur contrat',description:'USV solaire éolien 90j persistant ISR — AUS Navy surveillance.'},
 ];
-const API = 'https://scout-api-production-fa8d.up.railway.app';
+const API = window.SCOUT_API_URL;
 const IMG_BASE = 'https://guipl99.github.io/scout/assets/images/';
 const IMG_EXTS = ['jpg','jpeg','png','webp'];
 
@@ -3366,6 +3388,8 @@ window.renderSubnav = renderSubnav;
 function go(id, opts) {
   // CRM étape 1 : l'onglet Comptes est remplacé par la vue CRM (assets/crm.js).
   // L'ancien panneau reste joignable pour la fiche marché (opts.legacy).
+  // Anciens liens « onglet Contacts » de l'ancien panneau Comptes : vers la nouvelle liste Contacts.
+  if (id === 'end-users' && opts && opts.tab === 'contacts' && !opts.legacy && document.getElementById('panel-people') && window.scoutCrm) { id = 'people'; }
   if (id === 'end-users' && !(opts && opts.legacy) && document.getElementById('panel-accounts') && window.scoutCrm) { id = 'accounts'; }
   if (id === 'contacts' && !(opts && (opts.contactFilter || opts.legacy)) && document.getElementById('panel-people') && window.scoutCrm) { id = 'people'; }
   // Garde-fou : si le panel demande n'existe pas, ne rien casser (evite l'ecran noir
@@ -3913,7 +3937,7 @@ async function renderInsights(force, opts) {
         .slice(0, 5)
         .forEach(function(ct) {
           var fab = ct.societe_name || '';
-          var val = ct.valeur_max ? (ct.valeur_max >= 1e9 ? '$'+(ct.valeur_max/1e9).toFixed(1)+'B' : '$'+(ct.valeur_max/1e6).toFixed(0)+'M') : '';
+          var val = ct.valeur_max ? (ct.valeur_max >= 1e9 ? (ct.valeur_max/1e9).toFixed(1).replace('.',',')+' Md$' : Math.round(ct.valeur_max/1e6)+' M$') : '';
           var client = ct.client || ct.pays_client || '';
           var h = fab ? fab + ' remporte' : 'Contrat';
           if (val) h += ' un contrat ' + val;
@@ -4143,7 +4167,6 @@ function renderMyStats() {
         } else {
           rankHtml = '<div class="db-perso-rank" style="color:var(--text2);font-weight:600;"><span class="db-perso-badge">📊</span> Non classé cette semaine</div>';
         }
-        const esc = t => String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         const lead = lb.map(m => {
           const cls = (m.name || '').trim().toLowerCase() === meLc ? 'db-lead-me' : '';
           return '<span class="' + cls + '">' + esc(m.name || '?') + ' <b>' + (m.emails || 0) + '</b></span>';
@@ -4187,22 +4210,25 @@ async function renderDashboardCockpit(){
     let contacts = (_contactsPanelLoaded && _contactsPanelData.length) ? _contactsPanelData : null;
     if(!contacts){ try { const r = await fetch(API + "/contacts?limit=5000"); const d = await r.json(); contacts = d.contacts || []; _contactsPanelData = contacts; _contactsPanelLoaded = true; } catch(e){ contacts = []; } }
     const isOut = c => c.already_client || c.type_contact === "non_prospect_elistair";
-    const interested = contacts.filter(c => c.interested && !isOut(c)).length;
+    // Même définition que Ma journée / À faire : réponse positive pas encore transmise (équipe).
+    let interested = 0;
+    try { const rc = await fetch(API + "/me/counters?scope=team"); const dc = await rc.json(); interested = dc.interested_open || 0; } catch(e){}
     const vip = contacts.filter(c => (c.manual_priority === 3 || /⭐⭐⭐/.test(c.notes || "")) && !c.contacted && !isOut(c)).length;
     const sub = document.getElementById("db-cockpit-hot-sub");
     if(sub){
       const parts = [];
-      if(interested) parts.push(interested + " intéressé" + (interested>1?"s":""));
+      if(interested) parts.push(interested + " intéressé" + (interested>1?"s":"") + " à transmettre");
       if(vip) parts.push(vip + " VIP à contacter");
       sub.textContent = parts.length ? parts.join(" · ") : "Aucun pour le moment";
     }
   } catch(e){}
   // --- Relances dues ---
   try {
-    const _rd = (function(){ try{ const v=parseInt((loadSettings()||{}).relanceDays,10); return (v>=1&&v<=90)?v:14; }catch(e){ return 14; } })();
-    const r = await fetch(API + "/me/followups?days=" + _rd);
+    // Même source que À faire : relances de séquence dues ou en retard (/me/tracking).
+    const r = await fetch(API + "/me/tracking?scope=me");
     const d = await r.json();
-    const list = (d && d.followups) || [];
+    const list = ((d && d.tracking) || []).filter(x => x.status === 'waiting' && (x.urgency === 'overdue' || x.urgency === 'due'))
+      .map(x => Object.assign({}, x, { last_email: x.next_relance }));
     window._dbFollowups = list;
     const sub = document.getElementById("db-cockpit-followups-sub");
     const cta = document.getElementById("db-cockpit-followups-cta");
@@ -4211,8 +4237,9 @@ async function renderDashboardCockpit(){
       if(list.length){
         const oldest = list[0];
         const nm = ((oldest.prenom||"") + " " + (oldest.nom||"")).trim() || oldest.organisation || "contact";
-        const dd = oldest.last_email ? Math.floor((Date.now() - new Date(oldest.last_email).getTime())/86400000) : null;
-        sub.textContent = list.length + " à relancer" + (dd!=null ? (" · plus ancien : " + nm + " (" + dd + "j)") : (" · " + nm));
+        const dd = oldest.days_overdue || 0;
+        const nLate = list.filter(x => x.urgency === 'overdue').length;
+        sub.textContent = list.length + " à relancer" + (nLate ? " dont " + nLate + " en retard" : "") + " · " + nm + (dd ? " (" + dd + " j de retard)" : "");
         if(cta) cta.textContent = "Relancer →";
         if(card){ card.style.cursor = "pointer"; card.onclick = () => { if(typeof openContactDetail === "function") openContactDetail(oldest.id); }; }
       } else {
@@ -4448,8 +4475,8 @@ function renderDbContracts() {
   const colors = ['#6c63ff','#14b8a6','#f59e0b','#22c55e','#ef4444','#8b84ff'];
   el.innerHTML = top.map((ct,i) => {
     const valM = ct.valeur_max ? (ct.valeur_max/1e6 >= 1000
-      ? '$'+(ct.valeur_max/1e9).toFixed(1)+'B'
-      : '$'+(ct.valeur_max/1e6).toFixed(0)+'M') : '—';
+      ? (ct.valeur_max/1e9).toFixed(1).replace('.',',')+' Md$'
+      : Math.round(ct.valeur_max/1e6)+' M$') : '—';
     const socName = ct.societe_name || ct.societe_id || '—';
     return `<div class="db-row" onclick="go('contracts');setTimeout(()=>openContractDetail('${ct.id}'),200)">
       <div class="db-row-icon" style="background:${colors[i%colors.length]}20;color:${colors[i%colors.length]};">${sanitize(socName.slice(0,3).toUpperCase())}</div>
@@ -4499,7 +4526,7 @@ function renderFeedTypeFilters(feed) {
   }).join('');
 }
 
-function setFeedType(t) { activeFeedType = t; renderFeedList(window._feedCache||[]); }
+
 
 function renderFeedList(feed) {
   window._feedCache = feed;
@@ -4545,11 +4572,6 @@ async function loadFeed() {
     const d = await r.json();
     renderFeedTypeFilters(d.feed);
     renderFeedList(d.feed);
-    if (d.db) {
-      console.log('=== DB STATS ===');
-      console.log('Produits:', d.db.produits);
-      console.log('Sociétés:', d.db.societes);
-    }
   } catch(e) {
     const el = document.getElementById('feed-list');
     if (el) el.innerHTML = '<div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Erreur de chargement</span></div>';
@@ -4563,7 +4585,6 @@ async function loadSocietes() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     societes = d.societes || [];
-    console.log('[Scout] Loaded', societes.length, 'societes');
   } catch(e) { console.error('loadSocietes:', e); }
 }
 
@@ -4747,47 +4768,12 @@ function backToSocietes() {
 }
 
 // ── Societe form ──────────────────────────────────────────────
-function showSocieteForm(editId) {
-  editingSocieteId = editId || null;
-  const s = editId ? societes.find(x => x.id === editId) : null;
-  document.getElementById('societe-form-title').textContent = s ? 'Modifier ' + s.name : 'Nouveau fabricant';
-  document.getElementById('sf-name').value = s ? s.name : '';
-  document.getElementById('sf-url').value = s ? s.url : '';
-  document.getElementById('sf-secteur').value = s ? (s.secteur||'') : '';
-  document.getElementById('sf-freq').value = s ? (s.freq||'hebdo') : 'hebdo';
-  document.getElementById('sf-notes').value = s ? (s.notes||'') : '';
-  const allSigs = ['Prix & offres','Fonctionnalités','Recrutements','SEO & contenu','Réseaux sociaux','Avis clients','Partenariats','Levées de fonds','Presse'];
-  document.querySelectorAll('#sf-sigs .sig').forEach((el, i) => el.classList.toggle('on', s ? (s.signals||[]).includes(allSigs[i]) : i < 3));
-  return; // Forms disabled for public users
-  document.getElementById('societe-form-wrap').scrollIntoView({behavior:'smooth'});
-}
-function hideSocieteForm() { document.getElementById('societe-form-wrap').style.display = 'none'; editingSocieteId = null; }
 
-async function saveSociete() {
-  const name = document.getElementById('sf-name').value.trim();
-  const url = document.getElementById('sf-url').value.trim();
-  if (!name || !url) { alert('Nom et URL requis'); return; }
-  const id = editingSocieteId || name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'') + '_' + Date.now();
-  const signals = Array.from(document.querySelectorAll('#sf-sigs .sig.on')).map(e => e.textContent.trim());
-  const body = { id, name, url, pays: document.getElementById('sf-pays').value.trim(), secteur: document.getElementById('sf-secteur').value.trim(), signals, freq: document.getElementById('sf-freq').value, notes: document.getElementById('sf-notes').value.trim() };
-  try {
-    await fetch(API + '/societes', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    await loadSocietes();
-    hideSocieteForm();
-    renderSocietes();
-    renderDashboard();
-    // Update produits select
-    populateSocieteSelect();
-  } catch(e) { alert('Erreur: ' + e.message); }
-}
 
-async function deleteSociete(id) {
-  if (!confirm('Supprimer cette société et tous ses produits ?')) return;
-  await fetch(API + '/societes/' + id, { method: 'DELETE' });
-  await loadSocietes();
-  renderSocietes();
-  renderDashboard();
-}
+
+
+
+
 
 // ── Produits ──────────────────────────────────────────────────
 async function loadAllProduits() {
@@ -4799,7 +4785,6 @@ async function loadAllProduits() {
   };
   try {
     produits = await tryFetch(1);
-    console.log('[Scout] Loaded', produits.length, 'systemes from API');
   } catch(e1) {
     console.warn('[Scout] First /produits fetch failed:', e1.message, '— retrying...');
     try {
@@ -4920,48 +4905,12 @@ function populateSocieteSelect() {
   sel.innerHTML = '<option value="">— Aucune —</option>' + societes.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
 }
 
-function showProduitForm(societeId) {
-  editingProduitId = null;
-  document.getElementById('produit-form-title').textContent = 'Nouveau produit';
-  document.getElementById('pf-name').value = '';
-  if (document.getElementById('pf-emoji')) document.getElementById('pf-emoji').value = '🚁';
-  if (document.getElementById('pf-badge')) document.getElementById('pf-badge').value = 'Civil';
-  document.getElementById('pf-prix').value = '';
-  document.getElementById('pf-desc').value = '';
-  document.getElementById('pf-nouveau').value = 'false';
-  populateSocieteSelect();
-  if (societeId) document.getElementById('pf-societe').value = societeId;
-  return; // Forms disabled for public users
-  document.getElementById('produit-form-wrap').scrollIntoView({behavior:'smooth'});
-}
-function hideProduitForm() { document.getElementById('produit-form-wrap').style.display = 'none'; }
 
-async function saveProduit() {
-  const name = document.getElementById('pf-name').value.trim();
-  if (!name) { alert('Nom requis'); return; }
-  const id = editingProduitId || name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'') + '_' + Date.now();
-  const body = {
-    id, name,
-    societeId: document.getElementById('pf-societe').value || null,
-    emoji: document.getElementById('pf-emoji').value.trim() || '🚁',
-    badge: document.getElementById('pf-badge').value,
-    type_drone: document.getElementById('pf-type') ? document.getElementById('pf-type').value : '',
-    prix: document.getElementById('pf-prix').value.trim(),
-    description: document.getElementById('pf-desc').value.trim(),
-    nouveau: document.getElementById('pf-nouveau').value === 'true'
-  };
-  try {
-    await fetch(API + '/produits', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    await loadAllProduits();
-    hideProduitForm();
-    renderProduits();
-  } catch(e) { alert('Erreur: ' + e.message); }
-}
 
-function addProduitFromSociete() {
-  go('produits-db');
-  setTimeout(() => showProduitForm(currentSocieteId), 100);
-}
+
+
+
+
 
 // ── Init ──────────────────────────────────────────────────────
 // ── Contracts ─────────────────────────────────────────────────
@@ -4987,7 +4936,7 @@ function renderContracts(contracts, elId) {
   if (totalKnown > 0) {
     html += `<div class="contract-total">
       <span class="contract-total-label">Valeur totale identifiée</span>
-      <span class="contract-total-value">~$${totalKnown.toLocaleString()}M+</span>
+      <span class="contract-total-value">${totalKnown.toLocaleString("fr-FR")} M$ et plus</span>
     </div>`;
   }
 
@@ -5284,24 +5233,7 @@ function openTenderDetail(id) {
   document.body.appendChild(modal);
 }
 
-async function scrapeTenders() {
-  const btn = document.getElementById('btn-scrape-tenders');
-  btn.disabled = true; btn.textContent = '⏳ Scraping tenders...';
-  try {
-    const r = await fetch(API + '/admin/scrape-tenders', {
-      method: 'POST', headers: window.getAuthHeaders()
-    });
-    const d = await r.json();
-    btn.textContent = `✓ ${d.tenders_added} tenders ajoutés`;
-    await loadContracts();
-    filterContracts();
-    setContractTypeTab('tenders');
-    setTimeout(() => { btn.textContent = '🔍 Actualiser tenders'; btn.disabled = false; }, 4000);
-  } catch(e) {
-    btn.textContent = 'Erreur';
-    btn.disabled = false;
-  }
-}
+
 
 async function loadContracts() {
   try {
@@ -5330,7 +5262,7 @@ async function loadContractStats() {
       <div style="width:1px;background:var(--border2);margin:4px 0;"></div>
       <div style="display:flex;flex-direction:column;">
         <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Valeur identifiée</span>
-        <span style="font-size:22px;font-weight:700;color:var(--accent2);">~$${totalM >= 1000 ? (totalM/1000).toFixed(1)+'B' : totalM.toFixed(0)+'M'}</span>
+        <span style="font-size:22px;font-weight:700;color:var(--accent2);">${totalM > 0 ? (totalM >= 1000 ? (totalM/1000).toFixed(1).replace('.',',')+' Md$' : Math.round(totalM)+' M$') : 'non renseignée'}</span>
       </div>
       ${byStatut.slice(0,4).map(s => `
       <div style="width:1px;background:var(--border2);margin:4px 0;"></div>
@@ -5350,7 +5282,7 @@ function renderContractStatusFilters() {
   ).join('');
 }
 
-function setContractStatut(s) { activeContractStatut = s; renderContractStatusFilters(); filterContracts(); }
+
 
 function filterContracts() {
   const search = (document.getElementById('contracts-search')?.value||'').toLowerCase();
@@ -5587,7 +5519,7 @@ function openContractDetail(id) {
       <div style="display:flex;flex-direction:column;gap:8px;">
         ${linked.map(co => {
           const color = {'Militaire':'#ef4444','Sécurité':'#f59e0b','Civil':'#3b82f6','Humanitaire':'#10b981'}[co.secteur]||'#6b7280';
-          const initials = ((co.prenom||'')[0]||'')+((co.nom||'')[0]||'');
+          const initials = (((co.prenom||'')[0]||'')+((co.nom||'')[0]||'')).toUpperCase();
           return `<div style="display:flex;gap:10px;align-items:center;background:var(--bg3);border-radius:8px;padding:8px 12px;cursor:pointer;" onclick="this.closest('[style*=fixed]').remove();setTimeout(()=>{go('end-users');setTimeout(()=>openEndUser('${co.end_user_id||co.id}'),300)},100)">
             <div style="width:32px;height:32px;border-radius:50%;background:${color}22;border:1.5px solid ${color}44;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${color};flex-shrink:0;">${initials}</div>
             <div style="flex:1;min-width:0;">
@@ -5609,90 +5541,16 @@ function openContractDetail(id) {
   document.body.appendChild(modal);
 }
 
-function showContractForm(editId) {
-  editingContractId = editId || null;
-  const c = editId ? contracts.find(x => x.id === editId) : null;
-  document.getElementById('contract-form-title').textContent = c ? 'Modifier le contrat' : 'Nouveau contrat';
 
-  // Populate societe select
-  const sel = document.getElementById('cf-societe');
-  sel.innerHTML = '<option value="">— Aucun fabricant —</option>' + societes.map(s => `<option value="${s.id}" ${c?.societe_id===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
 
-  document.getElementById('cf-titre').value = c?.titre || '';
-  document.getElementById('cf-client').value = c?.client || '';
-  document.getElementById('cf-pays').value = c?.pays_client || '';
-  document.getElementById('cf-agence').value = c?.agence || '';
-  document.getElementById('cf-programme').value = c?.programme || '';
-  document.getElementById('cf-valeur').value = c?.valeur || '';
-  document.getElementById('cf-devise').value = c?.devise || 'USD';
-  document.getElementById('cf-type').value = c?.type || 'Program of Record';
-  document.getElementById('cf-statut').value = c?.statut || 'Attribué';
-  document.getElementById('cf-date').value = c?.date_signature ? c.date_signature.split('T')[0] : '';
-  document.getElementById('cf-datefin').value = c?.date_fin ? c.date_fin.split('T')[0] : '';
-  document.getElementById('cf-produits').value = (c?.produits||[]).join(', ');
-  document.getElementById('cf-desc').value = c?.description || '';
-  document.getElementById('cf-sources').value = (c?.sources||[]).join(', ');
 
-  return; // Forms disabled for public users
-  document.getElementById('contract-form-wrap').scrollIntoView({behavior:'smooth'});
-}
 
-function hideContractForm() {
-  document.getElementById('contract-form-wrap').style.display = 'none';
-  editingContractId = null;
-}
 
-async function saveContract() {
-  const titre = document.getElementById('cf-titre').value.trim();
-  if (!titre) { alert('Titre requis'); return; }
-  const id = editingContractId || 'c_' + Date.now();
-  const produits = document.getElementById('cf-produits').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const sources = document.getElementById('cf-sources').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const body = { id, titre,
-    client: document.getElementById('cf-client').value.trim(),
-    pays_client: document.getElementById('cf-pays').value.trim(),
-    agence: document.getElementById('cf-agence').value.trim(),
-    programme: document.getElementById('cf-programme').value.trim(),
-    valeur: document.getElementById('cf-valeur').value.trim(),
-    devise: document.getElementById('cf-devise').value,
-    type: document.getElementById('cf-type').value,
-    statut: document.getElementById('cf-statut').value,
-    date_signature: document.getElementById('cf-date').value || null,
-    date_fin: document.getElementById('cf-datefin').value || null,
-    societe_id: document.getElementById('cf-societe').value || null,
-    produits, sources,
-    description: document.getElementById('cf-desc').value.trim()
-  };
-  try {
-    const method = editingContractId ? 'PUT' : 'POST';
-    const url = editingContractId ? API+'/contracts/'+editingContractId : API+'/contracts';
-    await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    await loadContracts();
-    hideContractForm();
-    filterContracts();
-    loadContractStats();
-  } catch(e) { alert('Erreur: ' + e.message); }
-}
 
-async function deleteContractItem(id) {
-  if (!confirm('Supprimer ce contrat ?')) return;
-  await fetch(API+'/contracts/'+id, { method: 'DELETE' });
-  contracts = contracts.filter(c => c.id !== id);
-  filterContracts();
-  loadContractStats();
-}
+
 
 // ── Logos & Images ────────────────────────────────────────────
-function loadLogoSmall(societeId, elId) {
-  const el = document.getElementById(elId);
-  if (!el || !societeId) return;
-  const img = new Image();
-  img.onload = () => {
-    el.innerHTML = `<img src="${API}/societes/${societeId}/logo" style="width:20px;height:20px;border-radius:4px;object-fit:contain;background:white;">`;
-  };
-  img.onerror = () => {};
-  img.src = API + '/societes/' + societeId + '/logo';
-}
+
 
 function loadLogo(societeId, url, elId) {
   const el = document.getElementById(elId);
@@ -5707,173 +5565,30 @@ function loadLogo(societeId, url, elId) {
   img.src = proxyUrl;
 }
 
-function loadDroneImage(produitId, imageUrl, name, elId, detailWrapId) {
-  // If we have a direct URL, use it — otherwise use proxy (slower, triggers AI search)
-  const src = imageUrl || (API + '/produits/' + produitId + '/image');
-  function setImg(elId, h) {
-    const el = document.getElementById(elId);
-    if (!el || el.querySelector('img')) return;
-    const img = new Image();
-    img.onload = () => { el.innerHTML = `<img src="${src}" alt="${esc(name)}" style="width:100%;height:${h};object-fit:cover;">`; };
-    img.onerror = () => {
-      // If direct URL failed, try proxy
-      if (imageUrl) {
-        const proxyUrl = API + '/produits/' + produitId + '/image';
-        const img2 = new Image();
-        img2.onload = () => { el.innerHTML = `<img src="${proxyUrl}" alt="${esc(name)}" style="width:100%;height:${h};object-fit:cover;">`; };
-        img2.src = proxyUrl;
-      }
-    };
-    img.src = src;
-  }
-  if (elId) setImg(elId, '110px');
-  if (detailWrapId) setImg(detailWrapId, '60px');
-}
 
-function fetchAndSetDroneImage(produitId, imageUrl, name, elId) {
-  loadDroneImage(produitId, imageUrl, name, elId, null);
-}
 
-function setDroneImage(elId, url) {
-  const el = document.getElementById(elId);
-  if (!el || !url) return;
-  el.innerHTML = `<img src="${url}" alt="" style="width:100%;height:110px;object-fit:cover;">`;
-}
 
-function setDroneImageDetail(wrapId, url) {
-  const el = document.getElementById(wrapId);
-  if (!el || !url) return;
-  const img = new Image();
-  img.onload = () => { el.innerHTML = `<img src="${url}" alt="" style="width:100%;height:60px;object-fit:cover;border-radius:var(--radius);">`; };
-  img.onerror = () => {};
-  img.src = url;
-}
+
+
+
+
 
 // ── Maintenance ───────────────────────────────────────────────
-async function aiFetchImages() {
-  const btn = document.getElementById('btn-ai-imgs');
-  btn.disabled = true;
-  let total = 0;
-  for (let batch = 0; batch < 12; batch++) {
-    btn.textContent = `⏳ Batch ${batch+1}/12 en cours...`;
-    try {
-      const r = await fetch(API + '/admin/ai-fetch-images?batch=' + batch, {
-        method: 'POST', headers: window.getAuthHeaders()
-      });
-      const d = await r.json();
-      if (d.done) break;
-      total += d.updated || 0;
-      btn.textContent = `⏳ ${total} images trouvées — batch ${batch+1}/12...`;
-    } catch(e) { break; }
-  }
-  btn.textContent = `✓ ${total} images IA ajoutées`;
-  setTimeout(() => { btn.textContent = '🤖 IA — images manquantes (~3 min)'; btn.disabled = false; }, 8000);
-}
 
-async function fetchProductImages() {
-  const btn = document.getElementById('btn-fetch-imgs');
-  btn.disabled = true; btn.textContent = '⏳ Chargement images (30s)...';
-  try {
-    const r = await fetch(API + '/admin/fetch-images', { method: 'POST', headers: window.getAuthHeaders() });
-    const d = await r.json();
-    btn.textContent = d.ok ? `✓ ${d.fetched} images chargées` : 'Erreur';
-    setTimeout(() => { btn.textContent = '🖼 Charger images produits (Wikipedia)'; btn.disabled = false; }, 5000);
-  } catch(e) { btn.textContent = 'Erreur'; btn.disabled = false; }
-}
 
-async function scrapeTethered() {
-  const btn = event.target;
-  btn.disabled = true; btn.textContent = '⏳ Scraping tethered (1-2 min)...';
-  try {
-    const r = await fetch(API + '/admin/scrape-tethered', { method: 'POST', headers: window.getAuthHeaders() });
-    const d = await r.json();
-    btn.textContent = d.ok ? `✓ ${d.societes} fabricants, ${d.drones} drones ajoutés` : 'Erreur: ' + d.error;
-    setTimeout(() => { btn.textContent = '🪁 Scraper tethered drones'; btn.disabled = false; }, 5000);
-  } catch(e) { btn.textContent = 'Erreur réseau'; btn.disabled = false; }
-}
 
-async function scrapeTendersFromConfig() {
-  const btn = document.getElementById('btn-scrape-tenders-cfg');
-  btn.disabled = true;
-  btn.textContent = '⏳ Scraping tenders (2-4 min)...';
-  try {
-    const r = await fetch(API + '/admin/scrape-tenders', {
-      method: 'POST',
-      headers: window.getAuthHeaders()
-    });
-    const d = await r.json();
-    btn.textContent = d.ok !== false
-      ? '✓ ' + (d.added||0) + ' tenders ajoutés (' + (d.found||0) + ' trouvés)'
-      : '⚠ ' + (d.error||'Erreur');
-    setTimeout(() => { btn.textContent = '📡 Scraper live tenders défense'; btn.disabled = false; }, 6000);
-  } catch(e) {
-    btn.textContent = '⚠ Timeout - retry';
-    btn.disabled = false;
-  }
-}
 
-async function scrapeDefenseContracts() {
-  const btn = event.target;
-  btn.disabled = true; btn.textContent = '⏳ Scraping (2-3 min)...';
-  try {
-    // First clean civilian contracts
-    await fetch(API + '/admin/clean-defense', { method: 'POST', headers: window.getAuthHeaders() });
-    // Then scrape defense contracts
-    const r = await fetch(API + '/admin/scrape-contracts', { method: 'POST', headers: window.getAuthHeaders() });
-    const d = await r.json();
-    btn.textContent = `✓ ${d.added} contrats défense ajoutés`;
-    setTimeout(() => { btn.textContent = '🔍 Scraper contrats défense'; btn.disabled = false; }, 5000);
-  } catch(e) {
-    btn.textContent = 'Erreur'; btn.disabled = false;
-  }
-}
 
-async function cleanData() {
-  const msg = document.getElementById('maint-msg');
-  msg.textContent = 'Nettoyage en cours...';
-  try {
-    const r = await fetch(API + '/admin/clean-data', { method:'POST', headers: window.getAuthHeaders() });
-    const d = await r.json();
-    msg.textContent = `✓ ${d.societes_cleaned} sociétés + ${d.produits_cleaned} drones nettoyés`;
-    setTimeout(() => msg.textContent = '', 5000);
-  } catch(e) { msg.textContent = 'Erreur: ' + e.message; }
-}
-async function clearCache() {
-  if (!confirm('Vider tout le cache ? Les fiches seront re-scrapées à la prochaine ouverture.')) return;
-  const msg = document.getElementById('maint-msg');
-  msg.textContent = 'Vidage en cours...';
-  try {
-    const r = await fetch(API + '/admin/clear-cache', { method:'POST', headers: window.getAuthHeaders() });
-    const d = await r.json();
-    msg.textContent = '✓ Cache vidé — rechargement...';
-    setTimeout(() => location.reload(), 1500);
-  } catch(e) { msg.textContent = 'Erreur: ' + e.message; }
-}
+
+
+
+
+
+
+
 
 // ── Seed ─────────────────────────────────────────────────────
-async function initSeed() {
-  const btn = document.getElementById('btn-seed');
-  if (!confirm('Initialiser la base de référence avec 20 fabricants et 25 drones ? Les données existantes seront conservées.')) return;
-  btn.disabled = true; btn.textContent = 'Initialisation...';
-  try {
-    // Seed via API - run seed script on server
-    const r = await fetch(API + '/seed', {
-      method: 'POST',
-      headers: Object.assign({ 'Content-Type': 'application/json' }, window.getAuthHeaders())
-    });
-    // Wait a moment then reload
-    btn.textContent = 'Chargement...';
-    await new Promise(r => setTimeout(r, 3000));
-    await Promise.all([loadSocietes(), loadAllProduits()]);
-    renderSocietes(); renderProduits(); renderDashboard();
-    btn.textContent = 'Base initialisée ✓';
-    setTimeout(() => { btn.textContent = 'Réinitialiser la base'; btn.disabled = false; }, 3000);
-  } catch(e) {
-    btn.textContent = 'Erreur — réessayer';
-    btn.disabled = false;
-    alert('Erreur: ' + e.message);
-  }
-}
+
 
 // ── Filters ───────────────────────────────────────────────────
 let activeCat = 'Tous';
@@ -5913,12 +5628,7 @@ function getCatsForDomaine() {
   return CAT_MAP_AIR;
 }
 
-function getDomaineBadgeColor(type_drone) {
-  if (!type_drone) return null;
-  if (['UGV'].includes(type_drone)) return 'tag-amber';
-  if (['USV','UUV'].includes(type_drone)) return 'tag-blue';
-  return null;
-}
+
 
 function renderCatFilters() {
   const el = document.getElementById('cat-filters');
@@ -6178,7 +5888,7 @@ function renderSocContactsGrid(list) {
     return;
   }
   grid.innerHTML = list.map(ct => {
-    const initials = ((ct.prenom||'')[0]||'') + ((ct.nom||'')[0]||'');
+    const initials = (((ct.prenom||'')[0]||'') + ((ct.nom||'')[0]||'')).toUpperCase();
     const soc = (societes || []).find(s => s.name === ct.organisation);
     return `<div class="entity-card" data-contact-id="${ct.id}" style="cursor:pointer;padding:14px;position:relative;" onclick="openSocContactCard('${ct.id}')">
       <button class="scout-cs-inline-btn" data-contact-id="${ct.id}" type="button" style="position:absolute;top:8px;right:8px;padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--accent);background:var(--bg3);color:var(--accent);cursor:pointer;z-index:10;font-weight:600;">+ Action</button>
@@ -6681,30 +6391,7 @@ window.addEventListener('appinstalled', () => {
   if (btn) { btn.textContent = '✓ App installée'; btn.disabled = true; btn.style.opacity = '0.5'; }
 });
 
-function installPWA() {
-  if (pwaInstalled) {
-    alert('Scout est déjà installé sur cet appareil !');
-    return;
-  }
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(choice => {
-      deferredPrompt = null;
-      const btn = document.getElementById('btn-install-pwa');
-      if (choice.outcome === 'accepted') {
-        if (btn) { btn.textContent = '✓ Installation en cours...'; btn.disabled = true; }
-      }
-    });
-  } else {
-    // Fallback: show manual instructions
-    const msg = 'Pour installer Scout :\n\n' +
-      '1. Appuyez sur ⋮ (menu Chrome, en haut à droite)\n' +
-      '2. Appuyez sur "Ajouter à l\'écran d\'accueil"\n' +
-      '3. Confirmez\n\n' +
-      'Si vous l\'avez déjà refusé, allez dans\nParamètres Chrome → Notifications\npour réinitialiser.';
-    alert(msg);
-  }
-}
+
 
 // ══════════════════════════════════════════════════════════════
 // END-USERS
@@ -6900,7 +6587,7 @@ function renderContactsGrid(list) {
 
   grid.innerHTML = list.map(ct => {
     const color = SECT_COLOR[ct.secteur] || '#6b7280';
-    const initials = ((ct.prenom||'')[0]||'') + ((ct.nom||'')[0]||'');
+    const initials = (((ct.prenom||'')[0]||'') + ((ct.nom||'')[0]||'')).toUpperCase();
     const icon = TYPE_ICON[ct.type_contact] || '👤';
     const nContrats = (ct.contrats_refs||[]).length;
     const compte = allEndUsers.find(eu => eu.id === ct.end_user_id);
@@ -6941,6 +6628,8 @@ function renderContactsGrid(list) {
 function openContactFromGrid(id) {
   const ct = allContacts.find(c => c.id === id);
   if (!ct) return;
+  // Nouvelle interface : on ouvre directement la fiche du contact.
+  if (window.scoutCrm && window.scoutCrm.openContact && document.getElementById('panel-people')) { window.scoutCrm.openContact(ct.id); return; }
   if (ct.end_user_id) {
     // Ouvrir directement la fiche du compte via end_user_id (openEndUser s'auto-charge
     // si la liste des buyers n'est pas encore prête — sinon on retombait sur la liste).
@@ -7334,7 +7023,7 @@ function renderContactsForAccount(endUserId) {
     <div style="display:flex;flex-direction:column;gap:8px;">
       ${cts.map(ct => {
         const color = SECT_COLOR[ct.secteur] || '#6b7280';
-        const initials = ((ct.prenom||'')[0]||'') + ((ct.nom||'')[0]||'');
+        const initials = (((ct.prenom||'')[0]||'') + ((ct.nom||'')[0]||'')).toUpperCase();
         const icon = TYPE_ICON[ct.type_contact] || '👤';
         const linkedContracts = allContacts.find(x=>x.id===ct.id)?.contrats_refs?.length || ct.contrats_refs?.length || 0;
         return `<div style="background:var(--bg3);border-radius:8px;padding:12px;border:1px solid var(--border2);position:relative;">
@@ -7538,7 +7227,7 @@ async function fetchSegCounts() {
   // On s'appuie sur l'intercepteur fetch (qui injecte le token) + un header explicite
   // en secours. Pas de garde sur le token : sinon les décomptes ne s'affichaient plus.
   try {
-    const API_SEG = (typeof API !== 'undefined' && API) || (window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
+    const API_SEG = window.SCOUT_API_URL;
     const tok = (window.scoutSession && window.scoutSession.token) || (window.session && window.session.token) || null;
     const opts = tok ? { headers: { 'Authorization': 'Bearer ' + tok } } : {};
     const r = await fetch(API_SEG + '/action/segment-counts', opts);
@@ -7632,7 +7321,7 @@ function populateConfigPays() {
     if (!all.length) {
       // Pas encore de data — afficher un message + bouton retry au lieu de rester bloqué
       container.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--text3);">
-        <span>Pas de pays disponibles. Chargez les données d'abord en visitant l'onglet Buyers.</span>
+        <span>Pas de pays disponibles. Chargez les données d'abord en ouvrant l'onglet Comptes.</span>
         <button onclick="populateConfigPays()" style="align-self:flex-start;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text2);cursor:pointer;">↻ Réessayer</button>
       </div>`;
       return;
@@ -7678,10 +7367,10 @@ function saveExcludedPays() {
 }
 
 // Backwards-compat: certains appels existants peuvent encore référencer ces noms
-function saveTargetPays() { return saveExcludedPays(); }
-function addTargetPays() {}
-function removeTargetPays() {}
-function renderTargetPays() {}
+
+
+
+
 
 // ── Filtre rapide "Mes pays" — DEPRECATED depuis le passage en blacklist ───
 // La sémantique est maintenant "pays exclus", donc un filtre "Mes pays" en
@@ -8059,7 +7748,7 @@ async function exportLinkedInCsv(scope) {
 
 <script>
 (function(){
-  const API = (typeof window !== 'undefined' && window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
+  const API = window.SCOUT_API_URL;
   const LS_SESSION = 'scout_chat_session';
   
 
@@ -8195,9 +7884,7 @@ async function exportLinkedInCsv(scope) {
     localStorage.removeItem(LS_SESSION);
   }
 
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
-  }
+  function escapeHtml(s) { return esc(s); } // échappement commun (esc)
 
   function markdownToHtml(s) {
     // Minimal markdown (bold, line breaks, bullets)
@@ -8421,7 +8108,7 @@ async function exportLinkedInCsv(scope) {
 
 <script>
 (function(){
-  const API = (typeof window !== 'undefined' && window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
+  const API = window.SCOUT_API_URL;
   const LS_SESSION = 'scout_chat_session';
 
   function getSession() {
@@ -8433,9 +8120,7 @@ async function exportLinkedInCsv(scope) {
     const s = getSession();
     return s?.token ? {'Authorization': 'Bearer ' + s.token} : {};
   }
-  function escapeHtml(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
+  function escapeHtml(s) { return esc(s); } // échappement commun (esc)
   function formatDate(d) {
     if (!d) return '—';
     const dt = new Date(d);
@@ -8514,11 +8199,14 @@ async function exportLinkedInCsv(scope) {
     const panel = document.getElementById('panel-config');
     if (!panel) { setTimeout(watchConfigPanel, 1000); return; }
     let wasVisible = false;
-    setInterval(() => {
-      const visible = panel.classList.contains('active') || window.getComputedStyle(panel).display !== 'none';
+    const check = () => {
+      const visible = panel.classList.contains('active');
       if (visible && !wasVisible) renderCooldownSettings();
       wasVisible = visible;
-    }, 500);
+    };
+    // Observe l'ouverture du panneau au lieu de le sonder toutes les 500 ms.
+    new MutationObserver(check).observe(panel, { attributes: true, attributeFilter: ['class', 'style'] });
+    check();
   }
   setTimeout(watchConfigPanel, 500);
 
@@ -9140,9 +8828,6 @@ async function exportLinkedInCsv(scope) {
     // No-op: buttons are rendered by renderContactsGrid directly.
     // But we still need to style them based on contact status.
     const buttons = document.querySelectorAll('.scout-cs-inline-btn:not([data-cs-styled])');
-    if (buttons.length) {
-      console.log('[scout] styling', buttons.length, 'inline action buttons');
-    }
     buttons.forEach(btn => {
       btn.setAttribute('data-cs-styled', '1');
       const contactId = btn.dataset.contactId;
@@ -9411,9 +9096,7 @@ async function exportLinkedInCsv(scope) {
     });
   }
 
-  function escapeHtml(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
+  function escapeHtml(s) { return esc(s); } // échappement commun (esc)
 
   function highlight(text, query) {
     if (!query || !text) return escapeHtml(text);
@@ -9550,7 +9233,7 @@ async function exportLinkedInCsv(scope) {
     const groups = {};
     const labels = {
       contact: 'Contacts', fabricant: 'Fabricants',
-      produit: 'Produits', contrat: 'Contrats', buyer: 'Buyers'
+      produit: 'Produits', contrat: 'Contrats', buyer: 'Comptes'
     };
     const order = ['contact', 'fabricant', 'produit', 'contrat', 'buyer'];
     for (const item of items) {
@@ -9642,7 +9325,7 @@ async function exportLinkedInCsv(scope) {
 <script>
 // ── RESELLERS MAP (Leaflet + OpenStreetMap) ─────────────────────────────────
 (function() {
-  const API_RS = 'https://scout-api-production-fa8d.up.railway.app';
+  const API_RS = window.SCOUT_API_URL;
   let _rsMap = null;
   let _rsMarkers = [];
   let _rsData = null;  // cached full list
@@ -9816,7 +9499,6 @@ async function exportLinkedInCsv(scope) {
 })();
 </script>
 <script>
-function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 // Formate un champ notes dense en sections lisibles : étoiles de priorité,
 // et blocs étiquetés [Label] (Hunter, Pertinence Khronos, source, etc.).
 function formatNotes(raw){
@@ -9965,14 +9647,14 @@ async function renderHotProspects(){
     else { const r = await fetch(API + '/contacts?limit=5000'); const d = await r.json(); contacts = d.contacts || []; _contactsPanelData = contacts; _contactsPanelLoaded = true; }
   } catch(e) {}
   const isOut = c => c.already_client || c.type_contact === 'non_prospect_elistair';
-  const interested = contacts.filter(c => c.interested && !isOut(c));
+  const interested = contacts.filter(c => c.interested && !c.transmitted && !isOut(c));
   const vip = contacts.filter(c => (c.manual_priority === 3 || /⭐⭐⭐/.test(c.notes || '')) && !c.contacted && !isOut(c));
   const gridOpen = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">';
   const empty = (msg) => `<div style="padding:1.1rem;color:var(--text3);font-size:13px;">${msg}</div>`;
   const secHead = (icon,title,n,color) => `<div style="display:flex;align-items:center;gap:8px;margin:20px 0 10px;"><span style="font-size:14px;font-weight:700;color:${color};">${icon} ${title}</span><span style="font-size:12px;color:var(--text3);">${n}</span><span style="flex:1;height:1px;background:var(--border);"></span></div>`;
 
   let html = '';
-  html += secHead('✅','Ont répondu (intéressés)', interested.length, '#16a34a');
+  html += secHead('✅','Ont répondu, à transmettre', interested.length, '#16a34a');
   html += interested.length ? gridOpen + interested.map(contactPanelCard).join('') + '</div>'
         : empty(`Aucun contact n'a encore répondu positivement. Marque « a répondu » sur une fiche pour l'y voir apparaître.`);
   html += secHead('⭐','VIP à contacter (pas encore approchés)', vip.length, '#b45309');
@@ -11753,7 +11435,7 @@ window.exportTrackingCSV=exportTrackingCSV;
 
 
 function contactPanelCard(ct) {
-  const initials = ((ct.prenom || '')[0] || '') + ((ct.nom || '')[0] || '');
+  const initials = (((ct.prenom || '')[0] || '') + ((ct.nom || '')[0] || '')).toUpperCase();
   return `<div class="entity-card" style="cursor:pointer;padding:14px;" onclick="openContactDetail('${esc(ct.id)}')" title="Voir le contexte">
     <div style="display:flex;gap:10px;align-items:flex-start;">
       <div style="width:38px;height:38px;border-radius:50%;background:rgba(108,99,255,.14);border:2px solid rgba(108,99,255,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">${esc(initials || '?')}</div>
@@ -12038,7 +11720,7 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=176"></script>
+<script src="assets/crm.js?v=177"></script>
 <script>
 // Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.
 // Les écrans de connexion et de mot de passe ne sont jamais concernés.
