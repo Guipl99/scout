@@ -2779,6 +2779,7 @@ Réinitialiser tous les filtres
           <option value="interested">Intéressé</option>
           <option value="transmitted">Transmis au CRM</option>
           <option value="not_interested">Pas intéressé</option>
+          <option value="closed">Close, sans réponse (90 j)</option>
         </select>
         <input id="trk-search" type="text" placeholder="Filtrer par contact / compte…" oninput="renderTrackingTable()" style="flex:1;min-width:180px;font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
         <button type="button" onclick="exportTrackingCSV()" style="font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;">⬇️ Exporter CSV</button>
@@ -11296,6 +11297,7 @@ function _trkStatusChip(x){
   if(x.status==='transmitted') return '<span style="'+base+'background:rgba(37,99,235,.12);color:#2563eb;">Transmis au CRM</span>';
   if(x.status==='interested') return '<span style="'+base+'background:rgba(34,197,94,.14);color:#16a34a;">Intéressé</span>';
   if(x.status==='not_interested') return '<span style="'+base+'background:var(--bg3);color:var(--text3);">Pas intéressé</span>';
+  if(x.status==='closed') return '<span style="'+base+'background:var(--bg3);color:var(--text3);" title="Aucune réponse 90 jours après le dernier email">Close, sans réponse</span>';
   return '<span style="'+base+'background:var(--bg3);color:var(--text2);">En attente</span>';
 }
 function _trkUrgencyCell(x){
@@ -11385,7 +11387,7 @@ window.trkMarkRelanceSent=trkMarkRelanceSent;
 function exportTrackingCSV(){
   const list=window._trackingExport||_trkFiltered();
   const cols=['Owner','Prénom','Nom','Titre','Compte','Pays','Email','Statut','Étape','Prochaine relance','Jours de retard','Dernière action'];
-  const stMap={waiting:'En attente',interested:'Intéressé',transmitted:'Transmis au CRM',not_interested:'Pas intéressé'};
+  const stMap={waiting:'En attente',interested:'Intéressé',transmitted:'Transmis au CRM',not_interested:'Pas intéressé',closed:'Close, sans réponse'};
   const q=function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; };
   const lines=list.map(function(x){ return [x.owner||'',x.prenom||'',x.nom||'',x.titre||'',x.account_nom||x.organisation||'',x.pays||'',x.email||'',stMap[x.status]||x.status,x.stage||'',x.next_relance?String(x.next_relance).slice(0,10):'',x.urgency==='overdue'?x.days_overdue:'',x.last_action_at?String(x.last_action_at).slice(0,10):''].map(q).join(','); });
   const csv='﻿'+cols.map(q).join(',')+'\n'+lines.join('\n');
