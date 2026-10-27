@@ -754,6 +754,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="stylesheet" href="assets/crm.css?v=178">
 </head>
 <body>
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -2007,17 +2008,17 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
       <div class="logo-text">drone<span>.</span>scout</div>
     </div>
     <nav aria-label="Navigation principale">
-    <div class="nav-item active" id="nav-today" onclick="goGroup('today')" title="Ce qu'il y a à faire : relances, prospects chauds, visiteurs du site">
+    <div class="nav-item active" id="nav-today" onclick="goGroup('today')" title="Mon portefeuille de comptes, mes tâches, mes relances">
       <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M5.5 1.5v2M10.5 1.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M5.5 10l1.6 1.6L10.8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Aujourd'hui
+      Accueil
     </div>
-    <div class="nav-item" id="nav-prospects" onclick="goGroup('prospects')" title="Contacts, comptes et organisations vues sur le site">
-      <svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.6" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 13.5c0-2.8 2-4.6 4.5-4.6s4.5 1.8 4.5 4.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12.2" cy="6.6" r="1.9" stroke="currentColor" stroke-width="1.2"/><path d="M15 12.4c0-1.9-1.3-3.2-2.8-3.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      Prospects <span id="nav-prospects-badge" style="display:none;margin-left:auto;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#16a34a;color:#fff;">0</span>
+    <div class="nav-item" id="nav-prospects" onclick="goGroup('prospects')" title="Comptes et contacts prospects : fiches, comité d'achat, historique">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 6h6M5 8.5h6M5 11h3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Prospects
     </div>
-    <div class="nav-item" id="nav-marche" onclick="goGroup('marche')" title="Fabricants, produits, contrats, appels d'offres, distributeurs">
-      <svg viewBox="0 0 16 16" fill="none"><path d="M2 14V5.2L8 2l6 3.2V14" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M1 14h14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><rect x="6.2" y="8.6" width="3.6" height="5.4" stroke="currentColor" stroke-width="1.2"/></svg>
-      Marché
+    <div class="nav-item" id="nav-signaux" onclick="goGroup('signaux')" title="Signaux : prospects chauds, visiteurs du site, chat, appels d'offres et contrats">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 8.5a1 1 0 100-2 1 1 0 000 2z" fill="currentColor"/><path d="M5.2 10.3a4 4 0 010-5.6M10.8 4.7a4 4 0 010 5.6M3.1 12.4a7 7 0 010-9.8M12.9 2.6a7 7 0 010 9.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Signaux <span id="nav-prospects-badge" style="display:none;margin-left:auto;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#16a34a;color:#fff;">0</span>
     </div>
     <div class="nav-item" id="nav-config" onclick="goGroup('config')">
       <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -2477,6 +2478,13 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     </div>
 
     <!-- CONFIG -->
+    <!-- CRM étape 1 : rendus par assets/crm.js -->
+    <div id="panel-home" class="panel"></div>
+    <div id="panel-accounts" class="panel"></div>
+    <div id="panel-people" class="panel"></div>
+    <div id="panel-tasks" class="panel"></div>
+    <div id="panel-stats" class="panel"></div>
+
     <div id="panel-end-users" class="panel">
       <div id="eu-list-view">
         <div style="padding:12px 16px 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border2);">
@@ -2615,11 +2623,14 @@ Mes pays
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Onglet par défaut au démarrage</label>
               <select id="cfg-default-tab" onchange="saveSettings()"
                 style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);">
-                <option value="dashboard">Accueil</option>
+                <option value="home">Accueil · Ma journée</option>
+                <option value="tasks">Accueil · À faire</option>
+                <option value="accounts">Prospects · Comptes</option>
+                <option value="people">Prospects · Contacts</option>
+                <option value="dashboard">Statistiques</option>
                 <option value="societes">Fabricants</option>
                 <option value="produits-db">Systèmes</option>
                 <option value="contracts">Contrats & Tenders</option>
-                <option value="end-users">Comptes</option>
               </select>
             </div>
             <div>
@@ -3087,15 +3098,15 @@ Réinitialiser tous les filtres
     </div>
     <div class="bn-item active" id="bn-today" onclick="goGroup('today')">
       <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M5.5 1.5v2M10.5 1.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M5.5 10l1.6 1.6L10.8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      Aujourd'hui
+      Accueil
     </div>
-    <div class="bn-item" id="bn-prospects" onclick="goGroup('prospects')" style="position:relative;">
-      <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.6" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 13.5c0-2.8 2-4.6 4.5-4.6s4.5 1.8 4.5 4.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12.2" cy="6.6" r="1.9" stroke="currentColor" stroke-width="1.2"/><path d="M15 12.4c0-1.9-1.3-3.2-2.8-3.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
-      Prospects<span id="bn-prospects-badge" style="display:none;position:absolute;top:2px;right:8px;font-size:9px;font-weight:700;padding:0 4px;border-radius:999px;background:#16a34a;color:#fff;">0</span>
+    <div class="bn-item" id="bn-prospects" onclick="goGroup('prospects')">
+      <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 6h6M5 8.5h6M5 11h3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+      Prospects
     </div>
-    <div class="bn-item" id="bn-marche" onclick="goGroup('marche')">
-      <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><path d="M2 14V5.2L8 2l6 3.2V14" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M1 14h14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><rect x="6.2" y="8.6" width="3.6" height="5.4" stroke="currentColor" stroke-width="1.2"/></svg></span>
-      Marché
+    <div class="bn-item" id="bn-signaux" onclick="goGroup('signaux')" style="position:relative;">
+      <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><path d="M8 8.5a1 1 0 100-2 1 1 0 000 2z" fill="currentColor"/><path d="M5.2 10.3a4 4 0 010-5.6M10.8 4.7a4 4 0 010 5.6M3.1 12.4a7 7 0 010-9.8M12.9 2.6a7 7 0 010 9.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+      Signaux<span id="bn-prospects-badge" style="display:none;position:absolute;top:2px;right:8px;font-size:9px;font-weight:700;padding:0 4px;border-radius:999px;background:#16a34a;color:#fff;">0</span>
     </div>
     <div class="bn-item" id="bn-config" onclick="goGroup('config')">
       <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
@@ -3309,26 +3320,32 @@ let editingProduitId = null;
 // Les panneaux et leurs fonctions de rendu ne changent pas : go('contacts') marche
 // exactement comme avant. Seule la couche de navigation regroupe les 11 panneaux.
 const NAV_GROUPS = [
-  { id: 'today', label: "Aujourd'hui", tabs: [
-      { panel: 'dashboard', label: 'Ma journée' },
-      { panel: 'tracking',  label: 'Suivi & relances' },
-      { panel: 'hot',       label: 'Prospects chauds' } ] },
+  { id: 'today', label: "Accueil", tabs: [
+      { panel: 'home',      label: 'Ma journée' },
+      { panel: 'tasks',     label: 'À faire', badge: 'subnav-tasks-badge' },
+      { panel: 'stats',     label: 'Statistiques' },
+      { panel: 'dashboard', label: 'Ancien tableau de bord', hidden: true, alias: 'home' },
+      { panel: 'tracking',  label: 'Relances', hidden: true, alias: 'tasks' } ] },
   { id: 'prospects', label: 'Prospects', tabs: [
-      { panel: 'contacts',  label: 'Contacts' },
-      { panel: 'end-users', label: 'Comptes' },
+      { panel: 'accounts',  label: 'Comptes' },
+      { panel: 'people',    label: 'Contacts' },
+      { panel: 'end-users', label: 'Comptes', hidden: true, alias: 'accounts' },
+      { panel: 'contacts',  label: 'Contacts', hidden: true, alias: 'people' } ] },
+  { id: 'signaux', label: 'Signaux', tabs: [
+      { panel: 'hot',       label: 'Prospects chauds' },
       { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' },
-      { panel: 'chat',      label: 'Chat', badge: 'subnav-chat-badge' } ] },
-  { id: 'marche', label: 'Marché', tabs: [
-      { panel: 'societes',    label: 'Fabricants' },
-      { panel: 'produits-db', label: 'Produits' },
-      { panel: 'contracts',   label: 'Contrats & appels d\'offres' },
-      { panel: 'resellers',   label: 'Distributeurs' } ] },
+      { panel: 'chat',      label: 'Chat', badge: 'subnav-chat-badge' },
+      { panel: 'contracts', label: 'Appels d\'offres & contrats' },
+      { panel: 'resellers', label: 'Distributeurs' },
+      // Référentiel peu utilisé : plus dans le menu, toujours joignable par la recherche.
+      { panel: 'societes',    label: 'Fabricants', hidden: true },
+      { panel: 'produits-db', label: 'Produits', hidden: true } ] },
   { id: 'config', label: 'Paramètres', tabs: [
       { panel: 'config', label: 'Paramètres' } ] }
 ];
 const _navGroupOf = {};
 NAV_GROUPS.forEach(function (g) { g.tabs.forEach(function (t) { _navGroupOf[t.panel] = g; }); });
-let _navLast = { today: 'dashboard', prospects: 'contacts', marche: 'societes', config: 'config' };
+let _navLast = { today: 'home', prospects: 'accounts', signaux: 'hot', marche: 'societes', config: 'config' };
 try { const _st = JSON.parse(localStorage.getItem('scout_nav_last') || '{}'); Object.keys(_st).forEach(function (k) { if (_navLast[k] !== undefined && _navGroupOf[_st[k]]) _navLast[k] = _st[k]; }); } catch (e) {}
 
 // Clic sur une entrée du menu : revient sur le dernier onglet visité de ce groupe.
@@ -3346,8 +3363,9 @@ function renderSubnav(activePanel) {
   el.classList.add('on'); document.body.classList.add('has-subnav');
   el.innerHTML = '<h1 class="subnav-title">' + esc(g.label) + '</h1>'
     + (g.tabs.length > 1 ? '<div class="subnav-tabs" role="tablist" aria-label="' + esc(g.label) + '">'
-      + g.tabs.map(function (t) {
-        const on = t.panel === activePanel;
+      + g.tabs.filter(function (t) { return !t.hidden; }).map(function (t) {
+        const _act = g.tabs.find(function (x) { return x.panel === activePanel; });
+        const on = t.panel === activePanel || !!(_act && _act.alias === t.panel);
         return '<button type="button" role="tab" aria-selected="' + on + '" tabindex="' + (on ? '0' : '-1') + '"'
           + ' class="subnav-tab' + (on ? ' active' : '') + '" data-panel="' + t.panel + '" onclick="go(\'' + t.panel + '\')">'
           + esc(t.label) + (t.badge ? '<span id="' + t.badge + '" class="subnav-badge" style="display:none;">0</span>' : '') + '</button>';
@@ -3361,6 +3379,14 @@ function renderSubnav(activePanel) {
 window.renderSubnav = renderSubnav;
 
 function go(id, opts) {
+  // CRM étape 1 : l'onglet Comptes est remplacé par la vue CRM (assets/crm.js).
+  // L'ancien panneau reste joignable pour la fiche marché (opts.legacy).
+  // L'ancien tableau de bord est remplacé par Ma journée et Statistiques.
+  if (id === 'dashboard' && !(opts && opts.legacy) && document.getElementById('panel-home') && window.scoutCrm) { id = 'home'; }
+  // Anciens liens « onglet Contacts » de l'ancien panneau Comptes : vers la nouvelle liste Contacts.
+  if (id === 'end-users' && opts && opts.tab === 'contacts' && !opts.legacy && document.getElementById('panel-people') && window.scoutCrm) { id = 'people'; }
+  if (id === 'end-users' && !(opts && opts.legacy) && document.getElementById('panel-accounts') && window.scoutCrm) { id = 'accounts'; }
+  if (id === 'contacts' && !(opts && (opts.contactFilter || opts.legacy)) && document.getElementById('panel-people') && window.scoutCrm) { id = 'people'; }
   // Garde-fou : si le panel demande n'existe pas, ne rien casser (evite l'ecran noir
   // pour tout id inconnu). On verifie AVANT de desactiver les panels courants.
   const panelEl = document.getElementById('panel-' + id);
@@ -3471,6 +3497,7 @@ function go(id, opts) {
     });
     loadContacts(forceReload);
   }
+  if (window.scoutCrm && (id === 'accounts' || id === 'tasks' || id === 'home' || id === 'people' || id === 'stats')) window.scoutCrm.onPanel(id, opts);
   // Persister l'onglet dans le hash
   try { if (typeof _setCurrentView === 'function') _setCurrentView({ kind:'panel', id: id, tab: opts && opts.tab }); } catch(e){}
   // Historique : une entrée par changement d'onglet, pour que le bouton Retour du navigateur marche.
@@ -6315,7 +6342,7 @@ if ('serviceWorker' in navigator) {
   const hash = window.location.hash.slice(1); // ex: "end-users/contacts"
   if (!hash) return;
   const [panel, tab] = hash.split('/');
-  const validPanels = ['dashboard','societes','produits-db','contracts','end-users','config','hot','contacts','tracking','visitors','resellers','chat'];
+  const validPanels = ['dashboard','home','societes','produits-db','contracts','end-users','accounts','people','tasks','config','hot','contacts','tracking','visitors','resellers','chat'];
   if (!validPanels.includes(panel)) return;
   // Attendre que le DOM soit prêt
   if (document.readyState === 'loading') {
@@ -6596,6 +6623,8 @@ function renderContactsGrid(list) {
 function openContactFromGrid(id) {
   const ct = allContacts.find(c => c.id === id);
   if (!ct) return;
+  // Nouvelle interface : on ouvre directement la fiche du contact.
+  if (window.scoutCrm && window.scoutCrm.openContact && document.getElementById('panel-people')) { window.scoutCrm.openContact(ct.id); return; }
   if (ct.end_user_id) {
     // Ouvrir directement la fiche du compte via end_user_id (openEndUser s'auto-charge
     // si la liste des buyers n'est pas encore prête — sinon on retombait sur la liste).
@@ -7047,7 +7076,7 @@ function saveSettings() {
     excludedPays: prev.excludedPays || [],
     secteurs:    [...document.querySelectorAll('#cfg-secteurs input[type=checkbox]')]
                    .filter(el => el.checked).map(el => el.dataset.secteur),
-    defaultTab:  document.getElementById('cfg-default-tab')?.value || 'dashboard',
+    defaultTab:  document.getElementById('cfg-default-tab')?.value || 'home',
     defaultSubtab: document.querySelector('input[name="cfg-default-subtab"]:checked')?.value || 'comptes',
     density:     document.querySelector('input[name="cfg-density"]:checked')?.value || 'normal',
     theme:       document.querySelector('input[name="cfg-theme"]:checked')?.value || 'dark',
@@ -7085,7 +7114,7 @@ function applySettings() {
   });
   // Onglet par défaut
   const tabEl = document.getElementById('cfg-default-tab');
-  if (tabEl && s.defaultTab) tabEl.value = s.defaultTab;
+  if (tabEl && s.defaultTab) tabEl.value = (s.defaultTab === 'dashboard' ? 'home' : (s.defaultTab === 'end-users' ? 'accounts' : s.defaultTab));
   // Sous-onglet
   const sub = document.querySelector(`input[name="cfg-default-subtab"][value="${s.defaultSubtab || 'comptes'}"]`);
   if (sub) sub.checked = true;
@@ -7421,8 +7450,12 @@ function renderFiltersSummary() {
 document.addEventListener('DOMContentLoaded', () => {
   const s = loadSettings();
   // Appliquer l'onglet par défaut si pas de hash
-  if (!window.location.hash && s.defaultTab) {
-    go(s.defaultTab, { tab: s.defaultSubtab || 'comptes', silent: true });
+  // Onglet d'arrivée : « Ma journée » par défaut (l'ancien « Accueil » = dashboard y est redirigé)
+  if (!window.location.hash) {
+    var _dt = s.defaultTab;
+    if (!_dt || _dt === 'dashboard') _dt = document.getElementById('panel-home') ? 'home' : 'dashboard';
+    if (_dt === 'end-users' && document.getElementById('panel-accounts')) _dt = 'accounts';
+    go(_dt, { silent: true });
   }
   // Appliquer settings UI quand on arrive sur config
   document.getElementById('nav-config')?.addEventListener('click', () => {
@@ -11682,6 +11715,31 @@ function navBack(){
   } catch(e){ done(); }
   _updateBackBtn();
 }
+</script>
+<script src="assets/crm.js?v=178"></script>
+<script>
+// Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.
+// Les écrans de connexion et de mot de passe ne sont jamais concernés.
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape' || e.defaultPrevented) return;
+  var W = window.innerWidth, H = window.innerHeight, best = null, bestZ = -1;
+  document.querySelectorAll('body *').forEach(function (el) {
+    if (el.id && /auth|login|pw-modal/i.test(el.id)) return;
+    var cs = getComputedStyle(el);
+    if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return;
+    if (el.offsetWidth < W * 0.9 || el.offsetHeight < H * 0.9) return;
+    if (el.closest('[id*="auth"], [id*="login"]')) return;
+    var z = parseInt(cs.zIndex, 10) || 0; if (z >= bestZ) { bestZ = z; best = el; }
+  });
+  if (!best) return;
+  var btns = best.querySelectorAll('button, [role="button"], .close, [data-close]');
+  for (var i = 0; i < btns.length; i++) {
+    var b = btns[i], txt = (b.textContent || '').trim(), lab = (b.getAttribute('aria-label') || b.title || '');
+    if (b.hasAttribute('data-close') || b.classList.contains('close') || /^(✕|×|✖|x|Fermer|Annuler)$/i.test(txt) || /fermer|close/i.test(lab)) {
+      e.preventDefault(); b.click(); return;
+    }
+  }
+});
 </script>
 </body>
 </html>
