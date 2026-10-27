@@ -240,6 +240,7 @@
     p.querySelectorAll('[data-hs]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-hs') === S.homeScope); });
     var body = document.getElementById('crm-home-body');
     var team = S.homeScope === 'team';
+    var ht = document.getElementById('crm-home-title'); if (ht && S.facets && S.facets.me && S.facets.me.name) ht.textContent = 'Bonjour ' + S.facets.me.name;
     Promise.all([
       api('/crm/home?owner=' + (team ? 'team' : 'me')),
       loadQueue(S.homeScope),
