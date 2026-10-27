@@ -445,7 +445,8 @@
       + sel('secteur', 'Secteur', F.secteurs.map(function (x) { return opt(x.v, x.v + ' (' + x.n + ')', f.secteur); }).join(''))
       + sel('activity', 'Activité', opt('30', 'Moins de 30 j', f.activity) + opt('90', 'Moins de 90 j', f.activity) + opt('stale30', 'Rien depuis 30 j', f.activity) + opt('stale90', 'Rien depuis 90 j', f.activity) + opt('never', 'Jamais contacté', f.activity))
       + sel('tasks', 'Tâches', opt('open', 'Tâche ouverte', f.tasks) + opt('overdue', 'Tâche en retard', f.tasks) + opt('none', 'Aucune tâche', f.tasks))
-      + sel('web', 'Site web', opt('yes', 'A visité le site (90 j)', f.web));
+      + sel('web', 'Site web', opt('yes', 'A visité le site (90 j)', f.web))
+      + sel('market', 'Marchés', opt('yes', 'Appel d’offres ou contrat', f.market) + opt('recent', 'Marché de moins d’un an', f.market));
     el.classList.toggle('open', !!S.filtersOpen);
     document.getElementById('crm-filters-btn').onclick = function () { S.filtersOpen = !S.filtersOpen; el.classList.toggle('open', S.filtersOpen); this.setAttribute('aria-expanded', S.filtersOpen); };
     var t;
@@ -800,6 +801,13 @@
       + (openTasks.length ? openTasks.map(taskHtml).join('') : '<div class="crm-meta">Aucune tâche ouverte.</div>')
       + (doneTasks.length ? '<details style="margin-top:8px"><summary class="crm-meta" style="cursor:pointer">' + doneTasks.length + ' terminée' + (doneTasks.length > 1 ? 's' : '') + '</summary>' + doneTasks.map(taskHtml).join('') + '</details>' : '')
       + '</div>'
+      + (A.market && A.market.length ? '<div class="crm-card"><h3>Appels d’offres & contrats <span class="crm-meta">' + A.market.length + '</span></h3>' + A.market.map(function (m) {
+        var val = m.value_max ? (m.value_max >= 1e9 ? (m.value_max / 1e9).toFixed(1).replace('.', ',') + ' Md' : Math.round(m.value_max / 1e6) + ' M') : '';
+        var label = esc(m.title || 'Sans titre');
+        return '<div class="crm-webrow" style="align-items:flex-start;gap:8px"><span><span class="crm-q-kind k-' + (m.kind === 'tender' ? 'relance' : 'task') + '">' + (m.kind === 'tender' ? 'Appel d’offres' : 'Contrat') + '</span> '
+          + (m.url ? '<a class="crm-link" href="' + esc(m.url) + '" target="_blank" rel="noopener">' + label + '</a>' : label)
+          + '<br><span class="crm-meta">' + esc([m.buyer, val].filter(Boolean).join(' · ')) + '</span></span><span class="crm-meta" style="white-space:nowrap">' + esc(m.date ? fmtDate(m.date) : '') + '</span></div>';
+      }).join('') + '<div class="crm-meta" style="margin-top:6px">Rattachés par le nom de l’acheteur. Un marché de moins d’un an ajoute 10 points d’engagement (20 max).</div></div>' : '')
       + (A.web && A.web.length ? '<div class="crm-card"><h3>Pages vues <span class="crm-meta">elistair.com</span></h3>' + A.web.map(function (w) {
         return '<div class="crm-webrow"><span>' + esc(w.title && w.title !== 'Elistair' ? w.title : w.path) + '</span><span class="crm-meta">' + esc(relTime(w.ts)) + '</span></div>';
       }).join('') + '</div>' : '')
