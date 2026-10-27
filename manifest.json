@@ -1,12 +1,12 @@
 {
-  "name": "Defence Drone Deals",
-  "short_name": "D3",
-  "description": "Defence drone contracts, tenders & manufacturers intelligence",
+  "name": "Scout",
+  "short_name": "Scout",
+  "description": "Scout · Elistair : comptes, contacts et signaux de prospection",
   "start_url": "/scout/?utm_source=pwa",
   "scope": "/scout/",
   "display": "standalone",
-  "background_color": "#0d0d0f",
-  "theme_color": "#534AB7",
+  "background_color": "#1A2A28",
+  "theme_color": "#1A2A28",
   "orientation": "portrait-primary",
   "lang": "fr",
   "categories": [
@@ -47,9 +47,9 @@
   ],
   "shortcuts": [
     {
-      "name": "Fabricants",
-      "short_name": "Fabricants",
-      "url": "/scout/?panel=societes",
+      "name": "Ma journée",
+      "short_name": "Ma journée",
+      "url": "/scout/#home",
       "icons": [
         {
           "src": "icon-192.png",
@@ -58,9 +58,9 @@
       ]
     },
     {
-      "name": "Drones",
-      "short_name": "Drones",
-      "url": "/scout/?panel=produits-db",
+      "name": "Comptes",
+      "short_name": "Comptes",
+      "url": "/scout/#accounts",
       "icons": [
         {
           "src": "icon-192.png",
@@ -69,9 +69,9 @@
       ]
     },
     {
-      "name": "Contrats",
-      "short_name": "Contrats",
-      "url": "/scout/?panel=contracts",
+      "name": "Signaux",
+      "short_name": "Signaux",
+      "url": "/scout/#signals",
       "icons": [
         {
           "src": "icon-192.png",
@@ -86,7 +86,7 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Dashboard Scout Drone"
+      "label": "Scout"
     }
   ]
 }

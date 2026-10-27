@@ -420,7 +420,7 @@
       var lab = new Date(w.week + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
       return '<g><title>Semaine du ' + esc(lab) + ' : ' + w.emails + ' emails, ' + w.positive + ' réponses positives, ' + w.transmitted + ' transmis</title>'
         + '<rect x="' + (x + bw * 0.18) + '%" y="' + (165 - h) + '" width="' + (bw * 0.64) + '%" height="' + Math.max(h, 1) + '" rx="3" fill="var(--accent)" opacity=".75"></rect>'
-        + (w.positive ? '<text x="' + (x + bw / 2) + '%" y="' + (158 - h) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#16a34a">+' + w.positive + '</text>' : '')
+        + (w.positive ? '<text x="' + (x + bw / 2) + '%" y="' + (158 - h) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#6A8B74">+' + w.positive + '</text>' : '')
         + '<text x="' + (x + bw / 2) + '%" y="183" text-anchor="middle" font-size="10" fill="var(--text3)">' + esc(lab) + '</text></g>';
     }).join('');
     html += '<div class="crm-home-cols"><div class="crm-home-main">'

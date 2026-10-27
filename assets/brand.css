@@ -1,0 +1,94 @@
+/* Scout · charte Elistair (V8, 2026)
+   Vert sapin dominant, brun en accent, lin pour le texte sur fond sombre.
+   Titres Zalando Sans Expanded en capitales, texte Sora. Angles quasi droits. */
+
+body { font-family: 'Sora', Arial, sans-serif; font-weight: 400; letter-spacing: 0; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font-family: inherit; }
+::selection { background: rgba(133, 89, 62, .55); color: #fff; }
+
+/* ── Logo texte (pas de signe redessiné) ── */
+.logo { flex-direction: column; align-items: flex-start; gap: 2px; padding: .6rem .5rem 1.1rem; }
+.logo-icon { display: none; }
+.logo::before { content: 'ELISTAIR'; font-family: var(--font-title); font-size: 9px; font-weight: 600; letter-spacing: .22em; color: var(--accent2); }
+.logo-text { font-family: var(--font-title); font-size: 20px; font-weight: 800; letter-spacing: .04em; color: var(--text); line-height: 1; }
+.logo-text span { color: var(--accent); }
+
+/* ── Titres ── */
+.subnav-title, .topbar h1, .crm-h2, .scout-auth-card h1,
+.panel > h1, .panel h1[style*="margin:0"] {
+  font-family: var(--font-title); text-transform: uppercase; font-weight: 800; letter-spacing: .03em;
+}
+.subnav-title { font-size: 17px; }
+.crm-h2 { font-size: 22px; line-height: 1.15; }
+.crm-h2::after, .subnav-title::after { content: '.'; color: var(--accent); }
+.crm-card h3, .crm-pop-box h3 {
+  font-family: var(--font-title); text-transform: uppercase; font-weight: 700; font-size: 11.5px; letter-spacing: .09em;
+}
+.crm-head h2, .crm-rec-id h2 { font-family: var(--font-title); font-weight: 700; letter-spacing: .01em; }
+
+/* ── Navigation ── */
+.sidebar { background: #142220; border-right-color: var(--border); }
+.nav-item { border-radius: 2px; letter-spacing: .01em; }
+.nav-item.active { background: rgba(133, 89, 62, .16); color: var(--text); box-shadow: inset 2px 0 0 var(--accent); }
+.nav-item.active svg { color: var(--accent2); }
+.subnav-tab { border-radius: 2px; }
+.subnav-tab.active { background: transparent; border-color: transparent; color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+#subnav.on { border-bottom-color: var(--border); }
+
+/* ── Boutons : brun, capitales, angles quasi droits ── */
+.btn, .crm-btn, .crm-chip, .crm-sel, .crm-search, .crm-input, .crm-ta { border-radius: 2px; }
+.btn-primary, .crm-btn.primary, .crm-hero-card.main, .scout-auth-card button[type="submit"], #scout-auth-submit {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+.crm-btn.primary, #scout-auth-submit, .scout-auth-card button[type="submit"] {
+  text-transform: uppercase; letter-spacing: .06em; font-size: 12px; font-weight: 600;
+}
+.crm-btn.primary:hover, #scout-auth-submit:hover { background: #5E3F2C; border-color: #5E3F2C; }
+.crm-chip.on, .crm-chip.active { background: rgba(133, 89, 62, .22); border-color: var(--accent); color: var(--text); }
+.crm-hero-card.main .ic { background: rgba(255, 255, 255, .14); border-radius: 2px; }
+
+/* ── Cartes : filet lin léger, pas d'ombre forte ── */
+.crm-card, .crm-week div, .crm-hero-card, .crm-kpi, .crm-stat { border-radius: 2px; }
+.crm-card { border-color: var(--border); box-shadow: none; }
+.crm-pill, .crm-heat, .crm-prio, .crm-role, .crm-out, .crm-q-kind, .crm-tier { border-radius: 2px; }
+.crm-q-kind { letter-spacing: .1em; }
+.crm-toast { border-radius: 2px; background: var(--text); color: #1A2A28; }
+
+/* ── Écran de connexion ── */
+#scout-auth-gate { background: #1A2A28 !important; }
+#scout-auth-gate::before { content: ''; position: fixed; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(115deg, transparent 0 140px, rgba(133, 89, 62, .07) 140px 141px); }
+.scout-auth-card { position: relative; border-radius: 2px !important; background: #F2F0E6 !important; box-shadow: none !important; border-top: 3px solid var(--accent); }
+.scout-auth-card h1 { color: #1A2A28 !important; font-size: 26px !important; }
+.scout-auth-card h1::after { content: '.'; color: var(--accent); }
+.scout-auth-card .scout-auth-subtitle { font-family: var(--font-title); text-transform: uppercase; letter-spacing: .18em; font-size: 10px; color: var(--accent) !important; }
+.scout-auth-card input { border-radius: 2px !important; border-color: #CBC7B5 !important; background: #fff !important; color: #1A2A28 !important; }
+.scout-auth-card input:focus { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(133, 89, 62, .18) !important; }
+.scout-auth-card button { border-radius: 2px !important; }
+.scout-auth-card #scout-auth-forgot, .scout-auth-card button[style*="text-decoration:underline"] { color: var(--accent) !important; }
+
+/* ── Bascule FR / EN ── */
+.lang-toggle { border-color: var(--border2); border-radius: 2px; }
+.lang-toggle button, .scout-auth-card .lang-toggle button {
+  background: transparent !important; color: var(--text2) !important; border: 0 !important; border-radius: 0 !important;
+  font: 600 10.5px/1 var(--font-title) !important; letter-spacing: .12em; padding: 6px 10px !important; width: auto !important; margin: 0 !important; box-shadow: none !important;
+}
+.lang-toggle button.on, .scout-auth-card .lang-toggle button.on { background: var(--accent) !important; color: #fff !important; }
+.scout-auth-card .lang-toggle { border-color: #CBC7B5; }
+.scout-auth-card .lang-toggle button { color: #5E7069 !important; }
+.scout-auth-card .lang-toggle button.on { color: #fff !important; }
+
+/* ── Bouton flottant « Prochaine action » et bulle ── */
+#scout-action-btn, .scout-action-fab { border-radius: 2px !important; background: var(--accent) !important; text-transform: uppercase; letter-spacing: .06em; font-size: 12.5px !important; box-shadow: 0 6px 20px rgba(0, 0, 0, .35) !important; }
+
+/* ── Thème clair ── */
+body.theme-light .sidebar { background: #EAE7DA; }
+body.theme-light .nav-item.active { background: rgba(133, 89, 62, .12); color: #1A2A28; }
+body.theme-light .crm-toast { background: #1A2A28; color: #E5E2D2; }
+#scout-chat-btn { background: #1A2A28 !important; border: 1px solid var(--accent) !important; color: #E5E2D2 !important; border-radius: 2px !important; box-shadow: 0 6px 20px rgba(0, 0, 0, .35) !important; }
+#scout-gs-fab { border-radius: 2px !important; background: var(--accent) !important; color: #fff !important; box-shadow: none !important; outline: none !important; }
+#scout-gs-fab kbd { border-radius: 2px; background: rgba(255, 255, 255, .16); color: #fff; border: 0; }
+.crm-card h3 .crm-meta, .crm-card h3 .crm-link, .crm-card h3 .crm-tl-filters, .crm-card h3 small {
+  font-family: 'Sora', Arial, sans-serif; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 12px;
+}
+.crm-card h3 .crm-link { font-weight: 600; }
