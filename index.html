@@ -754,7 +754,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<link rel="stylesheet" href="assets/crm.css?v=175">
+<link rel="stylesheet" href="assets/crm.css?v=176">
 </head>
 <body>
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -11950,6 +11950,30 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=175"></script>
+<script src="assets/crm.js?v=176"></script>
+<script>
+// Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.
+// Les écrans de connexion et de mot de passe ne sont jamais concernés.
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape' || e.defaultPrevented) return;
+  var W = window.innerWidth, H = window.innerHeight, best = null, bestZ = -1;
+  document.querySelectorAll('body *').forEach(function (el) {
+    if (el.id && /auth|login|pw-modal/i.test(el.id)) return;
+    var cs = getComputedStyle(el);
+    if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return;
+    if (el.offsetWidth < W * 0.9 || el.offsetHeight < H * 0.9) return;
+    if (el.closest('[id*="auth"], [id*="login"]')) return;
+    var z = parseInt(cs.zIndex, 10) || 0; if (z >= bestZ) { bestZ = z; best = el; }
+  });
+  if (!best) return;
+  var btns = best.querySelectorAll('button, [role="button"], .close, [data-close]');
+  for (var i = 0; i < btns.length; i++) {
+    var b = btns[i], txt = (b.textContent || '').trim(), lab = (b.getAttribute('aria-label') || b.title || '');
+    if (b.hasAttribute('data-close') || b.classList.contains('close') || /^(✕|×|✖|x|Fermer|Annuler)$/i.test(txt) || /fermer|close/i.test(lab)) {
+      e.preventDefault(); b.click(); return;
+    }
+  }
+});
+</script>
 </body>
 </html>

@@ -477,9 +477,9 @@
   }
 
   var fetchSeq = 0;
-  function fetchAccounts(more) {
+  function fetchAccounts(more, keepSel) {
     var seq = ++fetchSeq;
-    if (!more) { S.rows = []; S.selected = {}; renderBulk(); }
+    if (!more) { S.rows = []; if (!keepSel) S.selected = {}; renderBulk(); }
     var tb = document.querySelector('#crm-table tbody');
     if (!more && tb) tb.innerHTML = '<tr><td colspan="10" class="crm-empty">Chargement…</td></tr>';
     return api('/crm/accounts?' + queryString(more ? S.rows.length : 0)).then(function (d) {
@@ -569,7 +569,7 @@
       + '<button class="crm-btn ghost" type="button" id="crm-bulk-clear" style="margin-left:auto">Désélectionner</button></div>';
     var run = function (body, label) {
       api('/crm/accounts/bulk', { method: 'POST', body: Object.assign({ ids: ids }, body) }).then(function (d) {
-        toast(label + ' : ' + d.updated + ' compte' + (d.updated > 1 ? 's' : '')); fetchAccounts();
+        toast(label + ' : ' + d.updated + ' compte' + (d.updated > 1 ? 's' : '')); fetchAccounts(false, true);
       }).catch(function (e) { toast('Erreur : ' + e.message); });
     };
     document.getElementById('crm-bulk-owner').onchange = function (e) { var v = e.target.value; if (v) run({ owner_user_id: v === '__none' ? null : v }, 'Propriétaire mis à jour'); };
