@@ -1370,7 +1370,7 @@
     try { trkMarkRelanceSent = window.trkMarkRelanceSent; } catch (e) {}
   }
 
-  window.scoutCrm = { onPanel: onPanel, openAccount: openAccount, openContact: openContact, refreshBadge: refreshBadge };
+  window.scoutCrm = { onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge };
   setTimeout(refreshBadge, 2500);
   setInterval(refreshBadge, 5 * 60 * 1000);
 })();
