@@ -368,3 +368,46 @@ body.theme-light .crm-q-kind.k-reply, body.theme-light .crm-q-ic.k-reply { color
 }
 
 @media (max-width: 900px) { .crm-bulk { left: 12px; right: 12px; bottom: 84px; } }
+
+/* Lot 4 : priorité, hiérarchie, arbre, signaux, qualité */
+.crm-prio { display: inline-flex; min-width: 30px; justify-content: center; font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums; padding: 2px 8px; border-radius: 999px; background: var(--bg3); color: var(--text2); }
+.crm-prio.mid { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.crm-prio.hi { color: #fff; background: var(--accent); }
+.crm-prio-parts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.crm-prio-parts > div { display: grid; grid-template-columns: 90px 1fr 44px; align-items: center; gap: 8px; font-size: 13px; }
+.crm-prio-parts b { text-align: right; font-variant-numeric: tabular-nums; }
+.crm-prio-bar { height: 6px; border-radius: 3px; background: var(--bg3); overflow: hidden; }
+.crm-prio-bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.crm-crumbs { font-size: 12.5px; color: var(--text3); margin-bottom: 2px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.crm-pick { position: relative; }
+.crm-pick .crm-input { width: 100%; box-sizing: border-box; }
+.crm-pick-list { position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.25); max-height: 280px; overflow: auto; }
+.crm-pick-list button { display: block; width: 100%; text-align: left; font: inherit; font-size: 13px; color: var(--text); background: none; border: 0; padding: 8px 10px; border-radius: 6px; cursor: pointer; min-height: 36px; }
+.crm-pick-list button:hover, .crm-pick-list button:focus { background: var(--bg3); outline: none; }
+.crm-input { font: inherit; font-size: 13px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.crm-btn.sm { padding: 5px 10px; font-size: 12.5px; }
+.crm-seg { display: inline-flex; gap: 4px; margin-right: 6px; }
+.crm-tree summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; padding: 3px 0; }
+.crm-tree summary::-webkit-details-marker { display: none; }
+.crm-tree summary::before { content: '▸'; color: var(--text3); font-size: 11px; width: 12px; }
+.crm-tree details[open] > summary::before { content: '▾'; }
+.crm-tree-country > summary { font-size: 14px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.crm-tree-kids { padding-left: 18px; border-left: 1px dashed var(--border); margin-left: 5px; }
+.crm-tree-leaf { padding: 2px 0 2px 18px; }
+.crm-tree-acc { font: inherit; font-size: 13px; color: var(--text); background: none; border: 0; padding: 4px 6px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.crm-tree-acc:hover { background: var(--bg3); }
+.crm-sig { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; align-items: start; }
+.crm-sig-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.crm-sig-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.crm-sig-pick { grid-column: 1 / -1; }
+.crm-sig-accs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.crm-sig-acc { display: inline-flex; align-items: center; gap: 2px; background: var(--bg3); border-radius: 999px; padding: 2px 4px 2px 10px; font-size: 12.5px; }
+.crm-x { font: inherit; background: none; border: 0; color: var(--text3); cursor: pointer; width: 24px; height: 24px; border-radius: 50%; }
+.crm-x:hover { background: var(--bg2); color: var(--text); }
+.crm-dups { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.crm-dup { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 720px) { .crm-sig { grid-template-columns: 1fr; } .crm-sig-actions { justify-content: flex-start; } }
+.crm-sig-main .crm-q-kind { align-self: flex-start; }
+.crm-sig-actions .crm-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; white-space: nowrap; }
+.crm-sig-actions .crm-btn svg { width: 14px; height: 14px; flex: none; }
+.crm-parent .crm-btn.sm { height: 28px; }

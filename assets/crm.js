@@ -58,6 +58,35 @@
       });
     });
   }
+  // Liste déroulante de comptes avec recherche (rattachement, signaux)
+  function acctPicker(host, opts) {
+    opts = opts || {};
+    host.innerHTML = '<div class="crm-pick"><input type="search" class="crm-input" placeholder="' + esc(opts.placeholder || 'Rechercher un compte…') + '" aria-label="' + esc(opts.placeholder || 'Rechercher un compte') + '" autocomplete="off"><ul class="crm-pick-list" role="listbox" hidden></ul></div>';
+    var inp = host.querySelector('input'), ul = host.querySelector('ul'), timer = null, items = [], seq = 0;
+    function draw() {
+      ul.hidden = !items.length;
+      ul.innerHTML = items.map(function (a, i) {
+        return '<li role="option"><button type="button" data-i="' + i + '"><b>' + esc(a.nom) + '</b><span class="crm-meta"> ' + esc([a.pays, a.parent_nom ? '› ' + a.parent_nom : ''].filter(Boolean).join(' ')) + '</span></button></li>';
+      }).join('');
+      ul.querySelectorAll('[data-i]').forEach(function (b) { b.onclick = function () { pick(items[+b.getAttribute('data-i')]); }; });
+    }
+    function pick(a) { if (!a) return; items = []; draw(); inp.value = a.nom; if (opts.onPick) opts.onPick(a); }
+    inp.oninput = function () {
+      clearTimeout(timer); var q = inp.value.trim();
+      if (q.length < 2) { items = []; draw(); return; }
+      timer = setTimeout(function () {
+        var my = ++seq;
+        api('/crm/accounts?limit=8&sort=nom&dir=asc&q=' + encodeURIComponent(q)).then(function (d) {
+          if (my !== seq) return;
+          items = (d.accounts || []).filter(function (a) { return (opts.exclude || []).indexOf(a.id) < 0; }); draw();
+        }).catch(function () {});
+      }, 220);
+    };
+    inp.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); pick(items[0]); } if (e.key === 'Escape') { items = []; draw(); e.stopPropagation(); } };
+    if (opts.focus) setTimeout(function () { inp.focus(); }, 30);
+    return inp;
+  }
+  function prioBadge(v) { var n = v || 0; return '<span class="crm-prio' + (n >= 60 ? ' hi' : n >= 35 ? ' mid' : '') + '" title="Priorité : adéquation + intention + relation">' + n + '</span>'; }
   function toast(msg) {
     var t = document.createElement('div'); t.className = 'crm-toast'; t.textContent = msg; t.setAttribute('role', 'status');
     document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2400);
@@ -117,7 +146,8 @@
   var S = {
     facets: null,
     filters: lsGet('scout_crm_filters', {}),
-    sort: lsGet('scout_crm_sort', { sort: 'score', dir: 'desc' }),
+    sort: lsGet('scout_crm_sort', { sort: 'priority', dir: 'desc' }),
+    treeView: !!lsGet('scout_crm_tree', 0),
     view: lsGet('scout_crm_view', 'all'),
     rows: [], total: 0, selected: {},
     savedViews: [], savedLoaded: false,
@@ -238,6 +268,112 @@
   }
 
   // ═════════════════════════════════════════════════════════════════════════
+  // SIGNAUX À TRAITER : appels d'offres et contrats, en un clic
+  // ═════════════════════════════════════════════════════════════════════════
+  function onSignalsPanel() {
+    var p = document.getElementById('panel-signals'); if (!p) return;
+    S.sigState = S.sigState || 'new';
+    p.innerHTML = '<div class="crm-wrap"><div class="crm-row crm-home-head"><div><h2 class="crm-h2">Signaux à traiter</h2><div class="crm-meta">Appels d’offres et contrats repérés par la veille. Rattachez-les à un compte, créez une tâche ou ignorez-les.</div></div>'
+      + '<div class="crm-views" style="margin:0" id="crm-sig-states"></div></div><div id="crm-sig-body"><div class="crm-empty">Chargement…</div></div></div>';
+    loadSignals();
+  }
+  function loadSignals() {
+    api('/crm/signals?state=' + S.sigState).then(function (d) {
+      var c = d.counts || {};
+      var st = document.getElementById('crm-sig-states');
+      if (st) {
+        st.innerHTML = [['new', 'À traiter'], ['done', 'Traités'], ['ignored', 'Ignorés']].map(function (x) {
+          return '<button type="button" class="crm-chip' + (S.sigState === x[0] ? ' on' : '') + '" data-ss="' + x[0] + '">' + x[1] + ' <span class="crm-meta">' + (c[x[0]] || 0) + '</span></button>';
+        }).join('');
+        st.querySelectorAll('[data-ss]').forEach(function (b) { b.onclick = function () { S.sigState = b.getAttribute('data-ss'); loadSignals(); }; });
+      }
+      drawSignals(d.signals || []);
+      var badge = document.getElementById('subnav-signals-badge'); if (badge) { badge.textContent = c.new || ''; badge.style.display = c.new ? '' : 'none'; }
+    }).catch(function (e) { var b = document.getElementById('crm-sig-body'); if (b) b.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+  }
+  function drawSignals(list) {
+    var body = document.getElementById('crm-sig-body'); if (!body) return;
+    if (!list.length) { body.innerHTML = '<div class="crm-empty">' + (S.sigState === 'new' ? 'Rien à traiter : tous les signaux ont été vus.' : 'Aucun signal dans cette liste.') + '</div>'; return; }
+    body.innerHTML = list.map(function (g, i) {
+      var val = g.value_max ? (g.value_max >= 1e9 ? (g.value_max / 1e9).toFixed(1).replace('.', ',') + ' Md' : Math.round(g.value_max / 1e6) + ' M') : '';
+      var accs = (g.accounts || []).map(function (a) {
+        return '<span class="crm-sig-acc"><button type="button" class="crm-link" data-open="' + esc(a.id) + '">' + esc(a.nom) + '</button>'
+          + '<button type="button" class="crm-x" data-unlink="' + i + '" data-eu="' + esc(a.id) + '" aria-label="Retirer le rattachement à ' + esc(a.nom) + '">×</button></span>';
+      }).join('');
+      return '<div class="crm-card crm-sig" data-i="' + i + '">'
+        + '<div class="crm-sig-main"><span class="crm-q-kind k-' + (g.kind === 'tender' ? 'relance' : 'task') + '">' + (g.kind === 'tender' ? 'Appel d’offres' : 'Contrat') + '</span> '
+        + (g.url ? '<a class="crm-link" href="' + esc(g.url) + '" target="_blank" rel="noopener"><b>' + esc(g.title || 'Sans titre') + '</b></a>' : '<b>' + esc(g.title || 'Sans titre') + '</b>')
+        + '<div class="crm-meta">' + esc([g.buyer, g.pays, val, g.date ? fmtDate(g.date) : ''].filter(Boolean).join(' · ')) + (g.state !== 'new' && g.by_name ? ' · ' + (g.state === 'ignored' ? 'ignoré' : 'traité') + ' par ' + esc(g.by_name) : '') + '</div>'
+        + '<div class="crm-sig-accs">' + (accs || '<span class="crm-meta">Aucun compte rattaché</span>') + '</div></div>'
+        + '<div class="crm-sig-actions">'
+        + (g.state === 'ignored' ? '<button type="button" class="crm-btn sm" data-act="restore" data-i="' + i + '">Remettre à traiter</button>'
+          : '<button type="button" class="crm-btn sm" data-act="pick" data-i="' + i + '">Rattacher</button>'
+          + '<button type="button" class="crm-btn sm" data-act="task" data-i="' + i + '">' + ICON.check + ' Créer une tâche</button>'
+          + (g.state === 'new' ? '<button type="button" class="crm-btn ghost sm" data-act="ignore" data-i="' + i + '">Ignorer</button>' : ''))
+        + '</div><div class="crm-sig-pick" id="crm-sig-pick-' + i + '" hidden></div></div>';
+    }).join('');
+    var act = function (g, body) {
+      return api('/crm/signals/' + g.kind + '/' + encodeURIComponent(g.ref_id) + '/action', { method: 'POST', body: body })
+        .then(function (r) { S.treeData = null; return r; });
+    };
+    body.querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-open')); }; });
+    body.querySelectorAll('[data-unlink]').forEach(function (b) { b.onclick = function () {
+      var g = list[+b.getAttribute('data-unlink')];
+      act(g, { action: 'unlink', end_user_id: b.getAttribute('data-eu') }).then(function () { toast('Rattachement retiré'); loadSignals(); }).catch(function (e) { toast('Erreur : ' + e.message); });
+    }; });
+    body.querySelectorAll('[data-act]').forEach(function (b) { b.onclick = function () {
+      var i = +b.getAttribute('data-i'), g = list[i], a = b.getAttribute('data-act');
+      if (a === 'ignore' || a === 'restore') { act(g, { action: a }).then(function () { toast(a === 'ignore' ? 'Signal ignoré' : 'Signal remis à traiter'); loadSignals(); }).catch(function (e) { toast('Erreur : ' + e.message); }); return; }
+      var box = document.getElementById('crm-sig-pick-' + i); box.hidden = false;
+      if (a === 'pick') {
+        acctPicker(box, { placeholder: 'Rattacher à quel compte ?', focus: true, exclude: (g.accounts || []).map(function (x) { return x.id; }), onPick: function (x) {
+          act(g, { action: 'link', end_user_id: x.id }).then(function () { toast('Rattaché à ' + x.nom); loadSignals(); }).catch(function (e) { toast('Erreur : ' + e.message); });
+        } });
+      } else if (a === 'task') {
+        var first = (g.accounts || [])[0];
+        var doTask = function (eu) {
+          act(g, { action: 'task', end_user_id: eu || null, title: 'Suivre : ' + (g.title || 'signal') }).then(function () { toast('Tâche créée (échéance dans 7 jours)'); loadSignals(); refreshBadge(); }).catch(function (e) { toast('Erreur : ' + e.message); });
+        };
+        if (first) { doTask(first.id); return; }
+        box.innerHTML = '<div class="crm-meta" style="margin-bottom:4px">Sur quel compte créer la tâche ?</div><div class="crm-pick-host"></div><button type="button" class="crm-link" style="margin-top:6px">Créer sans compte</button>';
+        acctPicker(box.querySelector('.crm-pick-host'), { placeholder: 'Compte concerné', focus: true, onPick: function (x) { doTask(x.id); } });
+        box.querySelector('button.crm-link').onclick = function () { doTask(null); };
+      }
+    }; });
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // QUALITÉ DES DONNÉES (admins, sous Statistiques)
+  // ═════════════════════════════════════════════════════════════════════════
+  function loadHygiene() {
+    var box = document.getElementById('crm-hygiene'); if (!box) return;
+    api('/crm/hygiene').then(function (d) {
+      var r = d.report || {}, last = d.last_run;
+      var kpi = function (v, l) { return '<div class="crm-kpi" style="cursor:default"><b>' + esc(v) + '</b><span>' + esc(l) + '</span></div>'; };
+      box.innerHTML = '<h3>Qualité des données <span class="crm-meta">' + (last ? 'dernier nettoyage ' + esc(relTime(last.at)) : 'jamais nettoyée') + ' · automatique chaque semaine</span></h3>'
+        + '<div class="crm-kpis">' + kpi(r.duplicates_count || 0, 'doublons probables') + kpi(r.t12_no_owner || 0, 'Tier 1–2 sans propriétaire') + kpi(r.accounts_no_country || 0, 'comptes sans pays')
+        + kpi(r.accounts_no_sector || 0, 'comptes sans secteur') + kpi(r.orphan_contacts || 0, 'contacts sans compte') + kpi(r.tasks_late_30 || 0, 'tâches en retard de 30 j+') + '</div>'
+        + '<div class="crm-row" style="gap:8px;margin-bottom:10px"><button type="button" class="crm-btn" id="crm-hyg-run">Lancer le nettoyage maintenant</button><span class="crm-meta">Corrige seul l’écriture des secteurs (casse, accents) et les espaces dans les noms. Les doublons se fusionnent à la main ci-dessous.</span></div>'
+        + ((r.duplicates || []).length ? '<details><summary class="crm-link" style="cursor:pointer">Voir les doublons (' + r.duplicates.length + ')</summary><div class="crm-dups">' + r.duplicates.map(function (g, gi) {
+          return '<div class="crm-dup">' + g.map(function (a, ai) {
+            return '<div class="crm-row" style="gap:8px"><button type="button" class="crm-link" data-open="' + esc(a.id) + '">' + esc(a.nom) + '</button><span class="crm-meta">' + esc(a.pays || '') + ' · ' + esc(a.id) + '</span>'
+              + '<button type="button" class="crm-btn ghost sm" data-keep="' + gi + ':' + ai + '">Garder celui-ci</button></div>';
+          }).join('') + '</div>';
+        }).join('') + '</div></details>' : '');
+      box.querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-open')); }; });
+      var run = document.getElementById('crm-hyg-run');
+      run.onclick = function () { run.disabled = true; run.textContent = 'Nettoyage…'; api('/crm/hygiene/run', { method: 'POST' }).then(function (x) { toast('Nettoyage : ' + (x.fixed.secteurs || 0) + ' secteurs et ' + (x.fixed.noms || 0) + ' noms corrigés'); S.treeData = null; loadHygiene(); }).catch(function (e) { toast('Erreur : ' + e.message); run.disabled = false; }); };
+      box.querySelectorAll('[data-keep]').forEach(function (b) { b.onclick = function () {
+        var p = b.getAttribute('data-keep').split(':'), g = r.duplicates[+p[0]], keep = g[+p[1]];
+        var others = g.filter(function (x) { return x.id !== keep.id; });
+        if (!window.confirm('Fusionner ' + others.length + ' doublon' + (others.length > 1 ? 's' : '') + ' dans « ' + keep.nom + ' » ? Contacts, tâches, notes et marchés seront déplacés. Le doublon est masqué, rien n’est supprimé.')) return;
+        others.reduce(function (pr, o) { return pr.then(function () { return api('/crm/accounts/' + encodeURIComponent(o.id) + '/merge', { method: 'POST', body: { into: keep.id } }); }); }, Promise.resolve())
+          .then(function () { toast('Fusion faite'); S.treeData = null; loadHygiene(); }).catch(function (e) { toast('Erreur : ' + e.message); });
+      }; });
+    }).catch(function (e) { box.innerHTML = '<h3>Qualité des données</h3><div class="crm-meta">' + esc(e.status === 403 ? 'Réservé aux admins.' : 'Erreur : ' + e.message) + '</div>'; });
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
   // STATISTIQUES : activité de l'équipe, conversion, portefeuille
   // ═════════════════════════════════════════════════════════════════════════
   function onStatsPanel() {
@@ -313,8 +449,11 @@
       + '</div>'
       + '<div class="crm-card"><h3>Lecture</h3><div class="crm-meta" style="line-height:1.6">« Contacts touchés » compte les personnes contactées par email, LinkedIn, appel ou RDV. Les réponses positives de la période peuvent venir d’emails envoyés plus tôt.</div></div>'
       + '</aside></div>';
+    var isAdmin = (S.facets && S.facets.me && S.facets.me.role === 'admin') || (window.scoutSession && window.scoutSession.role === 'admin');
+    if (isAdmin) html += '<div class="crm-card" id="crm-hygiene"><h3>Qualité des données</h3><div class="crm-meta">Chargement…</div></div>';
     body.innerHTML = html;
     body.querySelectorAll('[data-kf]').forEach(function (b) { b.onclick = function () { openAccountsWith(JSON.parse(b.getAttribute('data-kf'))); }; });
+    if (isAdmin) loadHygiene();
   }
 
   function loadHome() {
@@ -433,15 +572,67 @@
       + '<div class="crm-views" id="crm-views" role="tablist" aria-label="Vues"></div>'
       + '<div class="crm-toolbar" id="crm-toolbar"></div>'
       + '<div class="crm-row" style="justify-content:space-between;margin-bottom:8px;"><span class="crm-meta" id="crm-count" aria-live="polite"></span>'
-      + '<span class="crm-row"><button class="crm-btn ghost" id="crm-reset" type="button">Réinitialiser</button>'
+      + '<span class="crm-row"><span class="crm-seg" role="group" aria-label="Affichage"><button type="button" class="crm-chip sm' + (S.treeView ? '' : ' on') + '" id="crm-v-list">Liste</button><button type="button" class="crm-chip sm' + (S.treeView ? ' on' : '') + '" id="crm-v-tree">Arbre</button></span>'
+      + '<button class="crm-btn ghost" id="crm-reset" type="button">Réinitialiser</button>'
       + '<button class="crm-btn ghost" id="crm-export" type="button">Exporter (CSV)</button></span></div>'
-      + '<div class="crm-table-wrap"><table class="crm-table" id="crm-table"><thead></thead><tbody></tbody></table>'
+      + '<div class="crm-table-wrap" id="crm-table-wrap"' + (S.treeView ? ' hidden' : '') + '><table class="crm-table" id="crm-table"><thead></thead><tbody></tbody></table>'
       + '<div class="crm-more" id="crm-more" style="display:none"><button class="crm-btn" type="button" id="crm-more-btn">Afficher plus</button></div></div>'
+      + '<div class="crm-card crm-tree" id="crm-tree"' + (S.treeView ? '' : ' hidden') + '></div>'
       + '<div id="crm-bulk"></div>'
       + '</div><div class="crm-wrap crm-record" id="crm-detail" style="display:none"></div>';
     document.getElementById('crm-reset').onclick = function () { applyView('all'); };
     document.getElementById('crm-export').onclick = function () { exportCsv(); };
     document.getElementById('crm-more-btn').onclick = function () { fetchAccounts(true); };
+    var setView = function (tree) {
+      S.treeView = tree; lsSet('scout_crm_tree', tree ? 1 : 0);
+      document.getElementById('crm-v-list').classList.toggle('on', !tree); document.getElementById('crm-v-tree').classList.toggle('on', tree);
+      document.getElementById('crm-table-wrap').hidden = tree; document.getElementById('crm-tree').hidden = !tree;
+      if (tree) drawTree();
+    };
+    document.getElementById('crm-v-list').onclick = function () { setView(false); };
+    document.getElementById('crm-v-tree').onclick = function () { setView(true); };
+    if (S.treeView) setTimeout(drawTree, 0);
+  }
+
+  // Vue arbre : pays › comptes de tête › comptes rattachés
+  function drawTree() {
+    var box = document.getElementById('crm-tree'); if (!box) return;
+    box.innerHTML = '<div class="crm-row" style="gap:8px;margin-bottom:10px"><input type="search" class="crm-input" id="crm-tree-q" placeholder="Filtrer l’arbre (nom de compte)" aria-label="Filtrer l’arbre" style="max-width:340px"><span class="crm-meta" id="crm-tree-n"></span></div><div id="crm-tree-body"><div class="crm-empty">Chargement…</div></div>';
+    var q = document.getElementById('crm-tree-q'), t = null;
+    q.value = S.treeQ || '';
+    q.oninput = function () { clearTimeout(t); t = setTimeout(function () { S.treeQ = q.value.trim(); renderTreeBody(); }, 200); };
+    (S.treeData ? Promise.resolve(S.treeData) : api('/crm/tree').then(function (d) { S.treeData = d.accounts || []; return S.treeData; }))
+      .then(renderTreeBody).catch(function (e) { document.getElementById('crm-tree-body').innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+  }
+  function renderTreeBody() {
+    var body = document.getElementById('crm-tree-body'); if (!body || !S.treeData) return;
+    var all = S.treeData, byId = {}, kids = {};
+    all.forEach(function (a) { byId[a.id] = a; });
+    all.forEach(function (a) { if (a.parent_id && byId[a.parent_id]) (kids[a.parent_id] = kids[a.parent_id] || []).push(a); });
+    var ql = (S.treeQ || '').toLowerCase(), keep = null;
+    if (ql) {
+      keep = {};
+      var addUp = function (a) { while (a && !keep[a.id]) { keep[a.id] = 1; a = byId[a.parent_id]; } };
+      var addDown = function (a) { (kids[a.id] || []).forEach(function (k) { keep[k.id] = 1; addDown(k); }); };
+      all.forEach(function (a) { if (String(a.nom || '').toLowerCase().indexOf(ql) >= 0) { addUp(a); addDown(a); } });
+    }
+    var shown = all.filter(function (a) { return !keep || keep[a.id]; });
+    var countries = {};
+    shown.forEach(function (a) { if (!a.parent_id || !byId[a.parent_id]) (countries[a.pays || 'Sans pays'] = countries[a.pays || 'Sans pays'] || []).push(a); });
+    var node = function (a, depth) {
+      var ch = (kids[a.id] || []).filter(function (k) { return !keep || keep[k.id]; });
+      var label = '<button type="button" class="crm-tree-acc" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier) + '<span>' + esc(a.nom) + '</span>' + (ch.length ? '<span class="crm-meta">' + ch.length + '</span>' : '') + '</button>';
+      if (!ch.length || depth > 8) return '<div class="crm-tree-leaf">' + label + '</div>';
+      return '<details' + (ql || depth < 1 ? ' open' : '') + '><summary>' + label + '</summary><div class="crm-tree-kids">' + ch.map(function (k) { return node(k, depth + 1); }).join('') + '</div></details>';
+    };
+    var names = Object.keys(countries).sort(function (x, y) { return countries[y].length - countries[x].length; });
+    document.getElementById('crm-tree-n').textContent = shown.length.toLocaleString('fr-FR') + ' compte' + (shown.length > 1 ? 's' : '') + ' · ' + names.length + ' pays';
+    body.innerHTML = names.length ? names.map(function (c) {
+      var roots = countries[c].sort(function (x, y) { return ((kids[y.id] || []).length - (kids[x.id] || []).length) || String(x.nom).localeCompare(String(y.nom)); });
+      return '<details class="crm-tree-country"' + (ql || names.length === 1 ? ' open' : '') + '><summary><b>' + esc(c) + '</b> <span class="crm-meta">' + roots.length + '</span></summary><div class="crm-tree-kids">'
+        + roots.slice(0, 400).map(function (a) { return node(a, 0); }).join('') + (roots.length > 400 ? '<div class="crm-meta">+ ' + (roots.length - 400) + ' autres : affinez le filtre</div>' : '') + '</div></details>';
+    }).join('') : '<div class="crm-empty">Aucun compte.</div>';
+    body.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function (e) { e.preventDefault(); e.stopPropagation(); openAccount(b.getAttribute('data-acc')); }; });
   }
 
   function renderViews() {
@@ -576,6 +767,7 @@
   var COLS = [
     { k: 'tier', label: 'Tier', sort: 'tier', asc: true },
     { k: 'nom', label: 'Compte', sort: 'nom', asc: true },
+    { k: 'prio', label: 'Priorité', sort: 'priority' },
     { k: 'score', label: 'Engagement', sort: 'score' },
     { k: 'status', label: 'Statut', sort: 'status' },
     { k: 'coverage', label: 'Comité', sort: 'coverage' },
@@ -615,6 +807,7 @@
           + '<td class="cb"><input type="checkbox" data-cb="' + esc(r.id) + '" aria-label="Sélectionner ' + esc(r.nom) + '"' + (sel ? ' checked' : '') + '></td>'
           + '<td class="c-tier">' + tierBadge(r.tier) + '</td>'
           + '<td class="c-nom"><div class="crm-acc-name">' + esc(r.nom) + '</div><div class="crm-acc-sub">' + esc([r.pays, r.secteur].filter(Boolean).join(' · ')) + (r.n_contacts ? ' · ' + r.n_contacts + ' contact' + (r.n_contacts > 1 ? 's' : '') : '') + '</div></td>'
+          + '<td class="c-prio">' + prioBadge(r.priority) + '</td>'
           + '<td class="c-score">' + heatBadge(r.score, r.heat) + (r.web_pages_90d ? ' <span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</td>'
           + '<td class="c-status">' + statusPill(r.status) + '</td>'
           + '<td class="c-coverage">' + coverageDots(r.roles) + '</td>'
@@ -779,6 +972,7 @@
     var b = document.getElementById('crm-back'); if (b) b.onclick = backToList;
     window.scrollTo(0, 0);
     return Promise.all([loadFacets(), api('/crm/accounts/' + encodeURIComponent(id))]).then(function (res) {
+      if (res[1] && res[1].merged_into) { toast('Ce compte a été fusionné : ouverture du compte conservé'); openAccount(res[1].merged_into); return; }
       S.account = res[1]; S.tlFilter = 'all';
       drawAccount();
     }).catch(function (e) {
@@ -839,9 +1033,12 @@
     var others = (byRole.influenceur || []).concat(byRole.none || []);
 
     d.innerHTML = '<button class="crm-back" type="button" id="crm-back">← Comptes</button>'
-      + '<div class="crm-rec-head"><div class="crm-rec-id">' + tierBadge(a.tier) + '<div style="min-width:0"><h2>' + esc(a.nom) + '</h2>'
+      + '<div class="crm-rec-head"><div class="crm-rec-id">' + tierBadge(a.tier) + '<div style="min-width:0">'
+      + ((A.ancestors || []).length ? '<nav class="crm-crumbs" aria-label="Rattachement">' + A.ancestors.map(function (x) { return '<button type="button" class="crm-link" data-acc="' + esc(x.id) + '">' + esc(x.nom) + '</button>'; }).join(' › ') + ' ›</nav>' : '')
+      + '<h2>' + esc(a.nom) + '</h2>'
       + '<div class="crm-meta">' + esc([a.pays, a.ville, a.secteur].filter(Boolean).join(' · ')) + (sm.domain ? ' · <a class="crm-link" href="https://' + esc(sm.domain) + '" target="_blank" rel="noopener">' + esc(sm.domain) + '</a>' : '') + '</div></div></div>'
       + '<div class="crm-rec-kpis">'
+      + '<div><span>Priorité</span>' + prioBadge(sm.priority) + '</div>'
       + '<div><span>Engagement</span>' + heatBadge(sm.score, sm.heat) + '</div>'
       + '<div><span>Statut</span>' + statusPill(sm.status) + '</div>'
       + '<div><span>Comité</span>' + coverageDots(sm.roles) + '</div>'
@@ -856,7 +1053,16 @@
       + '<div class="crm-rec-grid">'
       // ── colonne gauche : à propos
       + '<aside class="crm-rec-left"><div class="crm-card"><h3>À propos du compte</h3><dl class="crm-fields" id="crm-acc-fields">' + fields.map(fieldRow).join('') + '</dl>'
+      + '<div class="crm-parent"><div class="crm-meta" style="margin:10px 0 4px">Rattaché à</div>'
+      + (sm.parent_id ? '<div class="crm-row" style="gap:6px;flex-wrap:wrap"><button type="button" class="crm-link" data-acc="' + esc(sm.parent_id) + '">' + esc(sm.parent_nom || 'compte parent') + '</button><button type="button" class="crm-btn ghost sm" id="crm-parent-edit">Changer</button><button type="button" class="crm-btn ghost sm" id="crm-parent-clear">Détacher</button></div><div id="crm-parent-pick" hidden></div>'
+        : '<div id="crm-parent-pick"></div>')
+      + '</div>'
       + (typeof window._legacyOpenEndUser === 'function' ? '<button type="button" class="crm-link" id="crm-legacy" style="margin-top:10px;font-size:12.5px">Fiche marché : produits et fournisseurs</button>' : '') + '</div>'
+      + '<div class="crm-card"><h3>Priorité <span class="crm-meta">sur 100</span></h3><div class="crm-score-big">' + prioBadge(sm.priority) + '</div>'
+      + '<div class="crm-prio-parts">'
+      + [['Adéquation', sm.fit, 40, 'tier, secteur cible, usage drone'], ['Intention', sm.intent, 40, 'engagement des 90 derniers jours'], ['Relation', sm.relation, 20, 'emails connus et comité couvert']].map(function (x) {
+        return '<div title="' + esc(x[3]) + '"><span>' + x[0] + '</span><span class="crm-prio-bar"><i style="width:' + Math.round(100 * (x[1] || 0) / x[2]) + '%"></i></span><b>' + (x[1] || 0) + '/' + x[2] + '</b></div>';
+      }).join('') + '</div></div>'
       + '<div class="crm-card"><h3>Engagement <span class="crm-meta">90 jours</span></h3><div class="crm-score-big">' + heatBadge(sm.score, sm.heat) + '</div>'
       + '<ul class="crm-score-list"><li>Actions et activités sur les contacts</li>'
       + '<li>' + (sm.web_pages_90d ? '<b>' + sm.web_pages_90d + '</b> page' + (sm.web_pages_90d > 1 ? 's' : '') + ' vue' + (sm.web_pages_90d > 1 ? 's' : '') + ' sur elistair.com' : 'Pas de visite rattachée' + (sm.domain ? '' : ' (renseignez le domaine)')) + '</li>'
@@ -877,6 +1083,9 @@
       }).join('')
       + (others.length ? '<div class="crm-com"><div class="crm-com-h"><span class="crm-role none">Autres</span><span class="crm-meta">rôle à préciser</span></div>' + others.map(contactLine).join('') + '</div>' : '')
       + '</div>'
+      + '<div class="crm-card"><h3>Comptes rattachés <span class="crm-meta">' + (A.children || []).length + '</span></h3>'
+      + ((A.children || []).length ? A.children.map(function (c) { return '<button type="button" class="crm-mini" data-acc="' + esc(c.id) + '">' + tierBadge(c.tier) + '<span class="m"><b>' + esc(c.nom) + '</b><span>' + esc(c.pays || '') + '</span></span></button>'; }).join('') : '<div class="crm-meta">Aucun compte rattaché.</div>')
+      + '<div id="crm-child-pick" style="margin-top:8px"></div></div>'
       + '<div class="crm-card"><h3>Tâches <span class="crm-meta">' + openTasks.length + ' ouverte' + (openTasks.length > 1 ? 's' : '') + '</span></h3>'
       + (openTasks.length ? openTasks.map(taskHtml).join('') : '<div class="crm-meta">Aucune tâche ouverte.</div>')
       + (doneTasks.length ? '<details style="margin-top:8px"><summary class="crm-meta" style="cursor:pointer">' + doneTasks.length + ' terminée' + (doneTasks.length > 1 ? 's' : '') + '</summary>' + doneTasks.map(taskHtml).join('') + '</details>' : '')
@@ -895,6 +1104,21 @@
 
     // liaisons
     document.getElementById('crm-back').onclick = backToList;
+    d.querySelectorAll('.crm-crumbs [data-acc], .crm-parent [data-acc], .crm-mini[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
+    var setParent = function (pid) {
+      return api('/crm/accounts/' + encodeURIComponent(a.id), { method: 'PATCH', body: { parent_id: pid } })
+        .then(function () { S.treeData = null; toast(pid ? 'Compte rattaché' : 'Compte détaché'); return reloadAccount(); })
+        .catch(function (e) { toast('Erreur : ' + e.message); });
+    };
+    var pp = document.getElementById('crm-parent-pick');
+    var mountParent = function () { pp.hidden = false; acctPicker(pp, { placeholder: 'Rattacher à… (ex. ministère, direction)', exclude: [a.id], onPick: function (x) { setParent(x.id); }, focus: !!sm.parent_id }); };
+    if (!sm.parent_id) mountParent();
+    var pe = document.getElementById('crm-parent-edit'); if (pe) pe.onclick = mountParent;
+    var pc = document.getElementById('crm-parent-clear'); if (pc) pc.onclick = function () { setParent(null); };
+    acctPicker(document.getElementById('crm-child-pick'), { placeholder: '+ Rattacher un compte à celui-ci', exclude: [a.id].concat((A.children || []).map(function (c) { return c.id; })), onPick: function (x) {
+      api('/crm/accounts/' + encodeURIComponent(x.id), { method: 'PATCH', body: { parent_id: a.id } })
+        .then(function () { S.treeData = null; toast(x.nom + ' rattaché'); return reloadAccount(); }).catch(function (e) { toast('Erreur : ' + e.message); });
+    } });
     bindFields(document.getElementById('crm-acc-fields'), fields, function (k, v) {
       if (k == null) { drawAccount(); return; }
       var body = {}; body[k] = v === '' ? null : v;
@@ -1422,6 +1646,7 @@
       else if (id === 'tasks') onTasksPanel();
       else if (id === 'home') onHomePanel();
       else if (id === 'stats') onStatsPanel();
+      else if (id === 'signals') onSignalsPanel();
       setTimeout(paintBadge, 30);
     } catch (e) { console.error('[crm] onPanel', e); }
   }

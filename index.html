@@ -754,7 +754,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<link rel="stylesheet" href="assets/crm.css?v=178">
+<link rel="stylesheet" href="assets/crm.css?v=180">
 </head>
 <body>
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -2484,6 +2484,7 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     <div id="panel-people" class="panel"></div>
     <div id="panel-tasks" class="panel"></div>
     <div id="panel-stats" class="panel"></div>
+    <div id="panel-signals" class="panel"></div>
 
     <div id="panel-end-users" class="panel">
       <div id="eu-list-view">
@@ -3332,6 +3333,7 @@ const NAV_GROUPS = [
       { panel: 'end-users', label: 'Comptes', hidden: true, alias: 'accounts' },
       { panel: 'contacts',  label: 'Contacts', hidden: true, alias: 'people' } ] },
   { id: 'signaux', label: 'Signaux', tabs: [
+      { panel: 'signals',   label: 'À traiter', badge: 'subnav-signals-badge' },
       { panel: 'hot',       label: 'Prospects chauds' },
       { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' },
       { panel: 'chat',      label: 'Chat', badge: 'subnav-chat-badge' },
@@ -3497,7 +3499,7 @@ function go(id, opts) {
     });
     loadContacts(forceReload);
   }
-  if (window.scoutCrm && (id === 'accounts' || id === 'tasks' || id === 'home' || id === 'people' || id === 'stats')) window.scoutCrm.onPanel(id, opts);
+  if (window.scoutCrm && (id === 'accounts' || id === 'tasks' || id === 'home' || id === 'people' || id === 'stats' || id === 'signals')) window.scoutCrm.onPanel(id, opts);
   // Persister l'onglet dans le hash
   try { if (typeof _setCurrentView === 'function') _setCurrentView({ kind:'panel', id: id, tab: opts && opts.tab }); } catch(e){}
   // Historique : une entrée par changement d'onglet, pour que le bouton Retour du navigateur marche.
@@ -11716,7 +11718,7 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=179"></script>
+<script src="assets/crm.js?v=180"></script>
 <script>
 // Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.
 // Les écrans de connexion et de mot de passe ne sont jamais concernés.
