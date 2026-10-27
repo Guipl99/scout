@@ -265,7 +265,18 @@
       + kpi((t.calls_meetings || 0) + (t.notes || 0), 'appels, RDV et notes')
       + '</div>';
     // Graphique 12 semaines (barres : emails ; points : réponses positives)
-    var W = d.weeks || [];
+    // 12 semaines complètes, y compris celles sans activité
+    var W = (function () {
+      var byW = {}; (d.weeks || []).forEach(function (w) { byW[w.week] = w; });
+      var now = new Date(); var day = (now.getDay() + 6) % 7; var mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+      var out = [];
+      for (var i = 11; i >= 0; i--) {
+        var dt = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() - 7 * i);
+        var k = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+        out.push(byW[k] || { week: k, emails: 0, positive: 0, transmitted: 0 });
+      }
+      return out;
+    })();
     var maxE = Math.max(1, Math.max.apply(null, W.map(function (w) { return w.emails; }).concat([1])));
     var bw = 100 / Math.max(W.length, 1);
     var bars = W.map(function (w, i) {
@@ -278,7 +289,7 @@
     }).join('');
     html += '<div class="crm-home-cols"><div class="crm-home-main">'
       + '<div class="crm-card"><h3>Emails envoyés par semaine <span class="crm-meta">12 dernières semaines, équipe · en vert : réponses positives</span></h3>'
-      + (W.length ? '<svg width="100%" height="190" role="img" aria-label="Emails par semaine">' + bars + '</svg>' : '<div class="crm-meta">Aucune activité sur la période.</div>') + '</div>';
+      + (W.some(function (w) { return w.emails; }) ? '<svg width="100%" height="190" role="img" aria-label="Emails par semaine">' + bars + '</svg>' : '<div class="crm-meta">Aucune activité sur la période.</div>') + '</div>';
     // Tableau par commercial
     var P = d.people || [];
     var cols = [['reached', 'Contacts touchés'], ['first_emails', '1ers emails'], ['relances', 'Relances'], ['calls_meetings', 'Appels / RDV'], ['linkedin', 'LinkedIn'], ['positive', 'Réponses +'], ['transmitted', 'Transmis'], ['tasks_done', 'Tâches faites'], ['notes', 'Notes']];
