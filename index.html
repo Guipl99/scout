@@ -754,7 +754,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<link rel="stylesheet" href="assets/crm.css?v=177">
+<link rel="stylesheet" href="assets/crm.css?v=178">
 </head>
 <body>
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -2483,6 +2483,7 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     <div id="panel-accounts" class="panel"></div>
     <div id="panel-people" class="panel"></div>
     <div id="panel-tasks" class="panel"></div>
+    <div id="panel-stats" class="panel"></div>
 
     <div id="panel-end-users" class="panel">
       <div id="eu-list-view">
@@ -3322,7 +3323,8 @@ const NAV_GROUPS = [
   { id: 'today', label: "Accueil", tabs: [
       { panel: 'home',      label: 'Ma journée' },
       { panel: 'tasks',     label: 'À faire', badge: 'subnav-tasks-badge' },
-      { panel: 'dashboard', label: 'Statistiques' },
+      { panel: 'stats',     label: 'Statistiques' },
+      { panel: 'dashboard', label: 'Ancien tableau de bord', hidden: true, alias: 'home' },
       { panel: 'tracking',  label: 'Relances', hidden: true, alias: 'tasks' } ] },
   { id: 'prospects', label: 'Prospects', tabs: [
       { panel: 'accounts',  label: 'Comptes' },
@@ -3379,6 +3381,8 @@ window.renderSubnav = renderSubnav;
 function go(id, opts) {
   // CRM étape 1 : l'onglet Comptes est remplacé par la vue CRM (assets/crm.js).
   // L'ancien panneau reste joignable pour la fiche marché (opts.legacy).
+  // L'ancien tableau de bord est remplacé par Ma journée et Statistiques.
+  if (id === 'dashboard' && !(opts && opts.legacy) && document.getElementById('panel-home') && window.scoutCrm) { id = 'home'; }
   // Anciens liens « onglet Contacts » de l'ancien panneau Comptes : vers la nouvelle liste Contacts.
   if (id === 'end-users' && opts && opts.tab === 'contacts' && !opts.legacy && document.getElementById('panel-people') && window.scoutCrm) { id = 'people'; }
   if (id === 'end-users' && !(opts && opts.legacy) && document.getElementById('panel-accounts') && window.scoutCrm) { id = 'accounts'; }
@@ -3493,7 +3497,7 @@ function go(id, opts) {
     });
     loadContacts(forceReload);
   }
-  if (window.scoutCrm && (id === 'accounts' || id === 'tasks' || id === 'home' || id === 'people')) window.scoutCrm.onPanel(id, opts);
+  if (window.scoutCrm && (id === 'accounts' || id === 'tasks' || id === 'home' || id === 'people' || id === 'stats')) window.scoutCrm.onPanel(id, opts);
   // Persister l'onglet dans le hash
   try { if (typeof _setCurrentView === 'function') _setCurrentView({ kind:'panel', id: id, tab: opts && opts.tab }); } catch(e){}
   // Historique : une entrée par changement d'onglet, pour que le bouton Retour du navigateur marche.
@@ -11712,7 +11716,7 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=177"></script>
+<script src="assets/crm.js?v=178"></script>
 <script>
 // Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.
 // Les écrans de connexion et de mot de passe ne sont jamais concernés.

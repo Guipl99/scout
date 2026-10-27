@@ -237,6 +237,75 @@
     loadFacets().then(loadHome).catch(function (e) { document.getElementById('crm-home-body').innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
   }
 
+  // ═════════════════════════════════════════════════════════════════════════
+  // STATISTIQUES : activité de l'équipe, conversion, portefeuille
+  // ═════════════════════════════════════════════════════════════════════════
+  function onStatsPanel() {
+    var p = document.getElementById('panel-stats'); if (!p) return;
+    S.statsDays = S.statsDays || 30;
+    var chips = [[7, '7 jours'], [30, '30 jours'], [90, '90 jours'], [365, '12 mois']].map(function (x) {
+      return '<button type="button" class="crm-chip' + (S.statsDays === x[0] ? ' on' : '') + '" data-sd="' + x[0] + '">' + x[1] + '</button>';
+    }).join('');
+    p.innerHTML = '<div class="crm-wrap crm-home"><div class="crm-row crm-home-head"><div><h2 class="crm-h2">Statistiques</h2><div class="crm-meta">Activité de l’équipe et conversion</div></div>'
+      + '<div class="crm-views" style="margin:0">' + chips + '</div></div><div id="crm-stats-body"><div class="crm-empty">Chargement…</div></div></div>';
+    p.querySelectorAll('[data-sd]').forEach(function (b) { b.onclick = function () { S.statsDays = parseInt(b.getAttribute('data-sd'), 10); onStatsPanel(); }; });
+    api('/crm/stats?days=' + S.statsDays).then(drawStats).catch(function (e) { document.getElementById('crm-stats-body').innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+  }
+  function drawStats(d) {
+    var body = document.getElementById('crm-stats-body'); if (!body) return;
+    var t = d.total || {}, A = d.accounts || {};
+    var me = (S.facets && S.facets.me && S.facets.me.name) || (window.scoutSession && window.scoutSession.first_name) || '';
+    var kpi = function (v, l, sub) { return '<div class="crm-kpi" style="cursor:default"><b>' + esc(v) + '</b><span>' + esc(l) + '</span>' + (sub ? '<small class="crm-meta">' + esc(sub) + '</small>' : '') + '</div>'; };
+    var html = '<div class="crm-kpis">'
+      + kpi(t.reached || 0, 'contacts touchés')
+      + kpi(t.first_emails || 0, 'premiers emails')
+      + kpi(t.relances || 0, 'relances')
+      + kpi(t.positive || 0, 'réponses positives')
+      + kpi(t.transmitted || 0, 'transmis au CRM')
+      + kpi((t.calls_meetings || 0) + (t.notes || 0), 'appels, RDV et notes')
+      + '</div>';
+    // Graphique 12 semaines (barres : emails ; points : réponses positives)
+    var W = d.weeks || [];
+    var maxE = Math.max(1, Math.max.apply(null, W.map(function (w) { return w.emails; }).concat([1])));
+    var bw = 100 / Math.max(W.length, 1);
+    var bars = W.map(function (w, i) {
+      var h = Math.round(125 * w.emails / maxE), x = i * bw;
+      var lab = new Date(w.week + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+      return '<g><title>Semaine du ' + esc(lab) + ' : ' + w.emails + ' emails, ' + w.positive + ' réponses positives, ' + w.transmitted + ' transmis</title>'
+        + '<rect x="' + (x + bw * 0.18) + '%" y="' + (165 - h) + '" width="' + (bw * 0.64) + '%" height="' + Math.max(h, 1) + '" rx="3" fill="var(--accent)" opacity=".75"></rect>'
+        + (w.positive ? '<text x="' + (x + bw / 2) + '%" y="' + (158 - h) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#16a34a">+' + w.positive + '</text>' : '')
+        + '<text x="' + (x + bw / 2) + '%" y="183" text-anchor="middle" font-size="10" fill="var(--text3)">' + esc(lab) + '</text></g>';
+    }).join('');
+    html += '<div class="crm-home-cols"><div class="crm-home-main">'
+      + '<div class="crm-card"><h3>Emails envoyés par semaine <span class="crm-meta">12 dernières semaines, équipe · en vert : réponses positives</span></h3>'
+      + (W.length ? '<svg width="100%" height="190" role="img" aria-label="Emails par semaine">' + bars + '</svg>' : '<div class="crm-meta">Aucune activité sur la période.</div>') + '</div>';
+    // Tableau par commercial
+    var P = d.people || [];
+    var cols = [['reached', 'Contacts touchés'], ['first_emails', '1ers emails'], ['relances', 'Relances'], ['calls_meetings', 'Appels / RDV'], ['linkedin', 'LinkedIn'], ['positive', 'Réponses +'], ['transmitted', 'Transmis'], ['tasks_done', 'Tâches faites'], ['notes', 'Notes']];
+    html += '<div class="crm-card"><h3>Par commercial <span class="crm-meta">' + esc(d.days === 365 ? '12 mois' : d.days + ' jours') + '</span></h3>'
+      + (P.length ? '<div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Commercial</th>' + cols.map(function (c) { return '<th style="text-align:right">' + esc(c[1]) + '</th>'; }).join('') + '</tr></thead><tbody>'
+        + P.map(function (r) {
+          var mine = me && String(r.name).toLowerCase() === String(me).toLowerCase();
+          return '<tr' + (mine ? ' class="sel"' : '') + '><td><b>' + esc(r.name) + '</b></td>' + cols.map(function (c) { return '<td style="text-align:right;font-variant-numeric:tabular-nums">' + (r[c[0]] || '<span class="crm-meta">0</span>') + '</td>'; }).join('')
+            + '</tr>';
+        }).join('') + '</tbody></table></div>' : '<div class="crm-meta">Aucune action enregistrée sur la période.</div>')
+      + '</div></div><aside class="crm-home-side">';
+    // Portefeuille
+    var bar = function (v, tot, label, filters) {
+      var w = tot ? Math.round(100 * v / tot) : 0;
+      return '<button type="button" class="crm-mini" style="display:block;width:100%" data-kf=\'' + esc(JSON.stringify(filters)) + '\'><span class="m"><b>' + v + '</b> <span>' + esc(label) + ' · ' + w + ' %</span></span>'
+        + '<span style="display:block;height:6px;border-radius:3px;background:var(--bg3);margin-top:6px"><span style="display:block;height:6px;width:' + w + '%;border-radius:3px;background:var(--accent)"></span></span></button>';
+    };
+    html += '<div class="crm-card"><h3>Portefeuille <span class="crm-meta">' + (A.total || 0) + ' comptes</span></h3>'
+      + bar(A.owned || 0, A.total, 'avec un propriétaire', {}) + bar(A.tiered || 0, A.total, 'avec un tier', { tier: '1,2,3' })
+      + bar(A.engaged || 0, A.total, 'engagés (90 j)', { heat: 'chaud,tiede' }) + bar(A.transmis || 0, A.total, 'transmis au CRM', { status: 'transmis' })
+      + '</div>'
+      + '<div class="crm-card"><h3>Lecture</h3><div class="crm-meta" style="line-height:1.6">« Contacts touchés » compte les personnes contactées par email, LinkedIn, appel ou RDV. Les réponses positives de la période peuvent venir d’emails envoyés plus tôt.</div></div>'
+      + '</aside></div>';
+    body.innerHTML = html;
+    body.querySelectorAll('[data-kf]').forEach(function (b) { b.onclick = function () { openAccountsWith(JSON.parse(b.getAttribute('data-kf'))); }; });
+  }
+
   function loadHome() {
     var p = document.getElementById('panel-home'); if (!p) return;
     p.querySelectorAll('[data-hs]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-hs') === S.homeScope); });
@@ -304,7 +373,7 @@
       html += '</div><aside class="crm-home-side">';
       // 4. Ma semaine
       if (st && st.ok) {
-        html += '<div class="crm-card"><h3>Ma semaine <button type="button" class="crm-link" data-goto="dashboard">Statistiques →</button></h3>'
+        html += '<div class="crm-card"><h3>Ma semaine <button type="button" class="crm-link" data-goto="stats">Statistiques →</button></h3>'
           + '<div class="crm-week">'
           + '<div><b>' + (st.emails_7d || 0) + '</b><span>emails envoyés</span></div>'
           + '<div><b>' + (st.relances_7d || 0) + '</b><span>relances</span></div>'
@@ -1341,6 +1410,7 @@
       else if (id === 'people') onPeoplePanel(opts || {});
       else if (id === 'tasks') onTasksPanel();
       else if (id === 'home') onHomePanel();
+      else if (id === 'stats') onStatsPanel();
       setTimeout(paintBadge, 30);
     } catch (e) { console.error('[crm] onPanel', e); }
   }
