@@ -1437,10 +1437,10 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
         const why = segOn
           ? 'Aucun contact ne correspond aux segments choisis dans Paramètres.'
           : 'Tous les contacts prioritaires sont déjà pris, en pause ou traités pour le moment.';
-        const btn = (id, label, primary) => `<button type="button" id="${id}" style="padding:9px 14px;border-radius:8px;border:1px solid var(--border2,#334155);background:${primary?'var(--accent,#6366f1)':'transparent'};color:${primary?'#fff':'inherit'};font-weight:600;cursor:pointer;">${label}</button>`;
+        const btn = (id, label, primary) => `<button type="button" id="${id}" style="padding:9px 14px;border-radius:8px;border:1px solid ${primary?'transparent':'#cbd5e1'};background:${primary?'#6366f1':'#fff'};color:${primary?'#fff':'#1e293b'};font-weight:600;cursor:pointer;">${label}</button>`;
         actionBody.innerHTML = `<div style="padding:18px 6px;text-align:center;">
-            <div style="font-size:15px;font-weight:700;margin-bottom:6px;">Pas de nouveau contact à proposer</div>
-            <div style="font-size:13px;opacity:.75;margin-bottom:16px;">${escapeHtml(why)}</div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:6px;color:#0f172a;">Pas de nouveau contact à proposer</div>
+            <div style="font-size:13px;color:#475569;margin-bottom:16px;">${escapeHtml(why)}</div>
             <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
               ${rel ? btn('scout-na-todo', 'Traiter ma file : ' + rel + ' à faire' + (late ? ' (' + late + ' en retard)' : ''), true) : ''}
               ${segOn ? btn('scout-na-seg', 'Modifier mes segments', !rel) : ''}
