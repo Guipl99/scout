@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scout-drone-v169';
+const CACHE_NAME = 'scout-drone-v170';
 const STATIC_ASSETS = [
   '/scout/',
   '/scout/index.html',
@@ -32,7 +32,7 @@ self.addEventListener('fetch', e => {
   if (url.hostname.includes('railway.app') || url.hostname.includes('up.railway')) {
     e.respondWith(
       fetch(e.request).catch(() => new Response(JSON.stringify({error: 'offline'}), {
-        headers: {'Content-Type': 'application/json'}
+        status: 503, headers: {'Content-Type': 'application/json'}
       }))
     );
     return;
