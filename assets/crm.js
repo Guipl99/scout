@@ -1076,6 +1076,7 @@
     var b = document.getElementById('crm-back'); if (b) b.onclick = backToList;
     window.scrollTo(0, 0);
     return Promise.all([loadFacets(), api('/crm/accounts/' + encodeURIComponent(id))]).then(function (res) {
+      if (res[1] && res[1].merged_into === '__archive__') { toast('Ce compte a été archivé lors du nettoyage'); backToList(); return; }
       if (res[1] && res[1].merged_into) { toast('Ce compte a été fusionné : ouverture du compte conservé'); openAccount(res[1].merged_into); return; }
       S.account = res[1]; S.tlFilter = 'all';
       drawAccount();
