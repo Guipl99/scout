@@ -408,6 +408,7 @@
       + '<b class="crm-ms-title">' + (sg.url ? '<a href="' + esc(sg.url) + '" target="_blank" rel="noopener">' + title + '</a>' : title) + '</b></div>'
       + '<div class="crm-ms-body"><div><div class="crm-meta">Pourquoi : ' + esc(sg.why || '') + '</div>'
       + '<div class="crm-ms-act">' + esc(sg.action || '') + '</div>'
+      + (sg.source ? '<div class="crm-meta">Source : ' + esc(sg.source) + (sg.type ? ' · ' + esc(sg.type) : '') + '</div>' : '')
       + '<div class="crm-meta">' + (acc ? '<button type="button" class="crm-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button> · ' + esc(acc.owner_name || 'sans commercial') : 'Sans compte : à relier (tri admin)') + '</div></div>'
       + '<div class="crm-ms-btns">' + btns + '</div></div>'
       + '<div class="crm-ms-pick" hidden></div></div>';
@@ -464,7 +465,7 @@
     var title = esc(sg.title || 'Sans titre');
     return '<div class="crm-mk-row">' + sigScore(sg.score)
       + '<span class="m"><span class="crm-ms-type">' + esc(sigType(sg)) + '</span> <b>' + (sg.url ? '<a href="' + esc(sg.url) + '" target="_blank" rel="noopener">' + title + '</a>' : title) + '</b>'
-      + '<span class="crm-meta">' + esc([sg.buyer, sg.pays, sg.supplier, val].filter(Boolean).join(' · ')) + '</span>'
+      + '<span class="crm-meta">' + esc([sg.buyer, sg.pays, sg.supplier, val, sg.source].filter(Boolean).join(' · ')) + '</span>'
       + (sg.why ? '<span class="crm-meta">' + esc(sg.why) + '</span>' : '') + '</span>'
       + '<span class="r crm-meta">' + esc(sg.date ? fmtDate(sg.date) : '') + (acc ? '<br><button type="button" class="crm-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button>' : '') + '</span></div>';
   }
