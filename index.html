@@ -1374,7 +1374,7 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
       if(!r.ok){ box.innerHTML='<div style="font-size:12px;color:#B5523B;">'+(d.error||'Erreur')+'</div>'; return; }
       box.innerHTML=(d.users||[]).map(function(u){
         const badge=u.role==='admin'?' <span style="font-size:10px;color:var(--accent2);border:1px solid var(--accent);border-radius:var(--radius);padding:1px 6px;">admin</span>':'';
-        const pw=u.has_password?'<span style="font-size:10px;color:#6A8B74;">🔒 perso</span>':'<span style="font-size:10px;color:#C99A4E;">mdp équipe</span>';
+        const pw=u.has_password?'<span style="font-size:10px;color:#6A8B74;">🔒 perso</span>':(u.email?'<span style="font-size:10px;color:#6A8B74;">code e-mail</span>':'<span style="font-size:10px;color:#C99A4E;">mdp équipe</span>');
         const op=u.active?'':'opacity:.5;';
         return `<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 8px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);${op}">`
           + `<span style="flex:1;min-width:0;"><span style="font-weight:600;">${esc(u.name)}${badge}</span><br><span style="font-size:11px;color:var(--text3);">${u.email?esc(u.email):'pas d\'e-mail'}</span></span>${pw}`
@@ -1384,13 +1384,47 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
           + `<button type="button" onclick="window.teamToggle(${u.id},${u.active?'false':'true'})" style="font-size:11px;color:var(--text2);background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:3px 8px;cursor:pointer;">${u.active?'Désactiver':'Activer'}</button>`
           + `</div>`;
       }).join('') || '<div style="font-size:12px;color:var(--text3);">Aucun profil.</div>';
+      if(window.loadTeamSecurity) window.loadTeamSecurity();
     }catch(e){ box.innerHTML='<div style="font-size:12px;color:#B5523B;">Erreur réseau</div>'; }
   };
   window.teamReset=async function(id){ const pw=prompt('Nouveau mot de passe pour ce commercial (min 6) :'); if(!pw) return; if(pw.length<6){alert('Minimum 6 caractères');return;} try{ const r=await fetch(API+'/team/'+id+'/password',{method:'POST',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({password:pw})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} alert('Mot de passe réinitialisé.'); window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
   window.teamEmail=async function(id){ const btn=document.querySelector('[onclick="window.teamEmail('+id+')"]'); const cur=btn?btn.getAttribute('data-email'):''; const em=prompt('Adresse @elistair.com de ce profil (vide pour retirer) :', cur||''); if(em===null) return; try{ const r=await fetch(API+'/team/'+id,{method:'PATCH',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({email:em.trim()})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
   window.teamRole=async function(id,role){ if(!confirm(role==='admin'?'Donner les droits admin à ce profil ?':'Retirer les droits admin de ce profil ?')) return; try{ const r=await fetch(API+'/team/'+id,{method:'PATCH',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({role:role})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
   window.teamToggle=async function(id,active){ try{ const r=await fetch(API+'/team/'+id,{method:'PATCH',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({active:active})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
-  window.addTeamMember=async function(){ const name=prompt('Prénom du nouveau commercial :'); if(!name) return; try{ const r=await fetch(API+'/team',{method:'POST',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({name:name.trim()})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} alert('Profil créé. Il se connecte avec le mot de passe d\'équipe, puis crée son mot de passe perso.'); window.loadTeamPanel(); }catch(e){alert('Erreur réseau');} };
+  window.addTeamMember=async function(){
+    const name=prompt('Prénom du nouveau commercial :'); if(!name) return;
+    const em=prompt('Son adresse @elistair.com (accès sur invitation : seule cette adresse pourra se connecter) :',''); if(em===null) return;
+    try{
+      const r=await fetch(API+'/team',{method:'POST',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({name:name.trim()})}); const d=await r.json();
+      if(!r.ok||!d.ok){alert(d.error||'Erreur');return;}
+      if(em.trim()){ const r2=await fetch(API+'/team/'+d.id,{method:'PATCH',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({email:em.trim()})}); const d2=await r2.json(); if(!r2.ok||!d2.ok){alert('Profil créé, mais e-mail refusé : '+(d2.error||'erreur'));} }
+      alert(em.trim()?'Profil créé. Il se connecte avec « Recevoir un code » sur son adresse.':'Profil créé sans e-mail : ajoute son adresse pour qu\'il puisse se connecter.');
+      window.loadTeamPanel();
+    }catch(e){alert('Erreur réseau');}
+  };
+  window.loadTeamSecurity = async function(){
+    const box=document.getElementById('cfg-team-sec'); if(!box) return;
+    try{
+      const r=await fetch(API+'/team/security',{headers:_teamH()}); const d=await r.json(); if(!r.ok){ box.innerHTML=''; return; }
+      const fmt=function(t){ try{ return new Date(t).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } };
+      const meth={code:'code e-mail',personal:'mot de passe perso',team:'mot de passe d\'équipe'};
+      const warn=(d.active_without_email||[]).length?'<div style="font-size:11px;color:#C99A4E;">Sans adresse e-mail (ne pourront plus se connecter si le mot de passe d\'équipe est coupé) : '+d.active_without_email.map(esc).join(', ')+'</div>':'';
+      const mail=d.mail_ok?'':'<div style="font-size:11px;color:#B5523B;">L\'envoi des codes par e-mail ne fonctionne pas sur le serveur : le mot de passe d\'équipe reste nécessaire.</div>';
+      box.innerHTML='<label style="font-size:12px;color:var(--text3);">🛡️ Accès</label>'
+        +'<div style="font-size:12px;color:var(--text2);">Accès sur invitation : seules les adresses ajoutées ici peuvent se connecter. Désactiver un profil coupe ses sessions immédiatement.</div>'
+        +'<div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="flex:1;">Mot de passe d\'équipe partagé : <b>'+(d.team_password_enabled?'actif':'coupé')+'</b></span>'
+        +'<button type="button" onclick="window.teamPwToggle('+(!d.team_password_enabled)+')" style="font-size:11px;color:'+(d.team_password_enabled?'#A44A35':'var(--text2)')+';background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:3px 8px;cursor:pointer;">'+(d.team_password_enabled?'Couper':'Réactiver')+'</button></div>'
+        +warn+mail
+        +'<label style="font-size:12px;color:var(--text3);margin-top:4px;">Dernières connexions'+(d.failed_7d?' · '+d.failed_7d+' échec(s) sur 7 jours':'')+'</label>'
+        +'<div style="max-height:220px;overflow:auto;font-size:11px;border:1px solid var(--border2);border-radius:var(--radius);">'
+        +(d.logins||[]).map(function(l){ return '<div style="display:flex;gap:8px;padding:4px 8px;border-bottom:1px solid var(--border2);'+(l.revoked_at?'opacity:.5;':'')+'"><span style="width:90px;">'+fmt(l.created_at)+'</span><span style="flex:1;font-weight:600;">'+esc(l.name||'?')+'</span><span style="color:var(--text3);">'+esc(meth[l.auth_method]||l.auth_method||'')+'</span><span style="color:var(--text3);width:110px;text-align:right;">'+esc(l.ip||'')+'</span></div>'; }).join('')
+        +'</div>';
+    }catch(e){ box.innerHTML=''; }
+  };
+  window.teamPwToggle=async function(on){
+    if(!on && !confirm('Couper le mot de passe d\'équipe ?\n\nLes sessions ouvertes avec lui seront fermées. Chaque commercial devra se connecter avec un code reçu sur son adresse e-mail.')) return;
+    try{ const r=await fetch(API+'/team/security',{method:'PATCH',headers:{'Content-Type':'application/json',..._teamH()},body:JSON.stringify({team_password_enabled:!!on})}); const d=await r.json(); if(!r.ok||!d.ok){alert(d.error||'Erreur');return;} window.loadTeamSecurity(); }catch(e){alert('Erreur réseau');}
+  };
   window.teamUnlock=async function(){
     if(!confirm('Débloquer les connexions récemment verrouillées (« trop de tentatives ») ?\n\nÀ utiliser quand un commercial est bloqué après plusieurs mauvais mots de passe.')) return;
     try{
@@ -2613,6 +2647,7 @@ Mes pays
                 </div>
               </div>
               <div id="cfg-team-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+              <div id="cfg-team-sec" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
             </div>
             <div>
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Segments proposés dans « Prochaine action » <span style="color:var(--text3);font-weight:400;">(pour cibler une séquence · tout coché = aucun filtre)</span> <span id="seg-total-ready" style="color:var(--accent2);font-weight:600;margin-left:6px;"></span></label>
@@ -11770,7 +11805,7 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=192"></script>
+<script src="assets/crm.js?v=193"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>
 <script>
 // Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.

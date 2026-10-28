@@ -127,6 +127,7 @@
   function statusPill(s) { return '<span class="crm-pill s-' + esc(s) + '">' + esc(STATUS_LABEL[s] || s) + '</span>'; }
   function tierBadge(t) { return t ? '<span class="crm-tier t' + esc(t) + '" title="Tier ' + esc(t) + '">T' + esc(t) + '</span>' : '<span class="crm-tier none" title="Pas de tier">·</span>'; }
   function heatBadge(score, heat) { return '<span class="crm-heat h-' + esc(heat || 'froid') + '" title="Score d’engagement sur 90 jours">' + esc(score || 0) + '<small>' + esc(HEAT_LABEL[heat] || '') + '</small></span>'; }
+  function isAdminNow() { return (S.facets && S.facets.me && S.facets.me.role === 'admin') || (window.scoutSession && window.scoutSession.role === 'admin'); }
   function coverageDots(roles) {
     roles = roles || [];
     return '<span class="crm-cov" title="Comité d’achat : ' + KEY_ROLES.map(function (r) { return ROLE_LABEL[r] + (roles.indexOf(r) >= 0 ? ' ✓' : ' manquant'); }).join(', ') + '">'
@@ -678,14 +679,14 @@
       + '<div class="crm-row" style="justify-content:space-between;margin-bottom:8px;"><span class="crm-meta" id="crm-count" aria-live="polite"></span>'
       + '<span class="crm-row"><span class="crm-seg" role="group" aria-label="Affichage"><button type="button" class="crm-chip sm' + (S.treeView ? '' : ' on') + '" id="crm-v-list">Liste</button><button type="button" class="crm-chip sm' + (S.treeView ? ' on' : '') + '" id="crm-v-tree">Arbre</button></span>'
       + '<button class="crm-btn ghost" id="crm-reset" type="button">Réinitialiser</button>'
-      + '<button class="crm-btn ghost" id="crm-export" type="button">Exporter (CSV)</button></span></div>'
+      + (isAdminNow() ? '<button class="crm-btn ghost" id="crm-export" type="button">Exporter (CSV)</button>' : '') + '</span></div>'
       + '<div class="crm-table-wrap" id="crm-table-wrap"' + (S.treeView ? ' hidden' : '') + '><table class="crm-table" id="crm-table"><thead></thead><tbody></tbody></table>'
       + '<div class="crm-more" id="crm-more" style="display:none"><button class="crm-btn" type="button" id="crm-more-btn">Afficher plus</button></div></div>'
       + '<div class="crm-card crm-tree" id="crm-tree"' + (S.treeView ? '' : ' hidden') + '></div>'
       + '<div id="crm-bulk"></div>'
       + '</div><div class="crm-wrap crm-record" id="crm-detail" style="display:none"></div>';
     document.getElementById('crm-reset').onclick = function () { applyView('all'); };
-    document.getElementById('crm-export').onclick = function () { exportCsv(); };
+    var exb = document.getElementById('crm-export'); if (exb) exb.onclick = function () { exportCsv(); };
     document.getElementById('crm-more-btn').onclick = function () { fetchAccounts(true); };
     var setView = function (tree) {
       S.treeView = tree; lsSet('scout_crm_tree', tree ? 1 : 0);
@@ -943,7 +944,7 @@
       + '<select class="crm-sel" id="crm-bulk-tier" aria-label="Tier"><option value="">Tier…</option><option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3">Tier 3</option><option value="__none">Sans tier</option></select>'
       + '<select class="crm-sel" id="crm-bulk-status" aria-label="Changer le statut"><option value="">Statut…</option><option value="__auto">Automatique</option>'
       + STATUS_ORDER.map(function (s) { return '<option value="' + s + '">' + STATUS_LABEL[s] + '</option>'; }).join('') + '</select>'
-      + '<button class="crm-btn" type="button" id="crm-bulk-export">Exporter</button>'
+      + (isAdminNow() ? '<button class="crm-btn" type="button" id="crm-bulk-export">Exporter</button>' : '')
       + '<button class="crm-btn ghost" type="button" id="crm-bulk-clear" style="margin-left:auto">Désélectionner</button></div>';
     var run = function (body, label) {
       api('/crm/accounts/bulk', { method: 'POST', body: Object.assign({ ids: ids }, body) }).then(function (d) {
@@ -953,7 +954,7 @@
     document.getElementById('crm-bulk-owner').onchange = function (e) { var v = e.target.value; if (v) run({ owner_user_id: v === '__none' ? null : v }, 'Propriétaire mis à jour'); };
     document.getElementById('crm-bulk-tier').onchange = function (e) { var v = e.target.value; if (v) run({ tier: v === '__none' ? null : v }, 'Tier mis à jour'); };
     document.getElementById('crm-bulk-status').onchange = function (e) { var v = e.target.value; if (v) run({ crm_status: v === '__auto' ? null : v }, 'Statut mis à jour'); };
-    document.getElementById('crm-bulk-export').onclick = function () { exportCsv(S.rows.filter(function (r) { return S.selected[r.id]; })); };
+    var bex = document.getElementById('crm-bulk-export'); if (bex) bex.onclick = function () { exportCsv(S.rows.filter(function (r) { return S.selected[r.id]; })); };
     document.getElementById('crm-bulk-clear').onclick = function () { S.selected = {}; renderTable(); renderBulk(); };
   }
 
