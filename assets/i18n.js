@@ -375,6 +375,8 @@
     "Copie la fiche :": "Copy the details:",
     "Une fois le contact créé dans Dynamics. Scout n’envoie rien à Dynamics.": "Once the contact is created in Dynamics. Scout sends nothing to Dynamics.",
     "Copie nom, titre, organisation, pays, email et LinkedIn pour les coller dans Dynamics": "Copies name, title, organisation, country, email and LinkedIn to paste into Dynamics",
+    "Ouvrir le compte": "Open account",
+    "Ancienne fiche": "Old record",
     // ── Pays et secteurs (données)
     "Pologne": "Poland",
     "Belgique": "Belgium",
@@ -433,6 +435,7 @@
     [/^fait il y a (.+) par (.+)$/, function (m) { return 'done ' + tr('il y a ' + m[1]) + ' by ' + m[2]; }],
     [/^Voir le compte : (.+)$/, function (m) { return 'See account: ' + m[1]; }],
     [/^(.+) \/ (.+)$/, function (m) { var a = tr(m[1]), b = tr(m[2]); return (a !== m[1] || b !== m[2]) ? a + ' / ' + b : null; }],
+    [/^est un compte Scout(.*)$/, function (m) { return 'is a Scout account' + m[1]; }],
     [/^Voir les doublons \(\{n\}\)$/, 'See duplicates ({n})'], [/^\+ \{n\} autres dans la file$/, '+ {n} more in the queue'],
     [/^(\{n\}) à relancer(.*)$/, function (m) { return m[1] + ' to follow up' + m[2].replace(' dont ', ' including ').replace(' en retard', ' overdue').replace(' j de retard', ' d overdue'); }]
   ];

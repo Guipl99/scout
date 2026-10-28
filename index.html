@@ -16,7 +16,7 @@
 <meta name="theme-color" content="#142220">
 <link rel="manifest" href="manifest.json">
 <title>Scout</title>
-<script src="assets/i18n.js?v=2"></script>
+<script src="assets/i18n.js?v=3"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Zalando+Sans+Expanded:wght@400;600;700;800&display=swap');
 
@@ -3356,7 +3356,8 @@ const NAV_GROUPS = [
       { panel: 'end-users', label: 'Comptes', hidden: true, alias: 'accounts' },
       { panel: 'contacts',  label: 'Contacts', hidden: true, alias: 'people' } ] },
   { id: 'signaux', label: 'Signaux', tabs: [
-      { panel: 'signals',   label: 'À traiter', badge: 'subnav-signals-badge' },
+      // File « À traiter » retirée : le rattachement appels d'offres / comptes se fait seul (fiche compte + priorité).
+      { panel: 'signals',   label: 'À traiter', hidden: true, alias: 'contracts' },
       { panel: 'hot',       label: 'Prospects chauds' },
       { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' },
       { panel: 'chat',      label: 'Chat', badge: 'subnav-chat-badge' },
@@ -3407,6 +3408,7 @@ function go(id, opts) {
   // CRM étape 1 : l'onglet Comptes est remplacé par la vue CRM (assets/crm.js).
   // L'ancien panneau reste joignable pour la fiche marché (opts.legacy).
   // L'ancien tableau de bord est remplacé par Ma journée et Statistiques.
+  if (id === 'signals' && !(opts && opts.legacy)) { id = 'contracts'; }
   if (id === 'dashboard' && !(opts && opts.legacy) && document.getElementById('panel-home') && window.scoutCrm) { id = 'home'; }
   // Anciens liens « onglet Contacts » de l'ancien panneau Comptes : vers la nouvelle liste Contacts.
   if (id === 'end-users' && opts && opts.tab === 'contacts' && !opts.legacy && document.getElementById('panel-people') && window.scoutCrm) { id = 'people'; }
@@ -10918,7 +10920,21 @@ function _visRenderDrawer() {
 
   // Prospecter : société puis contacts
   var pros = '';
-  if (a.societe_id) {
+  // Compte prospect (fiche compte) trouvé par le domaine : c'est lui qu'on ouvre en priorité.
+  var acc = _visDrawer.acct && _visDrawer.acct.key === a.account_key ? _visDrawer.acct.acc : undefined;
+  if (acc === undefined && a.org_domain && !_visDrawer.acctLoading) {
+    _visDrawer.acctLoading = true;
+    var _k = a.account_key, _d = String(a.org_domain).toLowerCase();
+    fetch(API + '/crm/accounts?limit=5&q=' + encodeURIComponent(_d), { headers: (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {} })
+      .then(function (r) { return r.ok ? r.json() : { accounts: [] }; })
+      .then(function (j) { var m = (j.accounts || []).find(function (x) { return String(x.domain || '').toLowerCase() === _d; }) || null; if (_visDrawer.key === _k) { _visDrawer.acct = { key: _k, acc: m }; _visDrawer.acctLoading = false; _visRenderDrawer(); } })
+      .catch(function () { if (_visDrawer.key === _k) { _visDrawer.acct = { key: _k, acc: null }; _visDrawer.acctLoading = false; } });
+  }
+  if (acc) {
+    pros += '<p><b>' + esc(acc.nom) + '</b> est un compte Scout' + (acc.tier ? ' (Tier ' + esc(acc.tier) + ')' : '') + '.</p><div class="vis-actions">'
+      + _visBtn('open-account', a.account_key, 'Ouvrir le compte', 'primary', ' data-id="' + esc(acc.id) + '"')
+      + (a.societe_id ? _visBtn('open-societe', a.account_key, 'Ancienne fiche', 'ghost', ' data-id="' + esc(a.societe_id) + '"') : '') + '</div>';
+  } else if (a.societe_id) {
     pros += '<p><b>' + esc(a.societe_name || a.societe_id) + '</b> est déjà dans Scout.</p><div class="vis-actions">'
       + _visBtn('open-societe', a.account_key, 'Ouvrir la fiche société', 'primary', ' data-id="' + esc(a.societe_id) + '"')
       + _visBtn('link', a.account_key, 'Rattacher ailleurs', 'ghost') + '</div>';
@@ -11243,6 +11259,7 @@ async function _visPollAlerts() {
     else if (act === 'close-drawer') _visCloseDrawer();
     else if (act === 'star') _visStar(key);
     else if (act === 'sort') { var by = b.dataset.by; if (_visSort.by === by) _visSort.dir = _visSort.dir === 'asc' ? 'desc' : 'asc'; else _visSort = { by: by, dir: by === 'name' ? 'asc' : 'desc' }; _visRenderTable(); }
+    else if (act === 'open-account') { _visCloseDrawer(); if (window.scoutCrm) window.scoutCrm.openAccount(b.dataset.id); }
     else if (act === 'open-societe') { _visCloseDrawer(); go('societes'); setTimeout(function () { try { openSociete(b.dataset.id); } catch (err) { console.error(err); } }, 60); }
     else if (act === 'open-contact') { try { openContactDetail(b.dataset.id); } catch (err) { console.error(err); } }
     else if (act === 'link') _visLink(key);
