@@ -7,7 +7,7 @@
   var API = (window.SCOUT_API_URL) || 'https://scout-api-production-fa8d.up.railway.app';
   var PAGE = 100;
 
-  var STATUS_LABEL = { nouveau: 'Nouveau', contacte: 'Contacté', engage: 'Engagé', qualifie: 'Qualifié', transmis: 'Transmis CRM', client: 'Client', perdu: 'Perdu' };
+  var STATUS_LABEL = { nouveau: 'Nouveau', contacte: 'Contacté', engage: 'Engagé', qualifie: 'Qualifié', transmis: 'Dans Dynamics', client: 'Client', perdu: 'Perdu' };
   var STATUS_ORDER = ['nouveau', 'contacte', 'engage', 'qualifie', 'transmis', 'client', 'perdu'];
   var ROLE_LABEL = { decideur: 'Décideur', acheteur: 'Acheteur', utilisateur: 'Utilisateur', technique: 'Technique', influenceur: 'Influenceur' };
   var ROLE_HINT = { decideur: 'Signe ou arbitre : chef de service, commandant, directeur', acheteur: 'Achats, marchés publics, acquisition', utilisateur: 'Opère les drones au quotidien', technique: 'Évalue la solution : technique, innovation, SI' };
@@ -19,7 +19,7 @@
     email: 'Email envoyé', email_bounced: 'Email non remis', linkedin_message: 'Message LinkedIn', linkedin_connect: 'Invitation LinkedIn',
     phone: 'Appel', call: 'Appel', in_person: 'Rendez-vous', meeting: 'Rendez-vous', third_party: 'Via un tiers', via_third_party: 'Via un tiers',
     other: 'Autre action', reply_positive: 'Réponse positive', reply_negative: 'Réponse négative', already_client: 'Marqué déjà client',
-    already_prospected_external: 'Déjà prospecté hors Scout', not_relevant: 'Marqué non pertinent', transmitted_crm: 'Transmis au CRM',
+    already_prospected_external: 'Déjà prospecté hors Scout', not_relevant: 'Marqué non pertinent', transmitted_crm: 'Saisi dans Dynamics',
     stale_flag: 'Signalé obsolète', nonprospect: 'Marqué non prospect'
   };
   var ICON = {
@@ -205,7 +205,7 @@
             sub: x.titre, who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x });
         } else if (x.status === 'interested') {
           items.push({ kind: 'reply', id: 'rep-' + x.id, due: x.last_action_at ? String(x.last_action_at).slice(0, 10) : null, title: 'Réponse positive : ' + name,
-            sub: 'À qualifier puis transmettre au CRM', who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x });
+            sub: 'À qualifier puis saisir dans Dynamics', who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x });
         }
       });
       items.sort(function (a, b) { return (a.due || '9999') < (b.due || '9999') ? -1 : ((a.due || '9999') > (b.due || '9999') ? 1 : 0); });
@@ -231,7 +231,8 @@
       : '<span class="crm-q-ic k-' + it.kind + '" aria-hidden="true">' + (it.kind === 'relance' ? ICON.mail : ICON.check) + '</span>';
     var actions = '';
     if (it.kind === 'relance') actions = '<button type="button" class="crm-btn sm primary" data-qrel="' + esc(it.contact_id) + '">Préparer la relance</button>';
-    if (it.kind === 'reply') actions = '<button type="button" class="crm-btn sm" data-qct="' + esc(it.contact_id) + '">Qualifier</button><button type="button" class="crm-btn sm primary" data-qtx="' + esc(it.contact_id) + '">Transmettre au CRM</button>';
+    if (it.kind === 'reply') actions = '<button type="button" class="crm-btn sm" data-qct="' + esc(it.contact_id) + '">Qualifier</button><button type="button" class="crm-btn sm" data-qcopy="' + esc(it.contact_id) + '" title="Copie nom, titre, organisation, pays, email et LinkedIn pour les coller dans Dynamics">Copier la fiche</button><button type="button" class="crm-btn sm primary" data-qtx="' + esc(it.contact_id) + '" title="Une fois le contact créé dans Dynamics. Scout n’envoie rien à Dynamics.">Saisi dans Dynamics ✓</button>';
+    if (it.kind === 'reply' && it.x) { S.qx = S.qx || {}; S.qx[it.contact_id] = it.x; }
     if (it.kind === 'task') actions = '<button type="button" class="del" data-deltask="' + esc(it.task.id) + '" title="Supprimer" aria-label="Supprimer la tâche">×</button>';
     return '<div class="crm-q k-' + it.kind + '">' + lead + '<div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
       + (it.kind === 'task' ? esc(it.title) : '<button type="button" class="crm-link strong" data-qct="' + esc(it.contact_id) + '">' + esc(it.title) + '</button>')
@@ -245,11 +246,20 @@
     root.querySelectorAll('[data-qrel]').forEach(function (b) {
       b.onclick = function () { if (typeof window.trkRelance === 'function') { S.afterRelance = after; window.trkRelance(b.getAttribute('data-qrel')); } else openContact(b.getAttribute('data-qrel')); };
     });
+    root.querySelectorAll('[data-qcopy]').forEach(function (b) {
+      b.onclick = function () {
+        var x = (S.qx || {})[b.getAttribute('data-qcopy')] || {};
+        var txt = [personName(x), x.titre, x.account_nom || x.organisation, x.pays, x.email, x.linkedin].filter(Boolean).join('\n');
+        var done = function () { toast('Fiche copiée : colle-la dans Dynamics'); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, function () { window.prompt('Copie la fiche :', txt); });
+        else window.prompt('Copie la fiche :', txt);
+      };
+    });
     root.querySelectorAll('[data-qtx]').forEach(function (b) {
       b.onclick = function () {
         b.disabled = true;
         api('/action/transmit-crm', { method: 'POST', body: { contact_id: b.getAttribute('data-qtx') } })
-          .then(function () { toast('Transmis au CRM'); after(); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
+          .then(function () { toast('Marqué comme saisi dans Dynamics'); after(); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
       };
     });
   }
@@ -397,7 +407,7 @@
       + kpi(t.first_emails || 0, 'premiers emails')
       + kpi(t.relances || 0, 'relances')
       + kpi(t.positive || 0, 'réponses positives')
-      + kpi(t.transmitted || 0, 'transmis au CRM')
+      + kpi(t.transmitted || 0, 'saisis dans Dynamics')
       + kpi((t.calls_meetings || 0) + (t.notes || 0), 'appels, RDV et notes')
       + '</div>';
     // Graphique 12 semaines (barres : emails ; points : réponses positives)
@@ -418,7 +428,7 @@
     var bars = W.map(function (w, i) {
       var h = Math.round(125 * w.emails / maxE), x = i * bw;
       var lab = new Date(w.week + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-      return '<g><title>Semaine du ' + esc(lab) + ' : ' + w.emails + ' emails, ' + w.positive + ' réponses positives, ' + w.transmitted + ' transmis</title>'
+      return '<g><title>Semaine du ' + esc(lab) + ' : ' + w.emails + ' emails, ' + w.positive + ' réponses positives, ' + w.transmitted + ' saisis dans Dynamics</title>'
         + '<rect x="' + (x + bw * 0.18) + '%" y="' + (165 - h) + '" width="' + (bw * 0.64) + '%" height="' + Math.max(h, 1) + '" rx="3" fill="var(--accent)" opacity=".75"></rect>'
         + (w.positive ? '<text x="' + (x + bw / 2) + '%" y="' + (158 - h) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#6A8B74">+' + w.positive + '</text>' : '')
         + '<text x="' + (x + bw / 2) + '%" y="183" text-anchor="middle" font-size="10" fill="var(--text3)">' + esc(lab) + '</text></g>';
@@ -428,7 +438,7 @@
       + (W.some(function (w) { return w.emails; }) ? '<svg width="100%" height="190" role="img" aria-label="Emails par semaine">' + bars + '</svg>' : '<div class="crm-meta">Aucune activité sur la période.</div>') + '</div>';
     // Tableau par commercial
     var P = d.people || [];
-    var cols = [['reached', 'Contacts touchés'], ['first_emails', '1ers emails'], ['relances', 'Relances'], ['calls_meetings', 'Appels / RDV'], ['linkedin', 'LinkedIn'], ['positive', 'Réponses +'], ['transmitted', 'Transmis'], ['tasks_done', 'Tâches faites'], ['notes', 'Notes']];
+    var cols = [['reached', 'Contacts touchés'], ['first_emails', '1ers emails'], ['relances', 'Relances'], ['calls_meetings', 'Appels / RDV'], ['linkedin', 'LinkedIn'], ['positive', 'Réponses +'], ['transmitted', 'Dans Dynamics'], ['tasks_done', 'Tâches faites'], ['notes', 'Notes']];
     html += '<div class="crm-card"><h3>Par commercial <span class="crm-meta">' + esc(d.days === 365 ? '12 mois' : d.days + ' jours') + '</span></h3>'
       + (P.length ? '<div class="crm-table-wrap"><table class="crm-table"><thead><tr><th>Commercial</th>' + cols.map(function (c) { return '<th style="text-align:right">' + esc(c[1]) + '</th>'; }).join('') + '</tr></thead><tbody>'
         + P.map(function (r) {
@@ -445,7 +455,7 @@
     };
     html += '<div class="crm-card"><h3>Portefeuille <span class="crm-meta">' + (A.total || 0) + ' comptes</span></h3>'
       + bar(A.owned || 0, A.total, 'avec un propriétaire', {}) + bar(A.tiered || 0, A.total, 'avec un tier', { tier: '1,2,3' })
-      + bar(A.engaged || 0, A.total, 'engagés (90 j)', { heat: 'chaud,tiede' }) + bar(A.transmis || 0, A.total, 'transmis au CRM', { status: 'transmis' })
+      + bar(A.engaged || 0, A.total, 'engagés (90 j)', { heat: 'chaud,tiede' }) + bar(A.transmis || 0, A.total, 'dans Dynamics', { status: 'transmis' })
       + '</div>'
       + '<div class="crm-card"><h3>Lecture</h3><div class="crm-meta" style="line-height:1.6">« Contacts touchés » compte les personnes contactées par email, LinkedIn, appel ou RDV. Les réponses positives de la période peuvent venir d’emails envoyés plus tôt.</div></div>'
       + '</aside></div>';
@@ -481,7 +491,7 @@
       html += '<div class="crm-hero">'
         + '<button type="button" class="crm-hero-card main" id="crm-hero-next"><span class="ic">' + ICON.send + '</span><span><b>Prochaine action</b><small>Traiter le prochain contact suggéré</small></span><span class="go">→</span></button>'
         + '<button type="button" class="crm-hero-card" data-goq="due"><b class="' + (nLate ? 'crm-late' : '') + '">' + dueNow.length + '</b><span>à faire aujourd’hui' + (nLate ? '<small class="crm-late">dont ' + nLate + ' en retard</small>' : '') + '</span></button>'
-        + '<button type="button" class="crm-hero-card" data-goq="reply"><b' + (nReply ? ' class="crm-today"' : '') + '>' + nReply + '</b><span>réponse' + (nReply > 1 ? 's' : '') + ' positive' + (nReply > 1 ? 's' : '') + ' à transmettre</span></button>'
+        + '<button type="button" class="crm-hero-card" data-goq="reply"><b' + (nReply ? ' class="crm-today"' : '') + '>' + nReply + '</b><span>réponse' + (nReply > 1 ? 's' : '') + ' positive' + (nReply > 1 ? 's' : '') + ' à saisir dans Dynamics</span></button>'
         + '<button type="button" class="crm-hero-card" data-kf=\'' + esc(JSON.stringify(Object.assign({}, ownerF, { heat: 'chaud,tiede' }))) + '\'><b>' + (k.engaged || 0) + '</b><span>compte' + (k.engaged > 1 ? 's' : '') + ' engagé' + (k.engaged > 1 ? 's' : '') + ' (90 j)</span></button>'
         + '</div>';
 

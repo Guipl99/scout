@@ -16,7 +16,7 @@
 <meta name="theme-color" content="#142220">
 <link rel="manifest" href="manifest.json">
 <title>Scout</title>
-<script src="assets/i18n.js?v=1"></script>
+<script src="assets/i18n.js?v=2"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Zalando+Sans+Expanded:wght@400;600;700;800&display=swap');
 
@@ -2812,7 +2812,7 @@ Réinitialiser tous les filtres
           <option value="">Tous les statuts</option>
           <option value="waiting">En attente de réponse</option>
           <option value="interested">Intéressé</option>
-          <option value="transmitted">Transmis au CRM</option>
+          <option value="transmitted">Saisi dans Dynamics</option>
           <option value="not_interested">Pas intéressé</option>
           <option value="closed">Close, sans réponse (90 j)</option>
         </select>
@@ -4237,7 +4237,7 @@ async function renderDashboardCockpit(){
     const sub = document.getElementById("db-cockpit-hot-sub");
     if(sub){
       const parts = [];
-      if(interested) parts.push(interested + " intéressé" + (interested>1?"s":"") + " à transmettre");
+      if(interested) parts.push(interested + " intéressé" + (interested>1?"s":"") + " à saisir dans Dynamics");
       if(vip) parts.push(vip + " VIP à contacter");
       sub.textContent = parts.length ? parts.join(" · ") : "Aucun pour le moment";
     }
@@ -9674,7 +9674,7 @@ async function renderHotProspects(){
   const secHead = (icon,title,n,color) => `<div style="display:flex;align-items:center;gap:8px;margin:20px 0 10px;"><span style="font-size:14px;font-weight:700;color:${color};">${icon} ${title}</span><span style="font-size:12px;color:var(--text3);">${n}</span><span style="flex:1;height:1px;background:var(--border);"></span></div>`;
 
   let html = '';
-  html += secHead('✅','Ont répondu, à transmettre', interested.length, '#6A8B74');
+  html += secHead('✅','Ont répondu, à saisir dans Dynamics', interested.length, '#6A8B74');
   html += interested.length ? gridOpen + interested.map(contactPanelCard).join('') + '</div>'
         : empty(`Aucun contact n'a encore répondu positivement. Marque « a répondu » sur une fiche pour l'y voir apparaître.`);
   html += secHead('⭐','VIP à contacter (pas encore approchés)', vip.length, '#8E6420');
@@ -11352,7 +11352,7 @@ function _trkFiltered(){
 }
 function _trkStatusChip(x){
   const base='font-size:11px;padding:2px 8px;border-radius:var(--radius);font-weight:600;';
-  if(x.status==='transmitted') return '<span style="'+base+'background:rgba(133,89,62,.12);color:#85593E;">Transmis au CRM</span>';
+  if(x.status==='transmitted') return '<span style="'+base+'background:rgba(133,89,62,.12);color:#85593E;">Saisi dans Dynamics</span>';
   if(x.status==='interested') return '<span style="'+base+'background:rgba(122,154,132,.14);color:#6A8B74;">Intéressé</span>';
   if(x.status==='not_interested') return '<span style="'+base+'background:var(--bg3);color:var(--text3);">Pas intéressé</span>';
   if(x.status==='closed') return '<span style="'+base+'background:var(--bg3);color:var(--text3);" title="Aucune réponse 90 jours après le dernier email">Close, sans réponse</span>';
@@ -11370,7 +11370,7 @@ function _trkActionBtn(x){
   if(x.status==='waiting' && x.email && (x.urgency==='overdue'||x.urgency==='due'||x.urgency==='future'))
     return '<button onclick="trkRelance(\''+esc(x.id)+'\')" style="'+b+'color:#fff;background:var(--accent);border:none;font-weight:600;">✉️ Relance</button>';
   if(x.status==='interested')
-    return '<button onclick="trkTransmitCRM(\''+esc(x.id)+'\')" style="'+b+'color:#85593E;background:rgba(133,89,62,.1);border:1px solid rgba(133,89,62,.4);font-weight:600;">→ Transmettre au CRM</button>';
+    return '<button onclick="trkTransmitCRM(\''+esc(x.id)+'\')" style="'+b+'color:#85593E;background:rgba(133,89,62,.1);border:1px solid rgba(133,89,62,.4);font-weight:600;" title="Une fois le contact créé dans Dynamics. Scout n’envoie rien à Dynamics.">✓ Saisi dans Dynamics</button>';
   return '<button onclick="openContactDetail(\''+esc(x.id)+'\')" style="'+b+'color:var(--text2);background:var(--bg3);border:1px solid var(--border2);">👁️ Fiche</button>';
 }
 function renderTrackingTable(){
@@ -11445,7 +11445,7 @@ window.trkMarkRelanceSent=trkMarkRelanceSent;
 function exportTrackingCSV(){
   const list=window._trackingExport||_trkFiltered();
   const cols=['Owner','Prénom','Nom','Titre','Compte','Pays','Email','Statut','Étape','Prochaine relance','Jours de retard','Dernière action'];
-  const stMap={waiting:'En attente',interested:'Intéressé',transmitted:'Transmis au CRM',not_interested:'Pas intéressé',closed:'Close, sans réponse'};
+  const stMap={waiting:'En attente',interested:'Intéressé',transmitted:'Saisi dans Dynamics',not_interested:'Pas intéressé',closed:'Close, sans réponse'};
   const q=function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; };
   const lines=list.map(function(x){ return [x.owner||'',x.prenom||'',x.nom||'',x.titre||'',x.account_nom||x.organisation||'',x.pays||'',x.email||'',stMap[x.status]||x.status,x.stage||'',x.next_relance?String(x.next_relance).slice(0,10):'',x.urgency==='overdue'?x.days_overdue:'',x.last_action_at?String(x.last_action_at).slice(0,10):''].map(q).join(','); });
   const csv='﻿'+cols.map(q).join(',')+'\n'+lines.join('\n');
@@ -11741,7 +11741,7 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=190"></script>
+<script src="assets/crm.js?v=191"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>
 <script>
 // Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.
