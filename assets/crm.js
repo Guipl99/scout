@@ -383,6 +383,100 @@
     }).catch(function (e) { box.innerHTML = '<h3>Qualité des données</h3><div class="crm-meta">' + esc(e.status === 403 ? 'Réservé aux admins.' : 'Erreur : ' + e.message) + '</div>'; });
   }
 
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // PROSPECTION : prochaine action, comptes chauds, comptes à ouvrir, VIP
+  // ═════════════════════════════════════════════════════════════════════════
+  function onProspectionPanel() {
+    var p = document.getElementById('panel-prospection'); if (!p) return;
+    S.prospScope = S.prospScope || lsGet('scout_prosp_scope', 'all');
+    p.innerHTML = '<div class="crm-wrap crm-home crm-prosp">'
+      + '<div class="crm-row crm-home-head"><div class="crm-meta crm-lead-in">Qui contacter maintenant, et pourquoi.</div>'
+      + '<div class="crm-seg"><button type="button" class="crm-chip" data-ps="me">Mes comptes</button><button type="button" class="crm-chip" data-ps="all">Tous les comptes</button></div></div>'
+      + '<div id="crm-prosp-body"><div class="crm-empty">Chargement…</div></div></div>';
+    p.querySelectorAll('[data-ps]').forEach(function (b) {
+      b.onclick = function () { S.prospScope = b.getAttribute('data-ps'); lsSet('scout_prosp_scope', S.prospScope); loadProspection(); };
+    });
+    loadProspection();
+  }
+
+  function loadProspection() {
+    var p = document.getElementById('panel-prospection'); if (!p) return;
+    p.querySelectorAll('[data-ps]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-ps') === S.prospScope); });
+    var body = document.getElementById('crm-prosp-body');
+    var own = S.prospScope === 'me' ? '&owner=me' : '';
+    Promise.all([
+      api('/crm/accounts?heat=chaud,tiede&sort=score&dir=desc&limit=10' + own).catch(function () { return { accounts: [] }; }),
+      api('/crm/accounts?activity=never&contacts=with&sort=priority&dir=desc&limit=10' + own).catch(function () { return { accounts: [] }; }),
+      api('/crm/contacts?vip=1&limit=12').catch(function () { return { contacts: [] }; }),
+      api('/me/stats').catch(function () { return {}; }),
+      api('/contacts/stats-engagement').catch(function () { return {}; }),
+      loadQueue('me').catch(function () { return []; })
+    ]).then(function (r) {
+      var hot = r[0].accounts || [], fresh = r[1].accounts || [], vip = r[2].contacts || [], st = r[3] || {}, eng = r[4] || {}, queue = r[5] || [];
+      var t = todayStr();
+      var nDue = queue.filter(function (x) { return x.kind === 'relance' && x.due && x.due <= t; }).length;
+      var nReply = queue.filter(function (x) { return x.kind === 'reply'; }).length;
+      var html = '';
+
+      // 1. Prochaine action + cadence
+      html += '<div class="crm-prosp-top">'
+        + '<div class="crm-prosp-next"><div class="ov">Prochaine action</div>'
+        + '<p>Scout choisit le meilleur contact à travailler dans tes segments : décideur vérifié, compte prioritaire, jamais contacté. Tu écris, Scout note et planifie la relance.</p>'
+        + '<div class="row"><button type="button" class="crm-btn primary lg" id="crm-prosp-go">Démarrer ›</button>'
+        + '<span class="crm-meta"><b>' + (eng.stock_relevant != null ? eng.stock_relevant : '…') + '</b> contacts prêts à prospecter · <button type="button" class="crm-link" data-goto="config">Mes segments</button></span></div></div>'
+        + '<div class="crm-prosp-stats">'
+        + '<button type="button" class="crm-kpi" data-goto="stats"><b>' + (st.emails_7d || 0) + '</b><span>emails envoyés (7 j)</span></button>'
+        + '<button type="button" class="crm-kpi' + (nDue ? ' warn' : '') + '" data-goq="all"><b>' + nDue + '</b><span>relances dues</span></button>'
+        + '<button type="button" class="crm-kpi" data-goq="reply"><b>' + nReply + '</b><span>réponses positives à saisir dans Dynamics</span></button>'
+        + '</div></div>';
+
+      var why = function (a) {
+        var w = [];
+        if (a.web_pages_90d) w.push('<span class="crm-why web">' + a.web_pages_90d + ' page' + (a.web_pages_90d > 1 ? 's' : '') + ' vues' + (a.last_visit ? ', ' + relTime(a.last_visit) : '') + '</span>');
+        if (a.chats_90d) w.push('<span class="crm-why">chat sur le site</span>');
+        if (a.n_market_recent) w.push('<span class="crm-why">appel d’offres récent</span>');
+        if (a.last_activity_at) w.push('<span class="crm-why soft">activité ' + relTime(a.last_activity_at) + '</span>');
+        return w.join('');
+      };
+      var row = function (a, right) {
+        return '<button type="button" class="crm-prow" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier)
+          + '<span class="m"><b>' + esc(a.nom) + '</b><span>' + esc([a.pays, a.secteur, (a.n_contacts || 0) + ' contact' + (a.n_contacts > 1 ? 's' : '')].filter(Boolean).join(' · ')) + '</span></span>'
+          + '<span class="w">' + right(a) + '</span>'
+          + '<span class="o">' + (a.owner_name ? '<span class="crm-avatar">' + esc(initials(a.owner_name)) + '</span>' + esc(a.owner_name) : '<span class="crm-meta">Personne</span>') + '</span></button>';
+      };
+
+      // 2. Comptes chauds
+      html += '<div class="crm-card"><h3>Comptes chauds <span class="crm-meta">ils bougent : visites du site, chat, appels d’offres, échanges récents</span> <button type="button" class="crm-link" data-kf=\'' + esc(JSON.stringify(Object.assign(S.prospScope === 'me' ? { owner: 'me' } : {}, { heat: 'chaud,tiede' }))) + '\'>Tous →</button></h3>'
+        + (hot.length ? hot.map(function (a) { return row(a, function (x) { return why(x) + heatBadge(x.score, x.heat); }); }).join('')
+          : '<div class="crm-empty" style="padding:16px">Aucun compte chaud pour le moment.</div>')
+        + '</div>';
+
+      // 3. Comptes à ouvrir
+      html += '<div class="crm-prosp-cols"><div class="crm-card"><h3>Comptes à ouvrir <span class="crm-meta">jamais contactés, les plus prioritaires d’abord</span> <button type="button" class="crm-link" data-kf=\'' + esc(JSON.stringify(Object.assign(S.prospScope === 'me' ? { owner: 'me' } : {}, { activity: 'never', contacts: 'with' }))) + '\'>Tous →</button></h3>'
+        + (fresh.length ? fresh.map(function (a) { return row(a, function (x) { return prioBadge(x.priority); }); }).join('')
+          : '<div class="crm-empty" style="padding:16px">Tous les comptes avec contacts ont déjà été travaillés.</div>')
+        + '</div>';
+
+      // 4. VIP
+      html += '<div class="crm-card"><h3>VIP à contacter <span class="crm-meta">contacts 3 étoiles jamais approchés</span></h3>'
+        + (vip.length ? vip.map(function (c) {
+          return '<button type="button" class="crm-prow person" data-ct="' + esc(c.id) + '"><span class="crm-avatar lg">' + esc(initials(personName(c))) + '</span>'
+            + '<span class="m"><b>' + esc(personName(c)) + '</b><span>' + esc([c.titre, c.account_nom || c.organisation, c.pays].filter(Boolean).join(' · ')) + '</span></span>'
+            + (c.role ? rolePill(c.role) : '') + '</button>';
+        }).join('') : '<div class="crm-empty" style="padding:16px">Aucun VIP en attente. Mets 3 étoiles à un contact clé pour le retrouver ici.</div>')
+        + '</div></div>';
+
+      body.innerHTML = html;
+      document.getElementById('crm-prosp-go').onclick = function () { if (window.scoutAction && window.scoutAction.open) window.scoutAction.open(); };
+      body.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
+      body.querySelectorAll('[data-ct]').forEach(function (b) { b.onclick = function () { openContact(b.getAttribute('data-ct')); }; });
+      body.querySelectorAll('[data-kf]').forEach(function (b) { b.onclick = function () { openAccountsWith(JSON.parse(b.getAttribute('data-kf'))); }; });
+      body.querySelectorAll('[data-goto]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-goto')); }; });
+      body.querySelectorAll('[data-goq]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-goq') === 'reply' ? 'reply' : 'all'; S.taskScope = 'me'; go('tasks'); }; });
+    }).catch(function (e) { body.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+  }
+
   // ═════════════════════════════════════════════════════════════════════════
   // STATISTIQUES : activité de l'équipe, conversion, portefeuille
   // ═════════════════════════════════════════════════════════════════════════
@@ -1657,6 +1751,7 @@
       else if (id === 'home') onHomePanel();
       else if (id === 'stats') onStatsPanel();
       else if (id === 'signals') onSignalsPanel();
+      else if (id === 'prospection') onProspectionPanel();
       setTimeout(paintBadge, 30);
     } catch (e) { console.error('[crm] onPanel', e); }
   }

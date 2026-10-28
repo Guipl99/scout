@@ -79,13 +79,22 @@ button, input, select, textarea { font-family: inherit; }
 .scout-auth-card .lang-toggle button.on { color: #fff !important; }
 
 /* ── Bouton flottant « Prochaine action » et bulle ── */
-#scout-action-btn, .scout-action-fab { border-radius: 2px !important; background: var(--accent) !important; text-transform: uppercase; letter-spacing: .06em; font-size: 12.5px !important; box-shadow: 0 6px 20px rgba(0, 0, 0, .35) !important; }
+/* « Prochaine action » vit dans l'onglet Prospection : plus de bouton flottant (la pastille « Reprendre » reste). */
+#scout-action-btn { display: none !important; }
+#scout-action-pill { border-radius: 2px !important; background: var(--accent) !important; box-shadow: 0 6px 20px rgba(0, 0, 0, .3) !important; }
 
 /* ── Thème clair ── */
 body.theme-light .sidebar { background: #EAE7DA; }
 body.theme-light .nav-item.active { background: rgba(133, 89, 62, .12); color: #1A2A28; }
 body.theme-light .crm-toast { background: #1A2A28; color: #E5E2D2; }
-#scout-chat-btn { background: #1A2A28 !important; border: 1px solid var(--accent) !important; color: #E5E2D2 !important; border-radius: 2px !important; box-shadow: 0 6px 20px rgba(0, 0, 0, .35) !important; }
+/* Bulle d'aide Scout : discrète, carrée aux angles doux, filet brun */
+#scout-chat-btn { width: 44px !important; height: 44px !important; right: 20px !important; bottom: 20px !important; border-radius: 50% !important;
+  background: var(--bg2) !important; border: 1px solid var(--border2) !important; color: var(--accent2) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .22) !important; transition: border-color .15s, color .15s, transform .15s !important; }
+#scout-chat-btn:hover { transform: translateY(-1px) !important; border-color: var(--accent) !important; color: var(--text) !important; box-shadow: 0 6px 18px rgba(0, 0, 0, .28) !important; }
+#scout-chat-btn svg { width: 19px !important; height: 19px !important; stroke-width: 1.8; }
+body.theme-light #scout-chat-btn { background: #fff !important; }
+@media (max-width: 768px) { #scout-chat-btn { bottom: 76px !important; right: 14px !important; width: 42px !important; height: 42px !important; } }
 #scout-gs-fab { border-radius: 2px !important; background: var(--accent) !important; color: #fff !important; box-shadow: none !important; outline: none !important; }
 #scout-gs-fab kbd { border-radius: 2px; background: rgba(255, 255, 255, .16); color: #fff; border: 0; }
 .crm-card h3 .crm-meta, .crm-card h3 .crm-link, .crm-card h3 .crm-tl-filters, .crm-card h3 small {
