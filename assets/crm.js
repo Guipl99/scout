@@ -386,6 +386,126 @@
 
 
   // ═════════════════════════════════════════════════════════════════════════
+  // SIGNAUX MARCHÉ : cartes « action proposée » et onglet Marchés
+  // ═════════════════════════════════════════════════════════════════════════
+  function sigType(sg) {
+    if (sg.flux === 1) return /avis amont/.test(sg.why || '') ? 'Avis amont' : 'Appel d’offres';
+    if (sg.flux === 2) return 'Concurrent' + (sg.competitor ? ' : ' + sg.competitor : '');
+    if (sg.flux === 3) return 'Achat déclencheur';
+    return sg.kind === 'tender' ? 'Appel d’offres' : 'Contrat';
+  }
+  function sigScore(n) { return '<span class="crm-ms-score s' + (n >= 5 ? 'hi' : n >= 3 ? 'mid' : 'lo') + '" title="Note sur 8 : produit, moment, compte, taille">' + n + '/8</span>'; }
+  function sigCard(sg) {
+    var acc = (sg.accounts || [])[0];
+    var title = esc(sg.title || 'Sans titre');
+    var btns = sg.flux === 1
+      ? '<button type="button" class="crm-btn primary sm" data-sa="go">Go</button><button type="button" class="crm-btn sm" data-sa="nogo">No-go</button>'
+      : '<button type="button" class="crm-btn primary sm" data-sa="accept">Accepter</button>';
+    btns += '<button type="button" class="crm-btn ghost sm" data-sa="not_relevant">Pas pertinent</button>';
+    if (!acc) btns = '<button type="button" class="crm-btn sm" data-sa="link">Relier à un compte</button>' + btns;
+    return '<div class="crm-ms" data-sk="' + esc(sg.kind) + '" data-sr="' + esc(sg.ref_id) + '">'
+      + '<div class="crm-ms-head">' + sigScore(sg.score) + '<span class="crm-ms-type">' + esc(sigType(sg)) + '</span>'
+      + '<b class="crm-ms-title">' + (sg.url ? '<a href="' + esc(sg.url) + '" target="_blank" rel="noopener">' + title + '</a>' : title) + '</b></div>'
+      + '<div class="crm-ms-body"><div><div class="crm-meta">Pourquoi : ' + esc(sg.why || '') + '</div>'
+      + '<div class="crm-ms-act">' + esc(sg.action || '') + '</div>'
+      + '<div class="crm-meta">' + (acc ? '<button type="button" class="crm-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button> · ' + esc(acc.owner_name || 'sans commercial') : 'Sans compte : à relier (tri admin)') + '</div></div>'
+      + '<div class="crm-ms-btns">' + btns + '</div></div>'
+      + '<div class="crm-ms-pick" hidden></div></div>';
+  }
+  var SIG_REASONS = ['Hors produit', 'Hors zone', 'Trop petit', 'Déjà connu', 'Autre'];
+  function bindSigCards(root, reload) {
+    root.querySelectorAll('.crm-ms').forEach(function (card) {
+      var kind = card.getAttribute('data-sk'), ref = card.getAttribute('data-sr');
+      var send = function (body, msg) {
+        card.style.opacity = '.5';
+        return api('/crm/signals/' + kind + '/' + encodeURIComponent(ref) + '/action', { method: 'POST', body: body })
+          .then(function () { toast(msg); reload(); })
+          .catch(function (e) { card.style.opacity = ''; toast('Erreur : ' + e.message); });
+      };
+      card.querySelectorAll('[data-sa]').forEach(function (b) {
+        b.onclick = function () {
+          var a = b.getAttribute('data-sa');
+          if (a === 'go') return send({ action: 'go' }, 'Go : tâche créée dans À faire');
+          if (a === 'accept') return send({ action: 'accept' }, 'Action acceptée : tâche créée dans À faire');
+          if (a === 'link') {
+            var host = card.querySelector('.crm-ms-pick'); host.hidden = false;
+            acctPicker(host, { focus: true, placeholder: 'Relier à quel compte ?', onPick: function (acc) { send({ action: 'link', end_user_id: acc.id }, 'Relié à ' + acc.nom); } });
+            return;
+          }
+          // no-go / pas pertinent : choix de la raison (sert à ajuster les mots-clés)
+          var host2 = card.querySelector('.crm-ms-pick'); host2.hidden = false;
+          host2.innerHTML = '<span class="crm-meta">' + (a === 'nogo' ? 'Pourquoi no-go ?' : 'Pourquoi pas pertinent ?') + '</span> '
+            + SIG_REASONS.map(function (r) { return '<button type="button" class="crm-chip" data-rs="' + esc(r) + '">' + esc(r) + '</button>'; }).join(' ');
+          host2.querySelectorAll('[data-rs]').forEach(function (rb) {
+            rb.onclick = function () { send({ action: a, reason: rb.getAttribute('data-rs') }, a === 'nogo' ? 'No-go enregistré' : 'Écarté, merci pour le retour'); };
+          });
+        };
+      });
+      card.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
+    });
+  }
+
+  function onMarketPanel() {
+    var p = document.getElementById('panel-market'); if (!p) return;
+    S.mkView = S.mkView || lsGet('scout_market_view', 'competitors');
+    p.innerHTML = '<div class="crm-wrap crm-home">'
+      + '<div class="crm-row crm-home-head"><div class="crm-meta crm-lead-in">Consultation. Les actions à mener arrivent dans Prospection.</div>'
+      + '<div class="crm-seg"><button type="button" class="crm-chip" data-mv="competitors">Concurrents</button><button type="button" class="crm-chip" data-mv="library">Bibliothèque</button></div></div>'
+      + '<div id="crm-mk-body"><div class="crm-empty">Chargement…</div></div></div>';
+    p.querySelectorAll('[data-mv]').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-mv') === S.mkView);
+      b.onclick = function () { S.mkView = b.getAttribute('data-mv'); lsSet('scout_market_view', S.mkView); onMarketPanel(); };
+    });
+    if (S.mkView === 'library') loadLibrary(); else loadCompetitors();
+  }
+  function mkRow(sg) {
+    var val = sg.value_max ? (sg.value_max >= 1e9 ? (sg.value_max / 1e9).toFixed(1).replace('.', ',') + ' Md' : sg.value_max >= 1e6 ? Math.round(sg.value_max / 1e6) + ' M' : Math.round(sg.value_max / 1e3) + ' k') : '';
+    var acc = (sg.accounts || [])[0];
+    var title = esc(sg.title || 'Sans titre');
+    return '<div class="crm-mk-row">' + sigScore(sg.score)
+      + '<span class="m"><span class="crm-ms-type">' + esc(sigType(sg)) + '</span> <b>' + (sg.url ? '<a href="' + esc(sg.url) + '" target="_blank" rel="noopener">' + title + '</a>' : title) + '</b>'
+      + '<span class="crm-meta">' + esc([sg.buyer, sg.pays, sg.supplier, val].filter(Boolean).join(' · ')) + '</span>'
+      + (sg.why ? '<span class="crm-meta">' + esc(sg.why) + '</span>' : '') + '</span>'
+      + '<span class="r crm-meta">' + esc(sg.date ? fmtDate(sg.date) : '') + (acc ? '<br><button type="button" class="crm-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button>' : '') + '</span></div>';
+  }
+  function loadCompetitors() {
+    var body = document.getElementById('crm-mk-body');
+    api('/crm/market/competitors').then(function (d) {
+      var list = d.competitors || [];
+      body.innerHTML = '<div class="crm-meta" style="margin:0 0 10px">Contrats, commandes et distributeurs des concurrents filaires, avec acheteur nommé. Les levées de fonds et lancements de produit n’y figurent pas.</div>'
+        + list.map(function (c) {
+          return '<div class="crm-card"><h3>' + esc(c.name) + ' <span class="crm-meta">' + c.n + ' marché' + (c.n > 1 ? 's' : '') + ' en base</span></h3>'
+            + (c.items.length ? c.items.map(mkRow).join('') : '<div class="crm-empty" style="padding:10px">Rien en base pour l’instant.</div>') + '</div>';
+        }).join('');
+      body.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
+    }).catch(function (e) { body.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+  }
+  function loadLibrary() {
+    var body = document.getElementById('crm-mk-body');
+    S.mkQ = S.mkQ || ''; S.mkMin = S.mkMin == null ? 0 : S.mkMin; S.mkKind = S.mkKind || '';
+    body.innerHTML = '<div class="crm-row" style="gap:8px;margin-bottom:10px;flex-wrap:wrap"><input type="search" class="crm-input" id="crm-mk-q" placeholder="Rechercher un titre, un acheteur, un pays, un fournisseur…" value="' + esc(S.mkQ) + '" style="flex:1;min-width:220px">'
+      + '<select class="crm-input" id="crm-mk-kind" style="width:auto"><option value="">Tout</option><option value="tender">Appels d’offres</option><option value="contract">Contrats</option></select>'
+      + '<select class="crm-input" id="crm-mk-min" style="width:auto"><option value="0">Toutes les notes</option><option value="3">3 et plus</option><option value="5">5 et plus</option></select></div>'
+      + '<div id="crm-mk-list"><div class="crm-empty">Chargement…</div></div>';
+    var q = document.getElementById('crm-mk-q'), k = document.getElementById('crm-mk-kind'), m = document.getElementById('crm-mk-min');
+    k.value = S.mkKind; m.value = String(S.mkMin);
+    var t = null;
+    var run = function () {
+      S.mkQ = q.value.trim(); S.mkKind = k.value; S.mkMin = parseInt(m.value, 10) || 0;
+      api('/crm/market/library?q=' + encodeURIComponent(S.mkQ) + '&kind=' + S.mkKind + '&min=' + S.mkMin).then(function (d) {
+        var list = document.getElementById('crm-mk-list'); if (!list) return;
+        var c = d.counts || {};
+        list.innerHTML = '<div class="crm-meta" style="margin-bottom:8px">' + d.n + ' résultat' + (d.n > 1 ? 's' : '') + (d.n > 200 ? ' (200 affichés)' : '') + ' · ' + (c.total || 0) + ' en base, ' + (c.proposed || 0) + ' notés 5 et plus, ' + (c.watch || 0) + ' notés 3 ou 4</div>'
+          + '<div class="crm-card">' + ((d.rows || []).map(mkRow).join('') || '<div class="crm-empty" style="padding:10px">Aucun résultat.</div>') + '</div>';
+        list.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
+      }).catch(function (e) { document.getElementById('crm-mk-list').innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+    };
+    q.oninput = function () { clearTimeout(t); t = setTimeout(run, 250); };
+    k.onchange = run; m.onchange = run;
+    run();
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
   // PROSPECTION : prochaine action, comptes chauds, comptes à ouvrir, VIP
   // ═════════════════════════════════════════════════════════════════════════
   function onProspectionPanel() {
@@ -412,9 +532,19 @@
       api('/crm/contacts?vip=1&limit=12').catch(function () { return { contacts: [] }; }),
       api('/me/stats').catch(function () { return {}; }),
       api('/contacts/stats-engagement').catch(function () { return {}; }),
-      loadQueue('me').catch(function () { return []; })
+      loadQueue('me').catch(function () { return []; }),
+      api('/crm/signals/proposed?scope=' + (S.prospScope === 'me' ? 'me' : 'all')).catch(function () { return { rows: [] }; })
     ]).then(function (r) {
       var hot = r[0].accounts || [], fresh = r[1].accounts || [], vip = r[2].contacts || [], st = r[3] || {}, eng = r[4] || {}, queue = r[5] || [];
+      var props = (r[6] && r[6].rows) || []; S.props = props;
+      // Comptes touchés par une action proposée : raison affichée, et remontés dans « Comptes chauds ».
+      var sigByAcc = {};
+      props.forEach(function (sg) { (sg.accounts || []).forEach(function (a) { if (!sigByAcc[a.id]) sigByAcc[a.id] = sg; }); });
+      Object.keys(sigByAcc).forEach(function (id) {
+        if (hot.some(function (a) { return a.id === id; })) return;
+        var sg = sigByAcc[id], a = (sg.accounts || []).filter(function (x) { return x.id === id; })[0];
+        if (a && hot.length < 14) hot.unshift({ id: a.id, nom: a.nom, owner_name: a.owner_name, pays: sg.pays, n_contacts: null, _sigOnly: true });
+      });
       var t = todayStr();
       var nDue = queue.filter(function (x) { return x.kind === 'relance' && x.due && x.due <= t; }).length;
       var nReply = queue.filter(function (x) { return x.kind === 'reply'; }).length;
@@ -424,6 +554,7 @@
       html += '<div class="crm-prosp-top">'
         + '<div class="crm-prosp-next"><div class="ov">Prochaine action</div>'
         + '<p>Scout choisit le meilleur contact à travailler dans tes segments : décideur vérifié, compte prioritaire, jamais contacté. Tu écris, Scout note et planifie la relance.</p>'
+        + (props.length ? '<p class="crm-prosp-sig"><b>' + props.length + ' action' + (props.length > 1 ? 's' : '') + ' proposée' + (props.length > 1 ? 's' : '') + '</b> par les signaux marché, dont « ' + esc((props[0].title || '').slice(0, 80)) + ' » <button type="button" class="crm-link" id="crm-prosp-sig">Voir ↓</button></p>' : '')
         + '<div class="row"><button type="button" class="crm-btn primary lg" id="crm-prosp-go">Démarrer ›</button>'
         + '<span class="crm-meta"><b>' + (eng.stock_relevant != null ? eng.stock_relevant : '…') + '</b> contacts prêts à prospecter · <button type="button" class="crm-link" data-goto="config">Mes segments</button></span></div></div>'
         + '<div class="crm-prosp-stats">'
@@ -436,18 +567,26 @@
         var w = [];
         if (a.web_pages_90d) w.push('<span class="crm-why web">' + a.web_pages_90d + ' page' + (a.web_pages_90d > 1 ? 's' : '') + ' vues' + (a.last_visit ? ', ' + relTime(a.last_visit) : '') + '</span>');
         if (a.chats_90d) w.push('<span class="crm-why">chat sur le site</span>');
-        if (a.n_market_recent) w.push('<span class="crm-why">appel d’offres récent</span>');
+        var sg = sigByAcc[a.id];
+        if (sg) w.push('<span class="crm-why sig">' + esc(sigType(sg)) + '</span>');
+        else if (a.n_market_recent) w.push('<span class="crm-why">marché récent</span>');
         if (a.last_activity_at) w.push('<span class="crm-why soft">activité ' + relTime(a.last_activity_at) + '</span>');
         return w.join('');
       };
       var row = function (a, right) {
         return '<button type="button" class="crm-prow" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier)
-          + '<span class="m"><b>' + esc(a.nom) + '</b><span>' + esc([a.pays, a.secteur, (a.n_contacts || 0) + ' contact' + (a.n_contacts > 1 ? 's' : '')].filter(Boolean).join(' · ')) + '</span></span>'
+          + '<span class="m"><b>' + esc(a.nom) + '</b><span>' + esc([a.pays, a.secteur, a._sigOnly ? '' : (a.n_contacts || 0) + ' contact' + (a.n_contacts > 1 ? 's' : '')].filter(Boolean).join(' · ')) + '</span></span>'
           + '<span class="w">' + right(a) + '</span>'
           + '<span class="o">' + (a.owner_name ? '<span class="crm-avatar">' + esc(initials(a.owner_name)) + '</span>' + esc(a.owner_name) : '<span class="crm-meta">Personne</span>') + '</span></button>';
       };
 
-      // 2. Comptes chauds
+      // 2. Actions proposées (signaux marché notés 5 sur 8 et plus, sans échéance)
+      html += '<div class="crm-card" id="crm-props"><h3>Actions proposées <span class="crm-meta">appels d’offres, contrats des concurrents, achats déclencheurs, notés 5 sur 8 et plus</span> <button type="button" class="crm-link" data-goto="market">Marchés →</button></h3>'
+        + (props.length ? props.map(sigCard).join('')
+          : '<div class="crm-empty" style="padding:16px">Aucune action proposée' + (S.prospScope === 'me' ? ' sur tes comptes' : '') + ' pour le moment.</div>')
+        + '</div>';
+
+      // 3. Comptes chauds
       html += '<div class="crm-card"><h3>Comptes chauds <span class="crm-meta">ils bougent : visites du site, chat, appels d’offres, échanges récents</span> <button type="button" class="crm-link" data-kf=\'' + esc(JSON.stringify(Object.assign(S.prospScope === 'me' ? { owner: 'me' } : {}, { heat: 'chaud,tiede' }))) + '\'>Tous →</button></h3>'
         + (hot.length ? hot.map(function (a) { return row(a, function (x) { return why(x) + heatBadge(x.score, x.heat); }); }).join('')
           : '<div class="crm-empty" style="padding:16px">Aucun compte chaud pour le moment.</div>')
@@ -470,6 +609,8 @@
 
       body.innerHTML = html;
       document.getElementById('crm-prosp-go').onclick = function () { if (window.scoutAction && window.scoutAction.open) window.scoutAction.open(); };
+      var sigBtn = document.getElementById('crm-prosp-sig'); if (sigBtn) sigBtn.onclick = function () { var el = document.getElementById('crm-props'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+      bindSigCards(body, loadProspection);
       body.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
       body.querySelectorAll('[data-ct]').forEach(function (b) { b.onclick = function () { openContact(b.getAttribute('data-ct')); }; });
       body.querySelectorAll('[data-kf]').forEach(function (b) { b.onclick = function () { openAccountsWith(JSON.parse(b.getAttribute('data-kf'))); }; });
@@ -1196,13 +1337,15 @@
       + (openTasks.length ? openTasks.map(taskHtml).join('') : '<div class="crm-meta">Aucune tâche ouverte.</div>')
       + (doneTasks.length ? '<details style="margin-top:8px"><summary class="crm-meta" style="cursor:pointer">' + doneTasks.length + ' terminée' + (doneTasks.length > 1 ? 's' : '') + '</summary>' + doneTasks.map(taskHtml).join('') + '</details>' : '')
       + '</div>'
-      + (A.market && A.market.length ? '<div class="crm-card"><h3>Appels d’offres & contrats <span class="crm-meta">' + A.market.length + '</span></h3>' + A.market.map(function (m) {
+      + (A.market && A.market.length ? '<div class="crm-card"><h3>Marchés <span class="crm-meta">' + A.market.length + '</span></h3>' + A.market.map(function (m) {
         var val = m.value_max ? (m.value_max >= 1e9 ? (m.value_max / 1e9).toFixed(1).replace('.', ',') + ' Md' : Math.round(m.value_max / 1e6) + ' M') : '';
         var label = esc(m.title || 'Sans titre');
         return '<div class="crm-webrow" style="align-items:flex-start;gap:8px"><span><span class="crm-q-kind k-' + (m.kind === 'tender' ? 'relance' : 'task') + '">' + (m.kind === 'tender' ? 'Appel d’offres' : 'Contrat') + '</span> '
           + (m.url ? '<a class="crm-link" href="' + esc(m.url) + '" target="_blank" rel="noopener">' + label + '</a>' : label)
-          + '<br><span class="crm-meta">' + esc([m.buyer, val].filter(Boolean).join(' · ')) + '</span></span><span class="crm-meta" style="white-space:nowrap">' + esc(m.date ? fmtDate(m.date) : '') + '</span></div>';
-      }).join('') + '<div class="crm-meta" style="margin-top:6px">Rattachés par le nom de l’acheteur. Un marché de moins d’un an ajoute 10 points d’engagement (20 max).</div></div>' : '')
+          + '<br><span class="crm-meta">' + esc([m.buyer, val].filter(Boolean).join(' · ')) + '</span>'
+          + (m.why ? '<br><span class="crm-meta">' + esc(m.why) + '</span>' : '') + '</span>'
+          + '<span class="crm-meta" style="white-space:nowrap;text-align:right">' + (m.score != null ? '<span class="crm-ms-score s' + (m.score >= 5 ? 'hi' : 'mid') + '" title="Note sur 8">' + m.score + '/8</span><br>' : '') + esc(m.date ? fmtDate(m.date) : '') + '</span></div>';
+      }).join('') + '<div class="crm-meta" style="margin-top:6px">Seuls les marchés notés 3 sur 8 et plus s’affichent ici. Rattachés par le nom de l’acheteur.</div></div>' : '')
       + (A.web && A.web.length ? '<div class="crm-card"><h3>Pages vues <span class="crm-meta">elistair.com</span></h3>' + A.web.map(function (w) {
         return '<div class="crm-webrow"><span>' + esc(w.title && w.title !== 'Elistair' ? w.title : w.path) + '</span><span class="crm-meta">' + esc(relTime(w.ts)) + '</span></div>';
       }).join('') + '</div>' : '')
@@ -1754,6 +1897,7 @@
       else if (id === 'stats') onStatsPanel();
       else if (id === 'signals') onSignalsPanel();
       else if (id === 'prospection') onProspectionPanel();
+      else if (id === 'market') onMarketPanel();
       setTimeout(paintBadge, 30);
     } catch (e) { console.error('[crm] onPanel', e); }
   }

@@ -16,7 +16,7 @@
 <meta name="theme-color" content="#142220">
 <link rel="manifest" href="manifest.json">
 <title>Scout</title>
-<script src="assets/i18n.js?v=5"></script>
+<script src="assets/i18n.js?v=6"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Zalando+Sans+Expanded:wght@400;600;700;800&display=swap');
 
@@ -770,7 +770,7 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<link rel="stylesheet" href="assets/crm.css?v=192">
+<link rel="stylesheet" href="assets/crm.css?v=194">
 <link rel="stylesheet" href="assets/brand.css?v=2">
 </head>
 <body>
@@ -2542,6 +2542,7 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     <div id="panel-tasks" class="panel"></div>
     <div id="panel-stats" class="panel"></div>
     <div id="panel-prospection" class="panel"></div>
+    <div id="panel-market" class="panel"></div>
     <div id="panel-signals" class="panel"></div>
 
     <div id="panel-end-users" class="panel">
@@ -3404,10 +3405,12 @@ const NAV_GROUPS = [
       { panel: 'contacts',  label: 'Contacts', hidden: true, alias: 'people' } ] },
   { id: 'signaux', label: 'Signaux', tabs: [
       // File « À traiter » retirée : le rattachement appels d'offres / comptes se fait seul (fiche compte + priorité).
-      { panel: 'signals',   label: 'À traiter', hidden: true, alias: 'contracts' },
+      { panel: 'signals',   label: 'À traiter', hidden: true, alias: 'market' },
       { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' },
       { panel: 'chat',      label: 'Chat', badge: 'subnav-chat-badge' },
-      { panel: 'contracts', label: 'Appels d\'offres & contrats' },
+      { panel: 'market',    label: 'Marchés' },
+      // Ancienne vue des appels d'offres et contrats : hors menu, encore ouverte par les liens de détail.
+      { panel: 'contracts', label: 'Appels d\'offres & contrats', hidden: true, alias: 'market' },
       { panel: 'resellers', label: 'Distributeurs' },
       // Référentiel peu utilisé : plus dans le menu, toujours joignable par la recherche.
       { panel: 'societes',    label: 'Fabricants', hidden: true },
@@ -3454,7 +3457,7 @@ function go(id, opts) {
   // CRM étape 1 : l'onglet Comptes est remplacé par la vue CRM (assets/crm.js).
   // L'ancien panneau reste joignable pour la fiche marché (opts.legacy).
   // L'ancien tableau de bord est remplacé par Ma journée et Statistiques.
-  if (id === 'signals' && !(opts && opts.legacy)) { id = 'contracts'; }
+  if (id === 'signals' && !(opts && opts.legacy)) { id = 'market'; }
   if (id === 'hot' && !(opts && opts.legacy)) { id = 'prospection'; }
   if (id === 'dashboard' && !(opts && opts.legacy) && document.getElementById('panel-home') && window.scoutCrm) { id = 'home'; }
   // Anciens liens « onglet Contacts » de l'ancien panneau Comptes : vers la nouvelle liste Contacts.
@@ -3571,7 +3574,7 @@ function go(id, opts) {
     });
     loadContacts(forceReload);
   }
-  if (window.scoutCrm && (id === 'accounts' || id === 'tasks' || id === 'home' || id === 'people' || id === 'stats' || id === 'signals' || id === 'prospection')) window.scoutCrm.onPanel(id, opts);
+  if (window.scoutCrm && (id === 'accounts' || id === 'tasks' || id === 'home' || id === 'people' || id === 'stats' || id === 'signals' || id === 'prospection' || id === 'market')) window.scoutCrm.onPanel(id, opts);
   // Persister l'onglet dans le hash
   try { if (typeof _setCurrentView === 'function') _setCurrentView({ kind:'panel', id: id, tab: opts && opts.tab }); } catch(e){}
   // Historique : une entrée par changement d'onglet, pour que le bouton Retour du navigateur marche.
@@ -6416,7 +6419,7 @@ if ('serviceWorker' in navigator) {
   const hash = window.location.hash.slice(1); // ex: "end-users/contacts"
   if (!hash) return;
   const [panel, tab] = hash.split('/');
-  const validPanels = ['dashboard','home','societes','produits-db','contracts','end-users','accounts','people','tasks','config','hot','contacts','tracking','visitors','resellers','chat'];
+  const validPanels = ['dashboard','home','societes','produits-db','contracts','end-users','accounts','people','tasks','config','hot','contacts','tracking','visitors','resellers','chat','market','prospection','stats'];
   if (!validPanels.includes(panel)) return;
   // Attendre que le DOM soit prêt
   if (document.readyState === 'loading') {
@@ -11805,7 +11808,7 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=193"></script>
+<script src="assets/crm.js?v=194"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>
 <script>
 // Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.
