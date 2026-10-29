@@ -16,7 +16,7 @@
 <meta name="theme-color" content="#142220">
 <link rel="manifest" href="manifest.json">
 <title>Scout</title>
-<script src="assets/i18n.js?v=8"></script>
+<script src="assets/i18n.js?v=9"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Zalando+Sans+Expanded:wght@400;600;700;800&display=swap');
 
@@ -771,7 +771,7 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <link rel="stylesheet" href="assets/crm.css?v=202">
-<link rel="stylesheet" href="assets/brand.css?v=11">
+<link rel="stylesheet" href="assets/brand.css?v=12">
 <link rel="stylesheet" href="assets/app.css?v=2">
 </head>
 <body>
@@ -2083,13 +2083,13 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
       <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M5.5 1.5v2M10.5 1.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       Aujourd'hui <span id="nav-today-badge" class="nav-badge" style="display:none">0</span>
     </div>
-    <div class="nav-item" id="nav-prospects" onclick="goGroup('prospects')" title="Comptes et contacts : fiches, organigramme, comité d'achat, historique">
+    <div class="nav-item" id="nav-prospects" onclick="goGroup('prospects')" title="Comptes, contacts et distributeurs : fiches, organigramme, comité d'achat, historique">
       <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 6h6M5 8.5h6M5 11h3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       Comptes
     </div>
-    <div class="nav-item" id="nav-signaux" onclick="goGroup('signaux')" title="Veille : marchés et concurrents, visiteurs du site, distributeurs, chat du site">
+    <div class="nav-item" id="nav-signaux" onclick="goGroup('signaux')" title="Signaux : appels d'offres et contrats, organismes venus sur le site, chats">
       <svg viewBox="0 0 16 16" fill="none"><path d="M8 8.5a1 1 0 100-2 1 1 0 000 2z" fill="currentColor"/><path d="M5.2 10.3a4 4 0 010-5.6M10.8 4.7a4 4 0 010 5.6M3.1 12.4a7 7 0 010-9.8M12.9 2.6a7 7 0 010 9.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      Veille <span id="nav-prospects-badge" class="nav-badge" style="display:none">0</span>
+      Signaux <span id="nav-prospects-badge" class="nav-badge" style="display:none">0</span>
     </div>
     <div class="nav-sec" aria-hidden="true">Administration</div>
     <div class="nav-item" id="nav-config" onclick="goGroup('config')">
@@ -2328,6 +2328,7 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     <!-- CONFIG -->
     <!-- CRM étape 1 : rendus par assets/crm.js -->
     <div id="panel-home" class="panel active"></div>
+    <div id="panel-feed" class="panel"></div>
     <div id="panel-accounts" class="panel"></div>
     <div id="panel-people" class="panel"></div>
     <div id="panel-stats" class="panel"></div>
@@ -2461,8 +2462,9 @@ Mes pays
                 <option value="home">Aujourd'hui</option>
                 <option value="accounts">Comptes</option>
                 <option value="people">Contacts</option>
-                <option value="market">Veille · Marchés</option>
-                <option value="visitors">Veille · Visiteurs web</option>
+                <option value="feed">Signaux · Fil</option>
+                <option value="market">Signaux · Marchés</option>
+                <option value="visitors">Signaux · Visiteurs web</option>
               </select>
             </div>
             <div>
@@ -2991,7 +2993,7 @@ Réinitialiser tous les filtres
     </div>
     <div class="bn-item" id="bn-signaux" onclick="goGroup('signaux')" style="position:relative;">
       <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><path d="M8 8.5a1 1 0 100-2 1 1 0 000 2z" fill="currentColor"/><path d="M5.2 10.3a4 4 0 010-5.6M10.8 4.7a4 4 0 010 5.6M3.1 12.4a7 7 0 010-9.8M12.9 2.6a7 7 0 010 9.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
-      Veille<span id="bn-prospects-badge" class="bn-badge" style="display:none">0</span>
+      Signaux<span id="bn-prospects-badge" class="bn-badge" style="display:none">0</span>
     </div>
     <div class="bn-item" id="bn-config" onclick="goGroup('config')">
       <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
@@ -3205,7 +3207,7 @@ let editingProduitId = null;
 // Les panneaux et leurs fonctions de rendu ne changent pas : go('contacts') marche
 // exactement comme avant. Seule la couche de navigation regroupe les 11 panneaux.
 const NAV_GROUPS = [
-  // Quatre entrées : Aujourd'hui (une seule file), Comptes, Veille, Paramètres.
+  // Quatre entrées : Aujourd'hui (une seule file), Comptes, Signaux, Paramètres.
   { id: 'today', label: "Aujourd'hui", tabs: [
       { panel: 'home',        label: "Aujourd'hui" },
       { panel: 'tasks',       label: 'À faire', hidden: true, alias: 'home' },
@@ -3216,12 +3218,13 @@ const NAV_GROUPS = [
   { id: 'prospects', label: 'Comptes', tabs: [
       { panel: 'accounts',  label: 'Comptes' },
       { panel: 'people',    label: 'Contacts' },
+      { panel: 'resellers', label: 'Distributeurs' },
       { panel: 'end-users', label: 'Comptes', hidden: true, alias: 'accounts' },
       { panel: 'contacts',  label: 'Contacts', hidden: true, alias: 'people' } ] },
-  { id: 'signaux', label: 'Veille', tabs: [
+  { id: 'signaux', label: 'Signaux', tabs: [
+      { panel: 'feed',      label: 'Fil' },
       { panel: 'market',    label: 'Marchés' },
       { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' },
-      { panel: 'resellers', label: 'Distributeurs' },
       { panel: 'chat',      label: 'Chat du site', badge: 'subnav-chat-badge' },
       { panel: 'signals',   label: 'À traiter', hidden: true, alias: 'market' },
       { panel: 'contracts', label: 'Appels d\'offres & contrats', hidden: true, alias: 'market' },
@@ -3233,7 +3236,7 @@ const NAV_GROUPS = [
 ];
 const _navGroupOf = {};
 NAV_GROUPS.forEach(function (g) { g.tabs.forEach(function (t) { _navGroupOf[t.panel] = g; }); });
-let _navLast = { today: 'home', prospects: 'accounts', signaux: 'market', config: 'config' };
+let _navLast = { today: 'home', prospects: 'accounts', signaux: 'feed', config: 'config' };
 try { const _st = JSON.parse(localStorage.getItem('scout_nav_last') || '{}'); Object.keys(_st).forEach(function (k) { if (_navLast[k] !== undefined && _navGroupOf[_st[k]]) _navLast[k] = _st[k]; }); } catch (e) {}
 
 // Clic sur une entrée du menu : revient sur le dernier onglet visité de ce groupe.
@@ -3378,7 +3381,7 @@ function go(id, opts) {
     });
     loadContacts(forceReload);
   }
-  if (window.scoutCrm && (id === 'accounts' || id === 'tasks' || id === 'home' || id === 'people' || id === 'stats' || id === 'signals' || id === 'prospection' || id === 'market')) window.scoutCrm.onPanel(id, opts);
+  if (window.scoutCrm && (id === 'accounts' || id === 'home' || id === 'people' || id === 'stats' || id === 'market' || id === 'feed')) window.scoutCrm.onPanel(id, opts);
   // Persister l'onglet dans le hash
   try { if (typeof _setCurrentView === 'function') _setCurrentView({ kind:'panel', id: id, tab: opts && opts.tab }); } catch(e){}
   // Historique : une entrée par changement d'onglet, pour que le bouton Retour du navigateur marche.
@@ -5262,7 +5265,7 @@ if ('serviceWorker' in navigator) {
   const hash = window.location.hash.slice(1); // ex: "end-users/contacts"
   if (!hash) return;
   const [panel, tab] = hash.split('/');
-  const validPanels = ['dashboard','home','societes','produits-db','contracts','end-users','accounts','people','tasks','config','hot','contacts','tracking','visitors','resellers','chat','market','prospection','stats','signals'];
+  const validPanels = ['dashboard','home','societes','produits-db','contracts','end-users','accounts','people','tasks','config','hot','contacts','tracking','visitors','resellers','chat','market','prospection','stats','signals','feed'];
   if (!validPanels.includes(panel)) return;
   // Attendre que le DOM soit prêt
   if (document.readyState === 'loading') {
@@ -10470,9 +10473,9 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=210"></script>
+<script src="assets/crm.js?v=211"></script>
 <script src="assets/settings.js?v=2"></script>
-<script src="assets/app.js?v=2"></script>
+<script src="assets/app.js?v=3"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>
 <script>
 // Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.

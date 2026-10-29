@@ -402,23 +402,44 @@
 
   // ── Signaux (appels d'offres et contrats) ──────────────────────────────────
   function renderSignals() {
-    top('Signaux', 'Appels d’offres et contrats repérés par la veille');
+    A.sigScope = A.sigScope || 'me';
+    top('Signaux', 'Marchés, visites du site, chats');
     var v = document.getElementById('sa-view');
-    v.innerHTML = '<div class="sa-empty">Chargement…</div>';
-    api('/crm/signals?state=new').then(function (d) {
-      var list = d.signals || [];
-      v.innerHTML = list.length ? '<div class="sa-list">' + list.slice(0, 50).map(function (g, i) {
-        var val = g.value_max ? (g.value_max >= 1e9 ? (g.value_max / 1e9).toFixed(1).replace('.', ',') + ' Md' : Math.round(g.value_max / 1e6) + ' M') : '';
-        return '<article class="sa-card"><div class="sa-card-h"><span class="sa-tag k-' + (g.kind === 'tender' ? 'relance' : 'task') + '">' + (g.kind === 'tender' ? 'Appel d’offres' : 'Contrat') + '</span><span class="sa-when">' + esc(g.date ? fmtDate(g.date) : '') + '</span></div>'
-          + '<div class="sa-card-t static">' + esc(g.title || 'Sans titre') + '</div><div class="sa-card-s">' + esc([g.buyer, g.pays, val].filter(Boolean).join(' · ')) + '</div>'
-          + ((g.accounts || []).length ? '<div class="sa-card-s">' + g.accounts.map(function (a) { return '<button type="button" class="sa-link" data-acc="' + esc(a.id) + '">' + esc(a.nom) + '</button>'; }).join(', ') + '</div>' : '')
-          + '<div class="sa-card-a">' + (g.url ? '<a class="sa-btn" href="' + esc(g.url) + '" target="_blank" rel="noopener">Voir l’avis</a>' : '') + '<button type="button" class="sa-btn" data-ign="' + i + '">Ignorer</button></div></article>';
-      }).join('') + '</div>' : '<div class="sa-empty">Rien à traiter.</div>';
-      bindCards(v);
-      v.querySelectorAll('[data-ign]').forEach(function (b) {
-        b.onclick = function () { var g = list[+b.getAttribute('data-ign')]; b.disabled = true; api('/crm/signals/' + g.kind + '/' + encodeURIComponent(g.ref_id) + '/action', { method: 'POST', body: { action: 'ignore' } }).then(function () { fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); }); };
+    v.innerHTML = '<div class="sa-seg" role="tablist"><button type="button" data-ss="me" class="' + (A.sigScope === 'me' ? 'on' : '') + '">Mes comptes</button><button type="button" data-ss="all" class="' + (A.sigScope === 'all' ? 'on' : '') + '">Tout</button></div><div id="sa-sig-list"><div class="sa-empty">Chargement…</div></div>';
+    v.querySelectorAll('[data-ss]').forEach(function (b) { b.onclick = function () { A.sigScope = b.getAttribute('data-ss'); renderSignals(); }; });
+    var box = document.getElementById('sa-sig-list');
+    var TY = { market: 'Marché', visit: 'Visite', chat: 'Chat' };
+    api('/signals/feed?days=30&scope=' + A.sigScope).then(function (d) {
+      var list = (d.items || []).slice(0, 60);
+      box.innerHTML = list.length ? '<div class="sa-list">' + list.map(function (g, i) {
+        var acc = g.account;
+        return '<article class="sa-card' + (g.imp >= 4 ? ' hot' : '') + '"><div class="sa-card-h"><span class="sa-tag">' + TY[g.type] + '</span>' + (acc && acc.tier ? '<span class="sa-tier">T' + esc(acc.tier) + '</span>' : '') + '<span class="sa-when">' + esc(rel(g.at)) + '</span></div>'
+          + '<div class="sa-card-t static">' + esc(g.title) + '</div>' + (g.why ? '<div class="sa-card-s">' + esc(g.why) + '</div>' : '')
+          + (acc ? '<button type="button" class="sa-card-s sa-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + (acc.owner_name ? ' · ' + esc(acc.owner_name) : '') + '</button>' : '<div class="sa-meta">Sans compte</div>')
+          + '<div class="sa-card-a">' + (g.type === 'market' && g.url ? '<a class="sa-btn" href="' + esc(g.url) + '" target="_blank" rel="noopener">Voir</a>' : '')
+          + '<button type="button" class="sa-btn primary" data-stask="' + i + '">' + I.check + 'Tâche</button><button type="button" class="sa-btn" data-sdis="' + i + '">Écarter</button></div></article>';
+      }).join('') + '</div>' : '<div class="sa-empty">' + (A.sigScope === 'me' ? 'Rien de neuf sur tes comptes. Regarde « Tout ».' : 'Rien sur 30 jours.') + '</div>';
+      bindCards(box);
+      box.querySelectorAll('[data-stask]').forEach(function (b) {
+        b.onclick = function () {
+          var g = list[+b.getAttribute('data-stask')]; b.disabled = true;
+          var p = g.type === 'market'
+            ? api('/crm/signals/' + g.kind + '/' + encodeURIComponent(g.ref_id) + '/action', { method: 'POST', body: { action: g.flux === 1 ? 'go' : 'accept' } })
+            : api('/crm/tasks', { method: 'POST', body: { title: (g.type === 'visit' ? 'Relancer ' + g.title + ' : visite du site' : 'Répondre au chat : ' + g.title).slice(0, 280), end_user_id: g.account ? g.account.id : null } })
+              .then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: g.key, reason: 'tâche créée' } }); });
+          p.then(function () { toast('Tâche créée dans Aujourd’hui'); fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
+        };
       });
-    }).catch(function (e) { v.innerHTML = '<div class="sa-empty">Erreur : ' + esc(e.message) + '</div>'; });
+      box.querySelectorAll('[data-sdis]').forEach(function (b) {
+        b.onclick = function () {
+          var g = list[+b.getAttribute('data-sdis')]; b.disabled = true;
+          var p = g.type === 'market'
+            ? api('/crm/signals/' + g.kind + '/' + encodeURIComponent(g.ref_id) + '/action', { method: 'POST', body: { action: g.flux === 1 ? 'nogo' : 'not_relevant', reason: 'Autre' } })
+            : api('/signals/feed/dismiss', { method: 'POST', body: { key: g.key } });
+          p.then(function () { fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
+        };
+      });
+    }).catch(function (e) { box.innerHTML = '<div class="sa-empty">Erreur : ' + esc(e.message) + '</div>'; });
   }
 
   // ── Moi : verrou, version complète, déconnexion ────────────────────────────

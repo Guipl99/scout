@@ -221,3 +221,22 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .crm-kpis.two { grid-template-columns: 1fr 1fr; }
 .crm-newtask[hidden] { display: none !important; }
 #scout-chat-btn { display: none !important; } /* l'assistant s'ouvre depuis la recherche ⌘K */
+/* Signaux › Fil */
+.crm-feed { padding-top: 2px; padding-bottom: 2px; }
+.crm-feed-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); transition: opacity .25s; }
+.crm-feed-row:last-child { border-bottom: 0; }
+.crm-feed-row.gone { opacity: 0; }
+.crm-feed-row.strong { box-shadow: inset 3px 0 0 var(--accent); padding-left: 10px; }
+.crm-feed-row > .crm-q-kind { flex: none; margin-top: 2px; min-width: 58px; text-align: center; }
+.crm-feed-b { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.crm-feed-b .t { font-size: 13.5px; line-height: 1.35; }
+.crm-feed-b .s { font-size: 12.5px; color: var(--text2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.crm-feed-acc.none { color: var(--text3); font-style: italic; }
+.crm-feed-a { flex: none; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 330px; }
+.crm-feed-a .crm-btn svg { width: 13px; height: 13px; }
+.crm-feed-pick { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.crm-feed-pick[hidden] { display: none; }
+.crm-q-kind.k-market { color: var(--accent2); }
+.crm-q-kind.k-visit { color: var(--teal); }
+.crm-q-kind.k-chat { color: var(--green); }
+@media (max-width: 760px) { .crm-feed-row { flex-wrap: wrap; } .crm-feed-a { max-width: none; justify-content: flex-start; width: 100%; } }

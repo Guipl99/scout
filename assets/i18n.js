@@ -21,7 +21,7 @@
 
   var D = {
     // ── Navigation, titres
-    "Aujourd'hui": 'Today', 'Aujourd’hui': 'Today', 'Veille': 'Watch', 'Pilotage': 'Management', 'Chat du site': 'Site chat', 'Rechercher ou demander': 'Search or ask',
+    "Aujourd'hui": 'Today', 'Aujourd’hui': 'Today', 'Fil': 'Feed', 'Mes comptes': 'My accounts', 'Sans compte': 'No account', 'Créer le compte': 'Create account', 'Rattacher': 'Link', 'Écarter': 'Dismiss', 'Visites': 'Visits', 'Chats': 'Chats', 'Marchés': 'Markets', 'Pilotage': 'Management', 'Chat du site': 'Site chat', 'Rechercher ou demander': 'Search or ask',
     'Tout': 'All', 'Urgent': 'Urgent', 'Réponses et réactions': 'Replies and reactions', 'Tâches': 'Tasks', 'Prospection': 'Prospecting', '+ Nouvelle tâche': '+ New task',
     'Tâches terminées (30 j)': 'Completed tasks (30 d)', 'Ma semaine': 'My week', 'Mon portefeuille': 'My portfolio', 'Prochaine action': 'Next action',
     'Compte chaud': 'Hot account', 'À ouvrir': 'To open', 'Ouvrir le compte': 'Open account', 'Ouvrir le contact': 'Open contact', 'Assistant Scout': 'Scout assistant',

@@ -354,6 +354,136 @@
   // SIGNAUX À TRAITER : appels d'offres et contrats, en un clic
   // ═════════════════════════════════════════════════════════════════════════
   // ═════════════════════════════════════════════════════════════════════════
+  // SIGNAUX › FIL : marchés, visites du site, chats, du plus récent au plus ancien.
+  // Trois gestes partout : rattacher (ou créer) le compte, créer une tâche, écarter.
+  // ═════════════════════════════════════════════════════════════════════════
+  var FEED_TYPE = { market: 'Marché', visit: 'Visite', chat: 'Chat' };
+  function onFeedPanel() {
+    var p = document.getElementById('panel-feed'); if (!p) return;
+    S.feedScope = S.feedScope || lsGet('scout_feed_scope', 'me');
+    S.feedType = S.feedType || 'all'; S.feedDays = S.feedDays || 30;
+    p.innerHTML = '<div class="crm-wrap crm-home"><div class="crm-row crm-home-head"><div><div class="crm-meta crm-lead-in">Tout ce qui bouge : appels d’offres et contrats, organismes venus sur le site, chats. Ce qui concerne tes comptes remonte aussi dans Aujourd’hui.</div></div>'
+      + '<select class="crm-sel" id="crm-feed-days" aria-label="Période">' + [[7, '7 jours'], [30, '30 jours'], [90, '90 jours']].map(function (d) { return '<option value="' + d[0] + '"' + (S.feedDays === d[0] ? ' selected' : '') + '>' + d[1] + '</option>'; }).join('') + '</select></div>'
+      + '<div class="crm-row crm-qbar"><div class="crm-views" style="margin:0" id="crm-feed-scope"></div><div class="crm-views" style="margin:0" id="crm-feed-type"></div></div>'
+      + '<div id="crm-feed-body"><div class="crm-empty">Chargement…</div></div></div>';
+    document.getElementById('crm-feed-days').onchange = function () { S.feedDays = +this.value; loadFeed(); };
+    loadFeed();
+  }
+  function loadFeed() {
+    var body = document.getElementById('crm-feed-body'); if (!body) return;
+    var seq = (S.feedSeq = (S.feedSeq || 0) + 1);
+    api('/signals/feed?days=' + S.feedDays + '&scope=' + S.feedScope).then(function (d) {
+      if (seq !== S.feedSeq) return;
+      var c = d.counts || {}, items = d.items || [];
+      var sc = document.getElementById('crm-feed-scope');
+      sc.innerHTML = [['me', 'Mes comptes', c.me], ['all', 'Tout', c.all], ['unlinked', 'Sans compte', c.unlinked]].map(function (x) {
+        return '<button type="button" class="crm-chip sm' + (S.feedScope === x[0] ? ' on' : '') + '" data-fs="' + x[0] + '">' + x[1] + '<span class="n"> ' + (x[2] || 0) + '</span></button>';
+      }).join('');
+      sc.querySelectorAll('[data-fs]').forEach(function (b) { b.onclick = function () { S.feedScope = b.getAttribute('data-fs'); lsSet('scout_feed_scope', S.feedScope); loadFeed(); }; });
+      var byType = { all: items.length, market: 0, visit: 0, chat: 0 }; items.forEach(function (it) { byType[it.type]++; });
+      var ty = document.getElementById('crm-feed-type');
+      ty.innerHTML = [['all', 'Tous'], ['market', 'Marchés'], ['visit', 'Visites'], ['chat', 'Chats']].map(function (x) {
+        return '<button type="button" class="crm-chip sm' + (S.feedType === x[0] ? ' on' : '') + '" data-ft="' + x[0] + '">' + x[1] + '<span class="n"> ' + (byType[x[0]] || 0) + '</span></button>';
+      }).join('');
+      ty.querySelectorAll('[data-ft]').forEach(function (b) { b.onclick = function () { S.feedType = b.getAttribute('data-ft'); drawFeed(); }; });
+      S.feedItems = items; drawFeed();
+    }).catch(function (e) { body.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+  }
+  function feedRow(it, i) {
+    var acc = it.account;
+    var title = esc(it.title);
+    if (it.type === 'market' && it.url) title = '<a class="crm-link strong" href="' + esc(it.url) + '" target="_blank" rel="noopener">' + title + '</a>';
+    else if (it.type === 'visit' && acc) title = '<button type="button" class="crm-link strong" data-facc="' + esc(acc.id) + '">' + title + '</button>';
+    else if (it.type === 'chat') title = '<button type="button" class="crm-link strong" data-fchat="' + i + '">' + title + '</button>';
+    else title = '<b>' + title + '</b>';
+    var sub = [];
+    if (it.type === 'market') { sub.push(sigScore(it.score)); if (it.flux) sub.push('<span class="crm-ms-type">' + esc(sigType(it)) + '</span>'); var v = it.value_max ? (it.value_max >= 1e9 ? (it.value_max / 1e9).toFixed(1).replace('.', ',') + ' Md' : it.value_max >= 1e6 ? Math.round(it.value_max / 1e6) + ' M' : '') : ''; sub.push(esc([it.buyer, it.pays, v].filter(Boolean).join(' · '))); }
+    if (it.type === 'visit') sub.push(esc([it.org && it.org.country, it.org && it.org.domain].filter(Boolean).join(' · ')));
+    var accHtml = acc ? '<span class="crm-feed-acc">' + (acc.tier ? tierBadge(acc.tier) + ' ' : '') + '<button type="button" class="crm-link" data-facc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button>' + (acc.owner_name ? ' · ' + esc(acc.owner_name) : ' · sans commercial') + '</span>'
+      : '<span class="crm-feed-acc none">Sans compte</span>';
+    var btns = '';
+    if (!acc) btns += it.type === 'visit' ? '<button type="button" class="crm-btn sm primary" data-fa="create" data-i="' + i + '">Créer le compte</button><button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>'
+      : '<button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>';
+    btns += '<button type="button" class="crm-btn sm' + (acc ? ' primary' : '') + '" data-fa="task" data-i="' + i + '">' + ICON.check + ' Tâche</button>';
+    btns += '<button type="button" class="crm-btn ghost sm" data-fa="dismiss" data-i="' + i + '">Écarter</button>';
+    return '<div class="crm-feed-row t-' + it.type + (it.imp >= 4 ? ' strong' : '') + '" data-row="' + i + '">'
+      + '<span class="crm-q-kind k-' + it.type + '">' + FEED_TYPE[it.type] + '</span>'
+      + '<div class="crm-feed-b"><div class="t">' + title + '</div>'
+      + '<div class="s">' + sub.filter(Boolean).join(' ') + (it.why ? '<span class="crm-meta"> ' + esc(it.why) + '</span>' : '') + '</div>'
+      + '<div class="s">' + accHtml + ' <span class="crm-meta">· ' + esc(relTime(it.at)) + '</span></div>'
+      + '<div class="crm-feed-pick" hidden></div></div>'
+      + '<div class="crm-feed-a">' + btns + '</div></div>';
+  }
+  function drawFeed() {
+    var body = document.getElementById('crm-feed-body'); if (!body) return;
+    document.querySelectorAll('#crm-feed-type [data-ft]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-ft') === S.feedType); });
+    var all = S.feedItems || [];
+    var list = all.map(function (it, i) { return { it: it, i: i }; }).filter(function (x) { return S.feedType === 'all' || x.it.type === S.feedType; });
+    if (!list.length) { body.innerHTML = '<div class="crm-empty">' + (S.feedScope === 'me' ? 'Rien de neuf sur tes comptes sur cette période. Regarde « Tout » ou « Sans compte ».' : 'Rien sur cette période.') + '</div>'; return; }
+    var html = '', last = '';
+    list.forEach(function (x) {
+      var day = x.it.at ? dayLabel(x.it.at) : 'Sans date';
+      if (day !== last) { html += (last ? '</div>' : '') + '<div class="crm-tl-day">' + esc(day) + '</div><div class="crm-card crm-feed">'; last = day; }
+      html += feedRow(x.it, x.i);
+    });
+    body.innerHTML = html + '</div>';
+    bindFeed(body);
+  }
+  function bindFeed(body) {
+    var items = S.feedItems || [];
+    var done = function (row, msg) { toast(msg); row.classList.add('gone'); setTimeout(function () { row.remove(); }, 250); refreshPropBadge(); };
+    body.querySelectorAll('[data-facc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-facc')); }; });
+    body.querySelectorAll('[data-fchat]').forEach(function (b) { b.onclick = function () { go('chat'); }; });
+    body.querySelectorAll('[data-fa]').forEach(function (b) {
+      b.onclick = function () {
+        var it = items[+b.getAttribute('data-i')], a = b.getAttribute('data-fa'), row = b.closest('.crm-feed-row'), pick = row.querySelector('.crm-feed-pick');
+        if (a === 'task') {
+          if (it.type === 'market') {
+            return api('/crm/signals/' + it.kind + '/' + encodeURIComponent(it.ref_id) + '/action', { method: 'POST', body: { action: it.flux === 1 ? 'go' : 'accept' } })
+              .then(function () { done(row, 'Tâche créée dans Aujourd’hui'); }).catch(function (e) { toast('Erreur : ' + e.message); });
+          }
+          var title = it.type === 'visit' ? 'Relancer ' + it.title + ' : visite du site (' + (it.why || '').split(' · ')[0] + ')' : 'Répondre au chat : ' + it.title;
+          return api('/crm/tasks', { method: 'POST', body: { title: title.slice(0, 280), end_user_id: it.account ? it.account.id : null } })
+            .then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: it.key, reason: 'tâche créée' } }); })
+            .then(function () { done(row, 'Tâche créée dans Aujourd’hui'); }).catch(function (e) { toast('Erreur : ' + e.message); });
+        }
+        if (a === 'create') {
+          b.disabled = true;
+          return api('/crm/accounts', { method: 'POST', body: { nom: it.org.name, pays: it.org.country || null, domain: it.org.domain || null, type: it.org.org_type === 'government' ? 'Sécurité publique' : 'Entreprise', source: 'visite du site' } })
+            .then(function (r) { S.treeData = null; toast(r.existed ? 'Ce compte existait déjà : ' + r.account.nom : 'Compte créé' + (r.account.owner_name ? ', attribué à ' + r.account.owner_name : '')); loadFeed(); })
+            .catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
+        }
+        if (a === 'link') {
+          pick.hidden = false;
+          return acctPicker(pick, { focus: true, placeholder: 'Rattacher à quel compte ?', onPick: function (acc) {
+            if (it.type === 'market') {
+              api('/crm/signals/' + it.kind + '/' + encodeURIComponent(it.ref_id) + '/action', { method: 'POST', body: { action: 'link', end_user_id: acc.id } })
+                .then(function () { toast('Rattaché à ' + acc.nom); loadFeed(); }).catch(function (e) { toast('Erreur : ' + e.message); });
+            } else if (it.type === 'visit' && it.org && it.org.domain) {
+              // les prochaines visites de ce domaine se rattacheront seules au compte
+              api('/crm/accounts/' + encodeURIComponent(acc.id)).then(function (D) {
+                if (D.account && D.account.domain && !D.account.domain_guessed && D.account.domain.toLowerCase() !== it.org.domain) { toast(acc.nom + ' a déjà le domaine ' + D.account.domain); return null; }
+                return api('/crm/accounts/' + encodeURIComponent(acc.id), { method: 'PATCH', body: { domain: it.org.domain } }).then(function () { toast('Rattaché à ' + acc.nom); loadFeed(); });
+              }).catch(function (e) { toast('Erreur : ' + e.message); });
+            } else { toast('Rattache ce chat depuis l’onglet Chat du site'); go('chat'); }
+          } });
+        }
+        if (a === 'dismiss') {
+          if (it.type !== 'market') return api('/signals/feed/dismiss', { method: 'POST', body: { key: it.key } }).then(function () { done(row, 'Écarté'); }).catch(function (e) { toast('Erreur : ' + e.message); });
+          pick.hidden = false;
+          pick.innerHTML = '<span class="crm-meta">Pourquoi ?</span> ' + SIG_REASONS.map(function (r) { return '<button type="button" class="crm-chip sm" data-rs="' + esc(r) + '">' + esc(r) + '</button>'; }).join(' ');
+          pick.querySelectorAll('[data-rs]').forEach(function (rb) {
+            rb.onclick = function () {
+              api('/crm/signals/' + it.kind + '/' + encodeURIComponent(it.ref_id) + '/action', { method: 'POST', body: { action: it.flux === 1 ? 'nogo' : 'not_relevant', reason: rb.getAttribute('data-rs') } })
+                .then(function () { done(row, 'Écarté, merci pour le retour'); }).catch(function (e) { toast('Erreur : ' + e.message); });
+            };
+          });
+        }
+      };
+    });
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
   // QUALITÉ DES DONNÉES (admins, sous Statistiques)
   // ═════════════════════════════════════════════════════════════════════════
   function loadHygiene() {
@@ -679,7 +809,7 @@
       + '<button type="button" class="crm-hero-card main" id="crm-hero-next" title="Scout choisit le meilleur contact à travailler dans tes segments : décideur vérifié, compte prioritaire, jamais contacté. Tu écris, Scout note et planifie la relance."><span class="ic">' + ICON.send + '</span><span><b>Prochaine action</b><small>Écrire au prochain contact suggéré</small></span><span class="go">→</span></button>'
       + '<button type="button" class="crm-hero-card" data-hq="urgent"><b class="' + (urgent ? 'crm-late' : '') + '">' + (now.length - nProsp) + '</b><span>à traiter' + (urgent ? '<small class="crm-late">dont ' + urgent + ' urgent' + (urgent > 1 ? 's' : '') + '</small>' : '') + '</span></button>'
       + '<button type="button" class="crm-hero-card" data-hq="reply"><b' + (nReply ? ' class="crm-today"' : '') + '>' + nReply + '</b><span>réponse' + (nReply > 1 ? 's' : '') + ' positive' + (nReply > 1 ? 's' : '') + ' à saisir dans Dynamics</span></button>'
-      + '<button type="button" class="crm-hero-card" data-hq="prosp"><b>' + nProsp + '</b><span>piste' + (nProsp > 1 ? 's' : '') + ' de prospection<small>veille, comptes chauds, VIP</small></span></button>'
+      + '<button type="button" class="crm-hero-card" data-hq="prosp"><b>' + nProsp + '</b><span>piste' + (nProsp > 1 ? 's' : '') + ' de prospection<small>signaux marché, comptes chauds, VIP</small></span></button>'
       + '</div>';
     document.getElementById('crm-hero-next').onclick = function () { if (window.scoutAction && window.scoutAction.open) window.scoutAction.open(); };
     box.querySelectorAll('[data-hq]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-hq'); S.taskState = 'open'; drawQueue(); var l = document.getElementById('crm-tasks-list'); if (l) l.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
@@ -2043,6 +2173,7 @@
       else if (id === 'home') onHomePanel();
       else if (id === 'stats') onStatsPanel();
       else if (id === 'market') onMarketPanel();
+      else if (id === 'feed') onFeedPanel();
       setTimeout(paintBadge, 30);
     } catch (e) { console.error('[crm] onPanel', e); }
   }
