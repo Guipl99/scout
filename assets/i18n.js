@@ -22,7 +22,7 @@
   var D = {
     // ── Navigation, titres
     'Accueil': 'Home', 'équipe': 'team', 'Ma journée': 'My day', 'À faire': 'To do', 'Statistiques': 'Statistics', 'Prospects': 'Prospects',
-    'Comptes': 'Accounts', 'Compte': 'Account', 'Contacts': 'Contacts', 'Contact': 'Contact', 'Signaux': 'Signals', 'Paramètres': 'Settings',
+    'Comptes': 'Accounts', 'Compte': 'Account', 'Contacts': 'Contacts', 'Contact': 'Contact', 'Signaux': 'Signals', 'Paramètres': 'Settings', 'Vente': 'Sales', 'Colonnes': 'Columns',
     'Marché': 'Market', 'Relances': 'Follow-ups', 'Relance': 'Follow-up', 'À traiter': 'To review', 'Prospects chauds': 'Hot prospects',
     'Visiteurs web': 'Web visitors', 'Chat': 'Chat', 'Distributeurs': 'Resellers', 'Fabricants': 'Manufacturers', 'Produits': 'Products',
     "Appels d'offres & contrats": 'Tenders & contracts', 'Appels d’offres & contrats': 'Tenders & contracts', 'Ancien tableau de bord': 'Old dashboard',

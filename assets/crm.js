@@ -816,6 +816,7 @@
       + '<div class="crm-views" id="crm-views" role="tablist" aria-label="Vues"></div>'
       + '<span class="crm-bar-r"><span class="crm-meta" id="crm-count" aria-live="polite"></span>'
       + '<span class="crm-seg" role="group" aria-label="Affichage"><button type="button" class="crm-chip sm' + (S.treeView ? '' : ' on') + '" id="crm-v-list">Liste</button><button type="button" class="crm-chip sm' + (S.treeView ? ' on' : '') + '" id="crm-v-tree">Arbre</button></span>'
+      + '<span class="crm-menu" id="crm-cols"></span>'
       + (isAdminNow() ? '<button class="crm-btn ghost sm" id="crm-export" type="button" title="Exporter la liste en CSV">Exporter</button>' : '') + '</span></div>'
       + '<div class="crm-fpanel" id="crm-fpanel"></div>'
       + '<div class="crm-table-wrap" id="crm-table-wrap"' + (S.treeView ? ' hidden' : '') + '><table class="crm-table" id="crm-table"><thead></thead><tbody></tbody></table>'
@@ -823,6 +824,7 @@
       + '<div class="crm-card crm-tree" id="crm-tree"' + (S.treeView ? '' : ' hidden') + '></div>'
       + '<div id="crm-bulk"></div>'
       + '</div><div class="crm-wrap crm-record" id="crm-detail" style="display:none"></div>';
+    colsMenu(document.getElementById('crm-cols'), '#crm-table', 'scout_cols_acc', COLS.filter(function (c) { return c.k !== 'nom'; }).map(function (c) { return [c.k, c.label]; }));
     var exb = document.getElementById('crm-export'); if (exb) exb.onclick = function () { exportCsv(); };
     document.getElementById('crm-more-btn').onclick = function () { fetchAccounts(true); };
     var setView = function (tree) {
@@ -1032,6 +1034,34 @@
       if (seq !== fetchSeq) return;
       if (tb) tb.innerHTML = '<tr><td colspan="10" class="crm-empty">Impossible de charger les comptes (' + esc(e.message) + ').</td></tr>';
     });
+  }
+
+  // Bouton « Colonnes » : masque des colonnes, mémorisé par navigateur. Le nom reste toujours affiché.
+  function colsMenu(host, tableSel, key, cols) {
+    if (!host) return;
+    var hidden = lsGet(key, []) || [];
+    var apply = function () {
+      var id = 'crm-colhide-' + key, st = document.getElementById(id);
+      if (!st) { st = document.createElement('style'); st.id = id; document.head.appendChild(st); }
+      st.textContent = hidden.map(function (k) { return '@media (min-width: 761px) { ' + tableSel + ' .c-' + k + ' { display: none; } }'; }).join('\n');
+      var b = host.querySelector('.crm-cols-btn'); if (b) b.textContent = 'Colonnes' + (hidden.length ? ' · ' + (cols.length - hidden.length) + '/' + cols.length : '') + ' ▾';
+    };
+    host.innerHTML = '<button type="button" class="crm-btn ghost sm crm-cols-btn" aria-haspopup="true" aria-expanded="false"></button>'
+      + '<div class="crm-menu-list right" hidden>' + cols.map(function (c) {
+        return '<label class="crm-menu-check"><input type="checkbox" data-col="' + c[0] + '"' + (hidden.indexOf(c[0]) < 0 ? ' checked' : '') + '> ' + esc(c[1]) + '</label>';
+      }).join('') + '</div>';
+    var btn = host.querySelector('.crm-cols-btn'), menu = host.querySelector('.crm-menu-list');
+    var outside = function (e) { if (!host.contains(e.target)) close(); };
+    var close = function () { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', outside, true); };
+    btn.onclick = function () { if (menu.hidden) { menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); document.addEventListener('click', outside, true); } else close(); };
+    menu.querySelectorAll('[data-col]').forEach(function (cb) {
+      cb.onchange = function () {
+        var k = cb.getAttribute('data-col');
+        hidden = hidden.filter(function (x) { return x !== k; }); if (!cb.checked) hidden.push(k);
+        lsSet(key, hidden); apply();
+      };
+    });
+    apply();
   }
 
   var COLS = [
@@ -1644,13 +1674,14 @@
     if (!document.getElementById('crm-plist')) {
       p.innerHTML = '<div class="crm-wrap" id="crm-plist"><div class="crm-bar"><div class="crm-toolbar" id="crm-ptoolbar"></div>'
         + '<div class="crm-views" id="crm-pviews" role="tablist" aria-label="Vues"></div>'
-        + '<span class="crm-bar-r"><span class="crm-meta" id="crm-pcount" aria-live="polite"></span><button class="crm-btn ghost sm" id="crm-pexport" type="button" title="Exporter la liste en CSV">Exporter</button></span></div>'
+        + '<span class="crm-bar-r"><span class="crm-meta" id="crm-pcount" aria-live="polite"></span><span class="crm-menu" id="crm-pcols"></span><button class="crm-btn ghost sm" id="crm-pexport" type="button" title="Exporter la liste en CSV">Exporter</button></span></div>'
         + '<div class="crm-fpanel" id="crm-pfpanel"></div>'
         + '<div class="crm-table-wrap"><table class="crm-table" id="crm-ptable"><thead></thead><tbody></tbody></table>'
         + '<div class="crm-more" id="crm-pmore" style="display:none"><button class="crm-btn" type="button" id="crm-pmore-btn">Afficher plus</button></div></div></div>'
         + '<div class="crm-wrap crm-record" id="crm-pdetail" style="display:none"></div>';
       document.getElementById('crm-pmore-btn').onclick = function () { fetchPeople(true); };
       document.getElementById('crm-pexport').onclick = exportPeople;
+      colsMenu(document.getElementById('crm-pcols'), '#crm-ptable', 'scout_cols_ppl', [['account', 'Compte'], ['role', 'Rôle'], ['email', 'Email'], ['owner', 'Propriétaire'], ['activity', 'Dernière activité']]);
     }
     var tab = opts && opts.tab;
     loadFacets().then(function () {
@@ -1724,7 +1755,7 @@
     var cols = [['nom', 'Contact', 1], ['account', 'Compte', 1], ['role', 'Rôle', 1], ['email', 'Email', 0], ['owner', 'Propriétaire', 0], ['last_activity', 'Dernière activité', 0]];
     th.innerHTML = '<tr>' + cols.map(function (c) {
       var sortable = c[0] !== 'email' && c[0] !== 'owner', on = P.sort.sort === c[0];
-      return '<th class="c-' + c[0] + (sortable ? ' sortable" data-psort="' + c[0] + '" data-asc="' + c[2] : '') + '">' + c[1] + (on ? '<span class="arr">' + (P.sort.dir === 'asc' ? '▲' : '▼') + '</span>' : '') + '</th>';
+      return '<th class="c-' + (c[0] === 'last_activity' ? 'activity' : c[0]) + (sortable ? ' sortable" data-psort="' + c[0] + '" data-asc="' + c[2] : '') + '">' + c[1] + (on ? '<span class="arr">' + (P.sort.dir === 'asc' ? '▲' : '▼') + '</span>' : '') + '</th>';
     }).join('') + '</tr>';
     th.querySelectorAll('[data-psort]').forEach(function (h) {
       h.onclick = function () { var s = h.getAttribute('data-psort'); P.sort = { sort: s, dir: P.sort.sort === s ? (P.sort.dir === 'asc' ? 'desc' : 'asc') : (h.getAttribute('data-asc') === '1' ? 'asc' : 'desc') }; fetchPeople(); };

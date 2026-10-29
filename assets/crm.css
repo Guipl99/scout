@@ -532,3 +532,8 @@ body.theme-light .crm-q-kind.k-reply, body.theme-light .crm-q-ic.k-reply { color
   .crm-bar .crm-views { margin: 0 !important; padding: 0; }
   .crm-hero-card.main b { font-size: 14px; }
 }
+.crm-menu-list.right { left: auto; right: 0; min-width: 200px; }
+.crm-menu-check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text2); padding: 6px 10px; cursor: pointer; border-radius: 2px; }
+.crm-menu-check:hover { background: var(--bg3); color: var(--text); }
+@media (max-width: 760px) { #crm-cols, #crm-pcols { display: none; } }
+.crm-menu-check input, .crm-table input[type="checkbox"] { accent-color: var(--accent); }
