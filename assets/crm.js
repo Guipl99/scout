@@ -199,16 +199,16 @@
       var items = [];
       var ready = {}; (r[2].ready || []).forEach(function (d) { ready[d.contact_id] = d; });
       (r[0].tasks || []).forEach(function (t) {
-        items.push({ kind: 'task', id: 'task-' + t.id, due: t.due_date || null, title: t.title, task: t,
+        items.push({ kind: 'task', id: 'task-' + t.id, due: t.due_date || null, title: t.title, task: t, tier: t.account_tier || null, created: t.created_at,
           who: t.owner_name, contact_id: t.contact_id, contact_name: t.contact_name, account_id: t.end_user_id, account_nom: t.account_nom });
       });
       (r[1].tracking || []).forEach(function (x) {
         var name = personName(x);
         if (x.status === 'waiting' && (x.urgency === 'overdue' || x.urgency === 'due' || x.urgency === 'future') && x.next_relance) {
-          items.push({ kind: 'relance', id: 'rel-' + x.id, due: String(x.next_relance).slice(0, 10), title: (x.stage === '1er mail' ? 'Relance 1' : 'Relance 2') + ' : ' + name,
+          items.push({ kind: 'relance', tier: x.account_tier || null, id: 'rel-' + x.id, due: String(x.next_relance).slice(0, 10), title: (x.stage === '1er mail' ? 'Relance 1' : 'Relance 2') + ' : ' + name,
             sub: x.titre, who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x, draft: ready[x.id] || null });
         } else if (x.status === 'interested') {
-          items.push({ kind: 'reply', id: 'rep-' + x.id, due: x.last_action_at ? String(x.last_action_at).slice(0, 10) : null, title: 'Réponse positive : ' + name,
+          items.push({ kind: 'reply', tier: x.account_tier || null, id: 'rep-' + x.id, due: x.last_action_at ? String(x.last_action_at).slice(0, 10) : null, title: 'Réponse positive : ' + name,
             sub: 'À qualifier puis saisir dans Dynamics', who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x });
         }
       });
@@ -221,25 +221,41 @@
           sub: what + ' ' + when + ' · ' + x.pages + ' page' + (x.pages > 1 ? 's' : '') + ((x.titles || []).length ? ' : ' + x.titles.filter(Boolean).slice(0, 3).join(', ') : ''),
           contact_id: x.contact_id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom, key: x.key });
       });
-      // Les réactions passent en tête : c'est le moment d'appeler.
-      var rank = function (it) { return it.kind === 'reaction' ? 0 : 1; };
-      items.sort(function (a, b) { return rank(a) - rank(b) || ((a.due || '9999') < (b.due || '9999') ? -1 : ((a.due || '9999') > (b.due || '9999') ? 1 : 0)); });
+      items.forEach(function (it) { it.prio = queuePriority(it); it.later = isLater(it); });
+      items.sort(function (a, b) { return b.prio - a.prio; });
       return items;
     });
   }
   var KIND_LABEL = { task: 'Tâche', relance: 'Relance', reply: 'Réponse', reaction: 'Réaction' };
 
+  // File unique classée par importance et urgence, sans planning au jour ou à la semaine :
+  //   réactions à nos emails, puis réponses positives, puis relances dues et tâches, pondérées par le tier du compte
+  //   et par le retard. Une tâche n'a pas besoin d'échéance ; une date future la range dans « Pas encore dues ».
+  function daysFrom(d) { return d ? Math.round((new Date(todayStr()) - new Date(String(d).slice(0, 10))) / 864e5) : null; }
+  function queuePriority(it) {
+    var tierPts = it.tier == 1 ? 60 : it.tier == 2 ? 30 : it.tier == 3 ? 0 : 10;
+    var late = daysFrom(it.due);
+    if (it.kind === 'reaction') return 1000 - Math.min(99, Math.max(0, daysFrom(it.due) || 0)) + tierPts / 10;
+    if (it.kind === 'reply') return 900 + tierPts / 10;
+    if (it.kind === 'relance') return late != null && late >= 0 ? 300 + Math.min(late, 30) * 4 + tierPts : 120 + late * 4 + tierPts;
+    // tâche
+    if (late == null) return 260 + tierPts + Math.min(30, Math.max(0, daysFrom(it.created) || 0));
+    return late >= 0 ? 320 + Math.min(late, 30) * 4 + tierPts : 140 + late * 4 + tierPts;
+  }
+  function isLater(it) { return (it.kind === 'relance' || it.kind === 'task') && it.due && it.due > todayStr(); }
+
   function queueItemHtml(it, opts) {
     opts = opts || {};
     var t = todayStr();
     var dueCls = it.due ? (it.due < t ? 'crm-late' : (it.due === t ? 'crm-today' : '')) : '';
-    var dueTxt = it.due ? (it.due < t ? 'En retard · ' + fmtDate(it.due) : (it.due === t ? "Aujourd'hui" : fmtDate(it.due))) : 'Sans échéance';
+    var late = daysFrom(it.due);
+    var dueTxt = it.due ? (late > 0 ? (it.kind === 'relance' ? 'Due depuis ' + late + ' j' : 'En retard de ' + late + ' j') : (late === 0 ? (it.kind === 'relance' ? 'Due' : 'Échéance atteinte') : (it.kind === 'relance' ? 'Prévue le ' : 'Échéance ') + fmtDate(it.due))) : 'À faire';
     if (it.kind === 'reply') dueTxt = it.due ? 'Reçue le ' + fmtDate(it.due) : 'Reçue';
     if (it.kind === 'reaction') { dueTxt = it.sub; dueCls = 'crm-today'; }
     var sub = [];
     if (it.kind === 'reply' || it.kind === 'reaction') dueCls = 'crm-today';
     sub.push('<span class="' + dueCls + '">' + esc(dueTxt) + '</span>');
-    if (it.account_nom) sub.push(it.account_id ? '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>' : esc(it.account_nom));
+    if (it.account_nom) sub.push((it.tier ? tierBadge(it.tier) + ' ' : '') + (it.account_id ? '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>' : esc(it.account_nom)));
     if (it.kind === 'task' && it.contact_name) sub.push('<button type="button" class="crm-link" data-qct="' + esc(it.contact_id) + '">' + esc(it.contact_name) + '</button>');
     if (opts.showWho && it.who) sub.push(esc(it.who));
     var lead = it.kind === 'task'
@@ -732,8 +748,8 @@
       var d = r[0], queue = r[1], st = r[2] || {};
       var t = todayStr();
       if (!team) updateBadge(queue);
-      var dueNow = queue.filter(function (x) { return x.kind === 'reply' || (x.due && x.due <= t); });
-      var nLate = queue.filter(function (x) { return x.kind !== 'reply' && x.due && x.due < t; }).length;
+      var dueNow = queue.filter(function (x) { return !x.later; });
+      var nLate = queue.filter(function (x) { return (x.kind === 'reaction') || (x.kind !== 'reply' && x.due && x.due < t); }).length;
       var nReply = queue.filter(function (x) { return x.kind === 'reply'; }).length;
       var k = d.kpi || {};
       var ownerF = team ? {} : { owner: 'me' };
@@ -742,16 +758,16 @@
       // 1. Bandeau d'actions
       html += '<div class="crm-hero">'
         + '<button type="button" class="crm-hero-card main" id="crm-hero-next"><span class="ic">' + ICON.send + '</span><span><b>Prochaine action</b><small>Traiter le prochain contact suggéré</small></span><span class="go">→</span></button>'
-        + '<button type="button" class="crm-hero-card" data-goq="due"><b class="' + (nLate ? 'crm-late' : '') + '">' + dueNow.length + '</b><span>à faire aujourd’hui' + (nLate ? '<small class="crm-late">dont ' + nLate + ' en retard</small>' : '') + '</span></button>'
+        + '<button type="button" class="crm-hero-card" data-goq="due"><b class="' + (nLate ? 'crm-late' : '') + '">' + dueNow.length + '</b><span>à traiter' + (nLate ? '<small class="crm-late">dont ' + nLate + ' urgent' + (nLate > 1 ? 's' : '') + '</small>' : '') + '</span></button>'
         + '<button type="button" class="crm-hero-card" data-goq="reply"><b' + (nReply ? ' class="crm-today"' : '') + '>' + nReply + '</b><span>réponse' + (nReply > 1 ? 's' : '') + ' positive' + (nReply > 1 ? 's' : '') + ' à saisir dans Dynamics</span></button>'
         + '<button type="button" class="crm-hero-card" data-kf=\'' + esc(JSON.stringify(Object.assign({}, ownerF, { heat: 'chaud,tiede' }))) + '\'><b>' + (k.engaged || 0) + '</b><span>compte' + (k.engaged > 1 ? 's' : '') + ' engagé' + (k.engaged > 1 ? 's' : '') + ' (90 j)</span></button>'
         + '</div>';
 
       html += '<div class="crm-home-cols"><div class="crm-home-main">';
-      // 2. À faire aujourd'hui
-      html += '<div class="crm-card"><h3>À faire aujourd’hui <button type="button" class="crm-link" data-goto="tasks">Toute la file →</button></h3>'
-        + (dueNow.length ? dueNow.slice(0, 10).map(function (x) { return queueItemHtml(x, { showWho: team }); }).join('')
-          + (dueNow.length > 10 ? '<div class="crm-meta" style="padding-top:8px">+ ' + (dueNow.length - 10) + ' autres dans la file</div>' : '')
+      // 2. À faire en priorité : le haut de la file, classée par importance et urgence
+      html += '<div class="crm-card"><h3>À faire en priorité <button type="button" class="crm-link" data-goto="tasks">Toute la file →</button></h3>'
+        + (dueNow.length ? dueNow.slice(0, 8).map(function (x) { return queueItemHtml(x, { showWho: team }); }).join('')
+          + (dueNow.length > 8 ? '<div class="crm-meta" style="padding-top:8px">+ ' + (dueNow.length - 8) + ' autres dans la file</div>' : '')
           : '<div class="crm-empty" style="padding:18px">Rien d’urgent aujourd’hui. Lancez « Prochaine action » ou travaillez vos comptes Tier 1.</div>')
         + '</div>';
       // 3. Portefeuille
@@ -798,11 +814,11 @@
       html += '<div class="crm-card"><h3>Visites sur elistair.com <button type="button" class="crm-link" data-goto="visitors">Signaux →</button></h3>'
         + accList(d.web, 'Aucune visite rattachée à ' + (team ? 'des' : 'vos') + ' comptes ces 90 jours. Le rattachement se fait par le domaine du compte.', function (a) { return a.web_pages_90d + ' page' + (a.web_pages_90d > 1 ? 's' : '') + (a.last_visit ? ', ' + relTime(a.last_visit) : ''); })
         + '</div>';
-      // 6. Prochaines échéances (au-delà d'aujourd'hui)
-      var next = queue.filter(function (x) { return x.kind !== 'reply' && x.due && x.due > t; }).slice(0, 5);
-      html += '<div class="crm-card"><h3>Prochains jours</h3>' + (next.length ? next.map(function (x) {
+      // 6. Échéances que le commercial a lui-même fixées (pas de planning imposé)
+      var next = queue.filter(function (x) { return x.later; }).sort(function (a, b) { return a.due < b.due ? -1 : 1; }).slice(0, 5);
+      html += '<div class="crm-card"><h3>Échéances à venir</h3>' + (next.length ? next.map(function (x) {
         return '<div class="crm-next"><span class="d">' + esc(fmtDate(x.due)) + '</span><span class="crm-q-kind k-' + x.kind + '">' + KIND_LABEL[x.kind] + '</span><span class="t">' + esc(x.kind === 'task' ? x.title : (x.contact_name + (x.account_nom ? ' · ' + x.account_nom : ''))) + '</span></div>';
-      }).join('') : '<div class="crm-meta">Rien de planifié.</div>') + '</div>';
+      }).join('') : '<div class="crm-meta">Aucune échéance fixée.</div>') + '</div>';
       html += '</aside></div>';
 
       body.innerHTML = html;
@@ -1625,9 +1641,9 @@
         + '<input class="crm-sel" type="date" id="crm-act-date" value="' + todayStr() + '" max="' + todayStr() + '" aria-label="Date">'
         + '<select class="crm-sel" id="crm-act-out" aria-label="Résultat"><option value="">Résultat</option><option value="positive">Positif</option><option value="neutral">Neutre</option><option value="negative">Négatif</option></select></span>'
         + '<button class="crm-btn primary" type="button" id="crm-act-save">Enregistrer</button></div>'
-        + '<div class="crm-next"><label class="crm-meta crm-row" style="gap:6px"><input type="checkbox" id="crm-act-follow"> Prochaine étape</label>'
+        + '<div class="crm-nextstep"><label class="crm-meta crm-row" style="gap:6px"><input type="checkbox" id="crm-act-follow"> Prochaine étape</label>'
         + '<input class="crm-input" id="crm-act-next" maxlength="300" placeholder="Ex. envoyer la fiche SAFE-T et caler une démo" aria-label="Prochaine étape">'
-        + '<input class="crm-sel" type="date" id="crm-act-next-date" value="' + addDays(7) + '" aria-label="Échéance de la prochaine étape"></div>';
+        + '<input class="crm-sel" type="date" id="crm-act-next-date" aria-label="Échéance de la prochaine étape (facultative)" title="Facultatif"></div>';
     } else if (mode === 'note') {
       html += '<textarea class="crm-ta" id="crm-note" placeholder="Info budget, organisation, contexte… (visible par toute l’équipe)" aria-label="Note"></textarea>'
         + '<div class="foot">' + (SPEECH ? '<button type="button" class="crm-btn ghost sm" id="crm-note-mic" aria-pressed="false">' + ICON_MIC + ' Dicter</button>' : '') + '<span class="crm-meta" style="margin-right:auto">Ctrl+Entrée pour enregistrer</span><button class="crm-btn primary" type="button" id="crm-note-save">Ajouter la note</button></div>';
@@ -1635,7 +1651,7 @@
       html += '<input class="crm-input" id="crm-task-title" maxlength="300" placeholder="Ex. Rappeler le chef du service drones" aria-label="Tâche">'
         + '<div class="foot"><span class="crm-row">'
         + '<button type="button" class="crm-chip sm" data-due="' + addDays(1) + '">Demain</button><button type="button" class="crm-chip sm" data-due="' + addDays(7) + '">1 semaine</button><button type="button" class="crm-chip sm" data-due="' + addDays(30) + '">1 mois</button>'
-        + '<input class="crm-sel" type="date" id="crm-task-due" aria-label="Échéance" value="' + addDays(7) + '">' + ctSelect('crm-task-ct') + '</span>'
+        + '<input class="crm-sel" type="date" id="crm-task-due" aria-label="Échéance (facultative)" title="Facultatif">' + ctSelect('crm-task-ct') + '</span>'
         + '<select class="crm-sel" id="crm-task-owner" aria-label="Attribuer à">' + F.users.map(function (u) { return opt(u.id, u.name, (a && a.owner_user_id) || F.me.user_id); }).join('') + '</select>'
         + '<button class="crm-btn primary" type="button" id="crm-task-save">Créer la tâche</button></div>';
     }
@@ -1658,7 +1674,7 @@
         if (!body.end_user_id && !body.contact_id) { toast('Ce contact n’est rattaché à aucun compte'); return; }
         var follow = document.getElementById('crm-act-follow').checked;
         var nextTitle = (document.getElementById('crm-act-next').value || '').trim() || ('Relancer après ' + ACT_LABEL[type].toLowerCase());
-        var nextDate = document.getElementById('crm-act-next-date').value || addDays(7);
+        var nextDate = document.getElementById('crm-act-next-date').value || null;
         save.disabled = true; stopDictation();
         api('/crm/activities', { method: 'POST', body: body }).then(function () {
           if (!follow) return null;
@@ -2035,10 +2051,10 @@
         + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-scope="me">Moi</button><button type="button" class="crm-chip" data-scope="team">Équipe</button>'
         + '<button type="button" class="crm-chip" data-state="done">Terminées (30 j)</button></div></div>'
         + '<div class="crm-newtask"><input class="crm-input" id="crm-nt-title" maxlength="300" placeholder="Nouvelle tâche, ex. Préparer la démo pour le SDIS 69" aria-label="Nouvelle tâche">'
-        + '<input class="crm-input" type="date" id="crm-nt-due" aria-label="Échéance" value="' + addDays(1) + '">'
+        + '<input class="crm-input" type="date" id="crm-nt-due" aria-label="Échéance (facultative)" title="Facultatif : la file se classe par importance">'
         + '<select class="crm-input" id="crm-nt-owner" aria-label="Attribuer à"></select>'
         + '<button class="crm-btn primary" type="button" id="crm-nt-save">Ajouter</button></div>'
-        + '<div class="crm-meta" style="margin:-8px 0 16px">Les relances dues (cadence J+14 / J+28 après le 1er email) et les réponses positives arrivent ici automatiquement. <button type="button" class="crm-link" id="crm-trk-link">Vue détaillée des relances</button></div>'
+        + '<div class="crm-meta" style="margin:-8px 0 16px">Une seule file, classée par importance : réactions à tes emails, réponses positives, puis relances et tâches selon le tier du compte et le retard. L’échéance d’une tâche est facultative. <button type="button" class="crm-link" id="crm-trk-link">Vue détaillée des relances</button></div>'
         + '<div id="crm-tasks-list"></div></div>';
       p.querySelectorAll('[data-scope]').forEach(function (b) { b.onclick = function () { S.taskScope = b.getAttribute('data-scope'); S.taskState = 'open'; loadTasks(); }; });
       p.querySelectorAll('[data-qf]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-qf'); S.taskState = 'open'; loadTasks(); }; });
@@ -2085,21 +2101,11 @@
       p.querySelectorAll('[data-qn]').forEach(function (n) { var c = counts[n.getAttribute('data-qn')]; n.textContent = c ? ' ' + c : ''; });
       var shown = S.qFilter === 'all' ? items : items.filter(function (x) { return x.kind === S.qFilter || (S.qFilter === 'reply' && x.kind === 'reaction'); });
       if (!shown.length) { list.innerHTML = '<div class="crm-empty">Rien dans cette file. Les tâches créées depuis une fiche, les relances dues et les réponses positives arrivent ici.</div>'; return; }
-      var t = todayStr(), w = addDays(7), html = '';
-      var isLive = function (x) { return x.kind === 'reply' || x.kind === 'reaction'; };
-      [
-        { k: 'reaction', label: 'Réactions à tes emails', test: function (x) { return x.kind === 'reaction'; } },
-        { k: 'reply', label: 'Réponses à traiter', test: function (x) { return x.kind === 'reply'; } },
-        { k: 'late', label: 'En retard', test: function (x) { return !isLive(x) && x.due && x.due < t; } },
-        { k: 'today', label: "Aujourd'hui", test: function (x) { return !isLive(x) && x.due === t; } },
-        { k: 'week', label: '7 prochains jours', test: function (x) { return !isLive(x) && x.due > t && x.due <= w; } },
-        { k: 'later', label: 'Plus tard', test: function (x) { return !isLive(x) && x.due > w; } },
-        { k: 'none', label: 'Sans échéance', test: function (x) { return !isLive(x) && !x.due; } }
-      ].forEach(function (g) {
-        var its = shown.filter(g.test); if (!its.length) return;
-        html += '<div class="crm-tasks-sec"><h4 class="' + (g.k === 'late' ? 'late' : '') + '">' + g.label + ' · ' + its.length + '</h4><div class="crm-card" style="padding-top:4px;padding-bottom:4px">'
-          + its.map(function (x) { return queueItemHtml(x, { showWho: S.taskScope === 'team' }); }).join('') + '</div></div>';
-      });
+      var now = shown.filter(function (x) { return !x.later; }), later = shown.filter(function (x) { return x.later; });
+      var html = now.length ? '<div class="crm-card" style="padding-top:4px;padding-bottom:4px">' + now.map(function (x) { return queueItemHtml(x, { showWho: S.taskScope === 'team' }); }).join('') + '</div>'
+        : '<div class="crm-empty">Rien à traiter pour l’instant.</div>';
+      if (later.length) html += '<details class="crm-later"><summary>Pas encore dues · ' + later.length + '</summary><div class="crm-card" style="padding-top:4px;padding-bottom:4px">'
+        + later.map(function (x) { return queueItemHtml(x, { showWho: S.taskScope === 'team' }); }).join('') + '</div></details>';
       list.innerHTML = html;
       bindQueue(list, loadTasks);
     }).catch(function (e) { list.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
@@ -2107,7 +2113,7 @@
 
   function updateBadge(items) {
     var t = todayStr();
-    S.badgeCount = (items || []).filter(function (x) { return x.kind === 'reply' || (x.due && x.due <= t); }).length;
+    S.badgeCount = (items || []).filter(function (x) { return x.kind === 'reply' || x.kind === 'reaction' || (x.due && x.due <= t); }).length;
     paintBadge();
   }
   function paintBadge() {
