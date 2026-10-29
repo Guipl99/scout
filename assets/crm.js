@@ -200,7 +200,7 @@
       prosp ? api('/crm/signals/proposed?scope=' + (team ? 'all' : 'me')).catch(none('rows')) : { rows: [] },
       prosp ? api('/crm/accounts?heat=chaud,tiede&sort=score&dir=desc&limit=8' + own).catch(none('accounts')) : { accounts: [] },
       prosp ? api('/crm/accounts?activity=never&contacts=with&sort=priority&dir=desc&limit=8' + own).catch(none('accounts')) : { accounts: [] },
-      prosp ? api('/crm/contacts?vip=1&limit=8').catch(none('contacts')) : { contacts: [] }
+      prosp ? api('/crm/contacts?vip=1&limit=8' + own).catch(none('contacts')) : { contacts: [] }
     ]).then(function (r) {
       var items = [];
       var ready = {}; (r[2].ready || []).forEach(function (d) { ready[d.contact_id] = d; });
