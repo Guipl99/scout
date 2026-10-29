@@ -1012,7 +1012,7 @@
     var card = function (a) {
       var n = (kids[a.id] || []).length;
       var meta = [a.n_contacts ? a.n_contacts + ' contact' + (a.n_contacts > 1 ? 's' : '') : '', a.owner_name ? first(a.owner_name) : ''].filter(Boolean).join(' · ');
-      return '<button type="button" class="crm-org-box' + (a.id === id ? ' on' : '') + (path[a.id] && a.id !== id ? ' path' : '') + '" data-org="' + esc(a.id) + '"' + (a.id === id ? ' aria-current="true"' : '') + '>'
+      return '<button type="button" class="crm-org-box' + (a.id === id ? ' on' : '') + (path[a.id] && a.id !== id ? ' path' : '') + (a.parent_source === 'auto' ? ' auto" title="Rattaché par Scout, à vérifier' : '') + '" data-org="' + esc(a.id) + '"' + (a.id === id ? ' aria-current="true"' : '') + '>'
         + '<span class="t">' + (a.tier ? tierBadge(a.tier) : '') + '<b title="' + esc(a.nom) + '">' + esc(short(a)) + '</b></span>'
         + (meta || n ? '<span class="crm-meta">' + esc(meta) + (n && meta ? ' · ' : '') + (n ? n + ' rattaché' + (n > 1 ? 's' : '') : '') + '</span>' : '') + '</button>';
     };
@@ -1547,7 +1547,7 @@
       // ── colonne gauche : à propos
       + '<aside class="crm-rec-left"><div class="crm-card"><h3>À propos du compte</h3><dl class="crm-fields" id="crm-acc-fields">' + fields.map(fieldRow).join('') + '</dl>'
       + '<div class="crm-parent"><div class="crm-meta" style="margin:10px 0 4px">Rattaché à</div>'
-      + (sm.parent_id ? '<div class="crm-row" style="gap:6px;flex-wrap:wrap"><button type="button" class="crm-link" data-acc="' + esc(sm.parent_id) + '">' + esc(sm.parent_nom || 'compte parent') + '</button><button type="button" class="crm-btn ghost sm" id="crm-parent-edit">Changer</button><button type="button" class="crm-btn ghost sm" id="crm-parent-clear">Détacher</button></div><div id="crm-parent-pick" hidden></div>'
+      + (sm.parent_id ? '<div class="crm-row" style="gap:6px;flex-wrap:wrap"><button type="button" class="crm-link" data-acc="' + esc(sm.parent_id) + '">' + esc(sm.parent_nom || 'compte parent') + '</button>' + (a.parent_source === 'auto' ? '<span class="crm-auto-tag" title="Rattachement fait par Scout à partir du nom ou du domaine mail. Changez-le ou détachez-le s’il est faux : Scout ne le refera pas.">par Scout</span>' : '') + '<button type="button" class="crm-btn ghost sm" id="crm-parent-edit">Changer</button><button type="button" class="crm-btn ghost sm" id="crm-parent-clear">Détacher</button></div><div id="crm-parent-pick" hidden></div>'
         : '<div id="crm-parent-pick"></div>')
       + '</div>'
       + (typeof window._legacyOpenEndUser === 'function' ? '<button type="button" class="crm-link" id="crm-legacy" style="margin-top:10px;font-size:12.5px">Fiche marché : produits et fournisseurs</button>' : '') + '</div>'

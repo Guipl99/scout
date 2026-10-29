@@ -602,3 +602,5 @@ body.theme-light .crm-q-ic.k-reaction, body.theme-light .crm-q-kind.k-reaction {
 #crm-org { margin-bottom: 12px; }
 .crm-org-card > summary h3 { justify-content: flex-start; gap: 4px; }
 .crm-org-card > summary h3 .crm-meta { margin-left: auto; }
+.crm-auto-tag { font-size: 11px; padding: 1px 6px; border: 1px dashed var(--border2); border-radius: 3px; color: var(--text3); white-space: nowrap; }
+.crm-org-box.auto:not(.on) { border-style: dashed; }
