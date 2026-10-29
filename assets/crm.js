@@ -513,9 +513,10 @@
     var p = document.getElementById('panel-prospection'); if (!p) return;
     S.prospScope = S.prospScope || lsGet('scout_prosp_scope', 'all');
     p.innerHTML = '<div class="crm-wrap crm-home crm-prosp">'
-      + '<div class="crm-row crm-home-head"><div class="crm-meta crm-lead-in">Qui contacter maintenant, et pourquoi.</div>'
-      + '<div class="crm-seg"><button type="button" class="crm-chip" data-ps="me">Mes comptes</button><button type="button" class="crm-chip" data-ps="all">Tous les comptes</button></div></div>'
+      + '<div class="crm-row crm-home-head"><div class="crm-meta crm-lead-in">Qui contacter maintenant, et pourquoi. <button type="button" class="crm-link" data-goto="config">Mes segments</button></div>'
+      + '<div class="crm-seg"><button type="button" class="crm-chip sm" data-ps="me">Mes comptes</button><button type="button" class="crm-chip sm" data-ps="all">Tous les comptes</button></div></div>'
       + '<div id="crm-prosp-body"><div class="crm-empty">Chargement…</div></div></div>';
+    p.querySelectorAll('.crm-home-head [data-goto]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-goto')); }; });
     p.querySelectorAll('[data-ps]').forEach(function (b) {
       b.onclick = function () { S.prospScope = b.getAttribute('data-ps'); lsSet('scout_prosp_scope', S.prospScope); loadProspection(); };
     });
@@ -551,18 +552,13 @@
       var nReply = queue.filter(function (x) { return x.kind === 'reply'; }).length;
       var html = '';
 
-      // 1. Prochaine action + cadence
-      html += '<div class="crm-prosp-top">'
-        + '<div class="crm-prosp-next"><div class="ov">Prochaine action</div>'
-        + '<p>Scout choisit le meilleur contact à travailler dans tes segments : décideur vérifié, compte prioritaire, jamais contacté. Tu écris, Scout note et planifie la relance.</p>'
-        + (props.length ? '<p class="crm-prosp-sig"><b>' + props.length + ' action' + (props.length > 1 ? 's' : '') + ' proposée' + (props.length > 1 ? 's' : '') + '</b> par les signaux marché, dont « ' + esc((props[0].title || '').slice(0, 80)) + ' » <button type="button" class="crm-link" id="crm-prosp-sig">Voir ↓</button></p>' : '')
-        + '<div class="row"><button type="button" class="crm-btn primary lg" id="crm-prosp-go">Démarrer ›</button>'
-        + '<span class="crm-meta"><b>' + (eng.stock_relevant != null ? eng.stock_relevant : '…') + '</b> contacts prêts à prospecter · <button type="button" class="crm-link" data-goto="config">Mes segments</button></span></div></div>'
-        + '<div class="crm-prosp-stats">'
-        + '<button type="button" class="crm-kpi" data-goto="stats"><b>' + (st.emails_7d || 0) + '</b><span>emails envoyés (7 j)</span></button>'
-        + '<button type="button" class="crm-kpi' + (nDue ? ' warn' : '') + '" data-goq="all"><b>' + nDue + '</b><span>relances dues</span></button>'
-        + '<button type="button" class="crm-kpi" data-goq="reply"><b>' + nReply + '</b><span>réponses positives à saisir dans Dynamics</span></button>'
-        + '</div></div>';
+      // 1. Bandeau compact (même format que l'Accueil)
+      html += '<div class="crm-hero">'
+        + '<button type="button" class="crm-hero-card main" id="crm-prosp-go" title="Scout choisit le meilleur contact à travailler dans tes segments : décideur vérifié, compte prioritaire, jamais contacté. Tu écris, Scout note et planifie la relance."><span class="ic">' + ICON.send + '</span><span><b>Prochaine action</b><small>' + (eng.stock_relevant != null ? eng.stock_relevant + ' contacts prêts dans tes segments' : 'Traiter le prochain contact suggéré') + '</small></span><span class="go">→</span></button>'
+        + '<button type="button" class="crm-hero-card" id="crm-prosp-sig"><b' + (props.length ? ' class="crm-today"' : '') + '>' + props.length + '</b><span>action' + (props.length > 1 ? 's' : '') + ' proposée' + (props.length > 1 ? 's' : '') + '<small>signaux marché</small></span></button>'
+        + '<button type="button" class="crm-hero-card" data-goq="all"><b class="' + (nDue ? 'crm-late' : '') + '">' + nDue + '</b><span>relance' + (nDue > 1 ? 's' : '') + ' due' + (nDue > 1 ? 's' : '') + '<small>' + (st.emails_7d || 0) + ' email' + ((st.emails_7d || 0) > 1 ? 's' : '') + ' envoyé' + ((st.emails_7d || 0) > 1 ? 's' : '') + ' en 7 j</small></span></button>'
+        + '<button type="button" class="crm-hero-card" data-goq="reply"><b' + (nReply ? ' class="crm-today"' : '') + '>' + nReply + '</b><span>réponse' + (nReply > 1 ? 's' : '') + ' positive' + (nReply > 1 ? 's' : '') + ' à saisir dans Dynamics</span></button>'
+        + '</div>';
 
       var why = function (a) {
         var w = [];
@@ -582,10 +578,9 @@
       };
 
       // 2. Actions proposées (signaux marché notés 5 sur 8 et plus, sans échéance)
-      html += '<div class="crm-card" id="crm-props"><h3>Actions proposées <span class="crm-meta">appels d’offres, contrats des concurrents, achats déclencheurs, notés 5 sur 8 et plus</span> <button type="button" class="crm-link" data-goto="market">Marchés →</button></h3>'
-        + (props.length ? props.map(sigCard).join('')
-          : '<div class="crm-empty" style="padding:16px">Aucune action proposée' + (S.prospScope === 'me' ? ' sur tes comptes' : '') + ' pour le moment.</div>')
-        + '</div>';
+      // Section affichée seulement s'il y a quelque chose : le bandeau donne déjà le compteur.
+      if (props.length) html += '<div class="crm-card" id="crm-props"><h3>Actions proposées <span class="crm-meta">appels d’offres, contrats des concurrents, achats déclencheurs, notés 5 sur 8 et plus</span> <button type="button" class="crm-link" data-goto="market">Marchés →</button></h3>'
+        + props.map(sigCard).join('') + '</div>';
 
       // 3. Comptes chauds
       html += '<div class="crm-card"><h3>Comptes chauds <span class="crm-meta">ils bougent : visites du site, chat, appels d’offres, échanges récents</span> <button type="button" class="crm-link" data-kf=\'' + esc(JSON.stringify(Object.assign(S.prospScope === 'me' ? { owner: 'me' } : {}, { heat: 'chaud,tiede' }))) + '\'>Tous →</button></h3>'
@@ -610,7 +605,7 @@
 
       body.innerHTML = html;
       document.getElementById('crm-prosp-go').onclick = function () { if (window.scoutAction && window.scoutAction.open) window.scoutAction.open(); };
-      var sigBtn = document.getElementById('crm-prosp-sig'); if (sigBtn) sigBtn.onclick = function () { var el = document.getElementById('crm-props'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+      var sigBtn = document.getElementById('crm-prosp-sig'); if (sigBtn) sigBtn.onclick = function () { var el = document.getElementById('crm-props'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); else go('market'); };
       bindSigCards(body, loadProspection);
       body.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
       body.querySelectorAll('[data-ct]').forEach(function (b) { b.onclick = function () { openContact(b.getAttribute('data-ct')); }; });
@@ -815,19 +810,19 @@
 
   function renderAccountsShell() {
     var p = panelAccounts(); if (!p) return;
+    // Une seule barre (recherche, vues rapides, menu Vues, Filtres, affichage, export), filtres repliés dessous.
     p.innerHTML = '<div class="crm-wrap" id="crm-list">'
+      + '<div class="crm-bar"><div class="crm-toolbar" id="crm-toolbar"></div>'
       + '<div class="crm-views" id="crm-views" role="tablist" aria-label="Vues"></div>'
-      + '<div class="crm-toolbar" id="crm-toolbar"></div>'
-      + '<div class="crm-row" style="justify-content:space-between;margin-bottom:8px;"><span class="crm-meta" id="crm-count" aria-live="polite"></span>'
-      + '<span class="crm-row"><span class="crm-seg" role="group" aria-label="Affichage"><button type="button" class="crm-chip sm' + (S.treeView ? '' : ' on') + '" id="crm-v-list">Liste</button><button type="button" class="crm-chip sm' + (S.treeView ? ' on' : '') + '" id="crm-v-tree">Arbre</button></span>'
-      + '<button class="crm-btn ghost" id="crm-reset" type="button">Réinitialiser</button>'
-      + (isAdminNow() ? '<button class="crm-btn ghost" id="crm-export" type="button">Exporter (CSV)</button>' : '') + '</span></div>'
+      + '<span class="crm-bar-r"><span class="crm-meta" id="crm-count" aria-live="polite"></span>'
+      + '<span class="crm-seg" role="group" aria-label="Affichage"><button type="button" class="crm-chip sm' + (S.treeView ? '' : ' on') + '" id="crm-v-list">Liste</button><button type="button" class="crm-chip sm' + (S.treeView ? ' on' : '') + '" id="crm-v-tree">Arbre</button></span>'
+      + (isAdminNow() ? '<button class="crm-btn ghost sm" id="crm-export" type="button" title="Exporter la liste en CSV">Exporter</button>' : '') + '</span></div>'
+      + '<div class="crm-fpanel" id="crm-fpanel"></div>'
       + '<div class="crm-table-wrap" id="crm-table-wrap"' + (S.treeView ? ' hidden' : '') + '><table class="crm-table" id="crm-table"><thead></thead><tbody></tbody></table>'
       + '<div class="crm-more" id="crm-more" style="display:none"><button class="crm-btn" type="button" id="crm-more-btn">Afficher plus</button></div></div>'
       + '<div class="crm-card crm-tree" id="crm-tree"' + (S.treeView ? '' : ' hidden') + '></div>'
       + '<div id="crm-bulk"></div>'
       + '</div><div class="crm-wrap crm-record" id="crm-detail" style="display:none"></div>';
-    document.getElementById('crm-reset').onclick = function () { applyView('all'); };
     var exb = document.getElementById('crm-export'); if (exb) exb.onclick = function () { exportCsv(); };
     document.getElementById('crm-more-btn').onclick = function () { fetchAccounts(true); };
     var setView = function (tree) {
@@ -882,21 +877,31 @@
     body.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function (e) { e.preventDefault(); e.stopPropagation(); openAccount(b.getAttribute('data-acc')); }; });
   }
 
+  var QUICK_VIEWS = ['all', 'mine', 't1', 'hot'];
   function renderViews() {
     var el = document.getElementById('crm-views'); if (!el) return;
-    el.innerHTML = allViews().map(function (v) {
+    var views = allViews(), cur = views.find(function (v) { return v.id === S.view; });
+    var quick = views.filter(function (v) { return QUICK_VIEWS.indexOf(v.id) >= 0; });
+    var other = views.filter(function (v) { return QUICK_VIEWS.indexOf(v.id) < 0; });
+    var inMenu = cur && QUICK_VIEWS.indexOf(cur.id) < 0;
+    el.innerHTML = quick.map(function (v) {
       var on = v.id === S.view;
-      return '<button type="button" role="tab" aria-selected="' + on + '" class="crm-chip' + (on ? ' on' : '') + '" data-view="' + esc(v.id) + '">' + esc(v.name)
-        + (v.custom ? ' <span class="x" data-del="' + esc(v.id) + '" title="Supprimer la vue" aria-label="Supprimer la vue">×</span>' : '') + '</button>';
-    }).join('') + '<button type="button" class="crm-chip add" id="crm-save-view">+ Enregistrer la vue</button>';
-    el.querySelectorAll('[data-view]').forEach(function (b) {
-      b.onclick = function (e) {
-        var del = e.target.getAttribute && e.target.getAttribute('data-del');
-        if (del) { e.stopPropagation(); deleteView(del); return; }
-        applyView(b.getAttribute('data-view'));
-      };
-    });
-    document.getElementById('crm-save-view').onclick = saveViewDialog;
+      return '<button type="button" role="tab" aria-selected="' + on + '" class="crm-chip sm' + (on ? ' on' : '') + '" data-view="' + esc(v.id) + '">' + esc(v.id === 'all' ? 'Tous' : v.name) + '</button>';
+    }).join('')
+      + '<span class="crm-menu"><button type="button" class="crm-chip sm' + (inMenu ? ' on' : '') + '" id="crm-views-btn" aria-haspopup="true" aria-expanded="false">' + esc(inMenu ? cur.name : 'Vues') + ' ▾</button>'
+      + '<div class="crm-menu-list" id="crm-views-menu" hidden>'
+      + other.map(function (v) {
+        return '<div class="crm-menu-it' + (v.id === S.view ? ' on' : '') + '"><button type="button" data-view="' + esc(v.id) + '">' + esc(v.name) + '</button>'
+          + (v.custom ? '<button type="button" class="x" data-del="' + esc(v.id) + '" title="Supprimer la vue" aria-label="Supprimer la vue ' + esc(v.name) + '">×</button>' : '') + '</div>';
+      }).join('')
+      + '<div class="crm-menu-sep"></div><div class="crm-menu-it"><button type="button" id="crm-save-view">+ Enregistrer la vue actuelle</button></div></div></span>';
+    var menu = document.getElementById('crm-views-menu'), mb = document.getElementById('crm-views-btn');
+    var closeMenu = function () { menu.hidden = true; mb.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', outside, true); };
+    var outside = function (e) { if (!e.target.closest || !e.target.closest('.crm-menu')) closeMenu(); };
+    mb.onclick = function () { if (menu.hidden) { menu.hidden = false; mb.setAttribute('aria-expanded', 'true'); document.addEventListener('click', outside, true); } else closeMenu(); };
+    el.querySelectorAll('[data-view]').forEach(function (b) { b.onclick = function () { document.removeEventListener('click', outside, true); applyView(b.getAttribute('data-view')); }; });
+    el.querySelectorAll('[data-del]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); closeMenu(); deleteView(b.getAttribute('data-del')); }; });
+    document.getElementById('crm-save-view').onclick = function () { closeMenu(); saveViewDialog(); };
   }
 
   function applyView(id) {
@@ -953,7 +958,9 @@
     };
     var nf = Object.keys(f).filter(function (k) { return k !== 'q' && f[k]; }).length;
     el.innerHTML = '<input class="crm-search" id="crm-q" type="search" placeholder="Rechercher un compte, un domaine, un contact…" aria-label="Rechercher" value="' + esc(f.q || '') + '">'
-      + '<button type="button" class="crm-btn crm-filters-btn" id="crm-filters-btn" aria-expanded="' + !!S.filtersOpen + '">Filtres' + (nf ? ' (' + nf + ')' : '') + '</button>'
+      + '<button type="button" class="crm-chip sm crm-filters-btn' + (nf ? ' set' : '') + '" id="crm-filters-btn" aria-expanded="' + !!S.filtersOpen + '" aria-controls="crm-fpanel">Filtres' + (nf ? ' · ' + nf : '') + '</button>';
+    var fp = document.getElementById('crm-fpanel');
+    fp.innerHTML = '<div class="crm-fsel">'
       + sel('owner', 'Propriétaire', opt('me', 'Moi', f.owner) + opt('none', 'Sans propriétaire', f.owner) + F.users.map(function (u) { return opt(u.id, u.name, f.owner); }).join(''))
       + sel('tier', 'Tier', opt('1', 'Tier 1', f.tier) + opt('2', 'Tier 2', f.tier) + opt('3', 'Tier 3', f.tier) + opt('1,2', 'Tier 1 et 2', f.tier) + opt('none', 'Sans tier', f.tier))
       + sel('heat', 'Engagement', opt('chaud', 'Chaud', f.heat) + opt('tiede', 'Tiède', f.heat) + opt('chaud,tiede', 'Chaud ou tiède', f.heat) + opt('froid', 'Froid', f.heat))
@@ -964,15 +971,31 @@
       + sel('activity', 'Activité', opt('30', 'Moins de 30 j', f.activity) + opt('90', 'Moins de 90 j', f.activity) + opt('stale30', 'Rien depuis 30 j', f.activity) + opt('stale90', 'Rien depuis 90 j', f.activity) + opt('never', 'Jamais contacté', f.activity))
       + sel('tasks', 'Tâches', opt('open', 'Tâche ouverte', f.tasks) + opt('overdue', 'Tâche en retard', f.tasks) + opt('none', 'Aucune tâche', f.tasks))
       + sel('web', 'Site web', opt('yes', 'A visité le site (90 j)', f.web))
-      + sel('market', 'Marchés', opt('yes', 'Appel d’offres ou contrat', f.market) + opt('recent', 'Marché de moins d’un an', f.market));
-    el.classList.toggle('open', !!S.filtersOpen);
-    document.getElementById('crm-filters-btn').onclick = function () { S.filtersOpen = !S.filtersOpen; el.classList.toggle('open', S.filtersOpen); this.setAttribute('aria-expanded', S.filtersOpen); };
+      + sel('market', 'Marchés', opt('yes', 'Appel d’offres ou contrat', f.market) + opt('recent', 'Marché de moins d’un an', f.market))
+      + (nf ? '<button type="button" class="crm-link" id="crm-reset">Effacer les filtres</button>' : '') + '</div>';
+    fp.insertAdjacentHTML('beforeend', activeChips(f, fp));
+    fp.classList.toggle('open', !!S.filtersOpen);
+    fp.classList.toggle('has-active', !!nf);
+    var rs = document.getElementById('crm-reset'); if (rs) rs.onclick = function () { applyView('all'); };
+    fp.querySelectorAll('[data-rmf]').forEach(function (b) { b.onclick = function () { setFilter(b.getAttribute('data-rmf'), ''); }; });
+    document.getElementById('crm-filters-btn').onclick = function () { S.filtersOpen = !S.filtersOpen; fp.classList.toggle('open', S.filtersOpen); this.setAttribute('aria-expanded', S.filtersOpen); };
     var t;
     document.getElementById('crm-q').oninput = function (e) {
       clearTimeout(t); var v = e.target.value;
       t = setTimeout(function () { setFilter('q', v.trim()); }, 300);
     };
-    el.querySelectorAll('[data-f]').forEach(function (s) { s.onchange = function () { setFilter(s.getAttribute('data-f'), s.value); }; });
+    fp.querySelectorAll('[data-f]').forEach(function (s) { s.onchange = function () { setFilter(s.getAttribute('data-f'), s.value); }; });
+  }
+
+  // Filtres actifs en pastilles retirables, visibles quand le panneau est replié.
+  function activeChips(f, fp) {
+    var out = [];
+    fp.querySelectorAll('select[data-f],select[data-pf]').forEach(function (sl) {
+      var k = sl.getAttribute('data-f') || sl.getAttribute('data-pf'); if (!f[k]) return;
+      var o = sl.options[sl.selectedIndex], lab = sl.getAttribute('aria-label');
+      out.push('<button type="button" class="crm-chip sm on" data-rm' + (sl.getAttribute('data-pf') ? 'p' : '') + 'f="' + esc(k) + '" title="Retirer ce filtre">' + esc(lab) + ' : ' + esc(o ? o.textContent : f[k]) + ' <span class="x" aria-hidden="true">×</span></button>');
+    });
+    return out.length ? '<div class="crm-factive">' + out.join('') + '</div>' : '';
   }
 
   function setFilter(k, v) {
@@ -1044,7 +1067,7 @@
       renderTable(); renderBulk();
     };
     var cnt = document.getElementById('crm-count');
-    if (cnt) cnt.textContent = S.total.toLocaleString('fr-FR') + ' compte' + (S.total > 1 ? 's' : '') + (S.rows.length < S.total ? ' · ' + S.rows.length + ' affichés' : '');
+    if (cnt) cnt.textContent = S.total.toLocaleString('fr-FR') + ' compte' + (S.total > 1 ? 's' : '');
     if (!S.rows.length) {
       tb.innerHTML = '<tr><td colspan="10" class="crm-empty">Aucun compte ne correspond à ces filtres.</td></tr>';
     } else {
@@ -1619,8 +1642,10 @@
   function onPeoplePanel(opts) {
     var p = document.getElementById('panel-people'); if (!p) return;
     if (!document.getElementById('crm-plist')) {
-      p.innerHTML = '<div class="crm-wrap" id="crm-plist"><div class="crm-toolbar" id="crm-ptoolbar"></div>'
-        + '<div class="crm-row" style="justify-content:space-between;margin-bottom:8px;"><span class="crm-meta" id="crm-pcount" aria-live="polite"></span><button class="crm-btn ghost" id="crm-pexport" type="button">Exporter (CSV)</button></div>'
+      p.innerHTML = '<div class="crm-wrap" id="crm-plist"><div class="crm-bar"><div class="crm-toolbar" id="crm-ptoolbar"></div>'
+        + '<div class="crm-views" id="crm-pviews" role="tablist" aria-label="Vues"></div>'
+        + '<span class="crm-bar-r"><span class="crm-meta" id="crm-pcount" aria-live="polite"></span><button class="crm-btn ghost sm" id="crm-pexport" type="button" title="Exporter la liste en CSV">Exporter</button></span></div>'
+        + '<div class="crm-fpanel" id="crm-pfpanel"></div>'
         + '<div class="crm-table-wrap"><table class="crm-table" id="crm-ptable"><thead></thead><tbody></tbody></table>'
         + '<div class="crm-more" id="crm-pmore" style="display:none"><button class="crm-btn" type="button" id="crm-pmore-btn">Afficher plus</button></div></div></div>'
         + '<div class="crm-wrap crm-record" id="crm-pdetail" style="display:none"></div>';
@@ -1641,18 +1666,36 @@
     var sel = function (key, label, options) { return '<select class="crm-sel' + (f[key] ? ' set' : '') + '" data-pf="' + key + '" aria-label="' + esc(label) + '">' + opt('', label, f[key]) + options + '</select>'; };
     var nf = Object.keys(f).filter(function (k) { return k !== 'q' && f[k]; }).length;
     el.innerHTML = '<input class="crm-search" id="crm-pq" type="search" placeholder="Rechercher un nom, un email, un titre, un compte…" aria-label="Rechercher" value="' + esc(f.q || '') + '">'
-      + '<button type="button" class="crm-btn crm-filters-btn" id="crm-pfilters-btn">Filtres' + (nf ? ' (' + nf + ')' : '') + '</button>'
+      + '<button type="button" class="crm-chip sm crm-filters-btn' + (nf ? ' set' : '') + '" id="crm-pfilters-btn" aria-expanded="' + !!S.pFiltersOpen + '" aria-controls="crm-pfpanel">Filtres' + (nf ? ' · ' + nf : '') + '</button>';
+    // Vues rapides : un clic remplace les filtres.
+    var PV = [['all', 'Tous', {}], ['mine', 'Mes comptes', { owner: 'me' }], ['dec', 'Décideurs', { role: 'decideur' }], ['never', 'Jamais contactés', { activity: 'never' }]];
+    var fkey = JSON.stringify(sortObj(Object.assign({}, f, { q: '' })));
+    var vEl = document.getElementById('crm-pviews');
+    if (vEl) {
+      vEl.innerHTML = PV.map(function (v) { var on = JSON.stringify(sortObj(v[2])) === fkey; return '<button type="button" role="tab" aria-selected="' + on + '" class="crm-chip sm' + (on ? ' on' : '') + '" data-pv="' + v[0] + '">' + v[1] + '</button>'; }).join('');
+      vEl.querySelectorAll('[data-pv]').forEach(function (b) { b.onclick = function () {
+        var v = PV.filter(function (x) { return x[0] === b.getAttribute('data-pv'); })[0];
+        S.people.filters = Object.assign(f.q ? { q: f.q } : {}, v[2]); lsSet('scout_crm_pfilters', S.people.filters); renderPeopleToolbar(); fetchPeople();
+      }; });
+    }
+    var fp = document.getElementById('crm-pfpanel');
+    fp.innerHTML = '<div class="crm-fsel">'
       + sel('role', 'Rôle', Object.keys(ROLE_LABEL).map(function (r) { return opt(r, ROLE_LABEL[r], f.role); }).join('') + opt('none', 'Rôle inconnu', f.role))
       + sel('owner', 'Propriétaire du compte', opt('me', 'Mes comptes', f.owner) + opt('none', 'Sans propriétaire', f.owner) + F.users.map(function (u) { return opt(u.id, u.name, f.owner); }).join(''))
       + sel('tier', 'Tier du compte', opt('1', 'Tier 1', f.tier) + opt('2', 'Tier 2', f.tier) + opt('3', 'Tier 3', f.tier))
       + sel('activity', 'Activité', opt('30', 'Moins de 30 j', f.activity) + opt('never', 'Jamais contacté', f.activity))
       + sel('account', 'Compte', opt('with', 'Rattaché à un compte', f.account) + opt('without', 'Sans compte', f.account))
-      + sel('email', 'Email', opt('none', 'Sans email', f.email));
-    el.classList.toggle('open', !!S.pFiltersOpen);
-    document.getElementById('crm-pfilters-btn').onclick = function () { S.pFiltersOpen = !S.pFiltersOpen; el.classList.toggle('open', S.pFiltersOpen); };
+      + sel('email', 'Email', opt('none', 'Sans email', f.email))
+      + (nf ? '<button type="button" class="crm-link" id="crm-preset">Effacer les filtres</button>' : '') + '</div>';
+    fp.insertAdjacentHTML('beforeend', activeChips(f, fp));
+    fp.classList.toggle('open', !!S.pFiltersOpen);
+    fp.classList.toggle('has-active', !!nf);
+    var rs = document.getElementById('crm-preset'); if (rs) rs.onclick = function () { S.people.filters = f.q ? { q: f.q } : {}; lsSet('scout_crm_pfilters', S.people.filters); renderPeopleToolbar(); fetchPeople(); };
+    fp.querySelectorAll('[data-rmpf]').forEach(function (b) { b.onclick = function () { setPFilter(b.getAttribute('data-rmpf'), ''); }; });
+    document.getElementById('crm-pfilters-btn').onclick = function () { S.pFiltersOpen = !S.pFiltersOpen; fp.classList.toggle('open', S.pFiltersOpen); this.setAttribute('aria-expanded', S.pFiltersOpen); };
     var t;
     document.getElementById('crm-pq').oninput = function (e) { clearTimeout(t); var v = e.target.value.trim(); t = setTimeout(function () { setPFilter('q', v); }, 300); };
-    el.querySelectorAll('[data-pf]').forEach(function (s) { s.onchange = function () { setPFilter(s.getAttribute('data-pf'), s.value); }; });
+    fp.querySelectorAll('[data-pf]').forEach(function (s) { s.onchange = function () { setPFilter(s.getAttribute('data-pf'), s.value); }; });
   }
   function setPFilter(k, v) {
     if (v) S.people.filters[k] = v; else delete S.people.filters[k];
@@ -1686,7 +1729,7 @@
     th.querySelectorAll('[data-psort]').forEach(function (h) {
       h.onclick = function () { var s = h.getAttribute('data-psort'); P.sort = { sort: s, dir: P.sort.sort === s ? (P.sort.dir === 'asc' ? 'desc' : 'asc') : (h.getAttribute('data-asc') === '1' ? 'asc' : 'desc') }; fetchPeople(); };
     });
-    document.getElementById('crm-pcount').textContent = P.total.toLocaleString('fr-FR') + ' contact' + (P.total > 1 ? 's' : '') + (P.rows.length < P.total ? ' · ' + P.rows.length + ' affichés' : '');
+    document.getElementById('crm-pcount').textContent = P.total.toLocaleString('fr-FR') + ' contact' + (P.total > 1 ? 's' : '');
     tb.innerHTML = P.rows.length ? P.rows.map(function (c) {
       return '<tr data-pid="' + esc(c.id) + '"><td class="c-nom"><div class="crm-acc-name">' + esc(personName(c)) + '</div><div class="crm-acc-sub">' + esc(c.titre || '') + '</div></td>'
         + '<td class="c-account">' + (c.end_user_id ? tierBadge(c.tier) + ' <button type="button" class="crm-link" data-pacc="' + esc(c.end_user_id) + '">' + esc(c.account_nom || c.organisation || '') + '</button>' : '<span class="crm-muted">' + esc(c.organisation || 'Sans compte') + '</span>') + '</td>'
