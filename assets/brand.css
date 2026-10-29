@@ -132,3 +132,7 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
   #scout-gs-fab.pulse::after { display: none; }
   #subnav.on { padding-right: 270px; }
 }
+@media (min-width: 761px) {
+  .crm-table, .crm-prow, .crm-acc-name, .crm-acc-sub { line-height: 1.3; }
+  .crm-table td { padding-top: 6px; padding-bottom: 6px; }
+}
