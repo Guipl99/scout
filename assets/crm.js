@@ -538,7 +538,7 @@
       api('/crm/signals/proposed?scope=' + (S.prospScope === 'me' ? 'me' : 'all')).catch(function () { return { rows: [] }; })
     ]).then(function (r) {
       var hot = r[0].accounts || [], fresh = r[1].accounts || [], vip = r[2].contacts || [], st = r[3] || {}, eng = r[4] || {}, queue = r[5] || [];
-      var props = (r[6] && r[6].rows) || []; S.props = props;
+      var props = (r[6] && r[6].rows) || []; S.props = props; var minSc = (r[6] && r[6].min_score) || 5;
       // Comptes touchés par une action proposée : raison affichée, et remontés dans « Comptes chauds ».
       var sigByAcc = {};
       props.forEach(function (sg) { (sg.accounts || []).forEach(function (a) { if (!sigByAcc[a.id]) sigByAcc[a.id] = sg; }); });
@@ -579,7 +579,7 @@
 
       // 2. Actions proposées (signaux marché notés 5 sur 8 et plus, sans échéance)
       // Section affichée seulement s'il y a quelque chose : le bandeau donne déjà le compteur.
-      if (props.length) html += '<div class="crm-card" id="crm-props"><h3>Actions proposées <span class="crm-meta">appels d’offres, contrats des concurrents, achats déclencheurs, notés 5 sur 8 et plus</span> <button type="button" class="crm-link" data-goto="market">Marchés →</button></h3>'
+      if (props.length) html += '<div class="crm-card" id="crm-props"><h3>Actions proposées <span class="crm-meta">appels d’offres, contrats des concurrents, achats déclencheurs, notés ' + minSc + ' sur 8 et plus</span> <button type="button" class="crm-link" data-goto="market">Marchés →</button></h3>'
         + props.map(sigCard).join('') + '</div>';
 
       // 3. Comptes chauds

@@ -188,3 +188,22 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .cfg-main { max-width: 980px; }
 #cfg-team-admin > div:first-child { gap: 12px; }
 #cfg-team-admin > div:first-child button { white-space: nowrap; }
+.cfg-box-h { display: flex; flex-direction: column; gap: 2px; }
+.cfg-box-h b { font-size: 13px; }
+.cfg-row-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cfg-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+.cfg-check input { accent-color: var(--accent); }
+.cfg-inline { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--text2); }
+.cfg-inline input, .cfg-inline select { width: 64px; margin-left: 6px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 2px; color: var(--text); padding: 5px 7px; font: inherit; font-size: 12.5px; }
+.cfg-inline select { width: auto; }
+.cfg-int { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+.cfg-box-h + .cfg-int { border-top: 0; }
+.cfg-int .m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cfg-int .m b { font-size: 12.5px; }
+.cfg-int .m span { font-size: 12px; color: var(--text2); }
+.cfg-dot.warn { background: #C99A4E; }
+.cfg-dot.off { background: #C46A52; }
+#cfg-owner-rules .cfg-utable td { white-space: normal; vertical-align: middle; }
+#cfg-owner-rules .crm-sel { min-width: 130px; }
+#scout-cooldowns-container .scout-cd-row { padding: 6px 0; }
+#cfg-integrations { display: flex; flex-direction: column; gap: 14px; }

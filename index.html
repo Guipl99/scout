@@ -771,7 +771,7 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <link rel="stylesheet" href="assets/crm.css?v=196">
-<link rel="stylesheet" href="assets/brand.css?v=8">
+<link rel="stylesheet" href="assets/brand.css?v=10">
 </head>
 <body>
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -2646,6 +2646,8 @@ Mes pays
         <button type="button" data-cfg="data">Import et export</button>
         <div class="cfg-nav-sec" data-admin="1">Administration</div>
         <button type="button" data-cfg="users" data-admin="1">Utilisateurs</button>
+        <button type="button" data-cfg="rules" data-admin="1">Règles commerciales</button>
+        <button type="button" data-cfg="integrations" data-admin="1">Intégrations</button>
         <button type="button" data-cfg="security" data-admin="1">Sécurité</button>
         <button type="button" data-cfg="moderation" data-admin="1">À valider</button>
         <button type="button" data-cfg="health" data-admin="1">Santé du système</button>
@@ -2758,7 +2760,7 @@ Réinitialiser tous les filtres
           </div>
         </section>
         <section class="cfg-sec" data-sec="prosp">
-          <header class="cfg-sec-head"><h2>Ma prospection</h2><p>Ce que Scout te propose dans « Prochaine action », et quand une relance devient due.</p></header>
+          <header class="cfg-sec-head"><h2>Ma prospection</h2><p>Ce que Scout te propose dans « Prochaine action ». La cadence des relances est commune à l’équipe (Règles commerciales).</p></header>
           <div class="cfg-sec-body">
             <div class="cfg-box">
             <div>
@@ -2785,10 +2787,6 @@ Réinitialiser tous les filtres
                   <input type="checkbox" data-secteur="Humanitaire" onchange="saveSettings()" style="accent-color:var(--accent);"> Humanitaire
                 </label>
               </div>
-            </div>
-            <div>
-              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Délai avant relance (jours) <span style="color:var(--text3);font-weight:400;">— un contact emailé depuis ce délai, sans réponse, apparaît dans « Relances dues » (une seule relance)</span></label>
-              <input id="cfg-relance-days" type="number" min="1" max="90" value="14" onchange="saveSettings();if(typeof renderDashboardCockpit==='function')renderDashboardCockpit();" style="width:90px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-size:13px;color:var(--text);outline:none;">
             </div>
             </div>
           </div>
@@ -2857,6 +2855,48 @@ Réinitialiser tous les filtres
             </div>
           </div>
         </section>
+        <section class="cfg-sec" data-sec="rules" data-admin="1">
+          <header class="cfg-sec-head"><h2>Règles commerciales</h2><p>Règles communes à toute l’équipe : qui suit quels comptes, la cadence des relances, ce que Scout propose.</p></header>
+          <div class="cfg-sec-body">
+            <div class="cfg-box">
+              <div class="cfg-box-h"><b>Attribution des comptes</b><span class="cfg-hint">Dans l’ordre : la première règle qui s’applique désigne le commercial.</span></div>
+              <div id="cfg-owner-rules"><span class="cfg-hint">Chargement…</span></div>
+              <div class="cfg-row-actions">
+                <button type="button" class="crm-btn sm" id="cfg-owner-save">Enregistrer les règles</button>
+                <label class="cfg-check"><input type="checkbox" id="cfg-owner-overwrite"> Réattribuer aussi les comptes déjà suivis par un autre commercial</label>
+                <button type="button" class="crm-btn ghost sm" id="cfg-owner-preview">Aperçu</button>
+                <button type="button" class="crm-btn primary sm" id="cfg-owner-apply" disabled>Appliquer aux comptes</button>
+              </div>
+              <div id="cfg-owner-msg" class="cfg-hint" role="status" aria-live="polite"></div>
+            </div>
+            <div class="cfg-box">
+              <div class="cfg-box-h"><b>Cadence des relances</b><span class="cfg-hint">Compté depuis le premier email. Les relances dues arrivent dans « À faire » de chacun.</span></div>
+              <div class="cfg-inline">
+                <label>Relance 1 à J+<input type="number" id="cfg-r1" min="1" max="120"></label>
+                <label>Relance 2 à J+<input type="number" id="cfg-r2" min="2" max="180"></label>
+                <label>Séquence close sans réponse après <input type="number" id="cfg-close" min="14" max="365"> jours</label>
+                <button type="button" class="crm-btn sm" id="cfg-seq-save">Enregistrer</button>
+                <span id="cfg-seq-msg" class="cfg-hint" role="status" aria-live="polite"></span>
+              </div>
+            </div>
+            <div class="cfg-box">
+              <div class="cfg-box-h"><b>Actions proposées</b><span class="cfg-hint">Note minimale (sur 8) d’un signal marché pour apparaître dans Prospection et allumer la pastille du commercial.</span></div>
+              <div class="cfg-inline">
+                <label>Note minimale <select id="cfg-minscore"><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select> sur 8</label>
+                <button type="button" class="crm-btn sm" id="cfg-minscore-save">Enregistrer</button>
+                <span id="cfg-minscore-msg" class="cfg-hint" role="status" aria-live="polite"></span>
+              </div>
+            </div>
+            <div class="cfg-box">
+              <div class="cfg-box-h"><b>Retour dans « Prochaine action »</b><span class="cfg-hint">Délai avant qu’un contact déjà travaillé soit de nouveau proposé, selon la dernière action. <span id="scout-cooldowns-saved-ind" style="opacity:0;transition:opacity .3s;color:#6A8B74;">Enregistré</span></span></div>
+              <div id="scout-cooldowns-container"><span class="cfg-hint">Chargement…</span></div>
+            </div>
+          </div>
+        </section>
+        <section class="cfg-sec" data-sec="integrations" data-admin="1">
+          <header class="cfg-sec-head"><h2>Intégrations</h2><p>Les services branchés à Scout et leur état. Les clés restent sur le serveur (Railway).</p></header>
+          <div class="cfg-sec-body"><div id="cfg-integrations"><span class="cfg-hint">Chargement…</span></div></div>
+        </section>
         <section class="cfg-sec" data-sec="security" data-admin="1">
           <header class="cfg-sec-head"><h2>Sécurité</h2><p>Mode de connexion de l'équipe et journal des connexions.</p></header>
           <div class="cfg-sec-body">
@@ -2880,8 +2920,9 @@ Réinitialiser tous les filtres
           </div>
         </section>
         <section class="cfg-sec" data-sec="health" data-admin="1">
-          <header class="cfg-sec-head"><h2>Santé du système</h2><p>Vérifier que l'API et ses services répondent.</p></header>
+          <header class="cfg-sec-head"><h2>Santé du système</h2><p>Vérifier que l'API et ses services répondent, et que les tâches automatiques tournent.</p></header>
           <div class="cfg-sec-body">
+            <div class="cfg-box"><div class="cfg-box-h"><b>Tâches automatiques</b><span class="cfg-hint">Elles tournent sur le serveur, sans personne.</span></div><div id="cfg-jobs"><span class="cfg-hint">Chargement…</span></div></div>
         <div class="card">
           <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
             <span class="card-title">Diagnostic système</span>
@@ -7427,6 +7468,7 @@ function cfgShow(sec) {
   try { localStorage.setItem('scout_cfg_sec', key); } catch (e) {}
   if (key === 'moderation' && typeof loadPending === 'function' && !pn.dataset.pendingLoaded) { pn.dataset.pendingLoaded = '1'; loadPending(); }
   if (key === 'health' && typeof runHealthCheck === 'function' && !pn.dataset.healthLoaded) { pn.dataset.healthLoaded = '1'; runHealthCheck(); }
+  if (window.scoutSettings) window.scoutSettings.onSection(key);
 }
 function cfgInit(sec) {
   const pn = document.getElementById('panel-config'); if (!pn) return;
@@ -11894,7 +11936,8 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=199"></script>
+<script src="assets/crm.js?v=200"></script>
+<script src="assets/settings.js?v=1"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>
 <script>
 // Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.
