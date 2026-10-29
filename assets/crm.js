@@ -1106,7 +1106,7 @@
         return '<tr data-id="' + esc(r.id) + '" class="' + (sel ? 'sel' : '') + '">'
           + '<td class="cb"><input type="checkbox" data-cb="' + esc(r.id) + '" aria-label="Sélectionner ' + esc(r.nom) + '"' + (sel ? ' checked' : '') + '></td>'
           + '<td class="c-tier">' + tierBadge(r.tier) + '</td>'
-          + '<td class="c-nom"><div class="crm-acc-name">' + esc(r.nom) + '</div><div class="crm-acc-sub">' + esc([r.pays, r.secteur].filter(Boolean).join(' · ')) + (r.n_contacts ? ' · ' + r.n_contacts + ' contact' + (r.n_contacts > 1 ? 's' : '') : '') + '</div></td>'
+          + '<td class="c-nom"><div class="crm-acc-name" title="' + esc(r.nom) + '">' + esc(r.nom) + '</div><div class="crm-acc-sub">' + esc([r.pays, r.secteur].filter(Boolean).join(' · ')) + (r.n_contacts ? ' · ' + r.n_contacts + ' contact' + (r.n_contacts > 1 ? 's' : '') : '') + '</div></td>'
           + '<td class="c-prio">' + prioBadge(r.priority) + '</td>'
           + '<td class="c-score">' + heatBadge(r.score, r.heat) + (r.web_pages_90d ? ' <span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</td>'
           + '<td class="c-status">' + statusPill(r.status) + '</td>'
@@ -1762,8 +1762,8 @@
     });
     document.getElementById('crm-pcount').textContent = P.total.toLocaleString('fr-FR') + ' contact' + (P.total > 1 ? 's' : '');
     tb.innerHTML = P.rows.length ? P.rows.map(function (c) {
-      return '<tr data-pid="' + esc(c.id) + '"><td class="c-nom"><div class="crm-acc-name">' + esc(personName(c)) + '</div><div class="crm-acc-sub">' + esc(c.titre || '') + '</div></td>'
-        + '<td class="c-account">' + (c.end_user_id ? tierBadge(c.tier) + ' <button type="button" class="crm-link" data-pacc="' + esc(c.end_user_id) + '">' + esc(c.account_nom || c.organisation || '') + '</button>' : '<span class="crm-muted">' + esc(c.organisation || 'Sans compte') + '</span>') + '</td>'
+      return '<tr data-pid="' + esc(c.id) + '"><td class="c-nom"><div class="crm-acc-name" title="' + esc(personName(c)) + '">' + esc(personName(c)) + '</div><div class="crm-acc-sub" title="' + esc(c.titre || '') + '">' + esc(c.titre || '') + '</div></td>'
+        + '<td class="c-account">' + (c.end_user_id ? tierBadge(c.tier) + ' <button type="button" class="crm-link" data-pacc="' + esc(c.end_user_id) + '" title="' + esc(c.account_nom || c.organisation || '') + '">' + esc(c.account_nom || c.organisation || '') + '</button>' : '<span class="crm-muted">' + esc(c.organisation || 'Sans compte') + '</span>') + '</td>'
         + '<td class="c-role">' + rolePill(c.role, !!c.buying_role) + '</td>'
         + '<td class="c-email">' + (c.email ? esc(c.email) : '<span class="crm-muted">Aucun</span>') + '</td>'
         + '<td class="c-owner">' + (c.owner_name ? esc(c.owner_name) : '<span class="crm-muted">Personne</span>') + '</td>'

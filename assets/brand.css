@@ -105,3 +105,30 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .nav-sec { font: 700 9.5px/1 var(--font-title, inherit); letter-spacing: .16em; text-transform: uppercase; color: var(--text3); padding: 14px 8px 6px; border-top: 1px solid var(--border); margin-top: 6px; }
 .nav-sec:first-child { border-top: 0; margin-top: 0; padding-top: 4px; }
 @media (max-width: 760px) { .nav-sec { display: none; } }
+
+/* ── Densité ordinateur : Sora est large, on descend d'un cran pour retrouver l'encombrement d'un CRM compact ── */
+@media (min-width: 761px) {
+  #subnav.on { padding-top: .7rem; padding-bottom: 4px; margin-bottom: .75rem; gap: 12px; }
+  .subnav-title { font-size: 15px; }
+  .subnav-tab { font-size: 12.5px; padding: 5px 11px; }
+  .nav-item { font-size: 12.5px; padding: 6px 8px; }
+  .crm-table { font-size: 12px; }
+  .crm-acc-name { font-size: 12.5px; }
+  .crm-acc-sub { font-size: 11px; }
+  .crm-meta { font-size: 11.5px; }
+  .crm-chip, .crm-btn, .crm-sel, .crm-search { font-size: 12px; }
+  .crm-chip.sm, .crm-btn.sm { font-size: 11.5px; }
+  /* Noms longs : une seule ligne, points de suspension (le nom complet reste au survol et sur la fiche) */
+  .crm-table td.c-nom .crm-acc-name, .crm-table td.c-nom .crm-acc-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+  .crm-table td.c-account .crm-link, .crm-table td.c-account .crm-muted { display: inline-block; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+  .crm-table td.c-email, .crm-table td.c-activity { white-space: nowrap; }
+}
+/* Recherche globale : champ discret dans la barre du haut, comme un CRM classique */
+@media (min-width: 761px) {
+  #scout-gs-fab { top: 10px !important; right: 20px !important; padding: 6px 10px !important; font: 400 12px/1 var(--font-body, Sora, sans-serif) !important; background: var(--bg2) !important; color: var(--text2) !important; border: 1px solid var(--border2) !important; min-width: 220px; gap: 8px; }
+  #scout-gs-fab:hover { transform: none !important; color: var(--text) !important; border-color: var(--text3) !important; }
+  #scout-gs-fab .label { flex: 1; text-align: left; }
+  #scout-gs-fab kbd { background: var(--bg3) !important; color: var(--text3) !important; font-size: 10px; }
+  #scout-gs-fab.pulse::after { display: none; }
+  #subnav.on { padding-right: 270px; }
+}
