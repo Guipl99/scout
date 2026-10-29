@@ -978,6 +978,69 @@
     body.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function (e) { e.preventDefault(); e.stopPropagation(); openAccount(b.getAttribute('data-acc')); }; });
   }
 
+  // Organigramme : compte de tête en haut, branches dessous, compte ouvert mis en évidence
+  function loadOrg(id) {
+    var box = document.getElementById('crm-org'); if (!box) return;
+    box.innerHTML = '<div class="crm-card"><h3>Organigramme</h3><div class="crm-meta">Chargement…</div></div>';
+    (S.treeData ? Promise.resolve(S.treeData) : api('/crm/tree').then(function (d) { S.treeData = d.accounts || []; return S.treeData; }))
+      .then(function () { drawOrg(id); })
+      .catch(function (e) { box.innerHTML = '<div class="crm-card"><h3>Organigramme</h3><div class="crm-meta">Indisponible : ' + esc(e.message) + '</div></div>'; });
+  }
+  function drawOrg(id) {
+    var box = document.getElementById('crm-org'); if (!box || !S.treeData) return;
+    var byId = {}, kids = {};
+    S.treeData.forEach(function (a) { byId[a.id] = a; });
+    S.treeData.forEach(function (a) { if (a.parent_id && byId[a.parent_id]) (kids[a.parent_id] = kids[a.parent_id] || []).push(a); });
+    Object.keys(kids).forEach(function (k) { kids[k].sort(function (x, y) { return ((kids[y.id] || []).length - (kids[x.id] || []).length) || String(x.nom).localeCompare(String(y.nom)); }); });
+    var cur = byId[id]; if (!cur) { box.innerHTML = ''; return; }
+    var path = {}, root = cur, guard = 0;
+    path[cur.id] = 1;
+    while (root.parent_id && byId[root.parent_id] && guard++ < 20) { root = byId[root.parent_id]; path[root.id] = 1; }
+    var total = 0;
+    var count = function (a, d) { total++; if (d < 30) (kids[a.id] || []).forEach(function (k) { count(k, d + 1); }); };
+    count(root, 0);
+    var MAXW = 10;
+    var first = function (n) { return String(n || '').split(' ')[0]; };
+    var card = function (a) {
+      var n = (kids[a.id] || []).length;
+      var meta = [a.n_contacts ? a.n_contacts + ' contact' + (a.n_contacts > 1 ? 's' : '') : '', a.owner_name ? first(a.owner_name) : ''].filter(Boolean).join(' · ');
+      return '<button type="button" class="crm-org-box' + (a.id === id ? ' on' : '') + (path[a.id] && a.id !== id ? ' path' : '') + '" data-org="' + esc(a.id) + '"' + (a.id === id ? ' aria-current="true"' : '') + '>'
+        + '<span class="t">' + (a.tier ? tierBadge(a.tier) : '') + '<b>' + esc(a.nom) + '</b></span>'
+        + (meta || n ? '<span class="crm-meta">' + esc(meta) + (n && meta ? ' · ' : '') + (n ? n + ' rattaché' + (n > 1 ? 's' : '') : '') + '</span>' : '') + '</button>';
+    };
+    // profondeur affichée : 3 niveaux sous la tête, plus le chemin vers le compte ouvert et ses enfants directs
+    var node = function (a, d) {
+      var ch = kids[a.id] || [];
+      var open = ch.length && (d < 2 || path[a.id]);
+      if (!open) return '<li>' + card(a) + '</li>';
+      var leaves = ch.every(function (k) { return !(kids[k.id] || []).length; });
+      if (leaves && ch.length > 4) {
+        // beaucoup de feuilles : une colonne compacte plutôt qu'une ligne très large
+        var shown = ch.slice(0, 14);
+        if (path[a.id]) ch.forEach(function (k) { if (path[k.id] && shown.indexOf(k) < 0) shown.push(k); });
+        return '<li>' + card(a) + '<ul><li><div class="crm-org-stack">' + shown.map(card).join('')
+          + (ch.length > shown.length ? '<span class="crm-meta">+ ' + (ch.length - shown.length) + ' autres</span>' : '') + '</div></li></ul></li>';
+      }
+      var vis = ch.slice(0, MAXW);
+      ch.forEach(function (k) { if (path[k.id] && vis.indexOf(k) < 0) vis.push(k); });
+      return '<li>' + card(a) + '<ul>' + vis.map(function (k) { return node(k, d + 1); }).join('')
+        + (ch.length > vis.length ? '<li><span class="crm-org-more">+ ' + (ch.length - vis.length) + ' autres</span></li>' : '') + '</ul></li>';
+    };
+    var pref = null; try { pref = localStorage.getItem('scout_org_open'); } catch (e) {}
+    var isOpen = pref ? pref === '1' : true;
+    box.innerHTML = '<details class="crm-card crm-org-card"' + (isOpen ? ' open' : '') + '><summary><h3>Organigramme <span class="crm-meta">' + total + ' compte' + (total > 1 ? 's' : '') + ' sous ' + esc(root.nom) + '</span></h3></summary>'
+      + '<div class="crm-org" tabindex="0" aria-label="Organigramme du groupe ' + esc(root.nom) + '"><ul>' + node(root, 0) + '</ul></div></details>';
+    var det = box.querySelector('details');
+    det.addEventListener('toggle', function () { try { localStorage.setItem('scout_org_open', det.open ? '1' : '0'); } catch (e) {} if (det.open) center(); });
+    box.querySelectorAll('[data-org]').forEach(function (b) { b.onclick = function () { var x = b.getAttribute('data-org'); if (x !== id) openAccount(x); }; });
+    var center = function () {
+      var on = box.querySelector('.crm-org-box.on'), sc = box.querySelector('.crm-org'); if (!on || !sc) return;
+      var r1 = on.getBoundingClientRect(), r2 = sc.getBoundingClientRect();
+      sc.scrollLeft += (r1.left + r1.width / 2) - (r2.left + r2.width / 2);
+    };
+    center();
+  }
+
   var QUICK_VIEWS = ['all', 'mine', 't1', 'hot'];
   function renderViews() {
     var el = document.getElementById('crm-views'); if (!el) return;
@@ -1472,7 +1535,7 @@
       + '<button type="button" class="crm-btn" id="crm-add-contact">' + ICON.plus + ' Contact</button>'
       + '<button type="button" class="crm-btn" id="crm-brief-btn" title="Résumé du compte avant un appel ou un rendez-vous">' + ICON.note + ' Brief</button>'
       + '</div>'
-      + '<div class="crm-rec-grid">'
+      + (sm.parent_id || (A.children || []).length ? '<div id="crm-org"></div>' : '') + '<div class="crm-rec-grid">'
       // ── colonne gauche : à propos
       + '<aside class="crm-rec-left"><div class="crm-card"><h3>À propos du compte</h3><dl class="crm-fields" id="crm-acc-fields">' + fields.map(fieldRow).join('') + '</dl>'
       + '<div class="crm-parent"><div class="crm-meta" style="margin:10px 0 4px">Rattaché à</div>'
@@ -1534,6 +1597,7 @@
         .then(function () { S.treeData = null; toast(pid ? 'Compte rattaché' : 'Compte détaché'); return reloadAccount(); })
         .catch(function (e) { toast('Erreur : ' + e.message); });
     };
+    loadOrg(a.id);
     var pp = document.getElementById('crm-parent-pick');
     var mountParent = function () { pp.hidden = false; acctPicker(pp, { placeholder: 'Rattacher à… (ex. ministère, direction)', exclude: [a.id], onPick: function (x) { setParent(x.id); }, focus: !!sm.parent_id }); };
     if (!sm.parent_id) mountParent();
