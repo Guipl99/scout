@@ -420,7 +420,7 @@
       var send = function (body, msg) {
         card.style.opacity = '.5';
         return api('/crm/signals/' + kind + '/' + encodeURIComponent(ref) + '/action', { method: 'POST', body: body })
-          .then(function () { toast(msg); reload(); })
+          .then(function () { toast(msg); reload(); refreshPropBadge(); })
           .catch(function (e) { card.style.opacity = ''; toast('Erreur : ' + e.message); });
       };
       card.querySelectorAll('[data-sa]').forEach(function (b) {
@@ -1936,7 +1936,27 @@
     try { trkMarkRelanceSent = window.trkMarkRelanceSent; } catch (e) {}
   }
 
-  window.scoutCrm = { onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge };
+  // Pastille Prospection : actions proposées (signaux marché 5+) sur mes comptes, non traitées.
+  // L'admin voit aussi celles qui ne sont rattachées à aucun compte. Même logique que les chats et visites.
+  function refreshPropBadge() {
+    if (typeof window.getAuthHeaders !== 'function' || !window.getAuthHeaders().Authorization) return;
+    api('/crm/signals/proposed?scope=me&count=1').then(function (d) {
+      var n = (d.mine || 0) + (isAdminNow() ? (d.unlinked || 0) : 0);
+      ['nav-prospection-badge', 'bn-prospection-badge'].forEach(function (id) {
+        var b = document.getElementById(id); if (!b) return;
+        b.textContent = n > 9 ? '9+' : String(n);
+        b.style.display = n ? 'inline-block' : 'none';
+        b.setAttribute('aria-label', n + ' action(s) proposée(s)');
+      });
+      var last = parseInt(lsGet('scout_prop_seen', '0'), 10) || 0;
+      if (n > last) toast(n - last > 1 ? (n - last) + ' nouvelles actions proposées dans Prospection' : 'Nouvelle action proposée dans Prospection');
+      lsSet('scout_prop_seen', String(n));
+    }).catch(function () {});
+  }
+
+  window.scoutCrm = { onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge, refreshPropBadge: refreshPropBadge };
   setTimeout(refreshBadge, 2500);
   setInterval(refreshBadge, 5 * 60 * 1000);
+  setTimeout(refreshPropBadge, 3500);
+  setInterval(refreshPropBadge, 5 * 60 * 1000);
 })();
