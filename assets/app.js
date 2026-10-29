@@ -136,9 +136,10 @@
       A.items = now;
       var head = '<div class="sa-kpi"><b>' + now.length + '</b><span>à traiter' + (urgent ? ', dont <em>' + urgent + ' urgent' + (urgent > 1 ? 's' : '') + '</em>' : '') + '</span></div>';
       v.innerHTML = head + (now.length ? '<div class="sa-list">' + now.slice(0, 60).map(card).join('') + '</div>'
-        : '<div class="sa-empty">Rien d’urgent. Profite pour avancer un compte T1.</div>')
+        : '<div class="sa-empty">Rien d’urgent dans ta file.' + (A.qScope === 'me' ? '<br><br><button type="button" class="sa-btn" id="sa-see-team">Voir la file de l’équipe</button>' : '') + '</div>')
         + (now.length > 60 ? '<div class="sa-meta sa-center">Les ' + (now.length - 60) + ' suivants sont dans la version complète.</div>' : '');
       bindCards(v);
+      var st = document.getElementById('sa-see-team'); if (st) st.onclick = function () { A.qScope = 'team'; renderToday(); };
     }).catch(function (e) { v.innerHTML = '<div class="sa-empty">Erreur : ' + esc(e.message) + '</div>'; });
   }
   function card(it, i) {

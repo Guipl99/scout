@@ -1,7 +1,8 @@
 /* Scout, mode appli (téléphone) : grandes cibles tactiles, une action par carte, charte Elistair */
 body.app-mode { overflow: hidden; }
 body.app-mode .sidebar, body.app-mode .main, body.app-mode .bottom-nav, body.app-mode #scout-chat-btn,
-body.app-mode .subnav, body.app-mode #scout-chat-panel { display: none !important; }
+body.app-mode .subnav, body.app-mode #scout-chat-panel, body.app-mode #scout-gs-fab, body.app-mode > .app { display: none !important; }
+body.app-mode #scout-update-banner { bottom: calc(84px + env(safe-area-inset-bottom)) !important; }
 
 #sa { position: fixed; inset: 0; z-index: 9000; display: flex; flex-direction: column; background: var(--bg); color: var(--text);
   font-size: 16px; -webkit-tap-highlight-color: transparent; padding-top: env(safe-area-inset-top); }
