@@ -537,3 +537,27 @@ body.theme-light .crm-q-kind.k-reply, body.theme-light .crm-q-ic.k-reply { color
 .crm-menu-check:hover { background: var(--bg3); color: var(--text); }
 @media (max-width: 760px) { #crm-cols, #crm-pcols { display: none; } }
 .crm-menu-check input, .crm-table input[type="checkbox"] { accent-color: var(--accent); }
+.crm-q-ready { font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #6A8B74; border: 1px solid rgba(106,139,116,.5); border-radius: 2px; padding: 2px 6px; margin-right: 6px; white-space: nowrap; }
+.crm-tier-banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 8px; border: 1px solid var(--border); border-left: 3px solid var(--accent); background: var(--bg2); font-size: 12.5px; color: var(--text2); }
+.crm-tier-banner > span:first-child { flex: 1; min-width: 240px; }
+.crm-tier-banner b { color: var(--text); }
+.crm-tier-box { width: min(920px, calc(100vw - 32px)); max-width: none; }
+.crm-tier-scroll { max-height: 58vh; overflow: auto; border: 1px solid var(--border); }
+.crm-tier-scroll .crm-table td { white-space: normal; vertical-align: middle; }
+.crm-tier-scroll tbody tr { cursor: default; }
+.crm-tier-sep td { background: var(--bg3); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text2); }
+.crm-ta-wrap { position: relative; }
+.crm-ta-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 2px; }
+.crm-btn.rec { border-color: #C46A52; color: #C46A52; }
+.crm-btn.rec svg { animation: crmPulse 1.2s ease-in-out infinite; }
+@keyframes crmPulse { 50% { opacity: .35; } }
+.crm-next { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.crm-next .crm-input { flex: 1 1 240px; }
+.crm-brief { border-left: 3px solid var(--accent); }
+.crm-brief .lead { margin: 0 0 10px; font-size: 13px; color: var(--text); line-height: 1.5; }
+.crm-brief-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; }
+.crm-brief h4 { margin: 0 0 4px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--text2); }
+.crm-brief ul { margin: 0; padding-left: 16px; font-size: 12.5px; line-height: 1.45; }
+.crm-brief p { margin: 0; font-size: 12.5px; line-height: 1.45; }
+.crm-brief-next { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12.5px; }
+@media (max-width: 760px) { .crm-brief-grid { grid-template-columns: minmax(0, 1fr); } }

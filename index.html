@@ -770,7 +770,7 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<link rel="stylesheet" href="assets/crm.css?v=196">
+<link rel="stylesheet" href="assets/crm.css?v=197">
 <link rel="stylesheet" href="assets/brand.css?v=10">
 </head>
 <body>
@@ -8223,6 +8223,11 @@ async function exportLinkedInCsv(scope) {
   .scout-cs-action-card .label { font-weight: 500; }
   .scout-cs-action-card .hint { font-size: 10px; color: #92A49D; }
 
+  .scout-cs-draft-edit { display: flex; flex-direction: column; gap: 4px; }
+  .scout-cs-draft-edit .hint { font-size: 12px; color: #354A46; margin: 12px 0 2px; font-weight: 500; }
+  .scout-cs-draft-edit label { font-size: 11.5px; color: #5E7069; margin-top: 6px; }
+  .scout-cs-draft-edit input, .scout-cs-draft-edit textarea { width: 100%; box-sizing: border-box; background: #fff; border: 1px solid #D0CDBC; border-radius: var(--radius); color: #1A2A28; font: inherit; font-size: 13px; padding: 8px 10px; }
+  .scout-cs-draft-edit textarea { line-height: 1.5; resize: vertical; min-height: 200px; }
   .scout-cs-draft {
     background: #F7F5EE; border: 1px solid #DAD6C4; border-radius:var(--radius);
     padding: 14px; margin-top: 14px; white-space: pre-wrap; font-size: 13px;
@@ -8649,10 +8654,14 @@ async function exportLinkedInCsv(scope) {
         return;
       }
       currentDraft = { subject: data.subject, body: data.body, to: data.to };
+      // Brouillon modifiable : le commercial relit et corrige avant de l'ouvrir dans sa messagerie.
       result.innerHTML = `
-        <div class="scout-cs-draft">
-          <div class="subject">Objet : ${escapeHtml(data.subject)}</div>
-          ${escapeHtml(data.body)}
+        <div class="scout-cs-draft-edit">
+          <div class="hint">Relis et modifie avant d'ouvrir dans Outlook.</div>
+          <label for="scout-draft-subject">Objet</label>
+          <input id="scout-draft-subject" value="${escapeHtml(data.subject)}" oninput="scoutContactStatus._syncDraft()">
+          <label for="scout-draft-body">Message</label>
+          <textarea id="scout-draft-body" rows="11" oninput="scoutContactStatus._syncDraft()">${escapeHtml(data.body)}</textarea>
         </div>
         <div class="scout-cs-actions-grid" style="margin-top:10px;">
           <button class="scout-cs-action-card" onclick="scoutContactStatus.sendEmail()">
@@ -8668,8 +8677,15 @@ async function exportLinkedInCsv(scope) {
     }
   }
 
+  function syncDraft() {
+    if (!currentDraft) return;
+    const sj = document.getElementById('scout-draft-subject'), bd = document.getElementById('scout-draft-body');
+    if (sj) currentDraft.subject = sj.value;
+    if (bd) currentDraft.body = bd.value;
+  }
   function sendEmail() {
     if (!currentDraft) return;
+    syncDraft();
     const url = `mailto:${encodeURIComponent(currentDraft.to)}?subject=${encodeURIComponent(currentDraft.subject)}&body=${encodeURIComponent(currentDraft.body)}`;
     window.location.href = url;
     logIntent('email', { subject: currentDraft.subject, body: currentDraft.body, to: currentDraft.to });
@@ -9089,7 +9105,7 @@ async function exportLinkedInCsv(scope) {
 
   window.scoutContactStatus = {
     openDrawer, closeDrawer,
-    openLinkedIn, draftEmail, sendEmail, draftLinkedInMsg, openLinkedInForMsg,
+    openLinkedIn, draftEmail, sendEmail, _syncDraft: syncDraft, draftLinkedInMsg, openLinkedInForMsg,
     toggleManualForm, submitManualLog, confirmSent, cancelSent,
     editAction, deleteAction,
     saveCooldown,
@@ -11608,31 +11624,53 @@ async function trkTransmitCRM(id){
   renderTrackingTiles(); renderTrackingTable();
 }
 window.trkTransmitCRM=trkTransmitCRM;
-async function trkRelance(id){
+// Relance : brouillon préparé par Scout (ou rédigé à la demande), TOUJOURS relu et modifiable avant l'envoi.
+// Les modifications sont enregistrées au fil de la frappe ; rien ne part sans que le commercial l'ouvre dans sa messagerie.
+function _trkH(json){ const h=(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}; return json?Object.assign({'Content-Type':'application/json'},h):h; }
+function _trkFields(){ const s=document.getElementById('trk-rel-subject'), b=document.getElementById('trk-rel-body'); const d=window._trkDraft||{}; return {subject:s?s.value:d.subject, body:b?b.value:d.body, to:d.to, id:d.id}; }
+let _trkSaveT=null;
+function _trkQueueSave(){
+  clearTimeout(_trkSaveT);
+  const st=document.getElementById('trk-rel-saved'); if(st) st.textContent='Modification…';
+  _trkSaveT=setTimeout(async function(){
+    const f=_trkFields(); if(!f.id||!f.body) return;
+    try{ const r=await fetch(API+'/assist/relance',{method:'PUT',headers:_trkH(true),body:JSON.stringify({contact_id:f.id,subject:f.subject,body:f.body})}); if(st) st.textContent=r.ok?'Modifications enregistrées':'Non enregistré'; }catch(e){ if(st) st.textContent='Non enregistré'; }
+  },700);
+}
+window._trkQueueSave=_trkQueueSave;
+async function trkRelance(id, regenerate){
   let modal=document.getElementById('trk-relance-modal');
-  if(!modal){ modal=document.createElement('div'); modal.id='trk-relance-modal'; modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;'; document.body.appendChild(modal); }
-  modal.innerHTML='<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);max-width:560px;width:100%;max-height:85vh;overflow:auto;padding:18px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="font-weight:600;color:var(--text);">✉️ Relance</div><button onclick="var m=document.getElementById(\'trk-relance-modal\');if(m)m.remove();" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);">×</button></div><div id="trk-relance-body" style="color:var(--text3);font-size:13px;">Génération de la relance par Claude…</div></div>';
+  if(!modal){ modal=document.createElement('div'); modal.id='trk-relance-modal'; modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;'; document.body.appendChild(modal); modal.addEventListener('click',function(e){ if(e.target===modal) modal.remove(); }); }
+  modal.innerHTML='<div role="dialog" aria-label="Relance" style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);max-width:640px;width:100%;max-height:90vh;overflow:auto;padding:18px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="font-weight:600;color:var(--text);">Relance</div><button aria-label="Fermer" onclick="var m=document.getElementById(\'trk-relance-modal\');if(m)m.remove();" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);">×</button></div><div id="trk-relance-body" style="color:var(--text3);font-size:13px;">'+(regenerate?'Nouvelle rédaction…':'Chargement du brouillon…')+'</div></div>';
   try{
-    const r=await fetch(API+'/action/draft-email',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:id,mode:'relance'})});
+    const r=await fetch(API+'/assist/relance?contact_id='+encodeURIComponent(id)+(regenerate?'&regenerate=1':''),{headers:_trkH(false)});
     const d=await r.json();
     const box=document.getElementById('trk-relance-body'); if(!box) return;
     if(!r.ok){ box.innerHTML='<span style="color:#B5523B;">'+esc(d.error||'Erreur')+'</span>'; return; }
     window._trkDraft={subject:d.subject,body:d.body,to:d.to,id:id};
-    box.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:10px;font-size:13px;line-height:1.5;color:var(--text);"><div style="font-weight:600;margin-bottom:6px;">Objet : '+esc(d.subject)+'</div><div style="white-space:pre-wrap;">'+esc(d.body)+'</div></div>'
-      +'<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
-      +'<button onclick="trkSendRelance()" style="font-size:12px;color:#fff;background:var(--accent);border:none;border-radius:var(--radius);padding:8px 12px;cursor:pointer;font-weight:600;">📮 Ouvrir dans mail</button>'
-      +'<button onclick="trkCopyRelance(this)" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--accent);border-radius:var(--radius);padding:8px 12px;cursor:pointer;">📋 Copier</button>'
-      +'<button onclick="trkMarkRelanceSent(\''+esc(id)+'\')" style="font-size:12px;color:#2F4A3E;background:rgba(16,185,129,.12);border:1px solid #7A9A84;border-radius:var(--radius);padding:8px 12px;cursor:pointer;font-weight:600;">✅ Marquer relance envoyée</button>'
+    const origin=d.prepared?(d.edited?'Brouillon préparé par Scout, déjà modifié'+(d.edited_by?' par '+esc(d.edited_by):''):'Brouillon préparé par Scout ce matin'):'Brouillon rédigé à l’instant';
+    const inp='width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font:inherit;font-size:13px;padding:8px 10px;';
+    box.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:10px;">'+origin+'. <b style="color:var(--text);">Relis-le et modifie-le</b> avant de l’ouvrir dans ta messagerie : rien ne part sans toi.</div>'
+      +'<div style="font-size:12px;color:var(--text3);margin-bottom:4px;">À : '+esc(d.to||'')+'</div>'
+      +'<label style="display:block;font-size:12px;color:var(--text3);margin:8px 0 4px;" for="trk-rel-subject">Objet</label><input id="trk-rel-subject" oninput="_trkQueueSave()" style="'+inp+'" value="'+esc(d.subject||'')+'">'
+      +'<label style="display:block;font-size:12px;color:var(--text3);margin:10px 0 4px;" for="trk-rel-body">Message</label><textarea id="trk-rel-body" oninput="_trkQueueSave()" rows="12" style="'+inp+'line-height:1.5;resize:vertical;min-height:220px;">'+esc(d.body||'')+'</textarea>'
+      +'<div id="trk-rel-saved" role="status" aria-live="polite" style="font-size:11.5px;color:var(--text3);margin-top:4px;min-height:14px;"></div>'
+      +'<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+      +'<button onclick="trkSendRelance()" style="font-size:12px;color:#fff;background:var(--accent);border:none;border-radius:var(--radius);padding:8px 12px;cursor:pointer;font-weight:600;">Ouvrir dans Outlook</button>'
+      +'<button onclick="trkCopyRelance(this)" style="font-size:12px;color:var(--text);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 12px;cursor:pointer;">Copier</button>'
+      +'<button onclick="if(confirm(\'Remplacer ce brouillon par une nouvelle rédaction ?\'))trkRelance(\''+esc(id)+'\',true)" style="font-size:12px;color:var(--text2);background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:8px 12px;cursor:pointer;">Nouvelle rédaction</button>'
+      +'<button onclick="trkMarkRelanceSent(\''+esc(id)+'\')" style="margin-left:auto;font-size:12px;color:var(--text);background:rgba(106,139,116,.16);border:1px solid #6A8B74;border-radius:var(--radius);padding:8px 12px;cursor:pointer;font-weight:600;">C’est envoyé</button>'
       +'</div>';
   }catch(e){ const box=document.getElementById('trk-relance-body'); if(box) box.innerHTML='<span style="color:#B5523B;">Erreur : '+esc(e.message)+'</span>'; }
 }
 window.trkRelance=trkRelance;
-function trkSendRelance(){ const d=window._trkDraft; if(!d) return; window.location.href='mailto:'+encodeURIComponent(d.to)+'?subject='+encodeURIComponent(d.subject)+'&body='+encodeURIComponent(d.body); }
+function trkSendRelance(){ const d=_trkFields(); if(!d||!d.to) return; window.location.href='mailto:'+encodeURIComponent(d.to)+'?subject='+encodeURIComponent(d.subject||'')+'&body='+encodeURIComponent(d.body||''); }
 window.trkSendRelance=trkSendRelance;
-function trkCopyRelance(btn){ const d=window._trkDraft; if(!d) return; try{ navigator.clipboard.writeText('Objet : '+d.subject+'\n\n'+d.body); if(btn){ const o=btn.innerHTML; btn.innerHTML='✓ Copié'; setTimeout(function(){btn.innerHTML=o;},1500); } }catch(e){} }
+function trkCopyRelance(btn){ const d=_trkFields(); if(!d) return; try{ navigator.clipboard.writeText('Objet : '+(d.subject||'')+'\n\n'+(d.body||'')); if(btn){ const o=btn.innerHTML; btn.innerHTML='Copié'; setTimeout(function(){btn.innerHTML=o;},1500); } }catch(e){} }
 window.trkCopyRelance=trkCopyRelance;
 async function trkMarkRelanceSent(id){
-  try{ const _d=window._trkDraft||{}; await fetch(API+'/action/confirm',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:id,action_type:'email',details:{subject:_d.subject,body:_d.body,to:_d.to}})}); }catch(e){}
+  const f=_trkFields();
+  try{ await fetch(API+'/action/confirm',{method:'POST',headers:_trkH(true),body:JSON.stringify({contact_id:id,action_type:'email',details:{subject:f.subject,body:f.body,to:f.to}})}); }catch(e){}
   const m=document.getElementById('trk-relance-modal'); if(m) m.remove();
   renderTracking();
 }
@@ -11936,7 +11974,7 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=200"></script>
+<script src="assets/crm.js?v=201"></script>
 <script src="assets/settings.js?v=2"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>
 <script>

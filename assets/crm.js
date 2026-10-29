@@ -192,9 +192,11 @@
     var team = scope === 'team';
     return Promise.all([
       api('/crm/tasks?scope=' + (team ? 'team' : 'me') + '&state=open').catch(function () { return { tasks: [] }; }),
-      api('/me/tracking?scope=' + (team ? 'team' : 'me')).catch(function () { return { tracking: [] }; })
+      api('/me/tracking?scope=' + (team ? 'team' : 'me')).catch(function () { return { tracking: [] }; }),
+      api('/assist/relances/ready').catch(function () { return { ready: [] }; })
     ]).then(function (r) {
       var items = [];
+      var ready = {}; (r[2].ready || []).forEach(function (d) { ready[d.contact_id] = d; });
       (r[0].tasks || []).forEach(function (t) {
         items.push({ kind: 'task', id: 'task-' + t.id, due: t.due_date || null, title: t.title, task: t,
           who: t.owner_name, contact_id: t.contact_id, contact_name: t.contact_name, account_id: t.end_user_id, account_nom: t.account_nom });
@@ -203,7 +205,7 @@
         var name = personName(x);
         if (x.status === 'waiting' && (x.urgency === 'overdue' || x.urgency === 'due' || x.urgency === 'future') && x.next_relance) {
           items.push({ kind: 'relance', id: 'rel-' + x.id, due: String(x.next_relance).slice(0, 10), title: (x.stage === '1er mail' ? 'Relance 1' : 'Relance 2') + ' : ' + name,
-            sub: x.titre, who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x });
+            sub: x.titre, who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x, draft: ready[x.id] || null });
         } else if (x.status === 'interested') {
           items.push({ kind: 'reply', id: 'rep-' + x.id, due: x.last_action_at ? String(x.last_action_at).slice(0, 10) : null, title: 'Réponse positive : ' + name,
             sub: 'À qualifier puis saisir dans Dynamics', who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x });
@@ -231,7 +233,8 @@
       ? '<input type="checkbox" data-task="' + esc(it.task.id) + '" aria-label="Terminer : ' + esc(it.title) + '">'
       : '<span class="crm-q-ic k-' + it.kind + '" aria-hidden="true">' + (it.kind === 'relance' ? ICON.mail : ICON.check) + '</span>';
     var actions = '';
-    if (it.kind === 'relance') actions = '<button type="button" class="crm-btn sm primary" data-qrel="' + esc(it.contact_id) + '">Préparer la relance</button>';
+    if (it.kind === 'relance') actions = (it.draft ? '<span class="crm-q-ready" title="Rédigée par Scout ce matin : à relire et modifier avant l’envoi">' + (it.draft.edited ? 'Brouillon relu' : 'Brouillon prêt') + '</span>' : '')
+      + '<button type="button" class="crm-btn sm primary" data-qrel="' + esc(it.contact_id) + '">' + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button>';
     if (it.kind === 'reply') actions = '<button type="button" class="crm-btn sm" data-qct="' + esc(it.contact_id) + '">Qualifier</button><button type="button" class="crm-btn sm" data-qcopy="' + esc(it.contact_id) + '" title="Copie nom, titre, organisation, pays, email et LinkedIn pour les coller dans Dynamics">Copier la fiche</button><button type="button" class="crm-btn sm primary" data-qtx="' + esc(it.contact_id) + '" title="Une fois le contact créé dans Dynamics. Scout n’envoie rien à Dynamics.">Saisi dans Dynamics ✓</button>';
     if (it.kind === 'reply' && it.x) { S.qx = S.qx || {}; S.qx[it.contact_id] = it.x; }
     if (it.kind === 'task') actions = '<button type="button" class="del" data-deltask="' + esc(it.task.id) + '" title="Supprimer" aria-label="Supprimer la tâche">×</button>';
@@ -819,6 +822,7 @@
       + '<span class="crm-menu" id="crm-cols"></span>'
       + (isAdminNow() ? '<button class="crm-btn ghost sm" id="crm-export" type="button" title="Exporter la liste en CSV">Exporter</button>' : '') + '</span></div>'
       + '<div class="crm-fpanel" id="crm-fpanel"></div>'
+      + '<div id="crm-tier-banner"></div>'
       + '<div class="crm-table-wrap" id="crm-table-wrap"' + (S.treeView ? ' hidden' : '') + '><table class="crm-table" id="crm-table"><thead></thead><tbody></tbody></table>'
       + '<div class="crm-more" id="crm-more" style="display:none"><button class="crm-btn" type="button" id="crm-more-btn">Afficher plus</button></div></div>'
       + '<div class="crm-card crm-tree" id="crm-tree"' + (S.treeView ? '' : ' hidden') + '></div>'
@@ -836,6 +840,64 @@
     document.getElementById('crm-v-list').onclick = function () { setView(false); };
     document.getElementById('crm-v-tree').onclick = function () { setView(true); };
     if (S.treeView) setTimeout(drawTree, 0);
+    loadTierBanner();
+  }
+
+  // ── Tiers proposés : Scout propose un tier pour les comptes sans tier, le commercial valide ──
+  function loadTierBanner(force) {
+    var el = document.getElementById('crm-tier-banner'); if (!el) return;
+    var scope = S.tierScope || 'me';
+    if (!force && S.tierSug && S.tierSug.scope === scope && Date.now() - S.tierSug.at < 10 * 60 * 1000) return drawTierBanner();
+    api('/crm/tiers/suggest?scope=' + scope).then(function (d) { d.at = Date.now(); S.tierSug = d; drawTierBanner(); }).catch(function () { el.innerHTML = ''; });
+  }
+  function drawTierBanner() {
+    var el = document.getElementById('crm-tier-banner'), d = S.tierSug; if (!el || !d) return;
+    if (!d.total) { el.innerHTML = ''; return; }
+    var c = d.counts;
+    el.innerHTML = '<div class="crm-tier-banner"><span><b>' + d.total.toLocaleString('fr-FR') + (d.scope === 'all' ? ' comptes de l’équipe' : ' de tes comptes') + ' n’ont pas de tier.</b> Scout propose ' + c[1] + ' en Tier 1, ' + c[2] + ' en Tier 2 et ' + c[3].toLocaleString('fr-FR') + ' en Tier 3.</span>'
+      + (isAdminNow() ? '<span class="crm-seg"><button type="button" class="crm-chip sm' + (d.scope === 'me' ? ' on' : '') + '" data-tsc="me">Mes comptes</button><button type="button" class="crm-chip sm' + (d.scope === 'all' ? ' on' : '') + '" data-tsc="all">Équipe</button></span>' : '')
+      + '<button type="button" class="crm-btn primary sm" id="crm-tier-open">Voir et valider</button></div>';
+    el.querySelectorAll('[data-tsc]').forEach(function (b) { b.onclick = function () { S.tierScope = b.getAttribute('data-tsc'); loadTierBanner(true); }; });
+    document.getElementById('crm-tier-open').onclick = openTierReview;
+  }
+  function openTierReview() {
+    var d = S.tierSug; if (!d) return;
+    var pop = document.createElement('div'); pop.className = 'crm-pop';
+    var team = d.scope === 'all';
+    var row = function (x) {
+      return '<tr><td><button type="button" class="crm-link" data-tacc="' + esc(x.id) + '">' + esc(x.nom) + '</button><div class="crm-meta">' + esc([x.pays, x.secteur, team ? x.owner_name : ''].filter(Boolean).join(' · ')) + '</div></td>'
+        + '<td class="crm-meta">' + esc(x.why || 'peu d’éléments') + '</td>'
+        + '<td><select class="crm-sel" data-tid="' + esc(x.id) + '" aria-label="Tier pour ' + esc(x.nom) + '">' + [1, 2, 3].map(function (t) { return '<option value="' + t + '"' + (t === x.suggested ? ' selected' : '') + '>Tier ' + t + '</option>'; }).join('') + '</select></td></tr>';
+    };
+    var t1 = d.accounts.filter(function (x) { return x.suggested === 1; }), t2 = d.accounts.filter(function (x) { return x.suggested === 2; });
+    pop.innerHTML = '<div class="crm-pop-box crm-tier-box" role="dialog" aria-label="Valider les tiers proposés"><h3>Tiers proposés' + (team ? ' pour l’équipe' : '') + '</h3>'
+      + '<div class="crm-meta" style="margin-bottom:10px">Classement dans le portefeuille de chaque commercial : au plus ' + d.rule.t1 + ' comptes en Tier 1 et ' + d.rule.t2 + ' en Tier 2, d’après le secteur, l’usage drone, l’engagement, les marchés, les visites du site et le comité couvert. Change ce qui ne te convient pas, puis valide. Les comptes qui ont déjà un tier ne sont pas touchés.</div>'
+      + '<div class="crm-tier-scroll"><table class="crm-table"><thead><tr><th>Compte</th><th>Pourquoi</th><th>Tier</th></tr></thead><tbody>'
+      + (t1.length ? '<tr class="crm-tier-sep"><td colspan="3">Tier 1 proposé · ' + t1.length + '</td></tr>' + t1.map(row).join('') : '')
+      + (t2.length ? '<tr class="crm-tier-sep"><td colspan="3">Tier 2 proposé · ' + t2.length + '</td></tr>' + t2.map(row).join('') : '')
+      + '<tr class="crm-tier-sep"><td colspan="3">Tier 3 · ' + d.t3_ids.length.toLocaleString('fr-FR') + ' autres comptes, classés en Tier 3 à la validation</td></tr>'
+      + '</tbody></table></div>'
+      + '<div class="crm-row" style="justify-content:flex-end;margin-top:14px"><span class="crm-meta" id="crm-tier-msg" style="margin-right:auto" role="status" aria-live="polite"></span><button class="crm-btn ghost" type="button" data-c>Plus tard</button><button class="crm-btn primary" type="button" id="crm-tier-ok">Valider les tiers</button></div></div>';
+    document.body.appendChild(pop);
+    var close = function () { pop.remove(); };
+    pop.onclick = function (e) { if (e.target === pop) close(); };
+    pop.querySelector('[data-c]').onclick = close;
+    pop.querySelectorAll('[data-tacc]').forEach(function (b) { b.onclick = function () { close(); openAccount(b.getAttribute('data-tacc')); }; });
+    var ok = document.getElementById('crm-tier-ok'), msg = document.getElementById('crm-tier-msg');
+    ok.onclick = function () {
+      var items = [];
+      pop.querySelectorAll('select[data-tid]').forEach(function (s) { items.push({ id: s.getAttribute('data-tid'), tier: parseInt(s.value, 10) }); });
+      d.t3_ids.forEach(function (id) { items.push({ id: id, tier: 3 }); });
+      ok.disabled = true; var done = 0, upd = 0, chunks = [];
+      for (var i = 0; i < items.length; i += 400) chunks.push(items.slice(i, i + 400));
+      var next = function () {
+        if (!chunks.length) { toast(upd + ' comptes classés'); close(); S.tierSug = null; loadTierBanner(true); fetchAccounts(); return; }
+        var c = chunks.shift();
+        api('/crm/tiers/apply', { method: 'POST', body: { items: c } }).then(function (r) { done += c.length; upd += r.updated || 0; msg.textContent = done + ' / ' + items.length; next(); })
+          .catch(function (e) { msg.textContent = 'Erreur : ' + e.message; ok.disabled = false; });
+      };
+      next();
+    };
   }
 
   // Vue arbre : pays › comptes de tête › comptes rattachés
@@ -1282,6 +1344,27 @@
     });
   }
 
+  // ── Brief de compte (IA) : ce qu'il faut savoir avant un appel, à partir des seules données de Scout ──
+  function loadBrief(id, refresh) {
+    var box = document.getElementById('crm-brief'); if (!box) return;
+    box.innerHTML = '<div class="crm-card crm-brief"><div class="crm-meta">Préparation du brief…</div></div>';
+    api('/assist/brief/' + encodeURIComponent(id) + (refresh ? '?refresh=1' : '')).then(function (b) {
+      S.brief = b; S.briefFor = id; drawBrief(b);
+    }).catch(function (e) { box.innerHTML = '<div class="crm-card crm-brief"><div class="crm-meta">Brief indisponible : ' + esc(e.message) + '</div></div>'; });
+  }
+  function drawBrief(b) {
+    var box = document.getElementById('crm-brief'); if (!box) return;
+    var list = function (arr) { return (arr || []).length ? '<ul>' + arr.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<div class="crm-meta">Rien de connu.</div>'; };
+    box.innerHTML = '<div class="crm-card crm-brief"><h3>Brief du compte <span class="crm-meta">' + (b.generated_at ? 'préparé ' + esc(relTime(b.generated_at)) : '') + ' · à partir des données de Scout</span>'
+      + '<span class="crm-row" style="gap:8px"><button type="button" class="crm-link" id="crm-brief-refresh">Actualiser</button><button type="button" class="crm-link" id="crm-brief-close" aria-label="Fermer le brief">Fermer</button></span></h3>'
+      + '<p class="lead">' + esc(b.situation || '') + '</p>'
+      + '<div class="crm-brief-grid"><div><h4>Interlocuteurs</h4>' + list(b.interlocuteurs) + '</div><div><h4>Signaux récents</h4>' + list(b.signaux) + '</div>'
+      + '<div><h4>Angle Elistair</h4><p>' + esc(b.angle || '') + '</p></div><div><h4>Questions à poser</h4>' + list(b.questions) + '</div></div>'
+      + (b.prochaine_action ? '<div class="crm-brief-next"><b>Prochaine action :</b> ' + esc(b.prochaine_action) + '</div>' : '') + '</div>';
+    document.getElementById('crm-brief-refresh').onclick = function () { loadBrief(S.briefFor, true); };
+    document.getElementById('crm-brief-close').onclick = function () { S.brief = null; S.briefFor = null; box.innerHTML = ''; };
+  }
+
   function reloadAccount() {
     if (!S.account) return Promise.resolve();
     return api('/crm/accounts/' + encodeURIComponent(S.account.account.id)).then(function (r) { S.account = r; drawAccount(); });
@@ -1350,6 +1433,7 @@
       + '<button type="button" class="crm-btn" data-compose="note">' + ICON.note + ' Note</button>'
       + '<button type="button" class="crm-btn" data-compose="task">' + ICON.check + ' Tâche</button>'
       + '<button type="button" class="crm-btn" id="crm-add-contact">' + ICON.plus + ' Contact</button>'
+      + '<button type="button" class="crm-btn" id="crm-brief-btn" title="Résumé du compte avant un appel ou un rendez-vous">' + ICON.note + ' Brief</button>'
       + '</div>'
       + '<div class="crm-rec-grid">'
       // ── colonne gauche : à propos
@@ -1370,7 +1454,7 @@
       + (sm.chats_90d ? '<li><b>' + sm.chats_90d + '</b> conversation' + (sm.chats_90d > 1 ? 's' : '') + ' sur le chat du site</li>' : '')
       + '</ul></div></aside>'
       // ── colonne centrale : composer + timeline
-      + '<main class="crm-rec-main"><div class="crm-card crm-composer" id="crm-composer"></div>'
+      + '<main class="crm-rec-main"><div id="crm-brief"></div><div class="crm-card crm-composer" id="crm-composer"></div>'
       + '<div class="crm-card"><h3>Historique <span class="crm-tl-filters" role="tablist">'
       + [['all', 'Tout'], ['act', 'Activités'], ['note', 'Notes'], ['sys', 'Modifications']].map(function (x) { return '<button type="button" class="crm-chip sm' + (S.tlFilter === x[0] ? ' on' : '') + '" data-tlf="' + x[0] + '">' + x[1] + '</button>'; }).join('')
       + '</span></h3><div id="crm-tl">' + timelineHtml(filterTl(A.timeline), true) + '</div></div></main>'
@@ -1431,6 +1515,8 @@
     });
     d.querySelectorAll('[data-compose]').forEach(function (b) { b.onclick = function () { drawComposer(b.getAttribute('data-compose'), true); }; });
     drawComposer(S.composeMode || 'activity', false);
+    document.getElementById('crm-brief-btn').onclick = function () { loadBrief(a.id, false); };
+    if (S.briefFor === a.id && S.brief) drawBrief(S.brief);
     d.querySelectorAll('[data-tlf]').forEach(function (b) {
       b.onclick = function () {
         S.tlFilter = b.getAttribute('data-tlf');
@@ -1470,6 +1556,29 @@
   }
 
   // Composer : activité / note / tâche
+  // Dictée : reconnaissance vocale du navigateur (Chrome, Edge, Safari récents). Le texte s'ajoute à la zone de saisie.
+  var SPEECH = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  var ICON_MIC = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true"><rect x="5.5" y="1.5" width="5" height="8.5" rx="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 7.5a5 5 0 0010 0M8 12.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+  var REC = null;
+  function stopDictation() { if (REC) { try { REC.stop(); } catch (e) {} } }
+  function toggleDictation(ta, btn) {
+    if (REC) { stopDictation(); return; }
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return;
+    var rec = new SR(); REC = rec;
+    rec.lang = (document.documentElement.lang || 'fr').slice(0, 2) === 'en' ? 'en-GB' : 'fr-FR';
+    rec.continuous = true; rec.interimResults = true;
+    var base = ta.value ? ta.value.replace(/\s*$/, '') + ' ' : '';
+    rec.onresult = function (e) {
+      var fin = '', tmp = '';
+      for (var i = 0; i < e.results.length; i++) { var r = e.results.item(i); if (r.isFinal) fin += r.item(0).transcript; else tmp += r.item(0).transcript; }
+      ta.value = base + fin + tmp;
+    };
+    var end = function () { REC = null; btn.classList.remove('rec'); btn.setAttribute('aria-pressed', 'false'); btn.innerHTML = ICON_MIC + ' Dicter'; };
+    rec.onend = end;
+    rec.onerror = function (e) { end(); if (e.error === 'not-allowed') toast('Micro refusé : autorise-le dans le navigateur'); };
+    try { rec.start(); btn.classList.add('rec'); btn.setAttribute('aria-pressed', 'true'); btn.innerHTML = ICON_MIC + ' Arrêter'; ta.focus(); } catch (e) { end(); }
+  }
+
   function drawComposer(mode, focus) {
     var box = document.getElementById('crm-composer'); if (!box) return;
     S.composeMode = mode;
@@ -1488,15 +1597,19 @@
     var html = tabs;
     if (mode === 'activity') {
       html += '<div class="crm-row" style="margin-bottom:8px">' + Object.keys(ACT_LABEL).map(function (k, i) { return '<button type="button" class="crm-chip sm' + (i === 0 ? ' on' : '') + '" data-atype="' + k + '">' + ACT_LABEL[k] + '</button>'; }).join('') + '</div>'
-        + '<textarea class="crm-ta" id="crm-act-notes" placeholder="Compte rendu : ce qui a été dit, le besoin, la suite…" aria-label="Compte rendu"></textarea>'
+        + '<div class="crm-ta-wrap"><textarea class="crm-ta" id="crm-act-notes" placeholder="Compte rendu : tape ou dicte en vrac, Scout le remet au propre" aria-label="Compte rendu"></textarea>'
+        + '<div class="crm-ta-tools">' + (SPEECH ? '<button type="button" class="crm-btn ghost sm" id="crm-act-mic" aria-pressed="false">' + ICON_MIC + ' Dicter</button>' : '')
+        + '<button type="button" class="crm-btn ghost sm" id="crm-act-ai">Mettre au propre</button><span class="crm-meta" id="crm-act-ai-msg" role="status" aria-live="polite"></span></div></div>'
         + '<div class="foot"><span class="crm-row">' + ctSelect('crm-act-ct')
         + '<input class="crm-sel" type="date" id="crm-act-date" value="' + todayStr() + '" max="' + todayStr() + '" aria-label="Date">'
         + '<select class="crm-sel" id="crm-act-out" aria-label="Résultat"><option value="">Résultat</option><option value="positive">Positif</option><option value="neutral">Neutre</option><option value="negative">Négatif</option></select></span>'
-        + '<label class="crm-meta crm-row" style="gap:6px"><input type="checkbox" id="crm-act-follow"> Créer une relance</label>'
-        + '<button class="crm-btn primary" type="button" id="crm-act-save">Enregistrer</button></div>';
+        + '<button class="crm-btn primary" type="button" id="crm-act-save">Enregistrer</button></div>'
+        + '<div class="crm-next"><label class="crm-meta crm-row" style="gap:6px"><input type="checkbox" id="crm-act-follow"> Prochaine étape</label>'
+        + '<input class="crm-input" id="crm-act-next" maxlength="300" placeholder="Ex. envoyer la fiche SAFE-T et caler une démo" aria-label="Prochaine étape">'
+        + '<input class="crm-sel" type="date" id="crm-act-next-date" value="' + addDays(7) + '" aria-label="Échéance de la prochaine étape"></div>';
     } else if (mode === 'note') {
       html += '<textarea class="crm-ta" id="crm-note" placeholder="Info budget, organisation, contexte… (visible par toute l’équipe)" aria-label="Note"></textarea>'
-        + '<div class="foot"><span class="crm-meta" style="margin-right:auto">Ctrl+Entrée pour enregistrer</span><button class="crm-btn primary" type="button" id="crm-note-save">Ajouter la note</button></div>';
+        + '<div class="foot">' + (SPEECH ? '<button type="button" class="crm-btn ghost sm" id="crm-note-mic" aria-pressed="false">' + ICON_MIC + ' Dicter</button>' : '') + '<span class="crm-meta" style="margin-right:auto">Ctrl+Entrée pour enregistrer</span><button class="crm-btn primary" type="button" id="crm-note-save">Ajouter la note</button></div>';
     } else {
       html += '<input class="crm-input" id="crm-task-title" maxlength="300" placeholder="Ex. Rappeler le chef du service drones" aria-label="Tâche">'
         + '<div class="foot"><span class="crm-row">'
@@ -1523,14 +1636,33 @@
         if (ct) body.contact_id = ct; else body.end_user_id = accId;
         if (!body.end_user_id && !body.contact_id) { toast('Ce contact n’est rattaché à aucun compte'); return; }
         var follow = document.getElementById('crm-act-follow').checked;
-        save.disabled = true;
+        var nextTitle = (document.getElementById('crm-act-next').value || '').trim() || ('Relancer après ' + ACT_LABEL[type].toLowerCase());
+        var nextDate = document.getElementById('crm-act-next-date').value || addDays(7);
+        save.disabled = true; stopDictation();
         api('/crm/activities', { method: 'POST', body: body }).then(function () {
           if (!follow) return null;
-          return api('/crm/tasks', { method: 'POST', body: { title: 'Relancer après ' + ACT_LABEL[type].toLowerCase(), due_date: addDays(7), end_user_id: accId || null, contact_id: ct || null } });
-        }).then(function () { toast(follow ? 'Activité et relance enregistrées' : 'Activité enregistrée'); return reload(); })
+          return api('/crm/tasks', { method: 'POST', body: { title: nextTitle, due_date: nextDate, end_user_id: accId || null, contact_id: ct || null } });
+        }).then(function () { toast(follow ? 'Activité et prochaine étape enregistrées' : 'Activité enregistrée'); return reload(); })
           .catch(function (e) { toast('Erreur : ' + e.message); save.disabled = false; });
       };
-      if (focus) document.getElementById('crm-act-notes').focus();
+      var ta = document.getElementById('crm-act-notes');
+      document.getElementById('crm-act-next').oninput = function () { document.getElementById('crm-act-follow').checked = !!this.value.trim(); };
+      var mic = document.getElementById('crm-act-mic'); if (mic) mic.onclick = function () { toggleDictation(ta, mic); };
+      document.getElementById('crm-act-ai').onclick = function () {
+        var raw = ta.value.trim(), m = document.getElementById('crm-act-ai-msg'), btn = this;
+        if (raw.length < 5) { m.textContent = 'Tape ou dicte d’abord quelques mots.'; ta.focus(); return; }
+        stopDictation(); btn.disabled = true; m.textContent = 'Mise au propre…';
+        var ct = fixedCt || (document.getElementById('crm-act-ct') ? document.getElementById('crm-act-ct').value : '');
+        api('/assist/activity-note', { method: 'POST', body: { text: raw, type: type, end_user_id: accId || null, contact_id: ct || null } }).then(function (r) {
+          S.rawNote = raw; ta.value = r.notes || raw;
+          if (r.outcome) document.getElementById('crm-act-out').value = r.outcome;
+          if (r.next_step) { document.getElementById('crm-act-next').value = r.next_step; document.getElementById('crm-act-follow').checked = true; }
+          if (r.next_date) document.getElementById('crm-act-next-date').value = r.next_date;
+          m.innerHTML = 'Relis avant d’enregistrer. <button type="button" class="crm-link" id="crm-act-undo">Revenir au texte d’origine</button>';
+          document.getElementById('crm-act-undo').onclick = function () { ta.value = S.rawNote || ''; m.textContent = ''; };
+        }).catch(function (e) { m.textContent = 'Erreur : ' + e.message; }).then(function () { btn.disabled = false; });
+      };
+      if (focus) ta.focus();
     } else if (mode === 'note') {
       var nb = document.getElementById('crm-note-save'), ta = document.getElementById('crm-note');
       nb.onclick = function () {
@@ -1541,6 +1673,7 @@
           .then(function () { toast('Note ajoutée'); return reload(); }).catch(function (e) { toast('Erreur : ' + e.message); nb.disabled = false; });
       };
       ta.onkeydown = function (e) { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) nb.click(); };
+      var nmic = document.getElementById('crm-note-mic'); if (nmic) nmic.onclick = function () { toggleDictation(ta, nmic); };
       if (focus) ta.focus();
     } else {
       box.querySelectorAll('[data-due]').forEach(function (b) { b.onclick = function () { document.getElementById('crm-task-due').value = b.getAttribute('data-due'); }; });
