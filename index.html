@@ -771,7 +771,7 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <link rel="stylesheet" href="assets/crm.css?v=196">
-<link rel="stylesheet" href="assets/brand.css?v=6">
+<link rel="stylesheet" href="assets/brand.css?v=8">
 </head>
 <body>
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -1338,6 +1338,8 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
         const irc = document.getElementById('card-import-review');
         if(irc) irc.style.display = (session && session.role==='admin') ? 'block' : 'none';
         if(session && session.role==='admin' && typeof loadImportReview==='function') loadImportReview();
+        const pc = document.getElementById('panel-config');
+        if(pc && pc.classList.contains('active') && typeof cfgInit==='function') cfgInit();
       }catch(e){}
     }catch(e){}
   }
@@ -1372,18 +1374,33 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     try{
       const r=await fetch(API+'/team',{headers:_teamH()}); const d=await r.json();
       if(!r.ok){ box.innerHTML='<div style="font-size:12px;color:#B5523B;">'+(d.error||'Erreur')+'</div>'; return; }
-      box.innerHTML=(d.users||[]).map(function(u){
-        const badge=u.role==='admin'?' <span style="font-size:10px;color:var(--accent2);border:1px solid var(--accent);border-radius:var(--radius);padding:1px 6px;">admin</span>':'';
-        const pw=u.has_password?'<span style="font-size:10px;color:#6A8B74;">🔒 perso</span>':(u.email?'<span style="font-size:10px;color:#6A8B74;">code e-mail</span>':'<span style="font-size:10px;color:#C99A4E;">mdp équipe</span>');
-        const op=u.active?'':'opacity:.5;';
-        return `<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 8px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);${op}">`
-          + `<span style="flex:1;min-width:0;"><span style="font-weight:600;">${esc(u.name)}${badge}</span><br><span style="font-size:11px;color:var(--text3);">${u.email?esc(u.email):'pas d\'e-mail'}</span></span>${pw}`
-          + `<button type="button" onclick="window.teamEmail(${u.id})" data-email="${esc(u.email||'')}" style="font-size:11px;color:var(--text2);background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:3px 8px;cursor:pointer;">E-mail</button>`
-          + `<button type="button" onclick="window.teamRole(${u.id},'${u.role==='admin'?'commercial':'admin'}')" style="font-size:11px;color:var(--text2);background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:3px 8px;cursor:pointer;">${u.role==='admin'?'Retirer admin':'Passer admin'}</button>`
-          + `<button type="button" onclick="window.teamReset(${u.id})" style="font-size:11px;color:var(--accent);background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:3px 8px;cursor:pointer;">Réinit. mdp</button>`
-          + `<button type="button" onclick="window.teamToggle(${u.id},${u.active?'false':'true'})" style="font-size:11px;color:var(--text2);background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:3px 8px;cursor:pointer;">${u.active?'Désactiver':'Activer'}</button>`
-          + `</div>`;
-      }).join('') || '<div style="font-size:12px;color:var(--text3);">Aucun profil.</div>';
+      // Tableau compact : nom, email, rôle, connexion, dernière connexion, statut, menu d'actions.
+      const fmtLast=function(x){ if(!x) return '<span class="cfg-muted">Jamais</span>'; const dt=new Date(x); const days=Math.floor((Date.now()-dt)/864e5); return days<1?'Aujourd’hui':days<2?'Hier':days<30?('Il y a '+days+' j'):dt.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}); };
+      const rows=(d.users||[]).map(function(u){
+        const how=u.has_password?'Mot de passe perso':(u.email?'Code par e-mail':'<span class="cfg-warn">Mot de passe d’équipe</span>');
+        return '<tr class="'+(u.active?'':'off')+'">'
+          + '<td><b>'+esc(u.name)+'</b></td>'
+          + '<td>'+(u.email?esc(u.email):'<span class="cfg-warn">Pas d’e-mail</span>')+'</td>'
+          + '<td>'+(u.role==='admin'?'<span class="cfg-pill admin">Admin</span>':'<span class="cfg-pill">Commercial</span>')+'</td>'
+          + '<td>'+how+'</td>'
+          + '<td>'+fmtLast(u.last_login)+'</td>'
+          + '<td>'+(u.active?'<span class="cfg-dot on"></span>Actif':'<span class="cfg-dot"></span>Désactivé')+'</td>'
+          + '<td class="act"><span class="cfg-umenu"><button type="button" class="cfg-ubtn" aria-haspopup="true" aria-label="Actions pour '+esc(u.name)+'">⋯</button>'
+          + '<span class="cfg-umenu-list" hidden>'
+          + '<button type="button" onclick="window.teamEmail('+u.id+')" data-email="'+esc(u.email||'')+'">Modifier l’e-mail</button>'
+          + '<button type="button" onclick="window.teamRole('+u.id+',\''+(u.role==='admin'?'commercial':'admin')+'\')">'+(u.role==='admin'?'Retirer les droits admin':'Donner les droits admin')+'</button>'
+          + '<button type="button" onclick="window.teamReset('+u.id+')">Réinitialiser le mot de passe</button>'
+          + '<button type="button" class="danger" onclick="window.teamToggle('+u.id+','+(u.active?'false':'true')+')">'+(u.active?'Désactiver':'Réactiver')+'</button>'
+          + '</span></span></td></tr>';
+      }).join('');
+      box.innerHTML = rows ? '<div class="cfg-utable-wrap"><table class="cfg-utable"><thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Connexion</th><th>Dernière connexion</th><th>Statut</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>' : '<div style="font-size:12px;color:var(--text3);">Aucun profil.</div>';
+      box.querySelectorAll('.cfg-umenu').forEach(function(m){
+        const btn=m.querySelector('.cfg-ubtn'), list=m.querySelector('.cfg-umenu-list');
+        const close=function(){ list.hidden=true; document.removeEventListener('click', out, true); };
+        const out=function(e){ if(!m.contains(e.target)) close(); };
+        btn.onclick=function(){ box.querySelectorAll('.cfg-umenu-list').forEach(function(x){ if(x!==list) x.hidden=true; }); if(list.hidden){ list.hidden=false; document.addEventListener('click', out, true); } else close(); };
+        list.querySelectorAll('button').forEach(function(x){ x.addEventListener('click', close); });
+      });
       if(window.loadTeamSecurity) window.loadTeamSecurity();
     }catch(e){ box.innerHTML='<div style="font-size:12px;color:#B5523B;">Erreur réseau</div>'; }
   };
@@ -2620,12 +2637,24 @@ Mes pays
         <button class="btn-back-home" onclick="go('dashboard')" title="Retour à l'accueil">←</button>
         <h1 style="margin:0;">Paramètres</h1>
       </div>
-      <div style="padding:16px;max-width:700px;display:flex;flex-direction:column;gap:16px;">
-
-        <!-- ── Mon profil ─────────────────────────────────────── -->
-        <div class="card">
-          <div class="card-header"><span class="card-title">Mon profil</span></div>
-          <div class="card-body" style="padding:16px;display:flex;flex-direction:column;gap:14px;">
+      <div class="cfg-layout">
+      <nav class="cfg-nav" aria-label="Sections des paramètres">
+        <div class="cfg-nav-sec">Mon compte</div>
+        <button type="button" data-cfg="profil">Profil</button>
+        <button type="button" data-cfg="prefs">Préférences</button>
+        <button type="button" data-cfg="prosp">Ma prospection</button>
+        <button type="button" data-cfg="data">Import et export</button>
+        <div class="cfg-nav-sec" data-admin="1">Administration</div>
+        <button type="button" data-cfg="users" data-admin="1">Utilisateurs</button>
+        <button type="button" data-cfg="security" data-admin="1">Sécurité</button>
+        <button type="button" data-cfg="moderation" data-admin="1">À valider</button>
+        <button type="button" data-cfg="health" data-admin="1">Santé du système</button>
+      </nav>
+      <div class="cfg-main">
+        <section class="cfg-sec" data-sec="profil">
+          <header class="cfg-sec-head"><h2>Profil</h2><p>Ton nom dans Scout, ton mot de passe et ta session.</p></header>
+          <div class="cfg-sec-body">
+            <div class="cfg-box">
             <div>
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Nom affiché</label>
               <input id="cfg-name" type="text" placeholder="Votre nom ou équipe" maxlength="60"
@@ -2636,28 +2665,110 @@ Mes pays
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Mot de passe personnel</label>
               <button type="button" onclick="if(window.promptSetPassword)window.promptSetPassword(false)" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 12px;cursor:pointer;">🔑 Créer / changer mon mot de passe</button>
             </div>
-            <div style="border-top:1px dashed var(--border);padding-top:12px;">
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Langue de l'interface</label>
+              <div class="lang-toggle no-i18n" role="group" aria-label="Langue / Language"><button type="button" data-lang="fr" onclick="setScoutLang('fr')">FR</button><button type="button" data-lang="en" onclick="setScoutLang('en')">EN</button></div>
+            </div>
+            </div>
+            <div class="cfg-box">
+            <div>
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Session</label>
               <p style="font-size:12px;color:var(--text3);margin:0 0 8px;">Se déconnecter pour laisser un autre commercial se connecter (et créer son mot de passe à la 1re connexion).</p>
               <button type="button" onclick="if(confirm('Se déconnecter de cette session ?')){ try{localStorage.removeItem('scout_user_firstname');}catch(e){} if(window.scoutAction&&window.scoutAction.logout){window.scoutAction.logout();}else{try{localStorage.removeItem('scout_chat_session');}catch(e){} location.reload();} }" style="font-size:12px;color:#A44A35;background:var(--bg3);border:1px solid #A44A35;border-radius:var(--radius);padding:7px 12px;cursor:pointer;">🚪 Se déconnecter</button>
             </div>
-            <div id="cfg-team-admin" style="display:none;border-top:1px dashed var(--border);padding-top:12px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                <label style="font-size:12px;color:var(--text3);">👥 Gestion de l'équipe (admin)</label>
-                <div style="display:flex;gap:6px;">
-                  <button type="button" onclick="if(window.teamUnlock)window.teamUnlock()" title="Lève le verrou anti-bruteforce quand un commercial est bloqué après plusieurs mauvais mots de passe" style="font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:5px 10px;cursor:pointer;">🔓 Débloquer connexions</button>
-                  <button type="button" onclick="if(window.addTeamMember)window.addTeamMember()" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:5px 10px;cursor:pointer;">+ Ajouter un commercial</button>
-                </div>
-              </div>
-              <div id="cfg-team-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-              <div id="cfg-team-sec" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
             </div>
+          </div>
+        </section>
+        <section class="cfg-sec" data-sec="prefs">
+          <header class="cfg-sec-head"><h2>Préférences</h2><p>Réglages d'affichage, propres à ce navigateur.</p></header>
+          <div class="cfg-sec-body">
+            <div class="cfg-box">
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Onglet par défaut au démarrage</label>
+              <select id="cfg-default-tab" onchange="saveSettings()"
+                style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-size:13px;color:var(--text);">
+                <option value="home">Accueil · Ma journée</option>
+                <option value="tasks">Accueil · À faire</option>
+                <option value="accounts">Prospects · Comptes</option>
+                <option value="people">Prospects · Contacts</option>
+                <option value="dashboard">Statistiques</option>
+                <option value="societes">Fabricants</option>
+                <option value="produits-db">Systèmes</option>
+                <option value="contracts">Contrats & Tenders</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Thème</label>
+              <div style="display:flex;gap:8px;">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-theme" value="dark" onchange="applyTheme(this.value);saveSettings()" style="accent-color:var(--accent);"> 🌙 Sombre
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-theme" value="light" onchange="applyTheme(this.value);saveSettings()" style="accent-color:var(--accent);"> ☀️ Clair (jour)
+                </label>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Taille du texte</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-fontsize" value="normal" onchange="applyFontSize(this.value);saveSettings()" style="accent-color:var(--accent);"> Normal
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-fontsize" value="grand" onchange="applyFontSize(this.value);saveSettings()" style="accent-color:var(--accent);"> Grand
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-fontsize" value="xgrand" onchange="applyFontSize(this.value);saveSettings()" style="accent-color:var(--accent);"> Très grand
+                </label>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Densité des cartes</label>
+              <div style="display:flex;gap:8px;">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-density" value="normal" onchange="applyDensity(this.value);saveSettings()" style="accent-color:var(--accent);"> Normal
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-density" value="compact" onchange="applyDensity(this.value);saveSettings()" style="accent-color:var(--accent);"> Compact
+                </label>
+              </div>
+            </div>
+            <div style="display:none;">
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Sous-onglet par défaut dans Comptes</label>
+              <div style="display:flex;gap:8px;">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-default-subtab" value="comptes" onchange="saveSettings()" style="accent-color:var(--accent);"> Comptes
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
+                  <input type="radio" name="cfg-default-subtab" value="contacts" onchange="saveSettings()" style="accent-color:var(--accent);"> Contacts
+                </label>
+              </div>
+            </div>
+            </div>
+            <div class="cfg-box">
+            <div>
+              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Filtres mémorisés</label>
+            <p style="font-size:12px;color:var(--text3);margin:0 0 6px;">Les filtres actifs sur chaque onglet sont automatiquement sauvegardés et restaurés à chaque session.</p>
+            <div id="cfg-filters-summary" style="font-size:12px;color:var(--text3);"></div>
+            <button onclick="resetAllFilters()" style="margin-top:6px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 14px;font-size:12px;color:var(--text2);cursor:pointer;">
+Réinitialiser tous les filtres
+            </button>
+            </div>
+            </div>
+          </div>
+        </section>
+        <section class="cfg-sec" data-sec="prosp">
+          <header class="cfg-sec-head"><h2>Ma prospection</h2><p>Ce que Scout te propose dans « Prochaine action », et quand une relance devient due.</p></header>
+          <div class="cfg-sec-body">
+            <div class="cfg-box">
             <div>
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Segments proposés dans « Prochaine action » <span style="color:var(--text3);font-weight:400;">(pour cibler une séquence · tout coché = aucun filtre)</span> <span id="seg-total-ready" style="color:var(--accent2);font-weight:600;margin-left:6px;"></span></label>
               <div id="cfg-seg-filter" style="display:flex;flex-direction:column;gap:12px;padding:10px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);">
                 <span style="font-size:12px;color:var(--text3);">Chargement…</span>
               </div>
             </div>
+            </div>
+            <div class="cfg-box">
             <div>
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Secteurs prioritaires</label>
               <div style="display:flex;gap:8px;flex-wrap:wrap;" id="cfg-secteurs">
@@ -2675,103 +2786,16 @@ Mes pays
                 </label>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- ── Affichage ──────────────────────────────────────── -->
-        <div class="card">
-          <div class="card-header"><span class="card-title">Affichage</span></div>
-          <div class="card-body" style="padding:16px;display:flex;flex-direction:column;gap:14px;">
-            <div>
-              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Onglet par défaut au démarrage</label>
-              <select id="cfg-default-tab" onchange="saveSettings()"
-                style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-size:13px;color:var(--text);">
-                <option value="home">Accueil · Ma journée</option>
-                <option value="tasks">Accueil · À faire</option>
-                <option value="accounts">Prospects · Comptes</option>
-                <option value="people">Prospects · Contacts</option>
-                <option value="dashboard">Statistiques</option>
-                <option value="societes">Fabricants</option>
-                <option value="produits-db">Systèmes</option>
-                <option value="contracts">Contrats & Tenders</option>
-              </select>
-            </div>
             <div>
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Délai avant relance (jours) <span style="color:var(--text3);font-weight:400;">— un contact emailé depuis ce délai, sans réponse, apparaît dans « Relances dues » (une seule relance)</span></label>
               <input id="cfg-relance-days" type="number" min="1" max="90" value="14" onchange="saveSettings();if(typeof renderDashboardCockpit==='function')renderDashboardCockpit();" style="width:90px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-size:13px;color:var(--text);outline:none;">
             </div>
-            <div style="display:none;">
-              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Sous-onglet par défaut dans Comptes</label>
-              <div style="display:flex;gap:8px;">
-                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
-                  <input type="radio" name="cfg-default-subtab" value="comptes" onchange="saveSettings()" style="accent-color:var(--accent);"> Comptes
-                </label>
-                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
-                  <input type="radio" name="cfg-default-subtab" value="contacts" onchange="saveSettings()" style="accent-color:var(--accent);"> Contacts
-                </label>
-              </div>
-            </div>
-            <div>
-              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Densité des cartes</label>
-              <div style="display:flex;gap:8px;">
-                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
-                  <input type="radio" name="cfg-density" value="normal" onchange="applyDensity(this.value);saveSettings()" style="accent-color:var(--accent);"> Normal
-                </label>
-                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
-                  <input type="radio" name="cfg-density" value="compact" onchange="applyDensity(this.value);saveSettings()" style="accent-color:var(--accent);"> Compact
-                </label>
-              </div>
-            </div>
-            <div>
-              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Thème</label>
-              <div style="display:flex;gap:8px;">
-                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
-                  <input type="radio" name="cfg-theme" value="dark" onchange="applyTheme(this.value);saveSettings()" style="accent-color:var(--accent);"> 🌙 Sombre
-                </label>
-                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
-                  <input type="radio" name="cfg-theme" value="light" onchange="applyTheme(this.value);saveSettings()" style="accent-color:var(--accent);"> ☀️ Clair (jour)
-                </label>
-              </div>
-            </div>
-            <div>
-              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Langue de l'interface</label>
-              <div class="lang-toggle no-i18n" role="group" aria-label="Langue / Language"><button type="button" data-lang="fr" onclick="setScoutLang('fr')">FR</button><button type="button" data-lang="en" onclick="setScoutLang('en')">EN</button></div>
-            </div>
-            <div>
-              <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Taille du texte</label>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
-                  <input type="radio" name="cfg-fontsize" value="normal" onchange="applyFontSize(this.value);saveSettings()" style="accent-color:var(--accent);"> Normal
-                </label>
-                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
-                  <input type="radio" name="cfg-fontsize" value="grand" onchange="applyFontSize(this.value);saveSettings()" style="accent-color:var(--accent);"> Grand
-                </label>
-                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;">
-                  <input type="radio" name="cfg-fontsize" value="xgrand" onchange="applyFontSize(this.value);saveSettings()" style="accent-color:var(--accent);"> Très grand
-                </label>
-              </div>
             </div>
           </div>
-        </div>
-
-        <!-- ── Filtres mémorisés ──────────────────────────────── -->
-        <div class="card">
-          <div class="card-header"><span class="card-title">Filtres mémorisés</span></div>
-          <div class="card-body" style="padding:16px;display:flex;flex-direction:column;gap:10px;">
-            <p style="font-size:13px;color:var(--text2);margin:0;">Les filtres actifs sur chaque onglet sont automatiquement sauvegardés et restaurés à chaque session.</p>
-            <div id="cfg-filters-summary" style="font-size:12px;color:var(--text3);"></div>
-            <button onclick="resetAllFilters()" style="align-self:flex-start;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 14px;font-size:12px;color:var(--text2);cursor:pointer;">
-Réinitialiser tous les filtres
-            </button>
-          </div>
-        </div>
-
-        <!-- ── Sauvegarde ─────────────────────────────────────── -->
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span id="cfg-save-msg" style="font-size:12px;color:#7A9A84;opacity:0;transition:opacity 0.3s;"></span>
-        </div>
-
-        <!-- ── Import de contacts (tous les commerciaux) ────── -->
+        </section>
+        <section class="cfg-sec" data-sec="data">
+          <header class="cfg-sec-head"><h2>Import et export</h2><p>Importer un fichier de contacts, exporter des audiences LinkedIn.</p></header>
+          <div class="cfg-sec-body">
         <div class="card" id="card-import">
           <div class="card-header"><span class="card-title">📥 Importer des contacts</span></div>
           <div class="card-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
@@ -2786,8 +2810,6 @@ Réinitialiser tous les filtres
             <div id="import-result" style="font-size:12.5px;"></div>
           </div>
         </div>
-
-        <!-- ── Contacts importés à valider (admin) ────────────── -->
         <div class="card" id="card-import-review" style="display:none;">
           <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
             <span class="card-title">🗂️ Contacts importés à valider <span id="import-review-count" style="font-size:10px;color:var(--text3);margin-left:4px;"></span></span>
@@ -2797,30 +2819,6 @@ Réinitialiser tous les filtres
             <span style="font-size:12px;color:var(--text3);">Chargement…</span>
           </div>
         </div>
-
-        <!-- ── Modération veille web ─────────────────────────── -->
-        <div class="card" id="card-pending">
-          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
-            <span class="card-title">🔍 À valider <span id="pending-count" style="font-size:10px;color:var(--text3);margin-left:4px;"></span></span>
-            <button onclick="loadPending()" style="font-size:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:4px 10px;cursor:pointer;color:var(--text2);">↻ Rafraîchir</button>
-          </div>
-          <div class="card-body" style="padding:0;">
-            <div id="pending-list" style="font-size:12px;color:var(--text3);padding:12px 16px;">Cliquez sur Rafraîchir pour charger les entrées à valider.</div>
-          </div>
-        </div>
-
-        <!-- ── Diagnostic système ────────────────────────────── -->
-        <div class="card">
-          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
-            <span class="card-title">Diagnostic système</span>
-            <button onclick="runHealthCheck()" style="font-size:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:4px 10px;cursor:pointer;color:var(--text2);">Vérifier</button>
-          </div>
-          <div class="card-body" style="padding:12px 16px;">
-            <div id="health-result" style="font-size:12px;color:var(--text3);">Cliquez sur Vérifier pour tester l'API.</div>
-          </div>
-        </div>
-
-        <!-- ── Export CSV LinkedIn Matched Audiences ──────────── -->
         <div class="card">
           <div class="card-header">
             <span class="card-title">📣 Export CSV LinkedIn (Matched Audiences)</span>
@@ -2840,7 +2838,65 @@ Réinitialiser tous les filtres
             <div id="csv-export-status" style="font-size:12px;color:var(--text3);"></div>
           </div>
         </div>
-
+          </div>
+        </section>
+        <section class="cfg-sec" data-sec="users" data-admin="1">
+          <header class="cfg-sec-head"><h2>Utilisateurs</h2><p>Qui peut se connecter à Scout, avec quel rôle.</p></header>
+          <div class="cfg-sec-body">
+            <div class="cfg-box">
+            <div id="cfg-team-admin" style="display:none;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span class="cfg-hint">Les personnes invitées ici peuvent se connecter. Désactiver un profil coupe ses sessions.</span>
+                <div style="display:flex;gap:6px;">
+                  <button type="button" onclick="if(window.teamUnlock)window.teamUnlock()" title="Lève le verrou anti-bruteforce quand un commercial est bloqué après plusieurs mauvais mots de passe" style="font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:5px 10px;cursor:pointer;">🔓 Débloquer connexions</button>
+                  <button type="button" onclick="if(window.addTeamMember)window.addTeamMember()" style="font-size:12px;color:var(--accent);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:5px 10px;cursor:pointer;">+ Ajouter un commercial</button>
+                </div>
+              </div>
+              <div id="cfg-team-list"></div>
+            </div>
+            </div>
+          </div>
+        </section>
+        <section class="cfg-sec" data-sec="security" data-admin="1">
+          <header class="cfg-sec-head"><h2>Sécurité</h2><p>Mode de connexion de l'équipe et journal des connexions.</p></header>
+          <div class="cfg-sec-body">
+            <div class="cfg-box">
+              <div id="cfg-team-sec" style="display:flex;flex-direction:column;gap:8px;"></div>
+            </div>
+          </div>
+        </section>
+        <section class="cfg-sec" data-sec="moderation" data-admin="1">
+          <header class="cfg-sec-head"><h2>À valider</h2><p>Entrées remontées par la veille web, à valider avant d'entrer dans la base.</p></header>
+          <div class="cfg-sec-body">
+        <div class="card" id="card-pending">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <span class="card-title">🔍 À valider <span id="pending-count" style="font-size:10px;color:var(--text3);margin-left:4px;"></span></span>
+            <button onclick="loadPending()" style="font-size:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:4px 10px;cursor:pointer;color:var(--text2);">↻ Rafraîchir</button>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div id="pending-list" style="font-size:12px;color:var(--text3);padding:12px 16px;">Cliquez sur Rafraîchir pour charger les entrées à valider.</div>
+          </div>
+        </div>
+          </div>
+        </section>
+        <section class="cfg-sec" data-sec="health" data-admin="1">
+          <header class="cfg-sec-head"><h2>Santé du système</h2><p>Vérifier que l'API et ses services répondent.</p></header>
+          <div class="cfg-sec-body">
+        <div class="card">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <span class="card-title">Diagnostic système</span>
+            <button onclick="runHealthCheck()" style="font-size:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:4px 10px;cursor:pointer;color:var(--text2);">Vérifier</button>
+          </div>
+          <div class="card-body" style="padding:12px 16px;">
+            <div id="health-result" style="font-size:12px;color:var(--text3);">Cliquez sur Vérifier pour tester l'API.</div>
+          </div>
+        </div>
+          </div>
+        </section>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="cfg-save-msg" style="font-size:12px;color:#7A9A84;opacity:0;transition:opacity 0.3s;"></span>
+        </div>
+      </div>
       </div>
     </div>
     <div id="panel-tracking" class="panel">
@@ -3542,6 +3598,7 @@ function go(id, opts) {
   if (id === 'chat') { try { renderChat(); } catch(e){ console.error('renderChat', e); } }
   if (id === 'tracking') { try { renderTracking(); } catch(e){ console.error('renderTracking', e); } }
   if (id === 'config') {
+    try { cfgInit(opts && opts.tab); } catch (e) { console.error('cfgInit', e); }
     // Settings panel — peupler la liste des pays exclus et tous les champs.
     // applySettings() s'occupe de loadEndUsers/loadContacts si besoin.
     if (typeof applySettings === 'function') applySettings();
@@ -7354,6 +7411,33 @@ function applyDensity(density) {
   document.querySelectorAll('#eu-grid, #contracts-grid, #p-grid, #s-grid').forEach(el => {
     el.style.gap = density === 'compact' ? '6px' : '';
   });
+}
+
+// ── Paramètres : menu à gauche, une section à la fois ──────────
+// Mon compte (tout le monde) / Administration (admin seulement). La section ouverte est mémorisée.
+function cfgIsAdmin() { return !!(window.scoutSession && window.scoutSession.role === 'admin'); }
+function cfgShow(sec) {
+  const pn = document.getElementById('panel-config'); if (!pn) return;
+  const admin = cfgIsAdmin();
+  let target = pn.querySelector('.cfg-sec[data-sec="' + sec + '"]');
+  if (!target || (target.dataset.admin && !admin)) target = pn.querySelector('.cfg-sec[data-sec="profil"]');
+  const key = target.dataset.sec;
+  pn.querySelectorAll('.cfg-sec').forEach(function (x) { x.hidden = x !== target; });
+  pn.querySelectorAll('.cfg-nav [data-cfg]').forEach(function (b) { const on = b.dataset.cfg === key; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'page' : 'false'); });
+  try { localStorage.setItem('scout_cfg_sec', key); } catch (e) {}
+  if (key === 'moderation' && typeof loadPending === 'function' && !pn.dataset.pendingLoaded) { pn.dataset.pendingLoaded = '1'; loadPending(); }
+  if (key === 'health' && typeof runHealthCheck === 'function' && !pn.dataset.healthLoaded) { pn.dataset.healthLoaded = '1'; runHealthCheck(); }
+}
+function cfgInit(sec) {
+  const pn = document.getElementById('panel-config'); if (!pn) return;
+  const admin = cfgIsAdmin();
+  pn.querySelectorAll('.cfg-nav [data-admin], .cfg-sec[data-admin]').forEach(function (x) { if (x.classList.contains('cfg-sec')) return; x.style.display = admin ? '' : 'none'; });
+  if (!pn.dataset.cfgBound) {
+    pn.dataset.cfgBound = '1';
+    pn.querySelectorAll('.cfg-nav [data-cfg]').forEach(function (b) { b.onclick = function () { cfgShow(b.dataset.cfg); }; });
+  }
+  let last = 'profil'; try { last = localStorage.getItem('scout_cfg_sec') || 'profil'; } catch (e) {}
+  cfgShow(sec || last);
 }
 
 // ── Accessibilité : thème (mode jour) + taille du texte ──────────
