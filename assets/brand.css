@@ -240,3 +240,14 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .crm-q-kind.k-visit { color: var(--teal); }
 .crm-q-kind.k-chat { color: var(--green); }
 @media (max-width: 760px) { .crm-feed-row { flex-wrap: wrap; } .crm-feed-a { max-width: none; justify-content: flex-start; width: 100%; } }
+.crm-feed-cands { display: flex; flex-direction: column; gap: 4px; width: 100%; margin-bottom: 6px; }
+.crm-feed-cand { display: flex; gap: 6px; align-items: baseline; font-size: 12.5px; cursor: pointer; }
+.crm-feed-cand input { accent-color: var(--accent); }
+.crm-q .crm-feed-pick { flex-basis: 100%; margin-left: 40px; }
+.crm-q:has(.crm-feed-pick:not([hidden])) { flex-wrap: wrap; }
+.crm-digest { margin-bottom: 12px; border-left: 3px solid var(--accent); }
+.crm-digest h3 { display: flex; gap: 10px; align-items: baseline; }
+.crm-digest h3 .crm-link { margin-left: auto; font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.crm-digest ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; font-size: 13.5px; line-height: 1.45; }
+.crm-sigstats td, .crm-sigstats th { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.crm-sigstats td:last-child { white-space: normal; }

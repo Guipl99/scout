@@ -200,7 +200,9 @@
       prosp ? api('/crm/signals/proposed?scope=' + (team ? 'all' : 'me')).catch(none('rows')) : { rows: [] },
       prosp ? api('/crm/accounts?heat=chaud,tiede&sort=score&dir=desc&limit=8' + own).catch(none('accounts')) : { accounts: [] },
       prosp ? api('/crm/accounts?activity=never&contacts=with&sort=priority&dir=desc&limit=8' + own).catch(none('accounts')) : { accounts: [] },
-      prosp ? api('/crm/contacts?vip=1&limit=8' + own).catch(none('contacts')) : { contacts: [] }
+      prosp ? api('/crm/contacts?vip=1&limit=8' + own).catch(none('contacts')) : { contacts: [] },
+      // visites du site et chats sur mes comptes (fil des signaux, 14 jours)
+      prosp ? api('/signals/feed?days=14&scope=' + (team ? 'all' : 'me')).catch(none('items')) : { items: [] }
     ]).then(function (r) {
       var items = [];
       var ready = {}; (r[2].ready || []).forEach(function (d) { ready[d.contact_id] = d; });
@@ -234,6 +236,11 @@
           items.push({ kind: 'signal', id: 'sig-' + sg.kind + '-' + sg.ref_id, sg: sg, score: sg.score || 0, account_id: acc && acc.id, tier: acc && acc.tier });
           if (acc) seenAcc[acc.id] = 1;
         });
+        ((r[8] && r[8].items) || []).forEach(function (f) {
+          if ((f.type !== 'visit' && f.type !== 'chat') || !f.account || f.imp < 2) return;
+          items.push({ kind: f.type, id: 'f-' + f.key, fkey: f.key, title: f.title, sub: f.why, account_id: f.account.id, account_nom: f.account.nom, tier: f.account.tier, who: f.account.owner_name, imp: f.imp, at: f.at, qualified: f.status === 'qualified' });
+          seenAcc[f.account.id] = 1;
+        });
         ((r[5] && r[5].accounts) || []).forEach(function (a) {
           if (seenAcc[a.id]) return; seenAcc[a.id] = 1;
           var why = [];
@@ -257,8 +264,8 @@
       return items;
     });
   }
-  var KIND_LABEL = { task: 'Tâche', relance: 'Relance', reply: 'Réponse', reaction: 'Réaction', signal: 'Marché', hot: 'Compte chaud', open: 'À ouvrir', vip: 'VIP' };
-  var PROSP_KINDS = { signal: 1, hot: 1, open: 1, vip: 1 };
+  var KIND_LABEL = { task: 'Tâche', relance: 'Relance', reply: 'Réponse', reaction: 'Réaction', signal: 'Marché', hot: 'Compte chaud', open: 'À ouvrir', vip: 'VIP', visit: 'Visite', chat: 'Chat' };
+  var PROSP_KINDS = { signal: 1, hot: 1, open: 1, vip: 1, visit: 1, chat: 1 };
 
   // File unique classée par importance et urgence, sans planning au jour ou à la semaine :
   //   réactions à nos emails, puis réponses positives, puis relances dues et tâches, pondérées par le tier du compte
@@ -270,6 +277,8 @@
     if (it.kind === 'reaction') return 1000 - Math.min(99, Math.max(0, daysFrom(it.due) || 0)) + tierPts / 10;
     if (it.kind === 'reply') return 900 + tierPts / 10;
     if (it.kind === 'signal') return 600 + (it.score || 0) * 5 + tierPts / 10;
+    if (it.kind === 'chat') return (it.qualified ? 700 : 450) + (it.imp || 0) * 5 + tierPts / 10;
+    if (it.kind === 'visit') return 420 + (it.imp || 0) * 8 + tierPts / 2;
     if (it.kind === 'hot') return 400 + Math.min(it.score || 0, 50) + tierPts / 2;
     if (it.kind === 'vip') return 380 + tierPts / 2;
     if (it.kind === 'open') return 150 + Math.min(it.priority || 0, 100) / 2 + tierPts / 2;
@@ -287,11 +296,13 @@
       var isCt = it.kind === 'vip';
       var target = isCt ? 'data-qct="' + esc(it.contact_id) + '"' : 'data-qacc="' + esc(it.account_id) + '"';
       var psub = [esc(it.sub || '')];
-      if (isCt && it.account_nom) psub.push((it.tier ? tierBadge(it.tier) + ' ' : '') + (it.account_id ? '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>' : esc(it.account_nom)));
+      if ((isCt || it.fkey) && it.account_nom) psub.push((it.tier ? tierBadge(it.tier) + ' ' : '') + (it.account_id ? '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>' : esc(it.account_nom)));
       if (opts.showWho && it.who) psub.push(esc(it.who));
-      return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (it.kind === 'open' ? ICON.send : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
+      return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (it.kind === 'open' ? ICON.send : it.kind === 'chat' ? ICON.chat : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
         + (!isCt && it.tier ? tierBadge(it.tier) + ' ' : '') + '<button type="button" class="crm-link strong" ' + target + '>' + esc(it.title) + '</button></div><div class="s">' + psub.filter(Boolean).join(' · ') + '</div></div>'
-        + '<div class="crm-q-a"><button type="button" class="crm-btn sm" ' + target + '>' + (isCt ? 'Ouvrir le contact' : 'Ouvrir le compte') + '</button></div></div>';
+        + '<div class="crm-q-a"><button type="button" class="crm-btn sm" ' + target + '>' + (isCt ? 'Ouvrir le contact' : 'Ouvrir le compte') + '</button>'
+        + (it.fkey ? '<button type="button" class="crm-btn sm" data-ftask="' + esc(it.fkey) + '" data-facc-id="' + esc(it.account_id) + '" data-ftitle="' + esc(it.title) + '">' + ICON.check + ' Tâche</button><button type="button" class="crm-btn ghost sm" data-fdis="' + esc(it.fkey) + '">Écarter</button>' : '')
+        + '</div><div class="crm-feed-pick" hidden></div></div>';
     }
     var t = todayStr();
     var dueCls = it.due ? (it.due < t ? 'crm-late' : (it.due === t ? 'crm-today' : '')) : '';
@@ -320,8 +331,29 @@
       + '</div><div class="s">' + sub.join(' · ') + '</div></div><div class="crm-q-a">' + actions + '</div></div>';
   }
 
+  var FEED_REASONS = ['Pas une cible', 'Déjà en contact', 'Concurrent ou fournisseur', 'Particulier ou étudiant', 'Autre'];
+  // Écarter un signal visite / chat : raison demandée (elle sert au bilan des sources dans Pilotage)
+  function askFeedReason(host, key, onDone) {
+    host.hidden = false;
+    host.innerHTML = '<span class="crm-meta">Pourquoi ?</span> ' + FEED_REASONS.map(function (r) { return '<button type="button" class="crm-chip sm" data-frs="' + esc(r) + '">' + esc(r) + '</button>'; }).join(' ');
+    host.querySelectorAll('[data-frs]').forEach(function (rb) {
+      rb.onclick = function () { api('/signals/feed/dismiss', { method: 'POST', body: { key: key, reason: rb.getAttribute('data-frs') } }).then(function () { toast('Écarté, merci pour le retour'); onDone(); }).catch(function (e) { toast('Erreur : ' + e.message); }); };
+    });
+  }
   function bindQueue(root, after) {
     bindTasks(root, after);
+    root.querySelectorAll('[data-fdis]').forEach(function (b) {
+      b.onclick = function (e) { e.stopPropagation(); var row = b.closest('.crm-q'); askFeedReason(row.querySelector('.crm-feed-pick'), b.getAttribute('data-fdis'), after); };
+    });
+    root.querySelectorAll('[data-ftask]').forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation(); b.disabled = true;
+        var key = b.getAttribute('data-ftask'), t = (/^chat:/.test(key) ? 'Répondre au chat : ' : 'Relancer après la visite du site : ') + b.getAttribute('data-ftitle');
+        api('/crm/tasks', { method: 'POST', body: { title: t.slice(0, 280), end_user_id: b.getAttribute('data-facc-id') || null } })
+          .then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: key, state: 'task' } }); })
+          .then(function () { toast('Tâche créée'); after(); }).catch(function (er) { b.disabled = false; toast('Erreur : ' + er.message); });
+      };
+    });
     root.querySelectorAll('[data-qacc]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); openAccount(b.getAttribute('data-qacc')); }; });
     root.querySelectorAll('[data-qct]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); openContact(b.getAttribute('data-qct')); }; });
     root.querySelectorAll('[data-qrel]').forEach(function (b) {
@@ -405,6 +437,7 @@
     if (!acc) btns += it.type === 'visit' ? '<button type="button" class="crm-btn sm primary" data-fa="create" data-i="' + i + '">Créer le compte</button><button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>'
       : '<button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>';
     btns += '<button type="button" class="crm-btn sm' + (acc ? ' primary' : '') + '" data-fa="task" data-i="' + i + '">' + ICON.check + ' Tâche</button>';
+    if (it.type === 'visit' && acc && it.org && it.org.domain) btns += '<button type="button" class="crm-btn sm" data-fa="contacts" data-i="' + i + '" title="Recherche Hunter sur ' + esc(it.org.domain) + ' : 1 crédit">Chercher des contacts</button>';
     btns += '<button type="button" class="crm-btn ghost sm" data-fa="dismiss" data-i="' + i + '">Écarter</button>';
     return '<div class="crm-feed-row t-' + it.type + (it.imp >= 4 ? ' strong' : '') + '" data-row="' + i + '">'
       + '<span class="crm-q-kind k-' + it.type + '">' + FEED_TYPE[it.type] + '</span>'
@@ -429,6 +462,30 @@
     body.innerHTML = html + '</div>';
     bindFeed(body);
   }
+  // Recherche de contacts sur le domaine d'un organisme venu sur le site (Hunter, 1 crédit, sur clic seulement).
+  // Les emails gouvernementaux non confirmés par Hunter ne sont pas ajoutés.
+  function feedContacts(it, pick, btn) {
+    pick.hidden = false; pick.innerHTML = '<span class="crm-meta">Recherche sur ' + esc(it.org.domain) + '…</span>'; btn.disabled = true;
+    api('/v/accounts/search-contacts', { method: 'POST', body: { key: it.org.key } }).then(function (r) {
+      var cands = (r.candidates || []).filter(function (c) { return !c.existing_id; });
+      if (!cands.length) { pick.innerHTML = '<span class="crm-meta">' + esc(r.message || ('Aucun nouveau contact trouvé sur ' + (r.domain || it.org.domain) + '.')) + '</span>'; btn.disabled = false; return; }
+      pick.innerHTML = '<div class="crm-feed-cands">' + cands.map(function (c, k) {
+        return '<label class="crm-feed-cand"><input type="checkbox" value="' + esc(c.email) + '"' + (c.suggested ? ' checked' : '') + '> <b>' + esc(((c.prenom || '') + ' ' + (c.nom || '')).trim() || c.email) + '</b> <span class="crm-meta">' + esc([c.titre, c.email, c.confidence ? c.confidence + ' %' : ''].filter(Boolean).join(' · ')) + '</span></label>';
+      }).join('') + '</div><button type="button" class="crm-btn sm primary" data-add>Ajouter au compte</button> <span class="crm-meta">Chaque email est vérifié avant l’ajout.</span>';
+      pick.querySelector('[data-add]').onclick = function () {
+        var emails = [].map.call(pick.querySelectorAll('input:checked'), function (x) { return x.value; });
+        if (!emails.length) { toast('Coche au moins un contact'); return; }
+        this.disabled = true;
+        api('/v/accounts/add-contacts', { method: 'POST', body: { key: it.org.key, emails: emails } }).then(function (out) {
+          var ids = (out.contacts || []).map(function (c) { return c.id; }).filter(Boolean);
+          return (ids.length ? api('/crm/accounts/' + encodeURIComponent(it.account.id) + '/attach-contacts', { method: 'POST', body: { ids: ids } }) : Promise.resolve({ attached: 0 })).then(function (a) {
+            var sk = (out.skipped || []).length;
+            pick.innerHTML = '<span class="crm-meta">' + (out.contacts || []).length + ' contact' + ((out.contacts || []).length > 1 ? 's' : '') + ' ajouté' + ((out.contacts || []).length > 1 ? 's' : '') + ' à ' + esc(it.account.nom) + (sk ? ', ' + sk + ' écarté' + (sk > 1 ? 's' : '') + ' (email non confirmé)' : '') + '.</span>';
+          });
+        }).catch(function (e) { pick.innerHTML = '<span class="crm-meta">Erreur : ' + esc(e.message) + '</span>'; });
+      };
+    }).catch(function (e) { pick.innerHTML = '<span class="crm-meta">Erreur : ' + esc(e.message) + '</span>'; btn.disabled = false; });
+  }
   function bindFeed(body) {
     var items = S.feedItems || [];
     var done = function (row, msg) { toast(msg); row.classList.add('gone'); setTimeout(function () { row.remove(); }, 250); refreshPropBadge(); };
@@ -444,9 +501,10 @@
           }
           var title = it.type === 'visit' ? 'Relancer ' + it.title + ' : visite du site (' + (it.why || '').split(' · ')[0] + ')' : 'Répondre au chat : ' + it.title;
           return api('/crm/tasks', { method: 'POST', body: { title: title.slice(0, 280), end_user_id: it.account ? it.account.id : null } })
-            .then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: it.key, reason: 'tâche créée' } }); })
+            .then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: it.key, state: 'task' } }); })
             .then(function () { done(row, 'Tâche créée dans Aujourd’hui'); }).catch(function (e) { toast('Erreur : ' + e.message); });
         }
+        if (a === 'contacts') return feedContacts(it, pick, b);
         if (a === 'create') {
           b.disabled = true;
           return api('/crm/accounts', { method: 'POST', body: { nom: it.org.name, pays: it.org.country || null, domain: it.org.domain || null, type: it.org.org_type === 'government' ? 'Sécurité publique' : 'Entreprise', source: 'visite du site' } })
@@ -469,7 +527,7 @@
           } });
         }
         if (a === 'dismiss') {
-          if (it.type !== 'market') return api('/signals/feed/dismiss', { method: 'POST', body: { key: it.key } }).then(function () { done(row, 'Écarté'); }).catch(function (e) { toast('Erreur : ' + e.message); });
+          if (it.type !== 'market') return askFeedReason(pick, it.key, function () { row.classList.add('gone'); setTimeout(function () { row.remove(); }, 250); });
           pick.hidden = false;
           pick.innerHTML = '<span class="crm-meta">Pourquoi ?</span> ' + SIG_REASONS.map(function (r) { return '<button type="button" class="crm-chip sm" data-rs="' + esc(r) + '">' + esc(r) + '</button>'; }).join(' ');
           pick.querySelectorAll('[data-rs]').forEach(function (rb) {
@@ -716,10 +774,28 @@
       + '<div class="crm-card"><h3>Lecture</h3><div class="crm-meta" style="line-height:1.6">« Contacts touchés » compte les personnes contactées par email, LinkedIn, appel ou RDV. Les réponses positives de la période peuvent venir d’emails envoyés plus tôt.</div></div>'
       + '</aside></div>';
     var isAdmin = (S.facets && S.facets.me && S.facets.me.role === 'admin') || (window.scoutSession && window.scoutSession.role === 'admin');
+    html += '<div class="crm-card" id="crm-sig-stats"><h3>Sources de signaux</h3><div class="crm-meta">Chargement…</div></div>';
     if (isAdmin) html += '<div class="crm-card" id="crm-hygiene"><h3>Qualité des données</h3><div class="crm-meta">Chargement…</div></div>';
     body.innerHTML = html;
     body.querySelectorAll('[data-kf]').forEach(function (b) { b.onclick = function () { openAccountsWith(JSON.parse(b.getAttribute('data-kf'))); }; });
+    loadSigStats();
     if (isAdmin) loadHygiene();
+  }
+  // Bilan par source : ce qui arrive, ce qui mène à une action, ce qui est écarté et pourquoi (pour couper le bruit)
+  function loadSigStats() {
+    var box = document.getElementById('crm-sig-stats'); if (!box) return;
+    var days = Math.max(30, S.statsDays || 30);
+    api('/signals/stats?days=' + days).then(function (d) {
+      var rows = Object.keys(d.sources || {}).map(function (k) {
+        var x = d.sources[k], treated = x.taches + x.ecartes;
+        var rate = treated ? Math.round(100 * x.taches / treated) + ' %' : '–';
+        var reasons = Object.keys(x.raisons || {}).sort(function (a, b) { return x.raisons[b] - x.raisons[a]; }).slice(0, 3).map(function (r) { return esc(r) + ' (' + x.raisons[r] + ')'; }).join(', ');
+        return '<tr><td><b>' + esc(x.label) + '</b></td><td>' + x.recus + '</td><td>' + x.avec_compte + '</td><td>' + x.taches + '</td><td>' + x.ecartes + '</td><td>' + rate + '</td><td class="crm-meta">' + (reasons || '–') + '</td></tr>';
+      }).join('');
+      box.innerHTML = '<h3>Sources de signaux <span class="crm-meta">' + d.days + ' derniers jours · ' + (d.comptes_crees || 0) + ' compte' + (d.comptes_crees > 1 ? 's' : '') + ' créé' + (d.comptes_crees > 1 ? 's' : '') + ' depuis un signal</span></h3>'
+        + '<div style="overflow-x:auto"><table class="crm-table crm-sigstats"><thead><tr><th>Source</th><th>Reçus</th><th>Avec compte</th><th>Tâches</th><th>Écartés</th><th>Taux d’action</th><th>Raisons d’écart</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+        + '<div class="crm-meta" style="margin-top:8px">Taux d’action : tâches créées sur signaux traités. Une source souvent écartée pour la même raison est à resserrer.</div>';
+    }).catch(function (e) { box.innerHTML = '<h3>Sources de signaux</h3><div class="crm-meta">Indisponible : ' + esc(e.message) + '</div>'; });
   }
 
   // ═════════════════════════════════════════════════════════════════════════
@@ -744,7 +820,7 @@
     p.innerHTML = '<div class="crm-wrap crm-home" id="crm-tasks"><div class="crm-row crm-home-head">'
       + '<div><h2 class="crm-h2" id="crm-home-title">Bonjour' + (me ? ' ' + esc(me) : '') + '</h2><div class="crm-meta">' + esc(dateTxt) + '</div></div>'
       + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-hs="me">Moi</button><button type="button" class="crm-chip" data-hs="team">Équipe</button></div></div>'
-      + '<div id="crm-home-hero"></div>'
+      + '<div id="crm-home-digest"></div><div id="crm-home-hero"></div>'
       + '<div class="crm-home-cols"><div class="crm-home-main">'
       + '<div class="crm-row crm-qbar"><div class="crm-views" style="margin:0" role="tablist">' + QF.map(function (x) { return '<button type="button" class="crm-chip sm" data-qf="' + x[0] + '">' + x[1] + '<span class="n" data-qn="' + x[0] + '"></span></button>'; }).join('') + '</div>'
       + '<button type="button" class="crm-btn sm" id="crm-nt-open">+ Nouvelle tâche</button></div>'
@@ -796,8 +872,35 @@
       if (!team) updateBadge(queue.filter(function (x) { return !PROSP_KINDS[x.kind]; }));
       drawHero(queue, st);
       drawSide(d, st, team);
+      loadDigest();
       if (S.taskState === 'done') drawDone(); else drawQueue();
     }).catch(function (e) { var l = document.getElementById('crm-tasks-list'); if (l) l.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+  }
+  // Résumé de la semaine en signaux : affiché à la première ouverture de la semaine, jusqu'à ce qu'on le ferme
+  function isoWeek() { var d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7); var w1 = new Date(d.getFullYear(), 0, 4); return d.getFullYear() + '-' + Math.round(((d - w1) / 864e5 - 3 + (w1.getDay() + 6) % 7) / 7 + 1); }
+  function loadDigest() {
+    var host = document.getElementById('crm-home-digest'); if (!host) return;
+    if (lsGet('scout_digest_week', '') === isoWeek()) { host.innerHTML = ''; return; }
+    var meId = S.facets && S.facets.me && String(S.facets.me.user_id);
+    api('/signals/feed?days=7&scope=all').then(function (d) {
+      var items = d.items || [];
+      var mine = function (it) { return it.account && String(it.account.owner_user_id) === meId; };
+      var pts = [];
+      var v = items.filter(function (it) { return it.type === 'visit' && mine(it); }).sort(function (a, b) { return b.imp - a.imp; });
+      if (v.length) pts.push('<b>' + (v.length > 1 ? v.length + ' de tes comptes</b> sont venus' : '1 de tes comptes</b> est venu') + ' sur le site : ' + v.slice(0, 3).map(function (x) { return esc(x.account.nom) + ' (' + esc((x.why || '').split(' · ')[0]) + ')'; }).join(', ') + '.');
+      var c = items.filter(function (it) { return it.type === 'chat' && mine(it); });
+      if (c.length) pts.push('<b>' + c.length + ' chat' + (c.length > 1 ? 's' : '') + '</b> sur tes comptes : ' + c.slice(0, 2).map(function (x) { return esc(x.title); }).join(', ') + '.');
+      var m = items.filter(function (it) { return it.type === 'market' && mine(it); });
+      if (m.length) pts.push('<b>' + m.length + ' marché' + (m.length > 1 ? 's' : '') + '</b> sur tes comptes, dont ' + esc(m[0].title.slice(0, 80)) + '.');
+      var comp = items.filter(function (it) { return it.type === 'market' && it.competitor; });
+      if (comp.length) pts.push('Concurrents : ' + comp.slice(0, 3).map(function (x) { return '<b>' + esc(x.competitor) + '</b> chez ' + esc(x.buyer || x.pays || '?'); }).join(', ') + (comp.length > 3 ? ' et ' + (comp.length - 3) + ' autres' : '') + '.');
+      var un = items.filter(function (it) { return it.type === 'visit' && !it.account; }).length;
+      if (un) pts.push('<b>' + un + ' organisme' + (un > 1 ? 's' : '') + ' public' + (un > 1 ? 's' : '') + '</b> venus sur le site n’ont pas encore de compte : <button type="button" class="crm-link" data-dg-go>à voir dans Signaux</button>.');
+      if (!pts.length) { host.innerHTML = ''; return; }
+      host.innerHTML = '<div class="crm-card crm-digest"><h3>Ta semaine en signaux <span class="crm-meta">7 derniers jours</span><button type="button" class="crm-link" data-dg-close>Fermer pour la semaine</button></h3><ul>' + pts.map(function (p) { return '<li>' + p + '</li>'; }).join('') + '</ul></div>';
+      host.querySelector('[data-dg-close]').onclick = function () { lsSet('scout_digest_week', isoWeek()); host.innerHTML = ''; };
+      var g = host.querySelector('[data-dg-go]'); if (g) g.onclick = function () { S.feedScope = 'unlinked'; go('feed'); };
+    }).catch(function () { host.innerHTML = ''; });
   }
   function drawHero(queue, st) {
     var box = document.getElementById('crm-home-hero'); if (!box) return;
