@@ -2,7 +2,7 @@
   "name": "Scout",
   "short_name": "Scout",
   "description": "Scout · Elistair : comptes, contacts et signaux de prospection",
-  "start_url": "/scout/?utm_source=pwa",
+  "start_url": "/scout/?utm_source=pwa&app=1",
   "scope": "/scout/",
   "display": "standalone",
   "background_color": "#1A2A28",
