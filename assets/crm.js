@@ -848,7 +848,11 @@
     var el = document.getElementById('crm-tier-banner'); if (!el) return;
     var scope = S.tierScope || 'me';
     if (!force && S.tierSug && S.tierSug.scope === scope && Date.now() - S.tierSug.at < 10 * 60 * 1000) return drawTierBanner();
-    api('/crm/tiers/suggest?scope=' + scope).then(function (d) { d.at = Date.now(); S.tierSug = d; drawTierBanner(); }).catch(function () { el.innerHTML = ''; });
+    api('/crm/tiers/suggest?scope=' + scope).then(function (d) {
+      // Un admin sans portefeuille propre voit directement les propositions de l'équipe.
+      if (!d.total && scope === 'me' && isAdminNow() && !S.tierScope) { S.tierScope = 'all'; return loadTierBanner(true); }
+      d.at = Date.now(); S.tierSug = d; drawTierBanner();
+    }).catch(function () { el.innerHTML = ''; });
   }
   function drawTierBanner() {
     var el = document.getElementById('crm-tier-banner'), d = S.tierSug; if (!el || !d) return;
