@@ -126,7 +126,7 @@
   }
   function statusPill(s) { return '<span class="crm-pill s-' + esc(s) + '">' + esc(STATUS_LABEL[s] || s) + '</span>'; }
   function tierBadge(t) { return t ? '<span class="crm-tier t' + esc(t) + '" title="Tier ' + esc(t) + '">T' + esc(t) + '</span>' : '<span class="crm-tier none" title="Pas de tier">·</span>'; }
-  function heatBadge(score, heat) { return '<span class="crm-heat h-' + esc(heat || 'froid') + '" title="Score d’engagement sur 90 jours">' + esc(score || 0) + '<small>' + esc(HEAT_LABEL[heat] || '') + '</small></span>'; }
+  function heatBadge(score, heat) { return '<span class="crm-heat h-' + esc(heat || 'froid') + '" title="Engagement : ce que le compte fait envers nous">' + esc(score || 0) + '<small>' + esc(HEAT_LABEL[heat] || '') + '</small></span>'; }
   function isAdminNow() { return (S.facets && S.facets.me && S.facets.me.role === 'admin') || (window.scoutSession && window.scoutSession.role === 'admin'); }
   function coverageDots(roles) {
     roles = roles || [];
@@ -1410,7 +1410,7 @@
           + '<td class="c-tier">' + tierBadge(r.tier) + '</td>'
           + '<td class="c-nom"><div class="crm-acc-name" title="' + esc(r.nom) + '">' + esc(r.nom) + '</div><div class="crm-acc-sub">' + esc([r.pays, r.secteur].filter(Boolean).join(' · ')) + (r.n_contacts ? ' · ' + r.n_contacts + ' contact' + (r.n_contacts > 1 ? 's' : '') : '') + '</div></td>'
           + '<td class="c-prio">' + prioBadge(r.priority) + '</td>'
-          + '<td class="c-score">' + heatBadge(r.score, r.heat) + (r.web_pages_90d ? ' <span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</td>'
+          + '<td class="c-score">' + heatBadge(r.score, r.heat) + (r.n_market_recent && r.score === r.score_v2 ? ' <span class="crm-buy" title="' + r.n_market_recent + ' marché(s) en 12 mois : achète des drones">Achète</span>' : '') + (r.web_pages_90d ? ' <span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</td>'
           + '<td class="c-status">' + statusPill(r.status) + '</td>'
           + '<td class="c-coverage">' + coverageDots(r.roles) + '</td>'
           + '<td class="c-owner">' + (r.owner_name ? '<span class="crm-owner"><span class="crm-avatar">' + esc(initials(r.owner_name)) + '</span>' + esc(r.owner_name) + '</span>' : '<span class="crm-muted">Personne</span>') + '</td>'
@@ -1685,14 +1685,24 @@
       + (typeof window._legacyOpenEndUser === 'function' ? '<button type="button" class="crm-link" id="crm-legacy" style="margin-top:10px;font-size:12.5px">Fiche marché : produits et fournisseurs</button>' : '') + '</div>'
       + '<div class="crm-card"><h3>Priorité <span class="crm-meta">sur 100</span></h3><div class="crm-score-big">' + prioBadge(sm.priority) + '</div>'
       + '<div class="crm-prio-parts">'
-      + [['Adéquation', sm.fit, 40, 'tier, secteur cible, usage drone'], ['Intention', sm.intent, 40, 'engagement des 90 derniers jours'], ['Relation', sm.relation, 20, 'emails connus et comité couvert']].map(function (x) {
+      + [['Adéquation', sm.fit, 40, 'tier, secteur cible, usage drone'], ['Intention', sm.intent, 40, 'engagement du compte et marchés récents'], ['Relation', sm.relation, 20, 'emails connus et comité couvert']].map(function (x) {
         return '<div title="' + esc(x[3]) + '"><span>' + x[0] + '</span><span class="crm-prio-bar"><i style="width:' + Math.round(100 * (x[1] || 0) / x[2]) + '%"></i></span><b>' + (x[1] || 0) + '/' + x[2] + '</b></div>';
       }).join('') + '</div></div>'
-      + '<div class="crm-card"><h3>Engagement <span class="crm-meta">90 jours</span></h3><div class="crm-score-big">' + heatBadge(sm.score, sm.heat) + '</div>'
-      + '<ul class="crm-score-list"><li>Actions et activités sur les contacts</li>'
-      + '<li>' + (sm.web_pages_90d ? '<b>' + sm.web_pages_90d + '</b> page' + (sm.web_pages_90d > 1 ? 's' : '') + ' vue' + (sm.web_pages_90d > 1 ? 's' : '') + ' sur elistair.com' : 'Pas de visite rattachée' + (sm.domain ? '' : ' (renseignez le domaine)')) + '</li>'
-      + (sm.chats_90d ? '<li><b>' + sm.chats_90d + '</b> conversation' + (sm.chats_90d > 1 ? 's' : '') + ' sur le chat du site</li>' : '')
-      + '</ul></div></aside>'
+      + (sm.score_v2 != null && sm.score === sm.score_v2
+        ? '<div class="crm-card"><h3>Engagement <span class="crm-meta">ce que le compte fait envers nous</span></h3><div class="crm-score-big">' + heatBadge(sm.score, sm.heat) + '</div>'
+          + '<ul class="crm-score-list">'
+          + '<li><b>' + (sm.eng_echanges || 0) + '</b> échanges (réponses, rendez-vous, appels aboutis)</li>'
+          + '<li><b>' + (sm.eng_web || 0) + '</b> visites du site' + (sm.web_pages_90d ? ' (' + sm.web_pages_90d + ' pages en 90 j)' : (sm.domain ? '' : ' (renseignez le domaine)')) + '</li>'
+          + (sm.eng_chat ? '<li><b>' + sm.eng_chat + '</b> chat sur le site</li>' : '')
+          + (sm.eng_clics ? '<li><b>' + sm.eng_clics + '</b> clics sur nos emails</li>' : '')
+          + '</ul><div class="crm-meta" style="margin-top:6px">Un signal perd la moitié de sa valeur tous les 30 jours. Nos propres envois ne comptent pas.</div>'
+          + (sm.n_market_recent ? '<div class="crm-buys"><span class="crm-buy">Achète</span> ' + sm.n_market_recent + ' marché' + (sm.n_market_recent > 1 ? 's' : '') + ' en 12 mois (compte dans la priorité)</div>' : '')
+          + '</div></aside>'
+        : '<div class="crm-card"><h3>Engagement <span class="crm-meta">90 jours</span></h3><div class="crm-score-big">' + heatBadge(sm.score, sm.heat) + '</div>'
+          + '<ul class="crm-score-list"><li>Actions et activités sur les contacts</li>'
+          + '<li>' + (sm.web_pages_90d ? '<b>' + sm.web_pages_90d + '</b> page' + (sm.web_pages_90d > 1 ? 's' : '') + ' vue' + (sm.web_pages_90d > 1 ? 's' : '') + ' sur elistair.com' : 'Pas de visite rattachée' + (sm.domain ? '' : ' (renseignez le domaine)')) + '</li>'
+          + (sm.chats_90d ? '<li><b>' + sm.chats_90d + '</b> conversation' + (sm.chats_90d > 1 ? 's' : '') + ' sur le chat du site</li>' : '')
+          + '</ul></div></aside>')
       // ── colonne centrale : composer + timeline
       + '<main class="crm-rec-main"><div id="crm-brief"></div><div class="crm-card crm-composer" id="crm-composer"></div>'
       + '<div class="crm-card"><h3>Historique <span class="crm-tl-filters" role="tablist">'
