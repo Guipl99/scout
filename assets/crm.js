@@ -188,13 +188,19 @@
   // ═════════════════════════════════════════════════════════════════════════
   // File unifiée : tâches Scout (crm_tasks) + relances dues (/me/tracking) + réponses positives
   // pas encore transmises à Dynamics. Chaque élément a une échéance et une action principale.
-  function loadQueue(scope) {
-    var team = scope === 'team';
+  function loadQueue(scope, opts) {
+    var team = scope === 'team', prosp = opts && opts.prospect, own = team ? '' : '&owner=me';
+    var none = function (k) { return function () { var o = {}; o[k] = []; return o; }; };
     return Promise.all([
       api('/crm/tasks?scope=' + (team ? 'team' : 'me') + '&state=open').catch(function () { return { tasks: [] }; }),
       api('/me/tracking?scope=' + (team ? 'team' : 'me')).catch(function () { return { tracking: [] }; }),
       api('/assist/relances/ready').catch(function () { return { ready: [] }; }),
-      api('/assist/reactions?scope=' + (team ? 'team' : 'me')).catch(function () { return { reactions: [] }; })
+      api('/assist/reactions?scope=' + (team ? 'team' : 'me')).catch(function () { return { reactions: [] }; }),
+      // Prospection (dans la même file) : actions proposées par la veille, comptes chauds, comptes à ouvrir, VIP
+      prosp ? api('/crm/signals/proposed?scope=' + (team ? 'all' : 'me')).catch(none('rows')) : { rows: [] },
+      prosp ? api('/crm/accounts?heat=chaud,tiede&sort=score&dir=desc&limit=8' + own).catch(none('accounts')) : { accounts: [] },
+      prosp ? api('/crm/accounts?activity=never&contacts=with&sort=priority&dir=desc&limit=8' + own).catch(none('accounts')) : { accounts: [] },
+      prosp ? api('/crm/contacts?vip=1&limit=8').catch(none('contacts')) : { contacts: [] }
     ]).then(function (r) {
       var items = [];
       var ready = {}; (r[2].ready || []).forEach(function (d) { ready[d.contact_id] = d; });
@@ -221,12 +227,38 @@
           sub: what + ' ' + when + ' · ' + x.pages + ' page' + (x.pages > 1 ? 's' : '') + ((x.titles || []).length ? ' : ' + x.titles.filter(Boolean).slice(0, 3).join(', ') : ''),
           contact_id: x.contact_id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom, key: x.key });
       });
+      if (prosp) {
+        var seenAcc = {}; items.forEach(function (it) { if (it.account_id) seenAcc[it.account_id] = 1; });
+        ((r[4] && r[4].rows) || []).forEach(function (sg) {
+          var acc = (sg.accounts || [])[0];
+          items.push({ kind: 'signal', id: 'sig-' + sg.kind + '-' + sg.ref_id, sg: sg, score: sg.score || 0, account_id: acc && acc.id, tier: acc && acc.tier });
+          if (acc) seenAcc[acc.id] = 1;
+        });
+        ((r[5] && r[5].accounts) || []).forEach(function (a) {
+          if (seenAcc[a.id]) return; seenAcc[a.id] = 1;
+          var why = [];
+          if (a.web_pages_90d) why.push(a.web_pages_90d + ' page' + (a.web_pages_90d > 1 ? 's' : '') + ' vue' + (a.web_pages_90d > 1 ? 's' : '') + ' sur le site' + (a.last_visit ? ', ' + relTime(a.last_visit) : ''));
+          if (a.chats_90d) why.push('chat sur le site');
+          if (a.n_market_recent) why.push('marché récent');
+          if (a.last_activity_at) why.push('activité ' + relTime(a.last_activity_at));
+          items.push({ kind: 'hot', id: 'hot-' + a.id, title: a.nom, sub: why.join(' · ') || 'Engagement en hausse', account_id: a.id, account_nom: a.nom, tier: a.tier, who: a.owner_name, score: a.score || 0 });
+        });
+        ((r[7] && r[7].contacts) || []).forEach(function (c) {
+          items.push({ kind: 'vip', id: 'vip-' + c.id, title: personName(c), sub: [c.titre, c.pays].filter(Boolean).join(' · '), contact_id: c.id, contact_name: personName(c), account_id: c.end_user_id, account_nom: c.account_nom || c.organisation, tier: c.tier });
+          if (c.end_user_id) seenAcc[c.end_user_id] = 1;
+        });
+        ((r[6] && r[6].accounts) || []).forEach(function (a) {
+          if (seenAcc[a.id]) return; seenAcc[a.id] = 1;
+          items.push({ kind: 'open', id: 'open-' + a.id, title: a.nom, sub: 'Jamais contacté · ' + (a.n_contacts || 0) + ' contact' + (a.n_contacts > 1 ? 's' : '') + (a.pays ? ' · ' + a.pays : ''), account_id: a.id, account_nom: a.nom, tier: a.tier, who: a.owner_name, priority: a.priority || 0 });
+        });
+      }
       items.forEach(function (it) { it.prio = queuePriority(it); it.later = isLater(it); });
       items.sort(function (a, b) { return b.prio - a.prio; });
       return items;
     });
   }
-  var KIND_LABEL = { task: 'Tâche', relance: 'Relance', reply: 'Réponse', reaction: 'Réaction' };
+  var KIND_LABEL = { task: 'Tâche', relance: 'Relance', reply: 'Réponse', reaction: 'Réaction', signal: 'Marché', hot: 'Compte chaud', open: 'À ouvrir', vip: 'VIP' };
+  var PROSP_KINDS = { signal: 1, hot: 1, open: 1, vip: 1 };
 
   // File unique classée par importance et urgence, sans planning au jour ou à la semaine :
   //   réactions à nos emails, puis réponses positives, puis relances dues et tâches, pondérées par le tier du compte
@@ -237,6 +269,10 @@
     var late = daysFrom(it.due);
     if (it.kind === 'reaction') return 1000 - Math.min(99, Math.max(0, daysFrom(it.due) || 0)) + tierPts / 10;
     if (it.kind === 'reply') return 900 + tierPts / 10;
+    if (it.kind === 'signal') return 600 + (it.score || 0) * 5 + tierPts / 10;
+    if (it.kind === 'hot') return 400 + Math.min(it.score || 0, 50) + tierPts / 2;
+    if (it.kind === 'vip') return 380 + tierPts / 2;
+    if (it.kind === 'open') return 150 + Math.min(it.priority || 0, 100) / 2 + tierPts / 2;
     if (it.kind === 'relance') return late != null && late >= 0 ? 300 + Math.min(late, 30) * 4 + tierPts : 120 + late * 4 + tierPts;
     // tâche
     if (late == null) return 260 + tierPts + Math.min(30, Math.max(0, daysFrom(it.created) || 0));
@@ -246,6 +282,17 @@
 
   function queueItemHtml(it, opts) {
     opts = opts || {};
+    if (it.kind === 'signal') return '<div class="crm-q k-signal">' + sigCard(it.sg) + '</div>';
+    if (PROSP_KINDS[it.kind]) {
+      var isCt = it.kind === 'vip';
+      var target = isCt ? 'data-qct="' + esc(it.contact_id) + '"' : 'data-qacc="' + esc(it.account_id) + '"';
+      var psub = [esc(it.sub || '')];
+      if (isCt && it.account_nom) psub.push((it.tier ? tierBadge(it.tier) + ' ' : '') + (it.account_id ? '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>' : esc(it.account_nom)));
+      if (opts.showWho && it.who) psub.push(esc(it.who));
+      return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (it.kind === 'open' ? ICON.send : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
+        + (!isCt && it.tier ? tierBadge(it.tier) + ' ' : '') + '<button type="button" class="crm-link strong" ' + target + '>' + esc(it.title) + '</button></div><div class="s">' + psub.filter(Boolean).join(' · ') + '</div></div>'
+        + '<div class="crm-q-a"><button type="button" class="crm-btn sm" ' + target + '>' + (isCt ? 'Ouvrir le contact' : 'Ouvrir le compte') + '</button></div></div>';
+    }
     var t = todayStr();
     var dueCls = it.due ? (it.due < t ? 'crm-late' : (it.due === t ? 'crm-today' : '')) : '';
     var late = daysFrom(it.due);
@@ -301,94 +348,11 @@
     });
   }
 
-  function onHomePanel() {
-    var p = document.getElementById('panel-home'); if (!p) return;
-    var me = (window.scoutSession && window.scoutSession.first_name) || '';
-    var dateTxt = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-    dateTxt = dateTxt.charAt(0).toUpperCase() + dateTxt.slice(1);
-    p.innerHTML = '<div class="crm-wrap crm-home"><div class="crm-row crm-home-head">'
-      + '<div><h2 class="crm-h2" id="crm-home-title">Bonjour' + (me ? ' ' + esc(me) : '') + '</h2><div class="crm-meta">' + esc(dateTxt) + '</div></div>'
-      + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-hs="me">Moi</button><button type="button" class="crm-chip" data-hs="team">Équipe</button></div></div>'
-      + '<div id="crm-home-body"><div class="crm-empty">Chargement…</div></div></div>';
-    p.querySelectorAll('[data-hs]').forEach(function (b) { b.onclick = function () { S.homeScope = b.getAttribute('data-hs'); loadHome(); }; });
-    loadFacets().then(loadHome).catch(function (e) { document.getElementById('crm-home-body').innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
-  }
+
 
   // ═════════════════════════════════════════════════════════════════════════
   // SIGNAUX À TRAITER : appels d'offres et contrats, en un clic
   // ═════════════════════════════════════════════════════════════════════════
-  function onSignalsPanel() {
-    var p = document.getElementById('panel-signals'); if (!p) return;
-    S.sigState = S.sigState || 'new';
-    p.innerHTML = '<div class="crm-wrap"><div class="crm-row crm-home-head"><div><h2 class="crm-h2">Signaux à traiter</h2><div class="crm-meta">Appels d’offres et contrats repérés par la veille. Rattachez-les à un compte, créez une tâche ou ignorez-les.</div></div>'
-      + '<div class="crm-views" style="margin:0" id="crm-sig-states"></div></div><div id="crm-sig-body"><div class="crm-empty">Chargement…</div></div></div>';
-    loadSignals();
-  }
-  function loadSignals() {
-    api('/crm/signals?state=' + S.sigState).then(function (d) {
-      var c = d.counts || {};
-      var st = document.getElementById('crm-sig-states');
-      if (st) {
-        st.innerHTML = [['new', 'À traiter'], ['done', 'Traités'], ['ignored', 'Ignorés']].map(function (x) {
-          return '<button type="button" class="crm-chip' + (S.sigState === x[0] ? ' on' : '') + '" data-ss="' + x[0] + '">' + x[1] + ' <span class="crm-meta">' + (c[x[0]] || 0) + '</span></button>';
-        }).join('');
-        st.querySelectorAll('[data-ss]').forEach(function (b) { b.onclick = function () { S.sigState = b.getAttribute('data-ss'); loadSignals(); }; });
-      }
-      drawSignals(d.signals || []);
-      var badge = document.getElementById('subnav-signals-badge'); if (badge) { badge.textContent = c.new || ''; badge.style.display = c.new ? '' : 'none'; }
-    }).catch(function (e) { var b = document.getElementById('crm-sig-body'); if (b) b.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
-  }
-  function drawSignals(list) {
-    var body = document.getElementById('crm-sig-body'); if (!body) return;
-    if (!list.length) { body.innerHTML = '<div class="crm-empty">' + (S.sigState === 'new' ? 'Rien à traiter : tous les signaux ont été vus.' : 'Aucun signal dans cette liste.') + '</div>'; return; }
-    body.innerHTML = list.map(function (g, i) {
-      var val = g.value_max ? (g.value_max >= 1e9 ? (g.value_max / 1e9).toFixed(1).replace('.', ',') + ' Md' : Math.round(g.value_max / 1e6) + ' M') : '';
-      var accs = (g.accounts || []).map(function (a) {
-        return '<span class="crm-sig-acc"><button type="button" class="crm-link" data-open="' + esc(a.id) + '">' + esc(a.nom) + '</button>'
-          + '<button type="button" class="crm-x" data-unlink="' + i + '" data-eu="' + esc(a.id) + '" aria-label="Retirer le rattachement à ' + esc(a.nom) + '">×</button></span>';
-      }).join('');
-      return '<div class="crm-card crm-sig" data-i="' + i + '">'
-        + '<div class="crm-sig-main"><span class="crm-q-kind k-' + (g.kind === 'tender' ? 'relance' : 'task') + '">' + (g.kind === 'tender' ? 'Appel d’offres' : 'Contrat') + '</span> '
-        + (g.url ? '<a class="crm-link" href="' + esc(g.url) + '" target="_blank" rel="noopener"><b>' + esc(g.title || 'Sans titre') + '</b></a>' : '<b>' + esc(g.title || 'Sans titre') + '</b>')
-        + '<div class="crm-meta">' + esc([g.buyer, g.pays, val, g.date ? fmtDate(g.date) : ''].filter(Boolean).join(' · ')) + (g.state !== 'new' && g.by_name ? ' · ' + (g.state === 'ignored' ? 'ignoré' : 'traité') + ' par ' + esc(g.by_name) : '') + '</div>'
-        + '<div class="crm-sig-accs">' + (accs || '<span class="crm-meta">Aucun compte rattaché</span>') + '</div></div>'
-        + '<div class="crm-sig-actions">'
-        + (g.state === 'ignored' ? '<button type="button" class="crm-btn sm" data-act="restore" data-i="' + i + '">Remettre à traiter</button>'
-          : '<button type="button" class="crm-btn sm" data-act="pick" data-i="' + i + '">Rattacher</button>'
-          + '<button type="button" class="crm-btn sm" data-act="task" data-i="' + i + '">' + ICON.check + ' Créer une tâche</button>'
-          + (g.state === 'new' ? '<button type="button" class="crm-btn ghost sm" data-act="ignore" data-i="' + i + '">Ignorer</button>' : ''))
-        + '</div><div class="crm-sig-pick" id="crm-sig-pick-' + i + '" hidden></div></div>';
-    }).join('');
-    var act = function (g, body) {
-      return api('/crm/signals/' + g.kind + '/' + encodeURIComponent(g.ref_id) + '/action', { method: 'POST', body: body })
-        .then(function (r) { S.treeData = null; return r; });
-    };
-    body.querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-open')); }; });
-    body.querySelectorAll('[data-unlink]').forEach(function (b) { b.onclick = function () {
-      var g = list[+b.getAttribute('data-unlink')];
-      act(g, { action: 'unlink', end_user_id: b.getAttribute('data-eu') }).then(function () { toast('Rattachement retiré'); loadSignals(); }).catch(function (e) { toast('Erreur : ' + e.message); });
-    }; });
-    body.querySelectorAll('[data-act]').forEach(function (b) { b.onclick = function () {
-      var i = +b.getAttribute('data-i'), g = list[i], a = b.getAttribute('data-act');
-      if (a === 'ignore' || a === 'restore') { act(g, { action: a }).then(function () { toast(a === 'ignore' ? 'Signal ignoré' : 'Signal remis à traiter'); loadSignals(); }).catch(function (e) { toast('Erreur : ' + e.message); }); return; }
-      var box = document.getElementById('crm-sig-pick-' + i); box.hidden = false;
-      if (a === 'pick') {
-        acctPicker(box, { placeholder: 'Rattacher à quel compte ?', focus: true, exclude: (g.accounts || []).map(function (x) { return x.id; }), onPick: function (x) {
-          act(g, { action: 'link', end_user_id: x.id }).then(function () { toast('Rattaché à ' + x.nom); loadSignals(); }).catch(function (e) { toast('Erreur : ' + e.message); });
-        } });
-      } else if (a === 'task') {
-        var first = (g.accounts || [])[0];
-        var doTask = function (eu) {
-          act(g, { action: 'task', end_user_id: eu || null, title: 'Suivre : ' + (g.title || 'signal') }).then(function () { toast('Tâche créée (échéance dans 7 jours)'); loadSignals(); refreshBadge(); }).catch(function (e) { toast('Erreur : ' + e.message); });
-        };
-        if (first) { doTask(first.id); return; }
-        box.innerHTML = '<div class="crm-meta" style="margin-bottom:4px">Sur quel compte créer la tâche ?</div><div class="crm-pick-host"></div><button type="button" class="crm-link" style="margin-top:6px">Créer sans compte</button>';
-        acctPicker(box.querySelector('.crm-pick-host'), { placeholder: 'Compte concerné', focus: true, onPick: function (x) { doTask(x.id); } });
-        box.querySelector('button.crm-link').onclick = function () { doTask(null); };
-      }
-    }; });
-  }
-
   // ═════════════════════════════════════════════════════════════════════════
   // QUALITÉ DES DONNÉES (admins, sous Statistiques)
   // ═════════════════════════════════════════════════════════════════════════
@@ -545,112 +509,6 @@
   // ═════════════════════════════════════════════════════════════════════════
   // PROSPECTION : prochaine action, comptes chauds, comptes à ouvrir, VIP
   // ═════════════════════════════════════════════════════════════════════════
-  function onProspectionPanel() {
-    var p = document.getElementById('panel-prospection'); if (!p) return;
-    S.prospScope = S.prospScope || lsGet('scout_prosp_scope', 'all');
-    p.innerHTML = '<div class="crm-wrap crm-home crm-prosp">'
-      + '<div class="crm-row crm-home-head"><div class="crm-meta crm-lead-in">Qui contacter maintenant, et pourquoi. <button type="button" class="crm-link" data-goto="config">Mes segments</button></div>'
-      + '<div class="crm-seg"><button type="button" class="crm-chip sm" data-ps="me">Mes comptes</button><button type="button" class="crm-chip sm" data-ps="all">Tous les comptes</button></div></div>'
-      + '<div id="crm-prosp-body"><div class="crm-empty">Chargement…</div></div></div>';
-    p.querySelectorAll('.crm-home-head [data-goto]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-goto')); }; });
-    p.querySelectorAll('[data-ps]').forEach(function (b) {
-      b.onclick = function () { S.prospScope = b.getAttribute('data-ps'); lsSet('scout_prosp_scope', S.prospScope); loadProspection(); };
-    });
-    loadProspection();
-  }
-
-  function loadProspection() {
-    var p = document.getElementById('panel-prospection'); if (!p) return;
-    p.querySelectorAll('[data-ps]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-ps') === S.prospScope); });
-    var body = document.getElementById('crm-prosp-body');
-    var own = S.prospScope === 'me' ? '&owner=me' : '';
-    Promise.all([
-      api('/crm/accounts?heat=chaud,tiede&sort=score&dir=desc&limit=10' + own).catch(function () { return { accounts: [] }; }),
-      api('/crm/accounts?activity=never&contacts=with&sort=priority&dir=desc&limit=10' + own).catch(function () { return { accounts: [] }; }),
-      api('/crm/contacts?vip=1&limit=12').catch(function () { return { contacts: [] }; }),
-      api('/me/stats').catch(function () { return {}; }),
-      api('/contacts/stats-engagement').catch(function () { return {}; }),
-      loadQueue('me').catch(function () { return []; }),
-      api('/crm/signals/proposed?scope=' + (S.prospScope === 'me' ? 'me' : 'all')).catch(function () { return { rows: [] }; })
-    ]).then(function (r) {
-      var hot = r[0].accounts || [], fresh = r[1].accounts || [], vip = r[2].contacts || [], st = r[3] || {}, eng = r[4] || {}, queue = r[5] || [];
-      var props = (r[6] && r[6].rows) || []; S.props = props; var minSc = (r[6] && r[6].min_score) || 5;
-      // Comptes touchés par une action proposée : raison affichée, et remontés dans « Comptes chauds ».
-      var sigByAcc = {};
-      props.forEach(function (sg) { (sg.accounts || []).forEach(function (a) { if (!sigByAcc[a.id]) sigByAcc[a.id] = sg; }); });
-      Object.keys(sigByAcc).forEach(function (id) {
-        if (hot.some(function (a) { return a.id === id; })) return;
-        var sg = sigByAcc[id], a = (sg.accounts || []).filter(function (x) { return x.id === id; })[0];
-        if (a && hot.length < 14) hot.unshift({ id: a.id, nom: a.nom, owner_name: a.owner_name, pays: sg.pays, n_contacts: null, _sigOnly: true });
-      });
-      var t = todayStr();
-      var nDue = queue.filter(function (x) { return x.kind === 'relance' && x.due && x.due <= t; }).length;
-      var nReply = queue.filter(function (x) { return x.kind === 'reply'; }).length;
-      var html = '';
-
-      // 1. Bandeau compact (même format que l'Accueil)
-      html += '<div class="crm-hero">'
-        + '<button type="button" class="crm-hero-card main" id="crm-prosp-go" title="Scout choisit le meilleur contact à travailler dans tes segments : décideur vérifié, compte prioritaire, jamais contacté. Tu écris, Scout note et planifie la relance."><span class="ic">' + ICON.send + '</span><span><b>Prochaine action</b><small>' + (eng.stock_relevant != null ? eng.stock_relevant + ' contacts prêts dans tes segments' : 'Traiter le prochain contact suggéré') + '</small></span><span class="go">→</span></button>'
-        + '<button type="button" class="crm-hero-card" id="crm-prosp-sig"><b' + (props.length ? ' class="crm-today"' : '') + '>' + props.length + '</b><span>action' + (props.length > 1 ? 's' : '') + ' proposée' + (props.length > 1 ? 's' : '') + '<small>signaux marché</small></span></button>'
-        + '<button type="button" class="crm-hero-card" data-goq="all"><b class="' + (nDue ? 'crm-late' : '') + '">' + nDue + '</b><span>relance' + (nDue > 1 ? 's' : '') + ' due' + (nDue > 1 ? 's' : '') + '<small>' + (st.emails_7d || 0) + ' email' + ((st.emails_7d || 0) > 1 ? 's' : '') + ' envoyé' + ((st.emails_7d || 0) > 1 ? 's' : '') + ' en 7 j</small></span></button>'
-        + '<button type="button" class="crm-hero-card" data-goq="reply"><b' + (nReply ? ' class="crm-today"' : '') + '>' + nReply + '</b><span>réponse' + (nReply > 1 ? 's' : '') + ' positive' + (nReply > 1 ? 's' : '') + ' à saisir dans Dynamics</span></button>'
-        + '</div>';
-
-      var why = function (a) {
-        var w = [];
-        if (a.web_pages_90d) w.push('<span class="crm-why web">' + a.web_pages_90d + ' page' + (a.web_pages_90d > 1 ? 's' : '') + ' vues' + (a.last_visit ? ', ' + relTime(a.last_visit) : '') + '</span>');
-        if (a.chats_90d) w.push('<span class="crm-why">chat sur le site</span>');
-        var sg = sigByAcc[a.id];
-        if (sg) w.push('<span class="crm-why sig">' + esc(sigType(sg)) + '</span>');
-        else if (a.n_market_recent) w.push('<span class="crm-why">marché récent</span>');
-        if (a.last_activity_at) w.push('<span class="crm-why soft">activité ' + relTime(a.last_activity_at) + '</span>');
-        return w.join('');
-      };
-      var row = function (a, right) {
-        return '<button type="button" class="crm-prow" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier)
-          + '<span class="m"><b>' + esc(a.nom) + '</b><span>' + esc([a.pays, a.secteur, a._sigOnly ? '' : (a.n_contacts || 0) + ' contact' + (a.n_contacts > 1 ? 's' : '')].filter(Boolean).join(' · ')) + '</span></span>'
-          + '<span class="w">' + right(a) + '</span>'
-          + '<span class="o">' + (a.owner_name ? '<span class="crm-avatar">' + esc(initials(a.owner_name)) + '</span>' + esc(a.owner_name) : '<span class="crm-meta">Personne</span>') + '</span></button>';
-      };
-
-      // 2. Actions proposées (signaux marché notés 5 sur 8 et plus, sans échéance)
-      // Section affichée seulement s'il y a quelque chose : le bandeau donne déjà le compteur.
-      if (props.length) html += '<div class="crm-card" id="crm-props"><h3>Actions proposées <span class="crm-meta">appels d’offres, contrats des concurrents, achats déclencheurs, notés ' + minSc + ' sur 8 et plus</span> <button type="button" class="crm-link" data-goto="market">Marchés →</button></h3>'
-        + props.map(sigCard).join('') + '</div>';
-
-      // 3. Comptes chauds
-      html += '<div class="crm-card"><h3>Comptes chauds <span class="crm-meta">ils bougent : visites du site, chat, appels d’offres, échanges récents</span> <button type="button" class="crm-link" data-kf=\'' + esc(JSON.stringify(Object.assign(S.prospScope === 'me' ? { owner: 'me' } : {}, { heat: 'chaud,tiede' }))) + '\'>Tous →</button></h3>'
-        + (hot.length ? hot.map(function (a) { return row(a, function (x) { return why(x) + heatBadge(x.score, x.heat); }); }).join('')
-          : '<div class="crm-empty" style="padding:16px">Aucun compte chaud pour le moment.</div>')
-        + '</div>';
-
-      // 3. Comptes à ouvrir
-      html += '<div class="crm-prosp-cols"><div class="crm-card"><h3>Comptes à ouvrir <span class="crm-meta">jamais contactés, les plus prioritaires d’abord</span> <button type="button" class="crm-link" data-kf=\'' + esc(JSON.stringify(Object.assign(S.prospScope === 'me' ? { owner: 'me' } : {}, { activity: 'never', contacts: 'with' }))) + '\'>Tous →</button></h3>'
-        + (fresh.length ? fresh.map(function (a) { return row(a, function (x) { return prioBadge(x.priority); }); }).join('')
-          : '<div class="crm-empty" style="padding:16px">Tous les comptes avec contacts ont déjà été travaillés.</div>')
-        + '</div>';
-
-      // 4. VIP
-      html += '<div class="crm-card"><h3>VIP à contacter <span class="crm-meta">contacts 3 étoiles jamais approchés</span></h3>'
-        + (vip.length ? vip.map(function (c) {
-          return '<button type="button" class="crm-prow person" data-ct="' + esc(c.id) + '"><span class="crm-avatar lg">' + esc(initials(personName(c))) + '</span>'
-            + '<span class="m"><b>' + esc(personName(c)) + '</b><span>' + esc([c.titre, c.account_nom || c.organisation, c.pays].filter(Boolean).join(' · ')) + '</span></span>'
-            + (c.role ? rolePill(c.role) : '') + '</button>';
-        }).join('') : '<div class="crm-empty" style="padding:16px">Aucun VIP en attente. Mets 3 étoiles à un contact clé pour le retrouver ici.</div>')
-        + '</div></div>';
-
-      body.innerHTML = html;
-      document.getElementById('crm-prosp-go').onclick = function () { if (window.scoutAction && window.scoutAction.open) window.scoutAction.open(); };
-      var sigBtn = document.getElementById('crm-prosp-sig'); if (sigBtn) sigBtn.onclick = function () { var el = document.getElementById('crm-props'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); else go('market'); };
-      bindSigCards(body, loadProspection);
-      body.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
-      body.querySelectorAll('[data-ct]').forEach(function (b) { b.onclick = function () { openContact(b.getAttribute('data-ct')); }; });
-      body.querySelectorAll('[data-kf]').forEach(function (b) { b.onclick = function () { openAccountsWith(JSON.parse(b.getAttribute('data-kf'))); }; });
-      body.querySelectorAll('[data-goto]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-goto')); }; });
-      body.querySelectorAll('[data-goq]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-goq') === 'reply' ? 'reply' : 'all'; S.taskScope = 'me'; go('tasks'); }; });
-    }).catch(function (e) { body.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
-  }
-
   // ═════════════════════════════════════════════════════════════════════════
   // STATISTIQUES : activité de l'équipe, conversion, portefeuille
   // ═════════════════════════════════════════════════════════════════════════
@@ -734,103 +592,144 @@
     if (isAdmin) loadHygiene();
   }
 
-  function loadHome() {
+  // ═════════════════════════════════════════════════════════════════════════
+  // AUJOURD'HUI : un seul écran, une seule file classée par importance et urgence.
+  // Réunit l'ancienne « Ma journée », « À faire » et « Prospection » (actions proposées
+  // par la veille, comptes chauds, comptes à ouvrir, VIP).
+  // ═════════════════════════════════════════════════════════════════════════
+  var QF = [['all', 'Tout'], ['urgent', 'Urgent'], ['relance', 'Relances'], ['reply', 'Réponses et réactions'], ['task', 'Tâches'], ['prosp', 'Prospection']];
+  function qMatch(x, f) {
+    if (f === 'all') return true;
+    if (f === 'urgent') return x.kind === 'reaction' || x.kind === 'reply' || (!PROSP_KINDS[x.kind] && x.due && x.due < todayStr());
+    if (f === 'reply') return x.kind === 'reply' || x.kind === 'reaction';
+    if (f === 'prosp') return !!PROSP_KINDS[x.kind];
+    return x.kind === f;
+  }
+  function onHomePanel() {
     var p = document.getElementById('panel-home'); if (!p) return;
-    p.querySelectorAll('[data-hs]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-hs') === S.homeScope); });
-    var body = document.getElementById('crm-home-body');
+    S.homeScope = S.homeScope || 'me'; S.qFilter = S.qFilter || 'all'; S.taskState = S.taskState || 'open';
+    var me = (window.scoutSession && window.scoutSession.first_name) || '';
+    var dateTxt = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    dateTxt = dateTxt.charAt(0).toUpperCase() + dateTxt.slice(1);
+    p.innerHTML = '<div class="crm-wrap crm-home" id="crm-tasks"><div class="crm-row crm-home-head">'
+      + '<div><h2 class="crm-h2" id="crm-home-title">Bonjour' + (me ? ' ' + esc(me) : '') + '</h2><div class="crm-meta">' + esc(dateTxt) + '</div></div>'
+      + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-hs="me">Moi</button><button type="button" class="crm-chip" data-hs="team">Équipe</button></div></div>'
+      + '<div id="crm-home-hero"></div>'
+      + '<div class="crm-home-cols"><div class="crm-home-main">'
+      + '<div class="crm-row crm-qbar"><div class="crm-views" style="margin:0" role="tablist">' + QF.map(function (x) { return '<button type="button" class="crm-chip sm" data-qf="' + x[0] + '">' + x[1] + '<span class="n" data-qn="' + x[0] + '"></span></button>'; }).join('') + '</div>'
+      + '<button type="button" class="crm-btn sm" id="crm-nt-open">+ Nouvelle tâche</button></div>'
+      + '<div class="crm-newtask" id="crm-nt-row" hidden><input class="crm-input" id="crm-nt-title" maxlength="300" placeholder="Nouvelle tâche, ex. Préparer la démo pour le SDIS 69" aria-label="Nouvelle tâche">'
+      + '<input class="crm-input" type="date" id="crm-nt-due" aria-label="Échéance (facultative)" title="Facultatif : la file se classe par importance">'
+      + '<select class="crm-input" id="crm-nt-owner" aria-label="Attribuer à"></select>'
+      + '<button class="crm-btn primary" type="button" id="crm-nt-save">Ajouter</button></div>'
+      + '<div id="crm-tasks-list"><div class="crm-empty">Chargement…</div></div>'
+      + '<div class="crm-meta crm-q-foot"><button type="button" class="crm-link" id="crm-q-done"></button></div>'
+      + '</div><aside class="crm-home-side" id="crm-home-side"></aside></div></div>';
+    p.querySelectorAll('[data-hs]').forEach(function (b) { b.onclick = function () { S.homeScope = b.getAttribute('data-hs'); S.taskState = 'open'; loadHome(); }; });
+    p.querySelectorAll('[data-qf]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-qf'); S.taskState = 'open'; drawQueue(); }; });
+    document.getElementById('crm-q-done').onclick = function () { S.taskState = S.taskState === 'done' ? 'open' : 'done'; S.taskState === 'done' ? drawDone() : drawQueue(); };
+    document.getElementById('crm-nt-open').onclick = function () { var r = document.getElementById('crm-nt-row'); r.hidden = !r.hidden; if (!r.hidden) document.getElementById('crm-nt-title').focus(); };
+    var save = document.getElementById('crm-nt-save');
+    save.onclick = function () {
+      var t = document.getElementById('crm-nt-title').value.trim(); if (!t) { document.getElementById('crm-nt-title').focus(); return; }
+      save.disabled = true;
+      api('/crm/tasks', { method: 'POST', body: { title: t, due_date: document.getElementById('crm-nt-due').value || null, owner_user_id: document.getElementById('crm-nt-owner').value || null } })
+        .then(function () { document.getElementById('crm-nt-title').value = ''; save.disabled = false; toast('Tâche créée'); loadHome(); })
+        .catch(function (e) { save.disabled = false; toast('Erreur : ' + e.message); });
+    };
+    document.getElementById('crm-nt-title').onkeydown = function (e) { if (e.key === 'Enter') save.click(); };
+    loadFacets().then(function (F) {
+      var sel = document.getElementById('crm-nt-owner');
+      if (sel && !sel.options.length) sel.innerHTML = F.users.map(function (u) { return opt(u.id, u.name, F.me.user_id); }).join('');
+      var ht = document.getElementById('crm-home-title'); if (ht && F.me && F.me.name) ht.textContent = 'Bonjour ' + F.me.name;
+    }).catch(function () {});
+    loadHome();
+  }
+  // compatibilité : l'ancien onglet « À faire » et la file d'équipe pointent ici
+  function onTasksPanel() { go('home'); }
+  function loadTasks() { loadHome(); }
+
+  function loadHome() {
+    var p = document.getElementById('panel-home'); if (!p || !document.getElementById('crm-tasks-list')) return;
     var team = S.homeScope === 'team';
-    var ht = document.getElementById('crm-home-title'); if (ht && S.facets && S.facets.me && S.facets.me.name) ht.textContent = 'Bonjour ' + S.facets.me.name;
+    S.taskScope = S.homeScope; S.inTasksPanel = true;
+    p.querySelectorAll('[data-hs]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-hs') === S.homeScope); });
+    var seq = (S.homeSeq = (S.homeSeq || 0) + 1);
     Promise.all([
-      api('/crm/home?owner=' + (team ? 'team' : 'me')),
-      loadQueue(S.homeScope),
+      loadQueue(S.homeScope, { prospect: true }),
+      api('/crm/home?owner=' + (team ? 'team' : 'me')).catch(function () { return {}; }),
       api('/me/stats').catch(function () { return {}; })
     ]).then(function (r) {
-      var d = r[0], queue = r[1], st = r[2] || {};
-      var t = todayStr();
-      if (!team) updateBadge(queue);
-      var dueNow = queue.filter(function (x) { return !x.later; });
-      var nLate = queue.filter(function (x) { return (x.kind === 'reaction') || (x.kind !== 'reply' && x.due && x.due < t); }).length;
-      var nReply = queue.filter(function (x) { return x.kind === 'reply'; }).length;
-      var k = d.kpi || {};
-      var ownerF = team ? {} : { owner: 'me' };
-      var html = '';
-
-      // 1. Bandeau d'actions
-      html += '<div class="crm-hero">'
-        + '<button type="button" class="crm-hero-card main" id="crm-hero-next"><span class="ic">' + ICON.send + '</span><span><b>Prochaine action</b><small>Traiter le prochain contact suggéré</small></span><span class="go">→</span></button>'
-        + '<button type="button" class="crm-hero-card" data-goq="due"><b class="' + (nLate ? 'crm-late' : '') + '">' + dueNow.length + '</b><span>à traiter' + (nLate ? '<small class="crm-late">dont ' + nLate + ' urgent' + (nLate > 1 ? 's' : '') + '</small>' : '') + '</span></button>'
-        + '<button type="button" class="crm-hero-card" data-goq="reply"><b' + (nReply ? ' class="crm-today"' : '') + '>' + nReply + '</b><span>réponse' + (nReply > 1 ? 's' : '') + ' positive' + (nReply > 1 ? 's' : '') + ' à saisir dans Dynamics</span></button>'
-        + '<button type="button" class="crm-hero-card" data-kf=\'' + esc(JSON.stringify(Object.assign({}, ownerF, { heat: 'chaud,tiede' }))) + '\'><b>' + (k.engaged || 0) + '</b><span>compte' + (k.engaged > 1 ? 's' : '') + ' engagé' + (k.engaged > 1 ? 's' : '') + ' (90 j)</span></button>'
-        + '</div>';
-
-      html += '<div class="crm-home-cols"><div class="crm-home-main">';
-      // 2. À faire en priorité : le haut de la file, classée par importance et urgence
-      html += '<div class="crm-card"><h3>À faire en priorité <button type="button" class="crm-link" data-goto="tasks">Toute la file →</button></h3>'
-        + (dueNow.length ? dueNow.slice(0, 8).map(function (x) { return queueItemHtml(x, { showWho: team }); }).join('')
-          + (dueNow.length > 8 ? '<div class="crm-meta" style="padding-top:8px">+ ' + (dueNow.length - 8) + ' autres dans la file</div>' : '')
-          : '<div class="crm-empty" style="padding:18px">Rien d’urgent aujourd’hui. Lancez « Prochaine action » ou travaillez vos comptes Tier 1.</div>')
-        + '</div>';
-      // 3. Portefeuille
-      if (!team && !k.n) {
-        html += '<div class="crm-card crm-callout"><b>Aucun compte ne vous est encore attribué.</b> Ouvrez <button type="button" class="crm-link" data-goto-acc=\'{"owner":"none","contacts":"with"}\'>les comptes sans propriétaire</button>, filtrez par pays, sélectionnez et assignez-vous les vôtres en une fois.</div>';
-      }
-      var tile = function (val, label, filters, cls) {
-        return '<button type="button" class="crm-kpi ' + (cls || '') + '" data-kf=\'' + esc(JSON.stringify(Object.assign({}, ownerF, filters))) + '\'><b>' + esc(val) + '</b><span>' + esc(label) + '</span></button>';
-      };
-      var accList = function (rows, empty, extra) {
-        if (!rows.length) return '<div class="crm-meta" style="padding:6px 0">' + empty + '</div>';
-        return rows.slice(0, 5).map(function (a) {
-          return '<button type="button" class="crm-mini" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier)
-            + '<span class="m"><b>' + esc(a.nom) + '</b><span>' + esc([a.pays, extra(a)].filter(Boolean).join(' · ')) + '</span></span>' + heatBadge(a.score, a.heat) + '</button>';
-        }).join('');
-      };
-      html += '<div class="crm-card"><h3>' + (team ? 'Portefeuille de l’équipe' : 'Mon portefeuille') + ' <button type="button" class="crm-link" data-kf=\'' + esc(JSON.stringify(ownerF)) + '\'>Tous ' + (team ? 'les' : 'mes') + ' comptes →</button></h3>'
-        + '<div class="crm-kpis">'
-        + tile(k.n || 0, 'Comptes', {})
-        + tile((k.t1 || 0) + ' · ' + (k.t2 || 0) + ' · ' + (k.t3 || 0), 'Tier 1 · 2 · 3', { tier: '1,2,3' })
-        + tile(k.stale || 0, 'Tier 1–2 sans activité 30 j', { tier: '1,2', activity: 'stale30' }, k.stale ? 'warn' : '')
-        + tile(k.gaps || 0, 'Comités incomplets (T1–2)', { tier: '1,2', coverage: 'incomplete' }, k.gaps ? 'warn' : '')
-        + '</div><div class="crm-home-lists">'
-        + '<div><h4>Engagés</h4>' + accList(d.hot, 'Aucun compte engagé ces 90 derniers jours.', function (a) { return a.last_activity_at ? relTime(a.last_activity_at) : ''; }) + '</div>'
-        + '<div><h4>Tier 1–2 à relancer</h4>' + accList(d.stale, 'Tous les comptes prioritaires ont eu une activité récente.', function (a) { return a.last_activity_at ? 'rien depuis ' + relTime(a.last_activity_at).replace('il y a ', '') : 'jamais contacté'; }) + '</div>'
-        + '<div><h4>Comités à compléter</h4>' + (d.gaps.length ? d.gaps.slice(0, 5).map(function (a) {
-          var miss = KEY_ROLES.filter(function (rr) { return (a.roles || []).indexOf(rr) < 0; }).map(function (rr) { return ROLE_LABEL[rr].toLowerCase(); });
-          return '<button type="button" class="crm-mini" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier) + '<span class="m"><b>' + esc(a.nom) + '</b><span>Manque : ' + esc(miss.join(', ')) + '</span></span>' + coverageDots(a.roles) + '</button>';
-        }).join('') : '<div class="crm-meta" style="padding:6px 0">Les comités des comptes prioritaires sont couverts.</div>') + '</div>'
-        + '</div></div>';
-      html += '</div><aside class="crm-home-side">';
-      // 4. Ma semaine
-      if (st && st.ok) {
-        html += '<div class="crm-card"><h3>Ma semaine <button type="button" class="crm-link" data-goto="stats">Statistiques →</button></h3>'
-          + '<div class="crm-week">'
-          + '<div><b>' + (st.emails_7d || 0) + '</b><span>emails envoyés</span></div>'
-          + '<div><b>' + (st.relances_7d || 0) + '</b><span>relances</span></div>'
-          + '<div><b>' + (st.actions_7d || 0) + '</b><span>actions</span></div>'
-          + '<div><b>' + (st.interested || 0) + '</b><span>intéressés (total)</span></div></div>'
-          + (st.leaderboard && st.leaderboard.length > 1 ? '<div class="crm-lead"><span class="crm-meta">Emails 7 j :</span> ' + st.leaderboard.map(function (l) { return '<span' + (l.name === st.me ? ' class="me"' : '') + '>' + esc(l.name) + ' <b>' + l.emails + '</b></span>'; }).join('') + '</div>' : '')
-          + '</div>';
-      }
-      // 5. Visites web
-      html += '<div class="crm-card"><h3>Visites sur elistair.com <button type="button" class="crm-link" data-goto="visitors">Signaux →</button></h3>'
-        + accList(d.web, 'Aucune visite rattachée à ' + (team ? 'des' : 'vos') + ' comptes ces 90 jours. Le rattachement se fait par le domaine du compte.', function (a) { return a.web_pages_90d + ' page' + (a.web_pages_90d > 1 ? 's' : '') + (a.last_visit ? ', ' + relTime(a.last_visit) : ''); })
-        + '</div>';
-      // 6. Échéances que le commercial a lui-même fixées (pas de planning imposé)
-      var next = queue.filter(function (x) { return x.later; }).sort(function (a, b) { return a.due < b.due ? -1 : 1; }).slice(0, 5);
-      html += '<div class="crm-card"><h3>Échéances à venir</h3>' + (next.length ? next.map(function (x) {
-        return '<div class="crm-next"><span class="d">' + esc(fmtDate(x.due)) + '</span><span class="crm-q-kind k-' + x.kind + '">' + KIND_LABEL[x.kind] + '</span><span class="t">' + esc(x.kind === 'task' ? x.title : (x.contact_name + (x.account_nom ? ' · ' + x.account_nom : ''))) + '</span></div>';
-      }).join('') : '<div class="crm-meta">Aucune échéance fixée.</div>') + '</div>';
-      html += '</aside></div>';
-
-      body.innerHTML = html;
-      var nx = document.getElementById('crm-hero-next');
-      nx.onclick = function () { if (window.scoutAction && window.scoutAction.open) window.scoutAction.open(); else go('dashboard'); };
-      body.querySelectorAll('[data-goq]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-goq') === 'reply' ? 'reply' : 'all'; S.taskScope = S.homeScope; go('tasks'); }; });
-      body.querySelectorAll('[data-kf]').forEach(function (b) { b.onclick = function () { openAccountsWith(JSON.parse(b.getAttribute('data-kf'))); }; });
-      body.querySelectorAll('[data-goto-acc]').forEach(function (b) { b.onclick = function () { openAccountsWith(JSON.parse(b.getAttribute('data-goto-acc'))); }; });
-      body.querySelectorAll('[data-goto]').forEach(function (b) { b.onclick = function () { go(b.getAttribute('data-goto')); }; });
-      bindQueue(body, loadHome);
-      body.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); openAccount(b.getAttribute('data-acc')); }; });
-    }).catch(function (e) { body.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+      if (seq !== S.homeSeq) return;
+      var queue = r[0], d = r[1] || {}, st = r[2] || {};
+      S.queueItems = queue;
+      if (!team) updateBadge(queue.filter(function (x) { return !PROSP_KINDS[x.kind]; }));
+      drawHero(queue, st);
+      drawSide(d, st, team);
+      if (S.taskState === 'done') drawDone(); else drawQueue();
+    }).catch(function (e) { var l = document.getElementById('crm-tasks-list'); if (l) l.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+  }
+  function drawHero(queue, st) {
+    var box = document.getElementById('crm-home-hero'); if (!box) return;
+    var now = queue.filter(function (x) { return !x.later; });
+    var urgent = now.filter(function (x) { return qMatch(x, 'urgent'); }).length;
+    var nReply = queue.filter(function (x) { return x.kind === 'reply'; }).length;
+    var nProsp = queue.filter(function (x) { return PROSP_KINDS[x.kind]; }).length;
+    box.innerHTML = '<div class="crm-hero">'
+      + '<button type="button" class="crm-hero-card main" id="crm-hero-next" title="Scout choisit le meilleur contact à travailler dans tes segments : décideur vérifié, compte prioritaire, jamais contacté. Tu écris, Scout note et planifie la relance."><span class="ic">' + ICON.send + '</span><span><b>Prochaine action</b><small>Écrire au prochain contact suggéré</small></span><span class="go">→</span></button>'
+      + '<button type="button" class="crm-hero-card" data-hq="urgent"><b class="' + (urgent ? 'crm-late' : '') + '">' + (now.length - nProsp) + '</b><span>à traiter' + (urgent ? '<small class="crm-late">dont ' + urgent + ' urgent' + (urgent > 1 ? 's' : '') + '</small>' : '') + '</span></button>'
+      + '<button type="button" class="crm-hero-card" data-hq="reply"><b' + (nReply ? ' class="crm-today"' : '') + '>' + nReply + '</b><span>réponse' + (nReply > 1 ? 's' : '') + ' positive' + (nReply > 1 ? 's' : '') + ' à saisir dans Dynamics</span></button>'
+      + '<button type="button" class="crm-hero-card" data-hq="prosp"><b>' + nProsp + '</b><span>piste' + (nProsp > 1 ? 's' : '') + ' de prospection<small>veille, comptes chauds, VIP</small></span></button>'
+      + '</div>';
+    document.getElementById('crm-hero-next').onclick = function () { if (window.scoutAction && window.scoutAction.open) window.scoutAction.open(); };
+    box.querySelectorAll('[data-hq]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-hq'); S.taskState = 'open'; drawQueue(); var l = document.getElementById('crm-tasks-list'); if (l) l.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
+  }
+  function drawQueue() {
+    var p = document.getElementById('panel-home'), list = document.getElementById('crm-tasks-list'); if (!p || !list) return;
+    var items = S.queueItems || [], team = S.homeScope === 'team';
+    var counts = {}; QF.forEach(function (f) { counts[f[0]] = items.filter(function (x) { return !x.later && qMatch(x, f[0]); }).length; });
+    p.querySelectorAll('[data-qn]').forEach(function (n) { var c = counts[n.getAttribute('data-qn')]; n.textContent = c ? ' ' + c : ''; });
+    p.querySelectorAll('[data-qf]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-qf') === S.qFilter); });
+    var done = document.getElementById('crm-q-done'); if (done) done.textContent = 'Tâches terminées (30 j)';
+    var shown = items.filter(function (x) { return qMatch(x, S.qFilter); });
+    var now = shown.filter(function (x) { return !x.later; }), later = shown.filter(function (x) { return x.later; });
+    var html = now.length ? '<div class="crm-card crm-qcard">' + now.map(function (x) { return queueItemHtml(x, { showWho: team }); }).join('') + '</div>'
+      : '<div class="crm-empty">' + (S.qFilter === 'all' ? 'Rien à traiter. Lance « Prochaine action » pour ouvrir un nouveau compte.' : 'Rien dans ce filtre.') + '</div>';
+    if (later.length) html += '<details class="crm-later"><summary>Pas encore dues · ' + later.length + '</summary><div class="crm-card crm-qcard">'
+      + later.map(function (x) { return queueItemHtml(x, { showWho: team }); }).join('') + '</div></details>';
+    list.innerHTML = html;
+    bindQueue(list, loadHome);
+    bindSigCards(list, loadHome);
+  }
+  function drawDone() {
+    var list = document.getElementById('crm-tasks-list'); if (!list) return;
+    var done = document.getElementById('crm-q-done'); if (done) done.textContent = '← Revenir à la file';
+    document.querySelectorAll('#panel-home [data-qf]').forEach(function (b) { b.classList.remove('on'); });
+    list.innerHTML = '<div class="crm-empty">Chargement…</div>';
+    api('/crm/tasks?scope=' + S.homeScope + '&state=done').then(function (d) {
+      var tasks = d.tasks || [];
+      list.innerHTML = tasks.length ? '<div class="crm-card">' + tasks.map(taskHtml).join('') + '</div>' : '<div class="crm-empty">Aucune tâche terminée ces 30 derniers jours.</div>';
+      bindTasks(list, drawDone);
+    }).catch(function (e) { list.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+  }
+  function drawSide(d, st, team) {
+    var box = document.getElementById('crm-home-side'); if (!box) return;
+    var k = d.kpi || {}, ownerF = team ? {} : { owner: 'me' }, html = '';
+    if (!team && k.n === 0) html += '<div class="crm-card crm-callout"><b>Aucun compte ne t’est encore attribué.</b> Ouvre <button type="button" class="crm-link" data-kf=\'{"owner":"none","contacts":"with"}\'>les comptes sans propriétaire</button> et attribue-toi ceux de ta zone.</div>';
+    if (st && st.ok) html += '<div class="crm-card"><h3>' + (team ? 'Semaine de l’équipe' : 'Ma semaine') + '</h3><div class="crm-week">'
+      + '<div><b>' + (st.emails_7d || 0) + '</b><span>emails envoyés</span></div><div><b>' + (st.relances_7d || 0) + '</b><span>relances</span></div>'
+      + '<div><b>' + (st.actions_7d || 0) + '</b><span>actions</span></div><div><b>' + (st.interested || 0) + '</b><span>intéressés</span></div></div></div>';
+    var tile = function (val, label, filters, cls) { return '<button type="button" class="crm-kpi ' + (cls || '') + '" data-kf=\'' + esc(JSON.stringify(Object.assign({}, ownerF, filters))) + '\'><b>' + esc(val) + '</b><span>' + esc(label) + '</span></button>'; };
+    html += '<div class="crm-card"><h3>' + (team ? 'Portefeuille de l’équipe' : 'Mon portefeuille') + '</h3><div class="crm-kpis two">'
+      + tile(k.n || 0, 'Comptes', {}) + tile((k.t1 || 0) + ' · ' + (k.t2 || 0) + ' · ' + (k.t3 || 0), 'Tier 1 · 2 · 3', { tier: '1,2,3' })
+      + tile(k.stale || 0, 'T1–2 sans activité 30 j', { tier: '1,2', activity: 'stale30' }, k.stale ? 'warn' : '')
+      + tile(k.gaps || 0, 'Comités incomplets', { tier: '1,2', coverage: 'incomplete' }, k.gaps ? 'warn' : '') + '</div></div>';
+    if ((d.web || []).length) html += '<div class="crm-card"><h3>Visites sur elistair.com</h3>' + d.web.slice(0, 5).map(function (a) {
+      return '<button type="button" class="crm-mini" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier) + '<span class="m"><b>' + esc(a.nom) + '</b><span>' + esc(a.web_pages_90d + ' page' + (a.web_pages_90d > 1 ? 's' : '') + (a.last_visit ? ' · ' + relTime(a.last_visit) : '')) + '</span></span></button>';
+    }).join('') + '</div>';
+    box.innerHTML = html;
+    box.querySelectorAll('[data-kf]').forEach(function (b) { b.onclick = function () { openAccountsWith(JSON.parse(b.getAttribute('data-kf'))); }; });
+    box.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
   }
 
   function openAccountsWith(filters) {
@@ -2115,82 +2014,20 @@
   // ═════════════════════════════════════════════════════════════════════════
   // À FAIRE : file unifiée (tâches, relances, réponses)
   // ═════════════════════════════════════════════════════════════════════════
-  function onTasksPanel() {
-    var p = document.getElementById('panel-tasks'); if (!p) return;
-    if (!document.getElementById('crm-tasks')) {
-      p.innerHTML = '<div class="crm-wrap" id="crm-tasks"><div class="crm-row" style="justify-content:space-between;margin-bottom:12px;gap:10px">'
-        + '<div class="crm-views" style="margin:0" role="tablist">' + [['all', 'Tout'], ['task', 'Tâches'], ['relance', 'Relances'], ['reply', 'Réponses et réactions']].map(function (x) { return '<button type="button" class="crm-chip" data-qf="' + x[0] + '">' + x[1] + '<span class="n" data-qn="' + x[0] + '"></span></button>'; }).join('') + '</div>'
-        + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-scope="me">Moi</button><button type="button" class="crm-chip" data-scope="team">Équipe</button>'
-        + '<button type="button" class="crm-chip" data-state="done">Terminées (30 j)</button></div></div>'
-        + '<div class="crm-newtask"><input class="crm-input" id="crm-nt-title" maxlength="300" placeholder="Nouvelle tâche, ex. Préparer la démo pour le SDIS 69" aria-label="Nouvelle tâche">'
-        + '<input class="crm-input" type="date" id="crm-nt-due" aria-label="Échéance (facultative)" title="Facultatif : la file se classe par importance">'
-        + '<select class="crm-input" id="crm-nt-owner" aria-label="Attribuer à"></select>'
-        + '<button class="crm-btn primary" type="button" id="crm-nt-save">Ajouter</button></div>'
-        + '<div class="crm-meta" style="margin:-8px 0 16px">Une seule file, classée par importance : réactions à tes emails, réponses positives, puis relances et tâches selon le tier du compte et le retard. L’échéance d’une tâche est facultative. <button type="button" class="crm-link" id="crm-trk-link">Vue détaillée des relances</button></div>'
-        + '<div id="crm-tasks-list"></div></div>';
-      p.querySelectorAll('[data-scope]').forEach(function (b) { b.onclick = function () { S.taskScope = b.getAttribute('data-scope'); S.taskState = 'open'; loadTasks(); }; });
-      p.querySelectorAll('[data-qf]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-qf'); S.taskState = 'open'; loadTasks(); }; });
-      p.querySelector('[data-state="done"]').onclick = function () { S.taskState = S.taskState === 'done' ? 'open' : 'done'; loadTasks(); };
-      document.getElementById('crm-trk-link').onclick = function () { go('tracking', { legacy: true }); };
-      var save = document.getElementById('crm-nt-save');
-      save.onclick = function () {
-        var t = document.getElementById('crm-nt-title').value.trim(); if (!t) { document.getElementById('crm-nt-title').focus(); return; }
-        save.disabled = true;
-        api('/crm/tasks', { method: 'POST', body: { title: t, due_date: document.getElementById('crm-nt-due').value || null, owner_user_id: document.getElementById('crm-nt-owner').value || null } })
-          .then(function () { document.getElementById('crm-nt-title').value = ''; save.disabled = false; toast('Tâche créée'); loadTasks(); })
-          .catch(function (e) { save.disabled = false; toast('Erreur : ' + e.message); });
-      };
-      document.getElementById('crm-nt-title').onkeydown = function (e) { if (e.key === 'Enter') save.click(); };
-    }
-    loadFacets().then(function (F) {
-      var sel = document.getElementById('crm-nt-owner');
-      if (sel && !sel.options.length) sel.innerHTML = F.users.map(function (u) { return opt(u.id, u.name, F.me.user_id); }).join('');
-    }).catch(function () {});
-    loadTasks();
-  }
-
-  function loadTasks() {
-    var p = document.getElementById('crm-tasks'); if (!p) return;
-    S.inTasksPanel = true;
-    S.qFilter = S.qFilter || 'all';
-    p.querySelectorAll('[data-scope]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-scope') === S.taskScope); });
-    p.querySelectorAll('[data-qf]').forEach(function (b) { b.classList.toggle('on', S.taskState === 'open' && b.getAttribute('data-qf') === S.qFilter); });
-    p.querySelector('[data-state="done"]').classList.toggle('on', S.taskState === 'done');
-    var list = document.getElementById('crm-tasks-list');
-    list.innerHTML = '<div class="crm-empty">Chargement…</div>';
-    if (S.taskState === 'done') {
-      api('/crm/tasks?scope=' + S.taskScope + '&state=done').then(function (d) {
-        var tasks = d.tasks || [];
-        list.innerHTML = tasks.length ? '<div class="crm-card">' + tasks.map(taskHtml).join('') + '</div>' : '<div class="crm-empty">Aucune tâche terminée ces 30 derniers jours.</div>';
-        bindTasks(list, loadTasks);
-      }).catch(function (e) { list.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
-      return;
-    }
-    loadQueue(S.taskScope).then(function (items) {
-      if (S.taskScope === 'me') updateBadge(items);
-      var counts = { all: items.length, task: 0, relance: 0, reply: 0, reaction: 0 }; items.forEach(function (x) { counts[x.kind]++; });
-      counts.reply += counts.reaction;
-      p.querySelectorAll('[data-qn]').forEach(function (n) { var c = counts[n.getAttribute('data-qn')]; n.textContent = c ? ' ' + c : ''; });
-      var shown = S.qFilter === 'all' ? items : items.filter(function (x) { return x.kind === S.qFilter || (S.qFilter === 'reply' && x.kind === 'reaction'); });
-      if (!shown.length) { list.innerHTML = '<div class="crm-empty">Rien dans cette file. Les tâches créées depuis une fiche, les relances dues et les réponses positives arrivent ici.</div>'; return; }
-      var now = shown.filter(function (x) { return !x.later; }), later = shown.filter(function (x) { return x.later; });
-      var html = now.length ? '<div class="crm-card" style="padding-top:4px;padding-bottom:4px">' + now.map(function (x) { return queueItemHtml(x, { showWho: S.taskScope === 'team' }); }).join('') + '</div>'
-        : '<div class="crm-empty">Rien à traiter pour l’instant.</div>';
-      if (later.length) html += '<details class="crm-later"><summary>Pas encore dues · ' + later.length + '</summary><div class="crm-card" style="padding-top:4px;padding-bottom:4px">'
-        + later.map(function (x) { return queueItemHtml(x, { showWho: S.taskScope === 'team' }); }).join('') + '</div></details>';
-      list.innerHTML = html;
-      bindQueue(list, loadTasks);
-    }).catch(function (e) { list.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
-  }
-
   function updateBadge(items) {
     var t = todayStr();
     S.badgeCount = (items || []).filter(function (x) { return x.kind === 'reply' || x.kind === 'reaction' || (x.due && x.due <= t); }).length;
     paintBadge();
   }
+  // Pastille du menu « Aujourd'hui » : urgences de la file + actions proposées par la veille
   function paintBadge() {
-    var b = document.getElementById('subnav-tasks-badge');
-    if (b && typeof S.badgeCount === 'number') { b.textContent = S.badgeCount > 99 ? '99+' : S.badgeCount; b.style.display = S.badgeCount ? '' : 'none'; }
+    if (typeof S.badgeCount !== 'number' && typeof S.propCount !== 'number') return;
+    var n = (S.badgeCount || 0) + (S.propCount || 0);
+    ['nav-today-badge', 'bn-today-badge'].forEach(function (id) {
+      var b = document.getElementById(id); if (!b) return;
+      b.textContent = n > 99 ? '99+' : String(n); b.style.display = n ? 'inline-block' : 'none';
+      b.setAttribute('aria-label', n + ' à traiter');
+    });
   }
   function refreshBadge() {
     if (!(window.getAuthHeaders && window.getAuthHeaders().Authorization)) return;
@@ -2202,11 +2039,9 @@
       if (id !== 'tasks') S.inTasksPanel = false;
       if (id === 'accounts') onAccountsPanel(opts || {});
       else if (id === 'people') onPeoplePanel(opts || {});
-      else if (id === 'tasks') onTasksPanel();
+      else if (id === 'tasks') go('home');
       else if (id === 'home') onHomePanel();
       else if (id === 'stats') onStatsPanel();
-      else if (id === 'signals') onSignalsPanel();
-      else if (id === 'prospection') onProspectionPanel();
       else if (id === 'market') onMarketPanel();
       setTimeout(paintBadge, 30);
     } catch (e) { console.error('[crm] onPanel', e); }
@@ -2251,14 +2086,9 @@
     if (typeof window.getAuthHeaders !== 'function' || !window.getAuthHeaders().Authorization) return;
     api('/crm/signals/proposed?scope=me&count=1').then(function (d) {
       var n = (d.mine || 0) + (isAdminNow() ? (d.unlinked || 0) : 0);
-      ['nav-prospection-badge', 'bn-prospection-badge'].forEach(function (id) {
-        var b = document.getElementById(id); if (!b) return;
-        b.textContent = n > 9 ? '9+' : String(n);
-        b.style.display = n ? 'inline-block' : 'none';
-        b.setAttribute('aria-label', n + ' action(s) proposée(s)');
-      });
+      S.propCount = n; paintBadge();
       var last = parseInt(lsGet('scout_prop_seen', '0'), 10) || 0;
-      if (n > last) toast(n - last > 1 ? (n - last) + ' nouvelles actions proposées dans Prospection' : 'Nouvelle action proposée dans Prospection');
+      if (n > last) toast(n - last > 1 ? (n - last) + ' nouvelles actions proposées par la veille, dans Aujourd’hui' : 'Nouvelle action proposée par la veille, dans Aujourd’hui');
       lsSet('scout_prop_seen', String(n));
     }).catch(function () {});
   }

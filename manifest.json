@@ -47,8 +47,8 @@
   ],
   "shortcuts": [
     {
-      "name": "Ma journée",
-      "short_name": "Ma journée",
+      "name": "Aujourd'hui",
+      "short_name": "Aujourd'hui",
       "url": "/scout/#home",
       "icons": [
         {
@@ -69,9 +69,9 @@
       ]
     },
     {
-      "name": "Signaux",
-      "short_name": "Signaux",
-      "url": "/scout/#signals",
+      "name": "Veille",
+      "short_name": "Veille",
+      "url": "/scout/#market",
       "icons": [
         {
           "src": "icon-192.png",

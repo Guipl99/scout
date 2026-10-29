@@ -16,7 +16,7 @@
 <meta name="theme-color" content="#142220">
 <link rel="manifest" href="manifest.json">
 <title>Scout</title>
-<script src="assets/i18n.js?v=7"></script>
+<script src="assets/i18n.js?v=8"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Zalando+Sans+Expanded:wght@400;600;700;800&display=swap');
 
@@ -771,7 +771,7 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <link rel="stylesheet" href="assets/crm.css?v=202">
-<link rel="stylesheet" href="assets/brand.css?v=10">
+<link rel="stylesheet" href="assets/brand.css?v=11">
 <link rel="stylesheet" href="assets/app.css?v=2">
 </head>
 <body>
@@ -1020,9 +1020,9 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 </div>
 
 <!-- Floating global search button -->
-<button id="scout-gs-fab" class="hidden" onclick="if(window.scoutGlobalSearch) window.scoutGlobalSearch.open();" aria-label="Recherche globale" title="Recherche globale (Cmd/Ctrl+K)">
+<button id="scout-gs-fab" class="hidden" onclick="if(window.scoutGlobalSearch) window.scoutGlobalSearch.open();" aria-label="Rechercher ou demander à Scout" title="Rechercher ou demander à Scout (Cmd/Ctrl+K)">
   <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.8"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-  <span class="label">Rechercher</span>
+  <span class="label">Rechercher ou demander</span>
   <kbd>⌘K</kbd>
 </button>
 
@@ -2079,21 +2079,17 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     </div>
     <nav aria-label="Navigation principale">
     <div class="nav-sec" aria-hidden="true">Vente</div>
-    <div class="nav-item active" id="nav-today" onclick="goGroup('today')" title="Mon portefeuille de comptes, mes tâches, mes relances">
-      <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M5.5 1.5v2M10.5 1.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M5.5 10l1.6 1.6L10.8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Accueil
+    <div class="nav-item active" id="nav-today" onclick="goGroup('today')" title="Une seule file : relances, réponses, tâches et pistes de prospection, classées par importance">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M5.5 1.5v2M10.5 1.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Aujourd'hui <span id="nav-today-badge" class="nav-badge" style="display:none">0</span>
     </div>
-    <div class="nav-item" id="nav-prospection" onclick="goGroup('prospection')" title="Prochaine action, comptes chauds, comptes à ouvrir, VIP">
-      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="0.9" fill="currentColor"/></svg>
-      Prospection <span id="nav-prospection-badge" title="Actions proposées sur tes comptes" style="display:none;margin-left:auto;font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;background:#6A8B74;color:#fff;">0</span>
-    </div>
-    <div class="nav-item" id="nav-prospects" onclick="goGroup('prospects')" title="Comptes et contacts : fiches, comité d'achat, historique">
+    <div class="nav-item" id="nav-prospects" onclick="goGroup('prospects')" title="Comptes et contacts : fiches, organigramme, comité d'achat, historique">
       <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 6h6M5 8.5h6M5 11h3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       Comptes
     </div>
-    <div class="nav-item" id="nav-signaux" onclick="goGroup('signaux')" title="Signaux : prospects chauds, visiteurs du site, chat, appels d'offres et contrats">
+    <div class="nav-item" id="nav-signaux" onclick="goGroup('signaux')" title="Veille : marchés et concurrents, visiteurs du site, distributeurs, chat du site">
       <svg viewBox="0 0 16 16" fill="none"><path d="M8 8.5a1 1 0 100-2 1 1 0 000 2z" fill="currentColor"/><path d="M5.2 10.3a4 4 0 010-5.6M10.8 4.7a4 4 0 010 5.6M3.1 12.4a7 7 0 010-9.8M12.9 2.6a7 7 0 010 9.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      Signaux <span id="nav-prospects-badge" style="display:none;margin-left:auto;font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;background:#6A8B74;color:#fff;">0</span>
+      Veille <span id="nav-prospects-badge" class="nav-badge" style="display:none">0</span>
     </div>
     <div class="nav-sec" aria-hidden="true">Administration</div>
     <div class="nav-item" id="nav-config" onclick="goGroup('config')">
@@ -2107,231 +2103,6 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
   <div class="main">
     <div id="subnav"></div>
 
-    <!-- DASHBOARD -->
-    <div id="panel-dashboard" class="panel active">
-      <div class="topbar"><h1>Vue d'ensemble</h1></div>
-
-      <!-- COCKPIT COMMERCIAL : action / prospects chauds / relances -->
-      <div class="db-cockpit">
-        <div class="db-cockpit-card db-cockpit-action" onclick="if(window.scoutAction)scoutAction.open()">
-          <div class="db-cockpit-icon">🎯</div>
-          <div class="db-cockpit-body"><div class="db-cockpit-title">Ma prochaine action</div><div class="db-cockpit-sub">Traiter le prochain contact suggéré</div></div>
-          <div class="db-cockpit-cta">Traiter →</div>
-        </div>
-        <div class="db-cockpit-card" id="db-cockpit-hot" onclick="go('hot')">
-          <div class="db-cockpit-icon">🔥</div>
-          <div class="db-cockpit-body"><div class="db-cockpit-title">Prospects chauds</div><div class="db-cockpit-sub" id="db-cockpit-hot-sub">…</div></div>
-          <div class="db-cockpit-cta">Voir →</div>
-        </div>
-        <div class="db-cockpit-card" id="db-cockpit-followups">
-          <div class="db-cockpit-icon">🔔</div>
-          <div class="db-cockpit-body"><div class="db-cockpit-title">Relances dues</div><div class="db-cockpit-sub" id="db-cockpit-followups-sub">…</div></div>
-          <div class="db-cockpit-cta" id="db-cockpit-followups-cta"></div>
-        </div>
-      </div>
-
-      <!-- SECTION: MON ACTIVITÉ (perso, commercial connecté) -->
-      <div class="db-section" id="db-section-perso">
-        <div class="db-section-head">
-          <span class="db-section-title">👤 Mon activité</span>
-          <span class="db-section-sub" id="db-perso-name">—</span>
-        </div>
-        <div class="db-kpi-row db-kpi-row-perso">
-          <div class="db-kpi" onclick="go('contacts',{contactFilter:'emailed7d'})" title="Emails que j'ai envoyés (marqués dans Scout) sur les 7 derniers jours. Sub-label : ma moyenne quotidienne sur 15 jours.">
-            <div class="db-kpi-icon">📤</div>
-            <div class="db-kpi-body">
-              <div class="db-kpi-val" id="m-my-emails-7d">—</div>
-              <div class="db-kpi-label">Mes emails (7j)</div>
-              <div class="db-kpi-sub db-kpi-sub-muted" id="m-my-emails-7d-sub">—</div>
-            </div>
-          </div>
-          <div class="db-kpi" title="Relances envoyées sur les 7 derniers jours (emails qui ne sont pas le 1er envoyé à un contact). Sub-label : total de relances depuis le début.">
-            <div class="db-kpi-icon">🔁</div>
-            <div class="db-kpi-body">
-              <div class="db-kpi-val" id="m-my-relances-7d">—</div>
-              <div class="db-kpi-label">Mes relances (7j)</div>
-              <div class="db-kpi-sub db-kpi-sub-muted" id="m-my-relances-7d-sub">—</div>
-            </div>
-          </div>
-          <div class="db-kpi db-kpi-success" onclick="go('contacts',{contactFilter:'interested'})" title="Contacts que j'ai contactés par email et qui ont répondu positivement. Sub-label : mon taux de conversion emails → intéressés.">
-            <div class="db-kpi-icon">✅</div>
-            <div class="db-kpi-body">
-              <div class="db-kpi-val" id="m-my-interested">—</div>
-              <div class="db-kpi-label">Mes intéressés</div>
-              <div class="db-kpi-sub db-kpi-sub-muted" id="m-my-interested-sub">—</div>
-            </div>
-          </div>
-        </div>
-        <div class="db-perso-strip" id="db-perso-rank-strip" style="display:none;"></div>
-      </div>
-
-
-      <!-- SECTION MARCHÉ & VEILLE (repliable) -->
-      <div class="db-section-head db-market-toggle" onclick="toggleDbMarket()" style="cursor:pointer;user-select:none;">
-        <span class="db-section-title">📈 Activité &amp; marché</span>
-        <span class="db-section-sub" id="db-market-hint">déplier</span>
-        <span id="db-market-chevron" style="margin-left:auto;color:var(--text3);transition:transform .2s;">▾</span>
-      </div>
-      <div id="db-market" style="display:none;">
-      <!-- MINI-GRAPHE ACTIVITÉ -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <span id="db-chart-title" style="font-size:13px;font-weight:600;color:var(--text);">📈 Activité — 14 derniers jours · équipe</span>
-            <div class="db-chart-scope" id="db-chart-scope">
-              <button type="button" data-scope="team" class="active" onclick="setChartScope('team')">Équipe</button>
-              <button type="button" data-scope="me" onclick="setChartScope('me')">Moi</button>
-            </div>
-          </div>
-          <span id="db-chart-legend" style="display:flex;gap:14px;font-size:11px;color:var(--text2);flex-wrap:wrap;"></span>
-        </div>
-        <div id="db-email-chart" style="min-height:150px;"></div>
-      </div>
-
-
-      <!-- SECTION: VUE GÉNÉRALE (équipe / toute la base) -->
-      <div class="db-section-head">
-        <span class="db-section-title">📊 Vue générale · équipe</span>
-        <span class="db-section-sub">toute la base</span>
-      </div>
-      <!-- KPI ROW - Prospection cockpit -->
-      <div class="db-kpi-row">
-        <div class="db-kpi db-kpi-accent" onclick="go('contacts',{contactFilter:'email'})" title="Total contacts en base avec un email valide (format a@b). Sub-label : % du total contacts.">
-          <div class="db-kpi-icon">📇</div>
-          <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-emails-base">—</div>
-            <div class="db-kpi-label">Emails qualifiés en base</div>
-            <div class="db-kpi-sub db-kpi-sub-muted" id="m-emails-base-sub">—</div>
-          </div>
-        </div>
-        <div class="db-kpi" onclick="go('contacts',{contactFilter:'new7d'})" title="Nouveaux contacts avec email ajoutés dans les 7 derniers jours (auto-prospect + ajouts manuels). Sub-label : moyenne quotidienne sur les 15 derniers jours.">
-          <div class="db-kpi-icon">✨</div>
-          <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-emails-new-7d">—</div>
-            <div class="db-kpi-label">Nouveaux emails (7j)</div>
-            <div class="db-kpi-sub db-kpi-sub-muted" id="m-emails-new-avg15d">—</div>
-          </div>
-        </div>
-        <div class="db-kpi" onclick="go('contacts',{contactFilter:'emailed7d'})" title="Emails marqués comme envoyés dans Scout sur les 7 derniers jours. Sub-label : moyenne quotidienne sur les 15 derniers jours.">
-          <div class="db-kpi-icon">📤</div>
-          <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-emails-sent-7d">—</div>
-            <div class="db-kpi-label">Emails envoyés (7j)</div>
-            <div class="db-kpi-sub db-kpi-sub-muted" id="m-emails-sent-avg15d">—</div>
-          </div>
-        </div>
-        <div class="db-kpi" onclick="go('contacts',{contactFilter:'emailed'})" title="Total cumulé des emails envoyés depuis le début">
-          <div class="db-kpi-icon">📨</div>
-          <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-emails-sent-total">—</div>
-            <div class="db-kpi-label">Emails envoyés (total)</div>
-          </div>
-        </div>
-        <div class="db-kpi" onclick="go('contacts',{contactFilter:'stock'})" title="Stock pertinent = emails qualifiés non encore contactés ET pas dans une société déjà saturée (≥5 contacts touchés). Sub-label : jours restants au rythme 7j + sociétés saturées exclues.">
-          <div class="db-kpi-icon">⏳</div>
-          <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-stock-restant">—</div>
-            <div class="db-kpi-label">Stock à contacter</div>
-            <div class="db-kpi-sub db-kpi-sub-muted" id="m-stock-jours">—</div>
-          </div>
-        </div>
-        <div class="db-kpi db-kpi-success" onclick="go('contacts',{contactFilter:'interested'})" title="Nombre de contacts ayant manifesté un intérêt (retour mail positif). Sub-label : taux de conversion emails envoyés → réponses positives.">
-          <div class="db-kpi-icon">✅</div>
-          <div class="db-kpi-body">
-            <div class="db-kpi-val" id="m-replies-positive">—</div>
-            <div class="db-kpi-label">Intéressés</div>
-            <div class="db-kpi-sub db-kpi-sub-muted" id="m-replies-rate">—</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- INSIGHTS ACTIONNABLES -->
-      <div class="db-ins">
-        <div class="db-ins-header">
-          <span class="db-ins-title">Insight <span id="db-ins-count" style="color:var(--text3);font-weight:400;margin-left:4px;"></span></span>
-          <div style="display:flex;gap:4px;align-items:center;">
-            <button class="db-link" onclick="renewInsights()" title="Renouveler — afficher d'autres insights" style="font-size:11px;">🔄 Renouveler</button>
-            <button class="db-link" onclick="resetInsights()" title="Reset — repartir des insights initiaux" style="font-size:10px;">↺</button>
-            <button class="db-link" onclick="renderInsights(true)" title="Recharger" style="font-size:10px;">↻</button>
-          </div>
-        </div>
-        <div id="db-ins-feed" class="db-ins-feed">
-          <div class="db-ins-empty">Chargement…</div>
-        </div>
-      </div>
-
-      <!-- PROSPECTS + DERNIERS AJOUTS (2 colonnes sur desktop) -->
-      <div class="db-ins-2col">
-
-        <!-- PROSPECTS ELISTAIR -->
-        <div class="db-ins">
-          <div class="db-ins-header">
-            <span class="db-ins-title">🎯 High-score Prospects</span>
-            <button class="db-link" onclick="renderElistairProspects(true)" style="font-size:10px;">↻</button>
-          </div>
-          <div id="db-elistair-feed" class="db-ins-feed" style="max-height:320px;">
-            <div class="db-ins-empty">Chargement…</div>
-          </div>
-        </div>
-
-        <!-- DERNIERS AJOUTS -->
-        <div class="db-ins">
-          <div class="db-ins-header">
-            <span class="db-ins-title">🆕 Derniers ajouts <span id="db-recent-count" style="color:var(--text3);font-weight:400;margin-left:4px;"></span></span>
-            <button class="db-link" onclick="renderRecent(true)" title="Recharger" style="font-size:10px;">↻</button>
-          </div>
-          <div id="db-recent-feed" class="db-ins-feed" style="max-height:320px;">
-            <div class="db-ins-empty">Chargement…</div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- MAIN GRID -->
-      <div class="db-grid">
-
-        <!-- TOP OPPORTUNITIES -->
-        <div class="db-card db-card-wide">
-          <div class="db-card-header">
-            <span class="db-card-title">⚡ Top opportunités live</span>
-            <button class="db-link" onclick="go('contracts');setTimeout(()=>setContractTypeTab('live'),200)">Voir tout →</button>
-          </div>
-          <div id="db-tenders-list" class="db-list">
-            <div class="db-empty">Chargement…</div>
-          </div>
-        </div>
-
-        <!-- RECENT CONTRACTS -->
-        <div class="db-card">
-          <div class="db-card-header">
-            <span class="db-card-title">🏆 Derniers contrats</span>
-            <button class="db-link" onclick="go('contracts')">Voir tout →</button>
-          </div>
-          <div id="db-contracts-list" class="db-list">
-            <div class="db-empty">Chargement…</div>
-          </div>
-        </div>
-
-        <!-- TOP BUYERS -->
-        <div class="db-card">
-          <div class="db-card-header">
-            <span class="db-card-title">🎖️ Comptes clés</span>
-            <button class="db-link" onclick="go('end-users')">Voir tout →</button>
-          </div>
-          <div id="db-buyers-list" class="db-list">
-            <div class="db-empty">Chargement…</div>
-          </div>
-        </div>
-
-
-      </div>
-
-      </div><!-- /db-market -->
-
-      <!-- hidden feed-list for compat -->
-      <div id="feed-list" style="display:none;"></div>
-      <div id="feed-type-filters" style="display:none;"></div>
-    </div>
 
     <!-- SOCIETES LIST -->
     <div id="panel-societes" class="panel">
@@ -2556,14 +2327,11 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
 
     <!-- CONFIG -->
     <!-- CRM étape 1 : rendus par assets/crm.js -->
-    <div id="panel-home" class="panel"></div>
+    <div id="panel-home" class="panel active"></div>
     <div id="panel-accounts" class="panel"></div>
     <div id="panel-people" class="panel"></div>
-    <div id="panel-tasks" class="panel"></div>
     <div id="panel-stats" class="panel"></div>
-    <div id="panel-prospection" class="panel"></div>
     <div id="panel-market" class="panel"></div>
-    <div id="panel-signals" class="panel"></div>
 
     <div id="panel-end-users" class="panel">
       <div id="eu-list-view">
@@ -2690,14 +2458,11 @@ Mes pays
               <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:5px;">Onglet par défaut au démarrage</label>
               <select id="cfg-default-tab" onchange="saveSettings()"
                 style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-size:13px;color:var(--text);">
-                <option value="home">Accueil · Ma journée</option>
-                <option value="tasks">Accueil · À faire</option>
-                <option value="accounts">Prospects · Comptes</option>
-                <option value="people">Prospects · Contacts</option>
-                <option value="dashboard">Statistiques</option>
-                <option value="societes">Fabricants</option>
-                <option value="produits-db">Systèmes</option>
-                <option value="contracts">Contrats & Tenders</option>
+                <option value="home">Aujourd'hui</option>
+                <option value="accounts">Comptes</option>
+                <option value="people">Contacts</option>
+                <option value="market">Veille · Marchés</option>
+                <option value="visitors">Veille · Visiteurs web</option>
               </select>
             </div>
             <div>
@@ -2940,45 +2705,6 @@ Réinitialiser tous les filtres
         </div>
       </div>
       </div>
-    </div>
-    <div id="panel-tracking" class="panel">
-      <div class="topbar"><h1>Suivi &amp; relances</h1></div>
-      <div style="padding:0 0 10px;font-size:13px;color:var(--text2);">Les prospects que tu as déjà contactés : relance-les au bon moment, suis leur statut, transmets au CRM.</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
-        <div style="display:inline-flex;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
-          <button type="button" id="trk-scope-me" onclick="setTrackingScope('me')"></button>
-          <button type="button" id="trk-scope-team" onclick="setTrackingScope('team')"></button>
-        </div>
-        <select id="trk-status" onchange="renderTrackingTable()" style="font-size:13px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
-          <option value="">Tous les statuts</option>
-          <option value="waiting">En attente de réponse</option>
-          <option value="interested">Intéressé</option>
-          <option value="transmitted">Saisi dans Dynamics</option>
-          <option value="not_interested">Pas intéressé</option>
-          <option value="closed">Close, sans réponse (90 j)</option>
-        </select>
-        <input id="trk-search" type="text" placeholder="Filtrer par contact / compte…" oninput="renderTrackingTable()" style="flex:1;min-width:180px;font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
-        <button type="button" onclick="exportTrackingCSV()" style="font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;">⬇️ Exporter CSV</button>
-      </div>
-      <div id="trk-tiles" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;"></div>
-      <div id="trk-body"></div>
-    </div>
-    <div id="panel-contacts" class="panel">
-      <div class="topbar"><h1>Contacts</h1></div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
-        <input id="contacts-panel-search" type="text" placeholder="Rechercher (nom, titre, organisation, email, notes…)" oninput="filterContactsPanel()" style="flex:1;min-width:220px;font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
-        <select id="contacts-panel-pays" onchange="filterContactsPanel()" style="font-size:13px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);"><option value="">🌍 Tous les pays</option></select>
-        <select id="contacts-panel-type" onchange="filterContactsPanel()" style="font-size:13px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);">
-          <option value="">Tous</option>
-          <option value="email">Avec email</option>
-          <option value="buyer">Rattachés à un compte</option>
-          <option value="company">Contacts entreprise</option>
-        </select>
-        <button type="button" onclick="exportContactsCSV()" title="Exporter la vue filtrée en CSV (Excel)" style="font-size:13px;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;white-space:nowrap;">⬇️ Exporter CSV</button>
-        <span id="contacts-panel-count" style="font-size:12px;color:var(--text3);white-space:nowrap;">—</span>
-        <span id="contacts-panel-filterchip" style="display:none;"></span>
-      </div>
-      <div id="contacts-panel-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;"></div>
     </div>
 
     <!-- VISITEURS WEB (Leadfeeder interne) -->
@@ -3230,12 +2956,6 @@ Réinitialiser tous les filtres
       </style>
     </div>
 
-    <!-- PROSPECTS CHAUDS -->
-    <div id="panel-hot" class="panel">
-      <div class="topbar"><h1>Prospects chauds</h1></div>
-      <div style="padding:0 0 8px;font-size:13px;color:var(--text2);">Les leads à traiter en priorité : ceux qui ont répondu, et tes contacts VIP pas encore approchés.</div>
-      <div id="hot-body"><div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div></div>
-    </div>
 
 
   </div>
@@ -3261,13 +2981,9 @@ Réinitialiser tous les filtres
       <svg class="bn-icon" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       Rechercher
     </div>
-    <div class="bn-item active" id="bn-today" onclick="goGroup('today')">
-      <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M5.5 1.5v2M10.5 1.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M5.5 10l1.6 1.6L10.8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      Accueil
-    </div>
-    <div class="bn-item" id="bn-prospection" onclick="goGroup('prospection')" style="position:relative;">
-      <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="0.9" fill="currentColor"/></svg></span>
-      Prospection<span id="bn-prospection-badge" style="display:none;position:absolute;top:2px;right:8px;font-size:9px;font-weight:700;padding:0 4px;border-radius:3px;background:#6A8B74;color:#fff;">0</span>
+    <div class="bn-item active" id="bn-today" onclick="goGroup('today')" style="position:relative;">
+      <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M5.5 1.5v2M10.5 1.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+      Aujourd'hui<span id="bn-today-badge" class="bn-badge" style="display:none">0</span>
     </div>
     <div class="bn-item" id="bn-prospects" onclick="goGroup('prospects')">
       <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 6h6M5 8.5h6M5 11h3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
@@ -3275,7 +2991,7 @@ Réinitialiser tous les filtres
     </div>
     <div class="bn-item" id="bn-signaux" onclick="goGroup('signaux')" style="position:relative;">
       <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><path d="M8 8.5a1 1 0 100-2 1 1 0 000 2z" fill="currentColor"/><path d="M5.2 10.3a4 4 0 010-5.6M10.8 4.7a4 4 0 010 5.6M3.1 12.4a7 7 0 010-9.8M12.9 2.6a7 7 0 010 9.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
-      Signaux<span id="bn-prospects-badge" style="display:none;position:absolute;top:2px;right:8px;font-size:9px;font-weight:700;padding:0 4px;border-radius:3px;background:#6A8B74;color:#fff;">0</span>
+      Veille<span id="bn-prospects-badge" class="bn-badge" style="display:none">0</span>
     </div>
     <div class="bn-item" id="bn-config" onclick="goGroup('config')">
       <span class="bn-icon"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
@@ -3489,38 +3205,35 @@ let editingProduitId = null;
 // Les panneaux et leurs fonctions de rendu ne changent pas : go('contacts') marche
 // exactement comme avant. Seule la couche de navigation regroupe les 11 panneaux.
 const NAV_GROUPS = [
-  { id: 'today', label: "Accueil", tabs: [
-      { panel: 'home',      label: 'Ma journée' },
-      { panel: 'tasks',     label: 'À faire', badge: 'subnav-tasks-badge' },
-      { panel: 'stats',     label: 'Statistiques' },
-      { panel: 'dashboard', label: 'Ancien tableau de bord', hidden: true, alias: 'home' },
-      { panel: 'tracking',  label: 'Relances', hidden: true, alias: 'tasks' } ] },
-  { id: 'prospection', label: 'Prospection', tabs: [
-      { panel: 'prospection', label: 'Prospection' },
-      { panel: 'hot', label: 'Prospects chauds', hidden: true, alias: 'prospection' } ] },
+  // Quatre entrées : Aujourd'hui (une seule file), Comptes, Veille, Paramètres.
+  { id: 'today', label: "Aujourd'hui", tabs: [
+      { panel: 'home',        label: "Aujourd'hui" },
+      { panel: 'tasks',       label: 'À faire', hidden: true, alias: 'home' },
+      { panel: 'prospection', label: 'Prospection', hidden: true, alias: 'home' },
+      { panel: 'dashboard',   label: 'Ancien tableau de bord', hidden: true, alias: 'home' },
+      { panel: 'tracking',    label: 'Relances', hidden: true, alias: 'home' },
+      { panel: 'hot',         label: 'Prospects chauds', hidden: true, alias: 'home' } ] },
   { id: 'prospects', label: 'Comptes', tabs: [
       { panel: 'accounts',  label: 'Comptes' },
       { panel: 'people',    label: 'Contacts' },
       { panel: 'end-users', label: 'Comptes', hidden: true, alias: 'accounts' },
       { panel: 'contacts',  label: 'Contacts', hidden: true, alias: 'people' } ] },
-  { id: 'signaux', label: 'Signaux', tabs: [
-      // File « À traiter » retirée : le rattachement appels d'offres / comptes se fait seul (fiche compte + priorité).
-      { panel: 'signals',   label: 'À traiter', hidden: true, alias: 'market' },
-      { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' },
-      { panel: 'chat',      label: 'Chat', badge: 'subnav-chat-badge' },
+  { id: 'signaux', label: 'Veille', tabs: [
       { panel: 'market',    label: 'Marchés' },
-      // Ancienne vue des appels d'offres et contrats : hors menu, encore ouverte par les liens de détail.
-      { panel: 'contracts', label: 'Appels d\'offres & contrats', hidden: true, alias: 'market' },
+      { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' },
       { panel: 'resellers', label: 'Distributeurs' },
-      // Référentiel peu utilisé : plus dans le menu, toujours joignable par la recherche.
+      { panel: 'chat',      label: 'Chat du site', badge: 'subnav-chat-badge' },
+      { panel: 'signals',   label: 'À traiter', hidden: true, alias: 'market' },
+      { panel: 'contracts', label: 'Appels d\'offres & contrats', hidden: true, alias: 'market' },
       { panel: 'societes',    label: 'Fabricants', hidden: true },
       { panel: 'produits-db', label: 'Produits', hidden: true } ] },
   { id: 'config', label: 'Paramètres', tabs: [
-      { panel: 'config', label: 'Paramètres' } ] }
+      { panel: 'config', label: 'Paramètres' },
+      { panel: 'stats',  label: 'Pilotage' } ] }
 ];
 const _navGroupOf = {};
 NAV_GROUPS.forEach(function (g) { g.tabs.forEach(function (t) { _navGroupOf[t.panel] = g; }); });
-let _navLast = { today: 'home', prospection: 'prospection', prospects: 'accounts', signaux: 'visitors', marche: 'societes', config: 'config' };
+let _navLast = { today: 'home', prospects: 'accounts', signaux: 'market', config: 'config' };
 try { const _st = JSON.parse(localStorage.getItem('scout_nav_last') || '{}'); Object.keys(_st).forEach(function (k) { if (_navLast[k] !== undefined && _navGroupOf[_st[k]]) _navLast[k] = _st[k]; }); } catch (e) {}
 
 // Clic sur une entrée du menu : revient sur le dernier onglet visité de ce groupe.
@@ -3558,7 +3271,8 @@ function go(id, opts) {
   // L'ancien panneau reste joignable pour la fiche marché (opts.legacy).
   // L'ancien tableau de bord est remplacé par Ma journée et Statistiques.
   if (id === 'signals' && !(opts && opts.legacy)) { id = 'market'; }
-  if (id === 'hot' && !(opts && opts.legacy)) { id = 'prospection'; }
+  if ((id === 'hot' || id === 'tasks' || id === 'prospection') && document.getElementById('panel-home') && window.scoutCrm) { id = 'home'; }
+  if (id === 'tracking' && !(opts && opts.legacy) && document.getElementById('panel-home') && window.scoutCrm) { id = 'home'; }
   if (id === 'dashboard' && !(opts && opts.legacy) && document.getElementById('panel-home') && window.scoutCrm) { id = 'home'; }
   // Anciens liens « onglet Contacts » de l'ancien panneau Comptes : vers la nouvelle liste Contacts.
   if (id === 'end-users' && opts && opts.tab === 'contacts' && !opts.legacy && document.getElementById('panel-people') && window.scoutCrm) { id = 'people'; }
@@ -3611,15 +3325,6 @@ function go(id, opts) {
     window._dashboardFilter = null;  // clear when going home
   }
 
-  if (id === 'dashboard') renderDashboard();
-  if (id === 'contacts') {
-    window._contactsPanelFilter = (opts && opts.contactFilter) || null;
-    // Uniformise le reset : à chaque arrivée sur l'onglet, on repart d'une base propre (comme la puce)
-    var _cs=document.getElementById('contacts-panel-search'); if(_cs) _cs.value='';
-    var _cp=document.getElementById('contacts-panel-pays'); if(_cp) _cp.value='';
-    var _ct=document.getElementById('contacts-panel-type'); if(_ct) _ct.value='';
-    renderContactsPanel();
-  }
   if (id === 'societes') { backToSocietes(); loadSocietes().then(renderSocietes); }
   if (id === 'produits-db') { backToProduits(); loadAllProduits().then(renderProduits); }
   if (id === 'contracts') {
@@ -3635,10 +3340,8 @@ function go(id, opts) {
     });
   }
   if (id === 'resellers') { loadResellersMap(); }
-  if (id === 'hot') { try { renderHotProspects(); } catch(e){ console.error('renderHotProspects', e); } }
   if (id === 'visitors') { try { renderVisitors(); } catch(e){ console.error('renderVisitors', e); } }
   if (id === 'chat') { try { renderChat(); } catch(e){ console.error('renderChat', e); } }
-  if (id === 'tracking') { try { renderTracking(); } catch(e){ console.error('renderTracking', e); } }
   if (id === 'config') {
     try { cfgInit(opts && opts.tab); } catch (e) { console.error('cfgInit', e); }
     // Settings panel — peupler la liste des pays exclus et tous les champs.
@@ -3778,954 +3481,7 @@ function streamText(elId, text, onDone) {
   if (onDone) onDone();
 }
 
-// ── Dashboard ─────────────────────────────────────────────────
-let activeFeedType = 'tous';
-
-// ── INSIGHTS ACTIONNABLES ─────────────────────────────────────────────────────
-const INS_SIGNALS = [
-  { re: /contrat.*202[5-6]|award.*202[5-6]|OTA.*202[5-6]|livr[e].*202[5-6]|sign.*202[5-6]|avr.*2026|jan.*2026|fev.*2026|mars.*2026/i, type:'hot',     label:'Récent' },
-  { re: /vient d[e']|vient de|world first|premier au monde/i,                                                                              type:'hot',     label:'Nouveauté' },
-  { re: /QUADBOX|KHRONOS.*deja|deja.*KHRONOS|Arastelle|partenaire.*Elistair|Elistair.*partenaire|SMAUG/i,                    type:'partner', label:'Partenaire' },
-  { re: /payload.*ISR|ISR.*payload|architecture.*ouverte|open.*architecture|tethered.*drone|drone.*filaire/i,                              type:'prospect',label:'Prospect' },
-];
-const INS_PRIO = { hot:0, partner:1, prospect:2, tender:3, contract:4 };
-
-let _insCache = null;
-let _elistairCache = null;
-let _elistairPage = 0;
-const ELISTAIR_PAGE_SIZE = 8;
-
-// Organisations déjà clientes Elistair — à exclure
-const ELISTAIR_EXISTING = ['elistair','milrem_robotics','arquus_jc','arx_robotics','rheinmetall_ag'];
-
-// Mots-clés signalant un intérêt pour les produits Elistair
-const ELISTAIR_KW = /tethered|persistant|loitering|ISR|fixe.drone|drone.fix|surveillance.drone|captive|cable|khronos|orion|arastelle|UGV.ISR|ISR.UGV/i;
-
-// Détecte un email peu actionnable (service générique, pas un décideur direct)
-const GENERIC_EMAIL_LOCAL = /^(info|contact|press|sales|media|support|hello|admin|office|enquiries|procurement|achat|achats|marches|hankinta|relatii|service|communications|comm|pr|investor|careers|hr|jobs|recruit|accueil|webmaster|mail|general|secretariat|secretary|secretaire|directeur|director|dg|dpt|dept|department|team|bureau|cabinet|pma|afhq|des-protector|drones|ministry|ministere|gouv|org|mil|hq|unit|commander|officer|liaison|desk)@/i;
-const GENERIC_EMAIL_SERVICE = /^(baainbw|mapn|dpsu|dginfantry|sail|stsi|gra|afhq|dga|dapa|mod|nic|pma\d+|des-)[a-z0-9_-]*@/i;
-function isGenericEmail(email) {
-  if (!email || !email.includes('@')) return false;
-  const e = email.toLowerCase().trim();
-  if (GENERIC_EMAIL_LOCAL.test(e) || GENERIC_EMAIL_SERVICE.test(e)) return true;
-  // Pattern "prenom.nom@" ou "p.nom@" = personnel
-  const local = e.split('@')[0];
-  if (/^[a-z]+[._-][a-z]+$/.test(local)) return false;        // prenom.nom
-  if (/^[a-z]\.[a-z]+$/.test(local)) return false;            // p.nom
-  if (/^[a-z]+[._-][a-z]+[._-][a-z]+$/.test(local)) return false; // prenom.nom.x
-  // Sinon : single word local = suspect (probable alias service)
-  if (/^[a-z]+$/.test(local) && local.length < 4) return true;
-  return false;
-}
-
-// Détecte un LinkedIn personnel (/in/) vs org (/company/) vs absent
-function linkedinQuality(linkedin) {
-  if (!linkedin) return 'none';
-  if (/linkedin\.com\/in\//i.test(linkedin)) return 'personal';
-  if (/linkedin\.com\/company\//i.test(linkedin)) return 'company';
-  return 'unknown';
-}
-
-// Score de qualification Elistair (0-100)
-function scoreElistair(contact) {
-  let score = 0;
-  const t = (contact.titre || '').toLowerCase();
-  const org = (contact.organisation || '').toLowerCase();
-  const notes = (contact.notes || '').toLowerCase();
-  const all = t + ' ' + org + ' ' + notes;
-
-  // Contact info disponible
-  if (contact.email && contact.email.includes('@') && !contact.email.startsWith('procurement@')) score += 20;
-  else if (contact.email) score += 10;
-  if (contact.linkedin && contact.linkedin.includes('linkedin.com/in/')) score += 15;
-  else if (contact.linkedin) score += 5;
-
-  // Titre pertinent
-  if (/chief|director|head|dg |général|brigadier|colonel|general/i.test(t)) score += 20;
-  else if (/manager|chef|responsable|officer|major|commandant/i.test(t)) score += 12;
-
-  // Domaine pertinent dans le titre
-  if (/UAS|UAV|drone|UGV|USV|UUV|autonome|ISR|robot|tethered|ground.*vehicle|unmanned/i.test(t)) score += 20;
-  else if (/acquisition|procurement|program|achat|equipment/i.test(t)) score += 10;
-
-  // Secteur militaire
-  if (contact.secteur === 'Militaire') score += 10;
-
-  // Mots-clés Elistair dans notes
-  if (ELISTAIR_KW.test(notes)) score += 15;
-
-  // Bonus UGV/USV
-  if (/UGV|USV|UUV|ground robot|unmanned ground|unmanned surface|robotic vehicle/i.test(all)) score += 10;
-
-  return Math.min(score, 100);
-}
-
-async function renderElistairProspects(force) {
-  if (force) _elistairCache = null;
-  const feed = document.getElementById('db-elistair-feed');
-  if (!feed) return;
-  if (_elistairCache) { _elistairPage = 0; _renderProspectRows(_elistairCache.slice(0, ELISTAIR_PAGE_SIZE)); _renderMoreButton(_elistairCache); return; }
-
-  feed.innerHTML = '<div class="db-ins-empty">Analyse…</div>';
-
-  try {
-    const r = await fetch(API + '/contacts?limit=2000', { headers: window.getAuthHeaders() });
-    const d = await r.json();
-    const contacts = d.contacts || [];
-
-    // Stocker dans allContacts pour que la recherche Comptes fonctionne
-    if (contacts.length > (allContacts?.length || 0)) {
-      allContacts = contacts;
-      contactsLoaded = true;
-    }
-
-    // Filtre élargi : email ou linkedin + (secteur défense OU titre défense)
-    const scored = contacts
-      .filter(c => (c.email || c.linkedin) && (
-        c.secteur === 'Militaire' || c.secteur === 'Defense' || c.secteur === 'Sécurité' ||
-        /colonel|brigadier|general|admiral|commandant|major|captain|director|chief|head.*drone|UAS|UAV|drone|UGV|USV|UUV|ISR|procurement|acquisition|unmanned/i.test(c.titre || '') ||
-        /DoD|MoD|NATO|OTAN|DGA|EDA|DAPA|BAAINBw|ministry|defence|defense|army|navy|marines|air force|air cmdr|ground forces/i.test(c.organisation || '')
-      ))
-      .map(c => ({ ...c, _score: scoreElistair(c) }))
-      .filter(c => c._score >= 30)
-      .sort((a, b) => b._score - a._score)
-      .slice(0, 30);
-
-    _elistairCache = scored;
-    _elistairPage = 0;
-    _renderProspectRows(scored.slice(0, ELISTAIR_PAGE_SIZE));
-    _renderMoreButton(scored);
-  } catch(e) {
-    feed.innerHTML = '<div class="db-ins-empty">Erreur chargement</div>';
-  }
-}
-
-function _renderProspectRows(prospects) {
-  var feed = document.getElementById('db-elistair-feed');
-  if (!feed) return;
-  if (!prospects.length) {
-    feed.innerHTML = '<div class="db-ins-empty">Aucun prospect trouve.</div>';
-    return;
-  }
-  var html = '';
-  for (var i = 0; i < prospects.length; i++) {
-    var p = prospects[i];
-    var nom = sanitize(([p.prenom, p.nom].filter(Boolean).join(' ') || p.nom || '-'));
-    var org = sanitize(p.organisation || '-');
-    var titre = sanitize((p.titre || '').slice(0, 50));
-    var score = p._score || 0;
-    var scoreColor = score >= 80 ? '#7A9A84' : score >= 60 ? '#C99A4E' : '#5E7069';
-    var emailBadge = '';
-    if (p.email && p.email.includes('@')) {
-      var isGen = isGenericEmail(p.email);
-      emailBadge = '<a href="mailto:' + esc(p.email) + '" onclick="event.stopPropagation()" title="' + (isGen ? 'Email générique du service — pas un contact direct' : p.email) + '" style="display:inline-flex;align-items:center;gap:3px;background:' + (isGen ? '#78716c22' : '#1e40af22') + ';color:' + (isGen ? '#a8a29e' : '#85593E') + ';border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">' + (isGen ? 'Email svc' : 'Email') + '</a>';
-    }
-    var liQual = linkedinQuality(p.linkedin);
-    var liLink = liQual === 'personal'
-      ? '<a href="' + safeUrl(p.linkedin) + '" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#5E7069;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">LinkedIn</a>'
-      : liQual === 'company'
-        ? '<span title="Seulement la page entreprise — pas le profil perso" style="display:inline-flex;align-items:center;gap:3px;background:#78716c22;color:#a8a29e;border-radius:4px;padding:1px 6px;font-size:10px;">Org LI</span>'
-        : '';
-    var reason = (p.notes && ELISTAIR_KW.test(p.notes)) ? 'Interet tethered/ISR'
-      : /UAS|UAV|drone|UGV|ISR/i.test(p.titre || '') ? 'Role UAS/UGV'
-      : /director|general|brigadier|colonel/i.test(p.titre || '') ? 'Decideur senior'
-      : 'Acheteur defense';
-    var safeNom = nom.replace(/"/g, '').replace(/'/g, '').slice(0, 30);
-    html += '<div class="elistair-prospect-row" data-nom="' + safeNom + '" style="padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;">'
-      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
-      + '<div style="flex:1;min-width:0;">'
-      + '<div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + nom + '</div>'
-      + '<div style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + titre + '</div>'
-      + '<div style="font-size:11px;color:var(--text3);">' + org + '</div>'
-      + '<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">'
-      + emailBadge + liLink
-      + '<span style="font-size:10px;color:var(--text3);padding:1px 6px;background:var(--bg3);border-radius:4px;">' + reason + '</span>'
-      + '</div></div>'
-      + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">'
-      + '<div style="font-size:12px;font-weight:700;color:' + scoreColor + ';">' + score + '</div>'
-      + '<div style="font-size:9px;color:var(--text3);">score</div>'
-      + '</div></div></div>';
-  }
-  feed.innerHTML = html;
-
-  feed.onclick = function(e) {
-    var row = e.target.closest('.elistair-prospect-row');
-    if (!row) return;
-    if (e.target.closest('a')) return;
-    var searchNom = row.getAttribute('data-nom');
-    // Naviguer sans tab — puis gérer manuellement l'onglet et le filtre
-    // pour contrôler l'ordre et éviter que setEuTab vide le champ après nous
-    go('end-users');
-    loadEndUsers().then(function() {
-      setEuTab('contacts');
-      // setEuTab vide le champ — on l'écrit immédiatement après dans le même tick
-      var s = document.getElementById('eu-contact-search');
-      if (s && searchNom) {
-        s.value = searchNom;
-        filterContactsGrid();
-      }
-    });
-  };
-}
-
-
-function _renderMoreButton(all) {
-  var feed = document.getElementById('db-elistair-feed');
-  if (!feed) return;
-  var shown = (_elistairPage + 1) * ELISTAIR_PAGE_SIZE;
-  // Supprimer ancien bouton si présent
-  var existing = document.getElementById('elistair-more-btn');
-  if (existing) existing.remove();
-  if (shown >= all.length) return; // plus rien à afficher
-  var remaining = all.length - shown;
-  var btn = document.createElement('div');
-  btn.id = 'elistair-more-btn';
-  btn.style.cssText = 'padding:8px 10px;text-align:center;cursor:pointer;font-size:11px;color:var(--accent2);font-weight:600;border-top:1px solid var(--border);';
-  btn.textContent = '+ ' + Math.min(remaining, ELISTAIR_PAGE_SIZE) + ' autres prospects';
-  btn.onclick = function() {
-    _elistairPage++;
-    var start = _elistairPage * ELISTAIR_PAGE_SIZE;
-    var next = all.slice(start, start + ELISTAIR_PAGE_SIZE);
-    // Supprimer le bouton avant d'ajouter les nouvelles lignes
-    btn.remove();
-    // Ajouter les nouvelles lignes dans le feed
-    next.forEach(function(p) {
-      var nom = sanitize(([p.prenom, p.nom].filter(Boolean).join(' ') || p.nom || '-'));
-      var org = sanitize(p.organisation || '-');
-      var titre = sanitize((p.titre || '').slice(0, 50));
-      var score = p._score || 0;
-      var scoreColor = score >= 80 ? '#7A9A84' : score >= 60 ? '#C99A4E' : '#5E7069';
-      var emailBadge = '';
-      if (p.email && p.email.includes('@')) {
-        var isGen = isGenericEmail(p.email);
-        emailBadge = '<a href="mailto:' + esc(p.email) + '" onclick="event.stopPropagation()" title="' + (isGen ? 'Email générique du service — pas un contact direct' : p.email) + '" style="display:inline-flex;align-items:center;gap:3px;background:' + (isGen ? '#78716c22' : '#1e40af22') + ';color:' + (isGen ? '#a8a29e' : '#85593E') + ';border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">' + (isGen ? 'Email svc' : 'Email') + '</a>';
-      }
-      var liQual = linkedinQuality(p.linkedin);
-      var liLink = liQual === 'personal'
-        ? '<a href="' + safeUrl(p.linkedin) + '" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;background:#0a66c222;color:#5E7069;border-radius:4px;padding:1px 6px;font-size:10px;text-decoration:none;">LinkedIn</a>'
-        : liQual === 'company'
-          ? '<span title="Seulement la page entreprise — pas le profil perso" style="display:inline-flex;align-items:center;gap:3px;background:#78716c22;color:#a8a29e;border-radius:4px;padding:1px 6px;font-size:10px;">Org LI</span>'
-          : '';
-      var reason = (p.notes && ELISTAIR_KW.test(p.notes)) ? 'Interet tethered/ISR'
-        : /UAS|UAV|drone|UGV|USV|ISR/i.test(p.titre || '') ? 'Role UAS/UGV/USV'
-        : /director|general|brigadier|colonel/i.test(p.titre || '') ? 'Decideur senior'
-        : 'Acheteur defense';
-      var safeNom = nom.replace(/"/g, '').replace(/'/g, '').slice(0, 30);
-      var div = document.createElement('div');
-      div.className = 'elistair-prospect-row';
-      div.setAttribute('data-nom', safeNom);
-      div.style.cssText = 'padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;';
-      div.innerHTML = '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">'
-        + '<div style="flex:1;min-width:0;">'
-        + '<div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + nom + '</div>'
-        + '<div style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + titre + '</div>'
-        + '<div style="font-size:11px;color:var(--text3);">' + org + '</div>'
-        + '<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">' + emailBadge + liLink
-        + '<span style="font-size:10px;color:var(--text3);padding:1px 6px;background:var(--bg3);border-radius:4px;">' + reason + '</span>'
-        + '</div></div>'
-        + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">'
-        + '<div style="font-size:12px;font-weight:700;color:' + scoreColor + ';">' + score + '</div>'
-        + '<div style="font-size:9px;color:var(--text3);">score</div>'
-        + '</div></div>';
-      div.addEventListener('click', function() {
-        var searchNom = div.getAttribute('data-nom');
-        go('end-users');
-        loadEndUsers().then(function() {
-          setEuTab('contacts');
-          var s = document.getElementById('eu-contact-search');
-          if (s && searchNom) { s.value = searchNom; filterContactsGrid(); }
-        });
-      });
-      feed.appendChild(div);
-    });
-    // Re-afficher le bouton More si encore des prospects
-    _renderMoreButton(all);
-  };
-  feed.appendChild(btn);
-}
-
-
-// Keys des insights déjà vus (persisté localStorage) — pour "Renouveler"
-var _insSeenKeys = (function() {
-  try {
-    var raw = localStorage.getItem('insights_seen_keys_v1');
-    return raw ? new Set(JSON.parse(raw)) : new Set();
-  } catch(e) { return new Set(); }
-})();
-
-function _insSaveSeen() {
-  try { localStorage.setItem('insights_seen_keys_v1', JSON.stringify(Array.from(_insSeenKeys))); }
-  catch(e) {}
-}
-
-function _updateInsCountBadge(lastResp) {
-  var el = document.getElementById('db-ins-count');
-  if (!el) return;
-  if (!lastResp) { el.textContent = ''; return; }
-  var total = lastResp.totalAvailable || 0;
-  var seen = _insSeenKeys.size;
-  if (seen > 0 && total > 0) {
-    el.textContent = '(' + Math.min(seen, total) + '/' + total + ' vus)';
-  } else {
-    el.textContent = total > 0 ? '(' + total + ')' : '';
-  }
-}
-
-async function renderInsights(force, opts) {
-  opts = opts || {};
-  if (force) _insCache = null;
-  const feed = document.getElementById('db-ins-feed');
-  if (!feed) return;
-  if (_insCache && !opts.renew) { _renderInsRows(_insCache); return; }
-
-  feed.innerHTML = '<div class="db-ins-empty">Analyse...</div>';
-
-  try {
-    // Construire l'URL avec ?exclude=... si renouvellement
-    var url = API + '/insights/news';
-    if (opts.renew && _insSeenKeys.size > 0) {
-      var keys = Array.from(_insSeenKeys).join(',');
-      // GET URL limite ~8k chars ; on tronque proprement si trop long
-      if (keys.length > 6000) keys = keys.slice(-6000).split(',').slice(1).join(',');
-      url += '?exclude=' + encodeURIComponent(keys);
-    }
-    const d = await fetch(url).then(r => r.json());
-    var news = d.news || [];
-
-    // Fallback si insights/news vide (hors renouvellement) : contrats + tenders directs
-    if (!news.length && !opts.renew) {
-      const nowD = new Date();
-      const [dC, dT] = await Promise.all([
-        fetch(API + '/contracts?limit=100').then(r => r.json()).catch(() => ({ contracts: [] })),
-        fetch(API + '/tenders').then(r => r.json()).catch(() => ({ tenders: [] }))
-      ]);
-      var fallback = [];
-      (dC.contracts || [])
-        .filter(function(ct) { return ct.date_attribution || ct.date_signature || ct.date_debut; })
-        .sort(function(a, b) {
-          var da = a.date_attribution || a.date_signature || a.date_debut || '';
-          var db2 = b.date_attribution || b.date_signature || b.date_debut || '';
-          return db2.localeCompare(da);
-        })
-        .slice(0, 5)
-        .forEach(function(ct) {
-          var fab = ct.societe_name || '';
-          var val = ct.valeur_max ? (ct.valeur_max >= 1e9 ? (ct.valeur_max/1e9).toFixed(1).replace('.',',')+' Md$' : Math.round(ct.valeur_max/1e6)+' M$') : '';
-          var client = ct.client || ct.pays_client || '';
-          var h = fab ? fab + ' remporte' : 'Contrat';
-          if (val) h += ' un contrat ' + val;
-          if (client) h += ' avec ' + client;
-          if (ct.titre) h += ' — ' + ct.titre.slice(0, 45);
-          fallback.push({ type: 'contract', headline: h, contractId: ct.id, societeId: ct.societe_id });
-        });
-      (dT.tenders || [])
-        .filter(function(t) { return !t.date_cloture || new Date(t.date_cloture) > nowD; })
-        .sort(function(a, b) { return new Date(a.date_cloture || '9999') - new Date(b.date_cloture || '9999'); })
-        .slice(0, 3)
-        .forEach(function(t) {
-          var days = t.date_cloture ? Math.ceil((new Date(t.date_cloture) - nowD) / 86400000) : null;
-          var pays = t.source_name || t.pays || '';
-          var h = (t.titre || 'Appel offres').slice(0, 65) + (pays ? ' · ' + pays : '');
-          fallback.push({ type: 'tender', headline: h, tenderId: t.id, daysLeft: days, urgent: days !== null && days < 14 });
-        });
-      news = fallback;
-    }
-
-    // Message spécifique si renouvellement sans rien de neuf
-    if (!news.length && opts.renew) {
-      feed.innerHTML = '<div class="db-ins-empty">Plus d\'insights nouveaux. Clique ↺ pour repartir des initiaux.</div>';
-      _updateInsCountBadge(d);
-      return;
-    }
-
-    // Tracker les keys vues
-    news.forEach(function(n) { if (n.key) _insSeenKeys.add(n.key); });
-    _insSaveSeen();
-
-    var items = news.map(function(n) {
-      return {
-        type: n.type,
-        headline: n.headline,
-        why: n.why,
-        reason: n.reason,
-        urgent: n.urgent || false,
-        daysAgo: n.daysAgo,
-        daysLeft: n.daysLeft,
-        action: n.tenderId
-          ? function() { go('contracts'); setTimeout(function() { setContractTypeTab('live'); setTimeout(function() { openTenderDetail(n.tenderId); }, 400); }, 200); }
-          : n.contractId
-            ? function() { go('contracts'); setTimeout(function() { openContractDetail(n.contractId); }, 200); }
-            : n.endUserId
-              ? function() { go('end-users'); setTimeout(async function() { if (!allEndUsers.length) await loadEndUsers(); openEndUser(n.endUserId); }, 300); }
-              : n.societeId
-                ? function() { go('societes'); setTimeout(function() { openSociete(n.societeId); }, 300); }
-                : null
-      };
-    });
-
-    _insCache = items;
-    _renderInsRows(items);
-    _updateInsCountBadge(d);
-  } catch(e) {
-    feed.innerHTML = '<div class="db-ins-empty">Erreur chargement</div>';
-    console.error('renderInsights:', e);
-  }
-}
-
-function renewInsights() {
-  _insCache = null;
-  renderInsights(true, { renew: true });
-}
-
-function resetInsights() {
-  _insSeenKeys = new Set();
-  _insSaveSeen();
-  _insCache = null;
-  renderInsights(true);
-}
-
-// ─── Derniers ajouts ─────────────────────────────────────────────
-var _recentCache = null;
-
-var RECENT_TYPE_META = {
-  societe:  { emoji: '\ud83c\udfe2', label: 'Société',  dot: 'ugv_target',  nav: function(id){ go('societes'); setTimeout(function(){ openSociete(id); }, 300); } },
-  contract: { emoji: '\ud83d\udccb', label: 'Contrat',  dot: 'contract',    nav: function(id){ go('contracts'); setTimeout(function(){ openContractDetail(id); }, 200); } },
-  contact:  { emoji: '\ud83d\udc64', label: 'Contact',  dot: 'prospect',    nav: function(id){ go('contacts'); setTimeout(function(){ if (typeof openContactDetail === 'function' && id) openContactDetail(id); }, 300); } },
-  end_user: { emoji: '\ud83c\udfaf', label: 'End-user', dot: 'buyer',       nav: function(id){ go('end-users'); setTimeout(async function(){ if (!allEndUsers.length) await loadEndUsers(); openEndUser(id); }, 300); } },
-  tender:   { emoji: '\u23f0',        label: 'Tender',   dot: 'tender_isr',  nav: function(id){ go('contracts'); setTimeout(function(){ setContractTypeTab('live'); setTimeout(function(){ openTenderDetail(id); }, 400); }, 200); } }
-};
-
-async function renderRecent(force) {
-  if (force) _recentCache = null;
-  var feed = document.getElementById('db-recent-feed');
-  if (!feed) return;
-  if (_recentCache) { _renderRecentRows(_recentCache); return; }
-
-  feed.innerHTML = '<div class="db-ins-empty">Chargement…</div>';
-
-  try {
-    var d = await fetch(API + '/insights/recent?limit=30&days=14').then(function(r) { return r.json(); });
-    var items = d.items || [];
-    _recentCache = items;
-    _renderRecentRows(items);
-    var cEl = document.getElementById('db-recent-count');
-    if (cEl) {
-      var counts = d.counts || {};
-      var parts = [];
-      if (counts.contract)  parts.push(counts.contract + ' contrats');
-      if (counts.societe)   parts.push(counts.societe + ' sociétés');
-      if (counts.contact)   parts.push(counts.contact + ' contacts');
-      if (counts.end_user)  parts.push(counts.end_user + ' end-users');
-      if (counts.tender)    parts.push(counts.tender + ' tenders');
-      cEl.textContent = parts.length ? '(' + parts.join(' · ') + ')' : '';
-    }
-  } catch(e) {
-    feed.innerHTML = '<div class="db-ins-empty">Erreur chargement</div>';
-    console.error('renderRecent:', e);
-  }
-}
-
-function _renderRecentRows(items) {
-  var feed = document.getElementById('db-recent-feed');
-  if (!feed) return;
-  if (!items.length) {
-    feed.innerHTML = '<div class="db-ins-empty">Aucun ajout récent.</div>';
-    return;
-  }
-  var html = '';
-  for (var i = 0; i < items.length; i++) {
-    var it = items[i];
-    var meta = RECENT_TYPE_META[it.type] || { emoji: '', label: it.type, dot: 'contract' };
-    var label = sanitize(it.label || '');
-    var subMeta = sanitize(it.meta || '');
-    var timeStr = it.daysAgo === 0 ? 'Auj.'
-                : it.daysAgo === 1 ? 'Hier'
-                : (it.daysAgo || 0) + 'j';
-    html += '<div class="db-ins-row" data-recent="' + i + '" style="display:block;padding:8px 10px;">'
-      + '<div style="display:flex;align-items:center;gap:6px;">'
-      + '<span class="db-ins-dot ' + meta.dot + '"></span>'
-      + '<span style="font-size:13px;flex-shrink:0;">' + meta.emoji + '</span>'
-      + '<span style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;">' + meta.label + '</span>'
-      + '<span style="font-size:12px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;">' + label + '</span>'
-      + '<span style="font-size:9px;color:var(--text3);flex-shrink:0;font-weight:600;">' + timeStr + '</span>'
-      + '</div>'
-      + (subMeta ? '<div style="font-size:11px;color:var(--text2);margin-top:2px;margin-left:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + subMeta + '</div>' : '')
-      + '</div>';
-  }
-  feed.innerHTML = html;
-  feed.querySelectorAll('.db-ins-row').forEach(function(el, i) {
-    var it = items[i];
-    if (!it) return;
-    var meta = RECENT_TYPE_META[it.type];
-    if (meta && meta.nav) {
-      el.style.cursor = 'pointer';
-      el.addEventListener('click', function() { meta.nav(it.id); });
-    }
-  });
-}
-
-
-
-
-function getChartScope(){ try { return localStorage.getItem('scoutChartScope') === 'me' ? 'me' : 'team'; } catch(e){ return 'team'; } }
-function syncChartScopeButtons(){ const sc = getChartScope(); document.querySelectorAll('#db-chart-scope button').forEach(b => b.classList.toggle('active', b.dataset.scope === sc)); }
-function setChartScope(sc){ sc = sc === 'me' ? 'me' : 'team'; try { localStorage.setItem('scoutChartScope', sc); } catch(e){} syncChartScopeButtons(); loadCockpitChart(); }
-function loadCockpitChart(){
-  const scope = getChartScope();
-  const ep = scope === 'me' ? '/me/stats-timeseries' : '/contacts/stats-timeseries';
-  const titleEl = document.getElementById('db-chart-title');
-  if (titleEl) titleEl.textContent = '📈 Activité — 14 derniers jours · ' + (scope === 'me' ? 'moi' : 'équipe');
-  fetch(API + ep + '?days=14').then(r => r.json()).then(d => {
-    if (d && d.ok) renderCockpitChart(d.days);
-  }).catch(()=>{});
-}
-
-function renderCockpitChart(series){
-  const el = document.getElementById('db-email-chart');
-  if(!el) return;
-  if(!series || !series.length){ el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:24px;text-align:center;">Aucune donnée.</div>'; return; }
-  const W=700, H=150, padL=26, padR=10, padT=12, padB=22;
-  const n=series.length;
-  const maxE=Math.max(1, ...series.map(d=>+d.emails_sent||0));
-  const plotH=H-padT-padB, plotW=W-padL-padR;
-  const bw=Math.min(26, (plotW/n)*0.6);
-  const x = i => padL + (plotW*(i+0.5)/n);
-  const y = v => padT + plotH*(1 - v/maxE);
-  const totalE = series.reduce((a,d)=>a+(+d.emails_sent||0),0);
-  const totalR = series.reduce((a,d)=>a+(+d.replies_positive||0),0);
-  let svg = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Emails envoyes et retours positifs par jour sur 14 jours">';
-  svg += '<line x1="'+padL+'" y1="'+y(0)+'" x2="'+(W-padR)+'" y2="'+y(0)+'" stroke="var(--border2)" stroke-width="1"/>';
-  svg += '<line x1="'+padL+'" y1="'+y(maxE)+'" x2="'+(W-padR)+'" y2="'+y(maxE)+'" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 3"/>';
-  svg += '<text x="'+(padL-4)+'" y="'+(y(maxE)+3)+'" text-anchor="end" font-size="9" fill="var(--text3)">'+maxE+'</text>';
-  svg += '<text x="'+(padL-4)+'" y="'+(y(0)+3)+'" text-anchor="end" font-size="9" fill="var(--text3)">0</text>';
-  series.forEach(function(d,i){
-    const e=+d.emails_sent||0, rp=+d.replies_positive||0;
-    if(e>0){ const bh=Math.max(0, plotH*e/maxE); svg += '<rect x="'+(x(i)-bw/2)+'" y="'+y(e)+'" width="'+bw+'" height="'+bh+'" rx="2" fill="var(--accent)"><title>'+d.day+' : '+e+' email'+(e>1?'s':'')+'</title></rect>'; }
-    if(rp>0){ svg += '<circle cx="'+x(i)+'" cy="'+(y(e)-6)+'" r="4" fill="var(--green,#7A9A84)"><title>'+d.day+' : '+rp+' retour positif'+(rp>1?'s':'')+'</title></circle>'; }
-    if(i%3===0 || i===n-1){ const dd=d.day.slice(8,10)+'/'+d.day.slice(5,7); svg += '<text x="'+x(i)+'" y="'+(H-6)+'" text-anchor="middle" font-size="9" fill="var(--text3)">'+dd+'</text>'; }
-  });
-  svg += '</svg>';
-  el.innerHTML = svg;
-  const leg=document.getElementById('db-chart-legend');
-  if(leg) leg.innerHTML = '<span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--accent);"></span>Emails envoyés ('+totalE+')</span>'
-    + '<span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:var(--green,#7A9A84);"></span>Retours positifs ('+totalR+')</span>';
-}
-
-function renderMyStats() {
-  const nameEl = document.getElementById('db-perso-name');
-  const strip  = document.getElementById('db-perso-rank-strip');
-  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
-  fetch(API + '/me/stats').then(r => r.json()).then(d => {
-    if (!d || !d.ok) return;
-    if (nameEl) nameEl.textContent = d.me || '';
-    set('m-my-emails-7d', (d.emails_7d || 0).toLocaleString('fr-FR'));
-    const avg15 = ((d.emails_15d || 0) / 15).toFixed(1).replace('.', ',');
-    set('m-my-emails-7d-sub', 'moy. ' + avg15 + '/jour (15j)');
-    set('m-my-emails-total', (d.emails_total || 0).toLocaleString('fr-FR'));
-    set('m-my-relances-7d', (d.relances_7d || 0).toLocaleString('fr-FR'));
-    set('m-my-relances-7d-sub', (d.relances_total || 0).toLocaleString('fr-FR') + ' au total');
-    set('m-my-contacted', (d.contacted || 0).toLocaleString('fr-FR'));
-    set('m-my-interested', (d.interested || 0).toLocaleString('fr-FR'));
-    const rate = d.emails_total > 0 ? Math.round((d.interested / d.emails_total) * 100) : 0;
-    set('m-my-interested-sub', d.emails_total > 0 ? rate + '% de mes emails' : '—');
-    if (strip) {
-      const lb = d.leaderboard || [];
-      if (lb.length) {
-        const meLc = (d.me || '').trim().toLowerCase();
-        let rankHtml;
-        if (d.my_rank) {
-          const medal = d.my_rank === 1 ? '🥇' : d.my_rank === 2 ? '🥈' : d.my_rank === 3 ? '🥉' : '🏅';
-          rankHtml = '<div class="db-perso-rank"><span class="db-perso-badge">' + medal + '</span> #' + d.my_rank + '</div>'
-            + '<div style="font-size:12px;color:var(--text2);">' + (d.my_share_pct || 0) + '% des emails de l\'équipe (7j)</div>';
-        } else {
-          rankHtml = '<div class="db-perso-rank" style="color:var(--text2);font-weight:600;"><span class="db-perso-badge">📊</span> Non classé cette semaine</div>';
-        }
-        const lead = lb.map(m => {
-          const cls = (m.name || '').trim().toLowerCase() === meLc ? 'db-lead-me' : '';
-          return '<span class="' + cls + '">' + esc(m.name || '?') + ' <b>' + (m.emails || 0) + '</b></span>';
-        }).join('');
-        strip.innerHTML = rankHtml
-          + '<div class="db-perso-sep"></div>'
-          + '<div class="db-perso-lead"><span style="color:var(--text3);">Classement 7j&nbsp;:</span>' + lead + '</div>';
-        strip.style.display = 'flex';
-      } else {
-        strip.style.display = 'none';
-      }
-    }
-  }).catch(() => {});
-}
-
-function toggleDbMarket(){
-  const m = document.getElementById('db-market'); if(!m) return;
-  const willOpen = (m.style.display === 'none' || !m.style.display);
-  m.style.display = willOpen ? '' : 'none';
-  const h = document.getElementById('db-market-hint'); if(h) h.textContent = willOpen ? 'replier' : 'déplier';
-  const c = document.getElementById('db-market-chevron'); if(c) c.style.transform = willOpen ? 'rotate(180deg)' : '';
-  if(willOpen){ try{ if(typeof loadCockpitChart==='function') loadCockpitChart(); }catch(e){} }
-  try { localStorage.setItem('scoutDbMarketOpen', willOpen ? '1' : '0'); } catch(e){}
-}
-window.toggleDbMarket = toggleDbMarket;
-
-function _applyDbMarketState(){
-  try {
-    const open = localStorage.getItem('scoutDbMarketOpen') === '1';
-    const m = document.getElementById('db-market'); if(!m) return;
-    m.style.display = open ? '' : 'none';
-    const h = document.getElementById('db-market-hint'); if(h) h.textContent = open ? 'replier' : 'déplier';
-    const c = document.getElementById('db-market-chevron'); if(c) c.style.transform = open ? 'rotate(180deg)' : '';
-    if(open){ try{ if(typeof loadCockpitChart==='function') loadCockpitChart(); }catch(e){} }
-  } catch(e){}
-}
-
-async function renderDashboardCockpit(){
-  // --- Prospects chauds (résumé) ---
-  try {
-    let contacts = (_contactsPanelLoaded && _contactsPanelData.length) ? _contactsPanelData : null;
-    if(!contacts){ try { const r = await fetch(API + "/contacts?limit=5000"); const d = await r.json(); contacts = d.contacts || []; _contactsPanelData = contacts; _contactsPanelLoaded = true; } catch(e){ contacts = []; } }
-    const isOut = c => c.already_client || c.type_contact === "non_prospect_elistair";
-    // Même définition que Ma journée / À faire : réponse positive pas encore transmise (équipe).
-    let interested = 0;
-    try { const rc = await fetch(API + "/me/counters?scope=team"); const dc = await rc.json(); interested = dc.interested_open || 0; } catch(e){}
-    const vip = contacts.filter(c => (c.manual_priority === 3 || /⭐⭐⭐/.test(c.notes || "")) && !c.contacted && !isOut(c)).length;
-    const sub = document.getElementById("db-cockpit-hot-sub");
-    if(sub){
-      const parts = [];
-      if(interested) parts.push(interested + " intéressé" + (interested>1?"s":"") + " à saisir dans Dynamics");
-      if(vip) parts.push(vip + " VIP à contacter");
-      sub.textContent = parts.length ? parts.join(" · ") : "Aucun pour le moment";
-    }
-  } catch(e){}
-  // --- Relances dues ---
-  try {
-    // Même source que À faire : relances de séquence dues ou en retard (/me/tracking).
-    const r = await fetch(API + "/me/tracking?scope=me");
-    const d = await r.json();
-    const list = ((d && d.tracking) || []).filter(x => x.status === 'waiting' && (x.urgency === 'overdue' || x.urgency === 'due'))
-      .map(x => Object.assign({}, x, { last_email: x.next_relance }));
-    window._dbFollowups = list;
-    const sub = document.getElementById("db-cockpit-followups-sub");
-    const cta = document.getElementById("db-cockpit-followups-cta");
-    const card = document.getElementById("db-cockpit-followups");
-    if(sub){
-      if(list.length){
-        const oldest = list[0];
-        const nm = ((oldest.prenom||"") + " " + (oldest.nom||"")).trim() || oldest.organisation || "contact";
-        const dd = oldest.days_overdue || 0;
-        const nLate = list.filter(x => x.urgency === 'overdue').length;
-        sub.textContent = list.length + " à relancer" + (nLate ? " dont " + nLate + " en retard" : "") + " · " + nm + (dd ? " (" + dd + " j de retard)" : "");
-        if(cta) cta.textContent = "Relancer →";
-        if(card){ card.style.cursor = "pointer"; card.onclick = () => { if(typeof openContactDetail === "function") openContactDetail(oldest.id); }; }
-      } else {
-        sub.textContent = "Rien à relancer pour le moment 👍";
-        if(cta) cta.textContent = "";
-        if(card){ card.style.cursor = "default"; card.onclick = null; }
-      }
-    }
-  } catch(e){}
-}
-window.renderDashboardCockpit = renderDashboardCockpit;
-
-function renderDashboard() {
-  // ===========================================================================
-  // COCKPIT PROSPECTION — 5 KPIs
-  //   1. Emails qualifiés en base       -> total_qualified (sub: total contacts)
-  //   2. Nouveaux emails (7j)           -> added_last_7d
-  //   3. Emails envoyés (7j)            -> emails_sent_last_7d
-  //   4. Emails envoyés (total)         -> emails_sent
-  //   5. Avec email (proportion)        -> total_qualified / total_contacts
-  // Source: /contacts/stats-engagement (aggregated server-side)
-  // ===========================================================================
-
-  // Cockpit commercial (prochaine action / chauds / relances) + état section marché — priorité (peint en premier)
-  renderDashboardCockpit();
-  _applyDbMarketState();
-
-  // Stats perso du commercial connecté (section « Mon activité »)
-  renderMyStats();
-
-  // Mini-graphe activité (emails envoyés + retours positifs) — bascule Équipe / Moi
-  syncChartScopeButtons();
-  // Différer le prewarm segments ; le graphe n'est rendu qu'à l'ouverture du bloc « Activité & marché » (épuré)
-  setTimeout(function(){ try{ loadBuyerSegments(); }catch(e){} }, 60);
-
-  fetch(API + '/contacts/stats-engagement').then(r => r.json()).then(d => {
-    if (!d || !d.ok) return;
-
-    const totalQualified   = d.total_qualified       || 0;
-    const totalContacts    = d.total_contacts        || 0;
-    const addedLast7d      = d.added_last_7d         || 0;
-    const emailsSentTotal  = d.emails_sent           || 0;
-    const emailsSent7d     = d.emails_sent_last_7d   || 0;
-    const contactedQual    = d.contacted             || 0;
-    const stockRemaining   = (d.stock_relevant !== undefined && d.stock_relevant !== null)
-      ? d.stock_relevant
-      : Math.max(0, totalQualified - contactedQual);
-    const saturatedOrgs    = d.saturated_orgs_count   || 0;
-    const dailyRate7d      = emailsSent7d / 7;
-    const daysRemaining    = dailyRate7d > 0
-      ? Math.round(stockRemaining / dailyRate7d)
-      : null;
-    const pctWithEmail     = totalContacts > 0
-      ? Math.round((totalQualified / totalContacts) * 100)
-      : 0;
-
-    // KPI 1 — Emails qualifiés en base (sub: % du total contacts)
-    const el1 = document.getElementById('m-emails-base');
-    if (el1) el1.textContent = totalQualified.toLocaleString('fr-FR');
-    const el1sub = document.getElementById('m-emails-base-sub');
-    if (el1sub) el1sub.textContent = totalContacts > 0
-      ? `${pctWithEmail}% des ${totalContacts.toLocaleString('fr-FR')} contacts`
-      : '—';
-
-    // KPI 2 — Nouveaux emails (7j) + sub-label moyenne 15j
-    const el2 = document.getElementById('m-emails-new-7d');
-    if (el2) el2.textContent = addedLast7d.toLocaleString('fr-FR');
-    const el2sub = document.getElementById('m-emails-new-avg15d');
-    if (el2sub) {
-      const added15d = d.added_last_15d || 0;
-      const avg15 = (added15d / 15).toFixed(1);
-      el2sub.textContent = `moy. ${avg15.replace('.', ',')}/jour (15j)`;
-    }
-
-    // KPI 3 — Emails envoyés (7j) + sub-label moyenne 15j
-    const el3 = document.getElementById('m-emails-sent-7d');
-    if (el3) el3.textContent = emailsSent7d.toLocaleString('fr-FR');
-    const el3sub = document.getElementById('m-emails-sent-avg15d');
-    if (el3sub) {
-      const sent15d = d.emails_sent_last_15d || 0;
-      const avg15s = (sent15d / 15).toFixed(1);
-      el3sub.textContent = `moy. ${avg15s.replace('.', ',')}/jour (15j)`;
-    }
-
-    // KPI 4 — Emails envoyés (total)
-    const el4 = document.getElementById('m-emails-sent-total');
-    if (el4) el4.textContent = emailsSentTotal.toLocaleString('fr-FR');
-
-    // KPI 5 — Stock à contacter (sub: jours restants au rythme 7j)
-    const el5 = document.getElementById('m-stock-restant');
-    const tile5 = el5 ? el5.closest('.db-kpi') : null;
-    if (el5) el5.textContent = stockRemaining.toLocaleString('fr-FR');
-    const el5sub = document.getElementById('m-stock-jours');
-    if (el5sub) {
-      let runwayText;
-      let alertLevel = 'ok';
-      if (daysRemaining === null) {
-        runwayText = 'cadence inconnue';
-      } else if (daysRemaining >= 365) {
-        runwayText = `> 1 an au rythme actuel`;
-      } else if (daysRemaining >= 60) {
-        runwayText = `~${Math.round(daysRemaining/30)} mois au rythme actuel`;
-      } else if (daysRemaining >= 14) {
-        runwayText = `~${Math.round(daysRemaining/7)} sem. au rythme actuel`;
-      } else if (daysRemaining >= 7) {
-        runwayText = `⚠️ ~${daysRemaining}j au rythme actuel`;
-        alertLevel = 'warning';
-      } else {
-        runwayText = `🚨 ~${daysRemaining}j — stock critique`;
-        alertLevel = 'critical';
-      }
-      if (saturatedOrgs > 0) {
-        runwayText += ` · ${saturatedOrgs} société${saturatedOrgs > 1 ? 's' : ''} saturée${saturatedOrgs > 1 ? 's' : ''}`;
-      }
-      el5sub.textContent = runwayText;
-      el5sub.classList.remove('db-kpi-sub-muted');
-      // Visual alert state on the tile
-      if (tile5) {
-        tile5.classList.remove('db-kpi-warning', 'db-kpi-critical');
-        if (alertLevel === 'warning') tile5.classList.add('db-kpi-warning');
-        if (alertLevel === 'critical') tile5.classList.add('db-kpi-critical');
-      }
-    }
-
-    // KPI 6 — Intéressés (replies positives, sub: taux conversion)
-    const repliesPositive = d.replies_positive || 0;
-    const replies7d       = d.replies_positive_last_7d || 0;
-    const el6 = document.getElementById('m-replies-positive');
-    if (el6) el6.textContent = repliesPositive.toLocaleString('fr-FR');
-    const el6sub = document.getElementById('m-replies-rate');
-    if (el6sub) {
-      if (emailsSentTotal > 0) {
-        const rate = ((repliesPositive / emailsSentTotal) * 100).toFixed(1);
-        const trend = replies7d > 0 ? ` · +${replies7d} (7j)` : '';
-        el6sub.textContent = `${repliesPositive}/${emailsSentTotal} = ${rate}%${trend}`;
-        el6sub.classList.remove('db-kpi-sub-muted');
-      } else {
-        el6sub.textContent = 'pas encore d\'envoi';
-      }
-    }
-  }).catch(()=>{});
-
-  // ===========================================================================
-  // SUITE — chargement des widgets contrats / tenders / brief (non-KPI)
-  // Ces données alimentent les widgets de liste/brief en-dessous des KPIs.
-  // ===========================================================================
-
-  // Charger contrats pour le widget liste
-  if (contracts.length > 0) {
-    renderDbContracts();
-  } else {
-    loadContracts().then(() => { renderDbContracts(); }).catch(()=>{});
-  }
-
-  // Buyers + tenders depuis API (pour widgets brief et listes)
-  Promise.all([
-    fetch(API + '/end-users?limit=3000', { headers: window.getAuthHeaders() }).then(r=>r.json()).catch(()=>({end_users:[]})),
-    fetch(API + '/tenders').then(r=>r.json()).catch(()=>({tenders:[]})),
-  ]).then(([euData, tdData]) => {
-    const endUsers = euData.end_users || [];
-    const now = new Date();
-    const in30d = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
-    const tenders = (tdData.tenders || []).filter(t =>
-      t.statut !== 'Clôturé' &&
-      (!t.date_cloture || new Date(t.date_cloture) > now)
-    ).sort((a, b) => {
-      // Ouverts d'abord, puis par date de clôture croissante (urgents en premier)
-      if (a.date_cloture && b.date_cloture) return new Date(a.date_cloture) - new Date(b.date_cloture);
-      if (a.date_cloture) return -1;
-      if (b.date_cloture) return 1;
-      return 0;
-    });
-
-    // Tenders closing in next 30 days = urgent
-    const tenders30d = tenders.filter(t => t.date_cloture && new Date(t.date_cloture) <= in30d).length;
-    const totalOpen = tenders.length;
-    const tenders30dEl = document.getElementById('m-tenders-30d');
-    const totalOpenEl = document.getElementById('m-tenders-total');
-    const pulseEl = document.getElementById('m-tenders-pulse');
-    if (tenders30dEl) tenders30dEl.textContent = tenders30d;
-    if (totalOpenEl) totalOpenEl.textContent = totalOpen > 0 ? `/ ${totalOpen} ouverts` : '—';
-    // Show the green pulse when at least one tender is closing soon
-    if (pulseEl) pulseEl.style.display = tenders30d > 0 ? '' : 'none';
-
-    // Stocker dans les globales pour que les clics fonctionnent
-    if (!allEndUsers.length) allEndUsers = endUsers;
-    if (!liveTenders.length) { liveTenders = tenders; liveTendersLoaded = true; }
-    renderDbTenders(tenders);
-    renderDbBuyers(endUsers);
-  });
-
-  loadFeed();
-  renderInsights();
-  renderElistairProspects();
-  renderRecent();
-}
-
-function renderDbTenders(tenders) {
-  const el = document.getElementById('db-tenders-list');
-  if (!el) return;
-  // Trier du plus récent au plus ancien avant d'afficher le top 6
-  const sorted = [...tenders].sort((a, b) => {
-    const da = a.date_publication || a.created_at || '';
-    const db = b.date_publication || b.created_at || '';
-    return db.localeCompare(da);
-  });
-  const top = sorted.slice(0, 6);
-  if (!top.length) { el.innerHTML = '<div class="db-empty">Aucun tender live</div>'; return; }
-  const now = new Date();
-  el.innerHTML = top.map(t => {
-    const days = t.date_cloture ? Math.ceil((new Date(t.date_cloture) - now) / 86400000) : null;
-    const urgentColor = days !== null && days < 14 ? '#C99A4E' : '#7A9A84';
-    const statusColor = t.statut === 'Ouvert' ? '#7A9A84' : '#C99A4E';
-    return `<div class="db-tender-card" onclick="go('contracts');setTimeout(()=>{setContractTypeTab('live');setTimeout(()=>openTenderDetail('${t.id}'),400);},200)">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-        <span class="db-tender-badge" style="background:${statusColor}20;color:${statusColor};">● ${sanitize(t.statut||'—')}</span>
-        ${days !== null ? `<span style="font-size:10px;font-weight:600;color:${urgentColor};">${days < 0 ? 'Clôturé' : days + 'j'}</span>` : ''}
-      </div>
-      <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.3;">${sanitize(t.titre||'').slice(0,60)}${(t.titre||'').length>60?'…':''}</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:11px;color:var(--text2);">${sanitize(t.pays||'—')} · ${sanitize(t.source_name||'—')}</span>
-        ${t.valeur_estimee ? `<span style="font-size:11px;font-weight:600;color:var(--accent2);font-family:'Sora', sans-serif;">${sanitize(t.valeur_estimee)}</span>` : ''}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function renderDbContracts() {
-  const el = document.getElementById('db-contracts-list');
-  if (!el) return;
-  const top = [...contracts].sort((a,b) => (b.valeur_max||0)-(a.valeur_max||0)).slice(0,6);
-  if (!top.length) { el.innerHTML = '<div class="db-empty">Chargement…</div>'; return; }
-  const colors = ['#85593E','#92A49D','#C99A4E','#7A9A84','#B5523B','#C49A78'];
-  el.innerHTML = top.map((ct,i) => {
-    const valM = ct.valeur_max ? (ct.valeur_max/1e6 >= 1000
-      ? (ct.valeur_max/1e9).toFixed(1).replace('.',',')+' Md$'
-      : Math.round(ct.valeur_max/1e6)+' M$') : '—';
-    const socName = ct.societe_name || ct.societe_id || '—';
-    return `<div class="db-row" onclick="go('contracts');setTimeout(()=>openContractDetail('${ct.id}'),200)">
-      <div class="db-row-icon" style="background:${colors[i%colors.length]}20;color:${colors[i%colors.length]};">${sanitize(socName.slice(0,3).toUpperCase())}</div>
-      <div class="db-row-body">
-        <div class="db-row-title">${sanitize(ct.titre||'').slice(0,40)}${(ct.titre||'').length>40?'…':''}</div>
-        <div class="db-row-sub">${sanitize(ct.client||'—')} · ${sanitize(ct.pays_client||'—')}</div>
-      </div>
-      <div class="db-row-right">
-        <div class="db-row-val">${valM}</div>
-        <div class="db-row-age">${sanitize(ct.statut||'')}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function renderDbBuyers(endUsers) {
-  const el = document.getElementById('db-buyers-list');
-  if (!el) return;
-  const top = endUsers.slice(0, 6);
-  if (!top.length) { el.innerHTML = '<div class="db-empty">Chargement…</div>'; return; }
-  const flags = {USA:'🇺🇸',France:'🇫🇷',Allemagne:'🇩🇪',Ukraine:'🇺🇦',Australie:'🇦🇺',UK:'🇬🇧','Royaume-Uni':'🇬🇧',Israel:'🇮🇱',Israël:'🇮🇱',Roumanie:'🇷🇴',Espagne:'🇪🇸','Nouvelle-Zélande':'🇳🇿',Inde:'🇮🇳',Japon:'🇯🇵',Canada:'🇨🇦'};
-  el.innerHTML = top.map(eu => {
-    const flag = flags[eu.pays] || '🌐';
-    return `<div class="db-row" onclick="go('end-users');setTimeout(async()=>{if(!allEndUsers.length)await loadEndUsers();openEndUser('${eu.id}');},200)">
-      <div class="db-row-icon" style="background:var(--bg3);font-size:16px;">${flag}</div>
-      <div class="db-row-body">
-        <div class="db-row-title">${sanitize(eu.nom||'').slice(0,38)}${(eu.nom||'').length>38?'…':''}</div>
-        <div class="db-row-sub">${sanitize(eu.pays||'—')} · ${sanitize(eu.type||'—')}</div>
-      </div>
-      <div class="db-row-right">
-        <div class="db-row-age" style="color:${eu.statut==='Opérationnel'?'#7A9A84':eu.statut==='Contractualisé'?'#C99A4E':'var(--text3)'};">${sanitize(eu.statut||'')}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function renderFeedTypeFilters(feed) {
-  const types = ['tous', 'fabricant', 'drone', 'contrat', 'alerte'];
-  const counts = {};
-  feed.forEach(f => { counts[f.icon] = (counts[f.icon]||0)+1; });
-  const el = document.getElementById('feed-type-filters');
-  if (!el) return;
-  el.innerHTML = types.map(t => {
-    const nb = t === 'tous' ? feed.length : (counts[t]||0);
-    if (t !== 'tous' && !nb) return '';
-    return ``;
-  }).join('');
-}
-
-
-
-function renderFeedList(feed) {
-  window._feedCache = feed;
-  const filtered = activeFeedType === 'tous' ? feed : feed.filter(f => f.icon === activeFeedType);
-  const el = document.getElementById('feed-list');
-  if (!el) return;
-  if (!filtered.length) { el.innerHTML = '<div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Aucune entrée</span></div>'; return; }
-
-  el.innerHTML = filtered.map(f => {
-    const age = timeAgo(f.date);
-    const iconLabel = {fabricant:'FAB',drone:'UAV',contrat:'CTR',alerte:'ALT'}[f.icon]||'—';
-    const iconClass = 'fi-' + f.icon;
-    const clickFn = f.type==='societe' ? `go('societes');setTimeout(()=>openSociete('${f.id}'),200)` :
-                    f.type==='drone'   ? `go('produits-db');setTimeout(()=>openProduit('${f.id}'),200)` :
-                    f.type==='contract'? `go('contracts')` : '';
-    return `<div class="feed-row" onclick="${clickFn}">
-      <div class="feed-icon ${iconClass}">${iconLabel}</div>
-      <div class="feed-body">
-        <div class="feed-title">${sanitize(f.title)}</div>
-        <div class="feed-sub">${sanitize(f.sub||'')}${f.statut ? ' · <span class="'+statutClass(f.statut)+'">'+sanitize(f.statut)+'</span>' : ''}</div>
-      </div>
-      <div class="feed-date">${age}</div>
-    </div>`;
-  }).join('');
-}
-
+// Ancien tableau de bord supprimé (remplacé par Aujourd'hui). Utilitaire conservé :
 function timeAgo(dateStr) {
   if (!dateStr) return '—';
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -4737,18 +3493,6 @@ function timeAgo(dateStr) {
   if (h > 0) return 'il y a ' + h + 'h';
   if (m > 0) return 'il y a ' + m + 'min';
   return 'maintenant';
-}
-
-async function loadFeed() {
-  try {
-    const r = await fetch(API + '/dashboard/feed');
-    const d = await r.json();
-    renderFeedTypeFilters(d.feed);
-    renderFeedList(d.feed);
-  } catch(e) {
-    const el = document.getElementById('feed-list');
-    if (el) el.innerHTML = '<div class="empty" style="padding:1rem;"><span style="color:var(--text3);">Erreur de chargement</span></div>';
-  }
 }
 
 // ── Societes ──────────────────────────────────────────────────
@@ -6478,8 +5222,6 @@ async function init() {
   await Promise.allSettled([loadSocietes(), loadAllProduits(), loadContracts()]);
   try { renderSocietes(); } catch(e) { console.error('renderSocietes:', e); }
   try { renderProduits(); } catch(e) { console.error('renderProduits:', e); }
-  try { renderDashboard(); } catch(e) { console.error('renderDashboard:', e); }
-  setTimeout(() => renderElistairProspects(false), 2000);
 }
 
 init().then(() => {
@@ -6520,7 +5262,7 @@ if ('serviceWorker' in navigator) {
   const hash = window.location.hash.slice(1); // ex: "end-users/contacts"
   if (!hash) return;
   const [panel, tab] = hash.split('/');
-  const validPanels = ['dashboard','home','societes','produits-db','contracts','end-users','accounts','people','tasks','config','hot','contacts','tracking','visitors','resellers','chat','market','prospection','stats'];
+  const validPanels = ['dashboard','home','societes','produits-db','contracts','end-users','accounts','people','tasks','config','hot','contacts','tracking','visitors','resellers','chat','market','prospection','stats','signals'];
   if (!validPanels.includes(panel)) return;
   // Attendre que le DOM soit prêt
   if (document.readyState === 'loading') {
@@ -7292,7 +6034,7 @@ function applySettings() {
   });
   // Onglet par défaut
   const tabEl = document.getElementById('cfg-default-tab');
-  if (tabEl && s.defaultTab) tabEl.value = (s.defaultTab === 'dashboard' ? 'home' : (s.defaultTab === 'end-users' ? 'accounts' : s.defaultTab));
+  if (tabEl && s.defaultTab) tabEl.value = ({ dashboard: 'home', tasks: 'home', prospection: 'home', 'end-users': 'accounts', societes: 'market', 'produits-db': 'market', contracts: 'market' })[s.defaultTab] || s.defaultTab;
   // Sous-onglet
   const sub = document.querySelector(`input[name="cfg-default-subtab"][value="${s.defaultSubtab || 'comptes'}"]`);
   if (sub) sub.checked = true;
@@ -7661,6 +6403,7 @@ document.addEventListener('DOMContentLoaded', () => {
     var _dt = s.defaultTab;
     if (!_dt || _dt === 'dashboard') _dt = document.getElementById('panel-home') ? 'home' : 'dashboard';
     if (_dt === 'end-users' && document.getElementById('panel-accounts')) _dt = 'accounts';
+    if (_dt === 'societes' || _dt === 'produits-db' || _dt === 'contracts') _dt = 'market';
     go(_dt, { silent: true });
   }
   // Appliquer settings UI quand on arrive sur config
@@ -7939,7 +6682,7 @@ async function exportLinkedInCsv(scope) {
 <div id="scout-chat-panel" role="dialog" aria-label="Chat Scout">
   <div id="scout-chat-header">
     <div>
-      <div class="title">💬 Scout — Chat commercial</div>
+      <div class="title">Assistant Scout</div>
       <div class="subtitle" id="scout-chat-status">Assistant Elistair BD</div>
     </div>
     <button class="close-btn" onclick="scoutChat.close()" aria-label="Fermer">×</button>
@@ -9218,7 +7961,7 @@ async function exportLinkedInCsv(scope) {
   <div id="scout-gs-palette">
     <div id="scout-gs-input-wrap">
       <span class="icon">🔍</span>
-      <input id="scout-gs-input" type="text" placeholder="Rechercher contact, fabricant, produit, contrat..."
+      <input id="scout-gs-input" type="text" placeholder="Chercher un compte, un contact, un contrat… ou poser une question"
              autocomplete="off" spellcheck="false" />
       <span id="scout-gs-kbd">Esc</span>
     </div>
@@ -9441,8 +8184,13 @@ async function exportLinkedInCsv(scope) {
     currentResults = items;
     selectedIdx = 0;
 
+    // Assistant intégré à la recherche : une seule entrée pour chercher ou poser une question
+    const askItem = { type: 'ask', name: q ? 'Demander à Scout : « ' + q + ' »' : 'Poser une question à Scout', meta: 'Assistant : comptes, contacts, marchés, conseils de prospection', icon: '?', data: { q: q } };
     if (!items.length) {
-      results.innerHTML = `<div class="scout-gs-empty">${q ? 'Aucun résultat' : 'Tape pour chercher dans toute la base…'}</div>`;
+      results.innerHTML = `<div class="scout-gs-group-label">Assistant</div><div class="scout-gs-item selected" data-idx="0"><div class="type-icon">?</div><div class="content"><div class="name">${escapeHtmlGs(askItem.name)}</div><div class="meta">${askItem.meta}</div></div></div>`
+        + (q ? `<div class="scout-gs-empty">Aucun résultat dans la base</div>` : `<div class="scout-gs-empty">Ou tape un nom de compte, de contact, de contrat…</div>`);
+      currentResults = [askItem];
+      const el0 = results.querySelector('.scout-gs-item'); if (el0) el0.addEventListener('click', () => { selectedIdx = 0; openItem(askItem); });
       return;
     }
 
@@ -9477,6 +8225,7 @@ async function exportLinkedInCsv(scope) {
         globalIdx++;
       }
     }
+    html += `<div class="scout-gs-group-label">Assistant</div><div class="scout-gs-item" data-idx="${globalIdx}"><div class="type-icon">?</div><div class="content"><div class="name">${escapeHtmlGs(askItem.name)}</div><div class="meta">${askItem.meta}</div></div></div>`;
     results.innerHTML = html;
 
     // Attach click handlers
@@ -9485,6 +8234,7 @@ async function exportLinkedInCsv(scope) {
     for (const key of order) {
       if (groups[key]) flat.push(...groups[key].slice(0, 10));
     }
+    flat.push(askItem);
     currentResults = flat;
 
     document.querySelectorAll('.scout-gs-item').forEach(el => {
@@ -9506,6 +8256,9 @@ async function exportLinkedInCsv(scope) {
     const d = item.data;
     try {
       switch (item.type) {
+        case 'ask':
+          if (window.scoutChat) { window.scoutChat.open(); if (d.q) setTimeout(() => window.scoutChat.useSuggestion(d.q), 300); }
+          break;
         case 'contact':
           if (typeof openContactFromGrid === 'function') {
             openContactFromGrid(d.id);
@@ -9533,6 +8286,7 @@ async function exportLinkedInCsv(scope) {
     }
   }
 
+  function escapeHtmlGs(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   // Expose for external use (add a search button in header, etc.)
   window.scoutGlobalSearch = { open, close };
 })();
@@ -9756,130 +8510,7 @@ function formatNotes(raw){
 let _contactsPanelData = [];
 let _contactsPanelLoaded = false;
 
-async function renderContactsPanel(force) {
-  const grid = document.getElementById('contacts-panel-grid');
-  if (!grid) return;
-  if (!_contactsPanelLoaded || force) {
-    grid.innerHTML = (typeof scoutSkeletonCards==='function') ? scoutSkeletonCards(9) : '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text3);">Chargement…</div>';
-    try {
-      const r = await fetch(API + '/contacts?limit=5000', { headers: (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {} });
-      const d = await r.json();
-      _contactsPanelData = d.contacts || [];
-      _contactsPanelLoaded = true;
-    } catch (e) {
-      grid.innerHTML = '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text3);">Erreur de chargement.</div>';
-      return;
-    }
-  }
-  populateContactsPanelPays();
-  filterContactsPanel();
-}
-
-function populateContactsPanelPays() {
-  const sel = document.getElementById('contacts-panel-pays');
-  if (!sel) return;
-  const cur = sel.value;
-  const paysList = [...new Set(_contactsPanelData.map(c => c.pays).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="">🌍 Tous les pays</option>' + paysList.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
-  sel.value = cur;
-}
-
-function filterContactsPanel() {
-  const grid = document.getElementById('contacts-panel-grid');
-  if (!grid) return;
-  const q = (document.getElementById('contacts-panel-search')?.value || '').toLowerCase().trim();
-  const pays = document.getElementById('contacts-panel-pays')?.value || '';
-  const typ = document.getElementById('contacts-panel-type')?.value || '';
-  const excluded = (typeof getExcludedPays === 'function') ? getExcludedPays() : [];
-  const _cf = window._contactsPanelFilter || null;
-  const _now = Date.now();
-  const list = _contactsPanelData.filter(c => {
-    if (_cf === 'interested' && !c.interested) return false;
-    if (_cf === 'email' && !(c.email && String(c.email).trim())) return false;
-    if (_cf === 'new7d') { const _t = c.created_at ? new Date(c.created_at).getTime() : 0; if (!(_t && (_now - _t) <= 7*86400000)) return false; }
-    if (_cf === 'contacted' && !c.contacted) return false;
-    if (_cf === 'emailed' && !c.emailed) return false;
-    if (_cf === 'emailed7d' && !c.emailed_7d) return false;
-    if (_cf === 'contacted7d' && !c.contacted_7d) return false;
-    if (_cf === 'stock' && !((c.email && String(c.email).trim()) && !c.contacted)) return false;
-    if (excluded.length && c.pays && excluded.includes(c.pays)) return false;
-    if (pays && c.pays !== pays) return false;
-    if (typ === 'email' && !(c.email && String(c.email).trim())) return false;
-    if (typ === 'company' && c.end_user_id) return false;
-    if (typ === 'buyer' && !c.end_user_id) return false;
-    if (q) {
-      const hay = [c.prenom, c.nom, c.titre, c.organisation, c.pays, c.email, c.notes].filter(Boolean).join(' ').toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    return true;
-  });
-  window._contactsFilteredExport = list; // pour l'export CSV (vue filtrée courante)
-  const badge = document.getElementById('contacts-panel-count');
-  if (badge) badge.textContent = list.length + ' contact' + (list.length > 1 ? 's' : '');
-  const chip = document.getElementById('contacts-panel-filterchip');
-  if (chip) {
-    const FLABEL = { interested:'✅ Intéressés', email:'✉️ Avec email', new7d:'🆕 Nouveaux (7j)', contacted:'📤 Déjà contactés', contacted7d:'📤 Contactés (7j)', emailed:'📧 Emailés', emailed7d:'📧 Emailés (7j)', stock:'🎯 À contacter (stock)' };
-    if (_cf && FLABEL[_cf]) {
-      chip.style.display = 'inline-flex';
-      chip.style.cssText += ';align-items:center;gap:6px;font-size:12px;font-weight:600;color:#6A8B74;background:rgba(122,154,132,.12);border:1px solid rgba(122,154,132,.4);border-radius:var(--radius);padding:4px 10px;cursor:default;';
-      chip.innerHTML = FLABEL[_cf] + ' <span onclick="window._contactsPanelFilter=null;filterContactsPanel();" title="Retirer le filtre" style="cursor:pointer;color:var(--text3);font-weight:700;">✕</span>';
-    } else {
-      chip.style.display = 'none';
-      chip.innerHTML = '';
-    }
-  }
-  if (!list.length) { grid.innerHTML = '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text3);">Aucun contact trouvé</div>'; return; }
-  const LIMIT = 600;
-  const shown = list.slice(0, LIMIT);
-  grid.innerHTML = shown.map(contactPanelCard).join('') +
-    (list.length > LIMIT ? `<div style="grid-column:1/-1;padding:1rem;text-align:center;color:var(--text3);font-size:12px;">${LIMIT} premiers affichés sur ${list.length} — affine la recherche.</div>` : '');
-}
-
-function exportContactsCSV() {
-  const list = window._contactsFilteredExport || [];
-  if (!list.length) { alert('Aucun contact à exporter dans la vue courante.'); return; }
-  const cols = [['prenom','Prénom'],['nom','Nom'],['titre','Titre'],['organisation','Organisation'],['pays','Pays'],['email','Email'],['linkedin','LinkedIn'],['telephone','Téléphone'],['secteur','Secteur'],['type_contact','Type'],['notes','Notes']];
-  const q = v => '"' + (v == null ? '' : String(v)).replace(/"/g,'""') + '"';
-  const header = cols.map(c => q(c[1])).join(',');
-  const rows = list.map(c => cols.map(col => q(c[col[0]])).join(','));
-  const csv = '\ufeff' + [header].concat(rows).join('\r\n'); // BOM UTF-8 pour Excel
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'scout_contacts_' + new Date().toISOString().slice(0,10) + '_' + list.length + '.csv';
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
-window.exportContactsCSV = exportContactsCSV;
-
-// ── Vue "Prospects chauds" : intéressés + comptes chauds + VIP à contacter ──
-window.openHotAccount = function(id){ go('end-users'); setTimeout(async ()=>{ try{ if(!allEndUsers.length) await loadEndUsers(); openEndUser(id); }catch(e){} }, 250); };
-async function renderHotProspects(){
-  const body = document.getElementById('hot-body'); if(!body) return;
-  body.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div>';
-  let contacts = [];
-  try {
-    if (_contactsPanelLoaded && _contactsPanelData.length) { contacts = _contactsPanelData; }
-    else { const r = await fetch(API + '/contacts?limit=5000'); const d = await r.json(); contacts = d.contacts || []; _contactsPanelData = contacts; _contactsPanelLoaded = true; }
-  } catch(e) {}
-  const isOut = c => c.already_client || c.type_contact === 'non_prospect_elistair';
-  const interested = contacts.filter(c => c.interested && !c.transmitted && !isOut(c));
-  const vip = contacts.filter(c => (c.manual_priority === 3 || /⭐⭐⭐/.test(c.notes || '')) && !c.contacted && !isOut(c));
-  const gridOpen = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">';
-  const empty = (msg) => `<div style="padding:1.1rem;color:var(--text3);font-size:13px;">${msg}</div>`;
-  const secHead = (icon,title,n,color) => `<div style="display:flex;align-items:center;gap:8px;margin:20px 0 10px;"><span style="font-size:14px;font-weight:700;color:${color};">${icon} ${title}</span><span style="font-size:12px;color:var(--text3);">${n}</span><span style="flex:1;height:1px;background:var(--border);"></span></div>`;
-
-  let html = '';
-  html += secHead('✅','Ont répondu, à saisir dans Dynamics', interested.length, '#6A8B74');
-  html += interested.length ? gridOpen + interested.map(contactPanelCard).join('') + '</div>'
-        : empty(`Aucun contact n'a encore répondu positivement. Marque « a répondu » sur une fiche pour l'y voir apparaître.`);
-  html += secHead('⭐','VIP à contacter (pas encore approchés)', vip.length, '#8E6420');
-  html += vip.length ? gridOpen + vip.slice(0,60).map(contactPanelCard).join('') + '</div>'
-        : empty(`Aucun contact VIP (⭐⭐⭐) en attente. Mets 3 étoiles à un contact prioritaire pour l'y retrouver.`);
-  body.innerHTML = html;
-}
-window.renderHotProspects = renderHotProspects;
+// Ancienne liste Contacts et vue « Prospects chauds » supprimées (remplacées par Contacts et Aujourd'hui).
 
 // ===================== Visiteurs web (Leadfeeder interne) =====================
 // Backend : scout-api/visitors.js (endpoints /v/*). Liste simple + panneau latéral par compte.
@@ -11521,110 +10152,10 @@ async function _visPollAlerts() {
 })();
 
 // ===================== Suivi & relances =====================
-let _trackingScope = 'me', _trackingData = [];
-function _trkBtnCss(on){ return 'font-size:13px;padding:8px 16px;border:none;cursor:pointer;'+(on?'background:var(--accent);color:#fff;font-weight:600;':'background:var(--bg3);color:var(--text2);'); }
-function _trkScopeStyle(){
-  const me=document.getElementById('trk-scope-me'), tm=document.getElementById('trk-scope-team');
-  if(me){ me.textContent='Moi'; me.style.cssText=_trkBtnCss(_trackingScope==='me'); }
-  if(tm){ tm.textContent='Équipe'; tm.style.cssText=_trkBtnCss(_trackingScope==='team'); }
-}
-async function renderTracking(){
-  _trkScopeStyle();
-  const body=document.getElementById('trk-body'); if(!body) return;
-  body.innerHTML=(typeof scoutSkeletonRows==='function')?scoutSkeletonRows(6):'<div style="padding:2rem;text-align:center;color:var(--text3);">Chargement…</div>';
-  try{
-    const r=await fetch(API+'/me/tracking?scope='+_trackingScope,{headers:(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}});
-    const d=await r.json();
-    _trackingData=d.tracking||[];
-  }catch(e){ body.innerHTML='<div style="padding:2rem;text-align:center;color:var(--text3);">Erreur de chargement.</div>'; return; }
-  renderTrackingTiles();
-  renderTrackingTable();
-}
-window.renderTracking=renderTracking;
-function setTrackingScope(sc){ _trackingScope=sc; _trkScopeStyle(); renderTracking(); }
-window.setTrackingScope=setTrackingScope;
-function renderTrackingTiles(){
-  const t=document.getElementById('trk-tiles'); if(!t) return;
-  const D=_trackingData;
-  const overdue=D.filter(x=>x.urgency==='overdue').length;
-  const due=D.filter(x=>x.urgency==='due').length;
-  const waiting=D.filter(x=>x.status==='waiting').length;
-  const interested=D.filter(x=>x.status==='interested'||x.status==='transmitted').length;
-  const tile=(lbl,val,col)=>'<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 12px;"><div style="font-size:11px;color:var(--text3);">'+lbl+'</div><div style="font-size:22px;font-weight:700;color:'+col+';">'+val+'</div></div>';
-  t.innerHTML=tile('En retard',overdue,'#A44A35')+tile("À relancer aujourd'hui",due,'#C99A4E')+tile('En attente',waiting,'var(--text)')+tile('Intéressés',interested,'#6A8B74');
-}
-function _trkFiltered(){
-  const st=(document.getElementById('trk-status')||{}).value||'';
-  const q=((document.getElementById('trk-search')||{}).value||'').toLowerCase().trim();
-  return _trackingData.filter(x=>{
-    if(st && x.status!==st) return false;
-    if(q){ const hay=((x.prenom||'')+' '+(x.nom||'')+' '+(x.account_nom||'')+' '+(x.organisation||'')).toLowerCase(); if(!hay.includes(q)) return false; }
-    return true;
-  });
-}
-function _trkStatusChip(x){
-  const base='font-size:11px;padding:2px 8px;border-radius:var(--radius);font-weight:600;';
-  if(x.status==='transmitted') return '<span style="'+base+'background:rgba(133,89,62,.12);color:#85593E;">Saisi dans Dynamics</span>';
-  if(x.status==='interested') return '<span style="'+base+'background:rgba(122,154,132,.14);color:#6A8B74;">Intéressé</span>';
-  if(x.status==='not_interested') return '<span style="'+base+'background:var(--bg3);color:var(--text3);">Pas intéressé</span>';
-  if(x.status==='closed') return '<span style="'+base+'background:var(--bg3);color:var(--text3);" title="Aucune réponse 90 jours après le dernier email">Close, sans réponse</span>';
-  return '<span style="'+base+'background:var(--bg3);color:var(--text2);">En attente</span>';
-}
-function _trkUrgencyCell(x){
-  if(x.status!=='waiting') return '<span style="color:var(--text3);">Hors séquence</span>';
-  if(x.urgency==='overdue') return '<span style="color:#A44A35;font-weight:600;">⚠️ En retard '+x.days_overdue+' j</span>';
-  if(x.urgency==='due') return '<span style="color:#C99A4E;font-weight:600;">🕐 Aujourd\'hui</span>';
-  if(x.urgency==='future') return '<span style="color:var(--text2);">Dans '+x.days_left+' j</span>';
-  return '<span style="color:var(--text3);">Séquence épuisée</span>';
-}
-function _trkActionBtn(x){
-  const b='font-size:12px;padding:6px 10px;border-radius:var(--radius);cursor:pointer;white-space:nowrap;';
-  if(x.status==='waiting' && x.email && (x.urgency==='overdue'||x.urgency==='due'||x.urgency==='future'))
-    return '<button onclick="trkRelance(\''+esc(x.id)+'\')" style="'+b+'color:#fff;background:var(--accent);border:none;font-weight:600;">✉️ Relance</button>';
-  if(x.status==='interested')
-    return '<button onclick="trkTransmitCRM(\''+esc(x.id)+'\')" style="'+b+'color:#85593E;background:rgba(133,89,62,.1);border:1px solid rgba(133,89,62,.4);font-weight:600;" title="Une fois le contact créé dans Dynamics. Scout n’envoie rien à Dynamics.">✓ Saisi dans Dynamics</button>';
-  return '<button onclick="openContactDetail(\''+esc(x.id)+'\')" style="'+b+'color:var(--text2);background:var(--bg3);border:1px solid var(--border2);">👁️ Fiche</button>';
-}
-function renderTrackingTable(){
-  const body=document.getElementById('trk-body'); if(!body) return;
-  const list=_trkFiltered(); window._trackingExport=list;
-  if(!list.length){ body.innerHTML='<div style="padding:2rem;text-align:center;color:var(--text3);">Aucun prospect contacté ici pour le moment.</div>'; return; }
-  const showOwner=(_trackingScope==='team');
-  const rows=list.map(function(x){
-    const name=((x.prenom||'')+' '+(x.nom||'')).trim()||x.id;
-    const compte=x.account_nom||x.organisation||'';
-    const euId=x.end_user_id;
-    return '<tr style="border-top:1px solid var(--border2);">'
-      +'<td style="padding:9px 10px;">'
-        +'<div onclick="openContactDetail(\''+esc(x.id)+'\')" style="color:var(--accent2);cursor:pointer;font-weight:500;">'+esc(name)+'</div>'
-        +'<div '+(euId?'onclick="go(\'end-users\');setTimeout(function(){openEndUser(\''+esc(euId)+'\')},300)" style="font-size:11px;color:var(--text3);cursor:pointer;"':'style="font-size:11px;color:var(--text3);"')+'>'+esc(compte)+'</div>'
-      +'</td>'
-      +(showOwner?'<td style="padding:9px 10px;color:var(--text2);font-size:12px;">'+esc(x.owner||'')+'</td>':'')
-      +'<td style="padding:9px 10px;">'+_trkStatusChip(x)+'<div style="font-size:11px;color:var(--text3);margin-top:3px;">'+esc(x.stage)+'</div></td>'
-      +'<td style="padding:9px 10px;font-size:12px;">'+_trkUrgencyCell(x)+'</td>'
-      +'<td style="padding:9px 10px;">'+_trkActionBtn(x)+'</td>'
-    +'</tr>';
-  }).join('');
-  body.innerHTML='<div style="border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;overflow-x:auto;">'
-    +'<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead>'
-    +'<tr style="background:var(--bg3);color:var(--text3);text-align:left;">'
-    +'<th style="padding:9px 10px;font-weight:500;">Contact / compte</th>'
-    +(showOwner?'<th style="padding:9px 10px;font-weight:500;">Owner</th>':'')
-    +'<th style="padding:9px 10px;font-weight:500;">Statut / étape</th>'
-    +'<th style="padding:9px 10px;font-weight:500;">Prochaine relance</th>'
-    +'<th style="padding:9px 10px;font-weight:500;">Action</th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
-}
-window.renderTrackingTable=renderTrackingTable;
+// Ancienne vue « Suivi & relances » supprimée (la file Aujourd'hui la remplace). Utilitaires conservés :
 function scoutSkeletonCards(n){ n=n||9; let h='<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;">'; for(let i=0;i<n;i++){ h+='<div style="border:1px solid var(--border2);border-radius:var(--radius);padding:14px;"><div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;"><div class="sk" style="width:34px;height:34px;border-radius:50%;"></div><div style="flex:1;"><div class="sk" style="height:12px;width:70%;margin-bottom:6px;"></div><div class="sk" style="height:10px;width:45%;"></div></div></div><div class="sk" style="height:10px;width:55%;"></div></div>'; } return h+'</div>'; }
 function scoutSkeletonRows(n){ n=n||6; let h='<div style="border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">'; for(let i=0;i<n;i++){ h+='<div style="display:flex;gap:14px;padding:13px 12px;border-top:1px solid var(--border2);align-items:center;"><div class="sk" style="height:12px;flex:2;"></div><div class="sk" style="height:12px;flex:1;"></div><div class="sk" style="height:12px;flex:1;"></div><div class="sk" style="height:12px;flex:1;"></div></div>'; } return h+'</div>'; }
 window.scoutSkeletonCards=scoutSkeletonCards; window.scoutSkeletonRows=scoutSkeletonRows;
-async function trkTransmitCRM(id){
-  try{ await fetch(API+'/action/transmit-crm',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:id})}); }catch(e){}
-  const x=(_trackingData||[]).find(t=>t.id===id); if(x) x.status='transmitted';
-  renderTrackingTiles(); renderTrackingTable();
-}
-window.trkTransmitCRM=trkTransmitCRM;
 // Relance : brouillon préparé par Scout (ou rédigé à la demande), TOUJOURS relu et modifiable avant l'envoi.
 // Les modifications sont enregistrées au fil de la frappe ; rien ne part sans que le commercial l'ouvre dans sa messagerie.
 function _trkH(json){ const h=(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}; return json?Object.assign({'Content-Type':'application/json'},h):h; }
@@ -11673,43 +10204,9 @@ async function trkMarkRelanceSent(id){
   const f=_trkFields();
   try{ await fetch(API+'/action/confirm',{method:'POST',headers:_trkH(true),body:JSON.stringify({contact_id:id,action_type:'email',details:{subject:f.subject,body:f.body,to:f.to}})}); }catch(e){}
   const m=document.getElementById('trk-relance-modal'); if(m) m.remove();
-  renderTracking();
 }
 window.trkMarkRelanceSent=trkMarkRelanceSent;
-function exportTrackingCSV(){
-  const list=window._trackingExport||_trkFiltered();
-  const cols=['Owner','Prénom','Nom','Titre','Compte','Pays','Email','Statut','Étape','Prochaine relance','Jours de retard','Dernière action'];
-  const stMap={waiting:'En attente',interested:'Intéressé',transmitted:'Saisi dans Dynamics',not_interested:'Pas intéressé',closed:'Close, sans réponse'};
-  const q=function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; };
-  const lines=list.map(function(x){ return [x.owner||'',x.prenom||'',x.nom||'',x.titre||'',x.account_nom||x.organisation||'',x.pays||'',x.email||'',stMap[x.status]||x.status,x.stage||'',x.next_relance?String(x.next_relance).slice(0,10):'',x.urgency==='overdue'?x.days_overdue:'',x.last_action_at?String(x.last_action_at).slice(0,10):''].map(q).join(','); });
-  const csv='﻿'+cols.map(q).join(',')+'\n'+lines.join('\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='suivi_relances.csv'; document.body.appendChild(a); a.click(); a.remove();
-}
-window.exportTrackingCSV=exportTrackingCSV;
 
-
-function contactPanelCard(ct) {
-  const initials = (((ct.prenom || '')[0] || '') + ((ct.nom || '')[0] || '')).toUpperCase();
-  return `<div class="entity-card" style="cursor:pointer;padding:14px;" onclick="openContactDetail('${esc(ct.id)}')" title="Voir le contexte">
-    <div style="display:flex;gap:10px;align-items:flex-start;">
-      <div style="width:38px;height:38px;border-radius:50%;background:rgba(133,89,62,.14);border:2px solid rgba(133,89,62,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;">${esc(initials || '?')}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:center;gap:5px;">
-          <span style="font-size:13px;font-weight:600;color:var(--text);">${esc(((ct.prenom || '') + ' ' + (ct.nom || '')).trim())}</span>
-          ${ct.verified ? '<span style="font-size:10px;color:#7A9A84;">✓</span>' : ''}
-        </div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.3;">${esc(ct.titre || '')}</div>
-      </div>
-    </div>
-    ${ct.organisation ? `<div style="margin-top:8px;font-size:11px;color:var(--accent2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🏢 ${esc(ct.organisation)}</div>` : ''}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;">
-      ${ct.pays ? `<span style="font-size:10px;color:var(--text3);">🌍 ${esc(ct.pays)}</span>` : ''}
-      ${ct.email ? '<span style="font-size:10px;color:var(--accent2);">✉️</span>' : ''}
-      ${ct.linkedin ? '<span style="font-size:10px;color:#5E7069;font-weight:700;">in</span>' : ''}
-    </div>
-  </div>`;
-}
 
 function _extractUrls(text){
   const out=[]; const seen=new Set(); let m;
@@ -11871,8 +10368,7 @@ async function markContactClient(id){
     await fetch(API+'/action/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contact_id:id,action_type:'already_client'})});
     const c=(_contactsPanelData||[]).find(x=>x.id===id); if(c) c.already_client=true;
     if(typeof closeContactDetail==='function') closeContactDetail();
-    if(document.getElementById('panel-hot')&&document.getElementById('panel-hot').classList.contains('active')) renderHotProspects();
-    else if(typeof filterContactsPanel==='function') filterContactsPanel();
+    if(window.scoutCrm&&window.scoutCrm.refreshBadge) window.scoutCrm.refreshBadge();
   }catch(e){ alert('Erreur réseau'); }
 }
 async function markContactNotRelevant(id){
@@ -11881,8 +10377,7 @@ async function markContactNotRelevant(id){
     await fetch(API+'/action/set-nonprospect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contact_id:id})});
     const c=(_contactsPanelData||[]).find(x=>x.id===id); if(c) c.type_contact='non_prospect_elistair';
     if(typeof closeContactDetail==='function') closeContactDetail();
-    if(document.getElementById('panel-hot')&&document.getElementById('panel-hot').classList.contains('active')) renderHotProspects();
-    else if(typeof filterContactsPanel==='function') filterContactsPanel();
+    if(window.scoutCrm&&window.scoutCrm.refreshBadge) window.scoutCrm.refreshBadge();
   }catch(e){ alert('Erreur réseau'); }
 }
 window.markContactClient=markContactClient;
@@ -11975,7 +10470,7 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=208"></script>
+<script src="assets/crm.js?v=209"></script>
 <script src="assets/settings.js?v=2"></script>
 <script src="assets/app.js?v=2"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>

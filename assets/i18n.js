@@ -21,6 +21,10 @@
 
   var D = {
     // ── Navigation, titres
+    "Aujourd'hui": 'Today', 'Aujourd’hui': 'Today', 'Veille': 'Watch', 'Pilotage': 'Management', 'Chat du site': 'Site chat', 'Rechercher ou demander': 'Search or ask',
+    'Tout': 'All', 'Urgent': 'Urgent', 'Réponses et réactions': 'Replies and reactions', 'Tâches': 'Tasks', 'Prospection': 'Prospecting', '+ Nouvelle tâche': '+ New task',
+    'Tâches terminées (30 j)': 'Completed tasks (30 d)', 'Ma semaine': 'My week', 'Mon portefeuille': 'My portfolio', 'Prochaine action': 'Next action',
+    'Compte chaud': 'Hot account', 'À ouvrir': 'To open', 'Ouvrir le compte': 'Open account', 'Ouvrir le contact': 'Open contact', 'Assistant Scout': 'Scout assistant',
     'Accueil': 'Home', 'équipe': 'team', 'Ma journée': 'My day', 'À faire': 'To do', 'Statistiques': 'Statistics', 'Prospects': 'Prospects',
     'Comptes': 'Accounts', 'Compte': 'Account', 'Contacts': 'Contacts', 'Contact': 'Contact', 'Signaux': 'Signals', 'Paramètres': 'Settings', 'Vente': 'Sales', 'Colonnes': 'Columns',
     'Marché': 'Market', 'Relances': 'Follow-ups', 'Relance': 'Follow-up', 'À traiter': 'To review', 'Prospects chauds': 'Hot prospects',

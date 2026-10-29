@@ -207,3 +207,17 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 #cfg-owner-rules .crm-sel { min-width: 130px; }
 #scout-cooldowns-container .scout-cd-row { padding: 6px 0; }
 #cfg-integrations { display: flex; flex-direction: column; gap: 14px; }
+/* pastilles du menu (Aujourd'hui, Veille) */
+.bn-badge { position: absolute; top: 2px; right: 8px; font-size: 9px; font-weight: 700; padding: 0 4px; border-radius: 3px; background: var(--accent); color: #fff; }
+#nav-today-badge { background: var(--accent); }
+/* Aujourd'hui : barre de filtres de la file */
+.crm-qbar { justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.crm-qcard { padding-top: 4px; padding-bottom: 4px; }
+.crm-q-foot { margin: 10px 0 0; }
+.crm-q.k-signal { display: block; padding: 0; }
+.crm-q.k-signal .crm-ms { border: 0; margin: 0; }
+.crm-q-ic.k-prosp { color: var(--teal); }
+.crm-q-kind.k-signal, .crm-q-kind.k-hot { border-color: var(--accent); color: var(--accent2); }
+.crm-kpis.two { grid-template-columns: 1fr 1fr; }
+.crm-newtask[hidden] { display: none !important; }
+#scout-chat-btn { display: none !important; } /* l'assistant s'ouvre depuis la recherche ⌘K */
