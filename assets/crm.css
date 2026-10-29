@@ -589,7 +589,8 @@ body.theme-light .crm-q-ic.k-reaction, body.theme-light .crm-q-kind.k-reaction {
 .crm-org-box.path { border-color: var(--text3); }
 .crm-org-box.on { background: var(--accent); border-color: var(--accent); color: #fff; cursor: default; }
 .crm-org-box.on .crm-meta { color: rgba(255,255,255,.8); }
-.crm-org-stack { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.crm-org-stack { display: grid; grid-template-columns: repeat(var(--cols, 1), minmax(150px, 200px)); gap: 6px; align-items: stretch; }
+.crm-org-stack > .crm-meta { align-self: center; padding: 0 6px; }
 .crm-org-stack .crm-org-box { max-width: 220px; }
 .crm-org-more { font-size: 12px; color: var(--text3); padding: 7px 4px; white-space: nowrap; }
 .crm-org-card > summary { list-style: none; cursor: pointer; }

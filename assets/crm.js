@@ -991,7 +991,7 @@
     var byId = {}, kids = {};
     S.treeData.forEach(function (a) { byId[a.id] = a; });
     S.treeData.forEach(function (a) { if (a.parent_id && byId[a.parent_id]) (kids[a.parent_id] = kids[a.parent_id] || []).push(a); });
-    Object.keys(kids).forEach(function (k) { kids[k].sort(function (x, y) { return ((kids[y.id] || []).length - (kids[x.id] || []).length) || String(x.nom).localeCompare(String(y.nom)); }); });
+    Object.keys(kids).forEach(function (k) { kids[k].sort(function (x, y) { return ((kids[y.id] || []).length - (kids[x.id] || []).length) || String(x.nom).localeCompare(String(y.nom), 'fr', { numeric: true }); }); });
     var cur = byId[id]; if (!cur) { box.innerHTML = ''; return; }
     var path = {}, root = cur, guard = 0;
     path[cur.id] = 1;
@@ -1001,11 +1001,19 @@
     count(root, 0);
     var MAXW = 10;
     var first = function (n) { return String(n || '').split(' ')[0]; };
+    var short = function (a) {
+      var nm = String(a.nom || ''), par = a.parent_id && byId[a.parent_id] ? String(byId[a.parent_id].nom || '').replace(/\s*\(.*\)\s*$/, '') : '';
+      if (par && par.length > 3 && nm.toLowerCase().indexOf(par.toLowerCase()) === 0) {
+        var rest = nm.slice(par.length).replace(/^[\s\-–:,·|]+/, '');
+        if (rest.length > 2 && rest[0] !== '(') return rest;
+      }
+      return nm;
+    };
     var card = function (a) {
       var n = (kids[a.id] || []).length;
       var meta = [a.n_contacts ? a.n_contacts + ' contact' + (a.n_contacts > 1 ? 's' : '') : '', a.owner_name ? first(a.owner_name) : ''].filter(Boolean).join(' · ');
       return '<button type="button" class="crm-org-box' + (a.id === id ? ' on' : '') + (path[a.id] && a.id !== id ? ' path' : '') + '" data-org="' + esc(a.id) + '"' + (a.id === id ? ' aria-current="true"' : '') + '>'
-        + '<span class="t">' + (a.tier ? tierBadge(a.tier) : '') + '<b>' + esc(a.nom) + '</b></span>'
+        + '<span class="t">' + (a.tier ? tierBadge(a.tier) : '') + '<b title="' + esc(a.nom) + '">' + esc(short(a)) + '</b></span>'
         + (meta || n ? '<span class="crm-meta">' + esc(meta) + (n && meta ? ' · ' : '') + (n ? n + ' rattaché' + (n > 1 ? 's' : '') : '') + '</span>' : '') + '</button>';
     };
     // profondeur affichée : 3 niveaux sous la tête, plus le chemin vers le compte ouvert et ses enfants directs
@@ -1016,9 +1024,9 @@
       var leaves = ch.every(function (k) { return !(kids[k.id] || []).length; });
       if (leaves && ch.length > 4) {
         // beaucoup de feuilles : une colonne compacte plutôt qu'une ligne très large
-        var shown = ch.slice(0, 14);
+        var shown = ch.slice(0, 24);
         if (path[a.id]) ch.forEach(function (k) { if (path[k.id] && shown.indexOf(k) < 0) shown.push(k); });
-        return '<li>' + card(a) + '<ul><li><div class="crm-org-stack">' + shown.map(card).join('')
+        return '<li>' + card(a) + '<ul><li><div class="crm-org-stack" style="--cols:' + Math.min(4, Math.ceil(shown.length / 5)) + '">' + shown.map(card).join('')
           + (ch.length > shown.length ? '<span class="crm-meta">+ ' + (ch.length - shown.length) + ' autres</span>' : '') + '</div></li></ul></li>';
       }
       var vis = ch.slice(0, MAXW);
