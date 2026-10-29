@@ -110,7 +110,7 @@
         : row('off', 'Envoi d’e-mails', 'Non configuré : les codes de connexion par e-mail ne partent pas.');
       box.innerHTML = '<div class="cfg-box"><div class="cfg-box-h"><b>Prospection</b></div>'
         + mail
-        + row(d.hunter.configured ? (d.hunter.errors_7d ? 'warn' : 'ok') : 'off', 'Hunter', d.hunter.configured ? ('Vérification des emails. Dernier appel ' + ago(d.hunter.last && d.hunter.last.at) + (d.hunter.errors_7d ? ' · ' + d.hunter.errors_7d + ' erreurs en 7 j' : '')) : 'Clé absente.')
+        + row(d.hunter.configured ? (d.hunter.errors_7d ? 'warn' : 'ok') : 'off', 'Hunter', d.hunter.configured ? ('Clé configurée : recherche et vérification des emails' + (d.hunter.last ? '. Dernier appel ' + ago(d.hunter.last.at) : '') + (d.hunter.errors_7d ? ' · ' + d.hunter.errors_7d + ' erreurs en 7 j' : '') + '.') : 'Clé absente.')
         + row(d.ai.configured ? 'ok' : 'off', 'Claude (IA)', d.ai.configured ? 'Rédaction des emails, chat du site, résumés.' : 'Clé absente : rédaction et chat désactivés.')
         + row('warn', 'Microsoft Dynamics', 'Pas de connexion : les réponses positives sont saisies à la main dans Dynamics.')
         + '</div><div class="cfg-box"><div class="cfg-box-h"><b>Sources marchés</b><span class="cfg-hint">Collecte chaque matin, alimente Marchés et les actions proposées.</span></div>' + srcRows + '</div>'
