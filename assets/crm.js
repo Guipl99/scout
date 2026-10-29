@@ -193,7 +193,8 @@
     return Promise.all([
       api('/crm/tasks?scope=' + (team ? 'team' : 'me') + '&state=open').catch(function () { return { tasks: [] }; }),
       api('/me/tracking?scope=' + (team ? 'team' : 'me')).catch(function () { return { tracking: [] }; }),
-      api('/assist/relances/ready').catch(function () { return { ready: [] }; })
+      api('/assist/relances/ready').catch(function () { return { ready: [] }; }),
+      api('/assist/reactions?scope=' + (team ? 'team' : 'me')).catch(function () { return { reactions: [] }; })
     ]).then(function (r) {
       var items = [];
       var ready = {}; (r[2].ready || []).forEach(function (d) { ready[d.contact_id] = d; });
@@ -211,11 +212,22 @@
             sub: 'À qualifier puis saisir dans Dynamics', who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x });
         }
       });
-      items.sort(function (a, b) { return (a.due || '9999') < (b.due || '9999') ? -1 : ((a.due || '9999') > (b.due || '9999') ? 1 : 0); });
+      // Réactions à nos emails : clic sur un lien suivi, ou visite du site par le même organisme après l'envoi.
+      (r[3].reactions || []).forEach(function (x) {
+        var name = personName(x), days = Math.max(0, Math.round((new Date(x.first_at) - new Date(x.sent_at)) / 864e5));
+        var what = x.kind === 'clic' ? 'a ouvert le lien de ton email' : (x.account_nom || 'Son organisme') + ' est venu sur elistair.com';
+        var when = days === 0 ? 'le jour même' : days === 1 ? 'le lendemain' : days + ' jours après';
+        items.push({ kind: 'reaction', id: 'rea-' + x.key, due: String(x.last_at).slice(0, 10), title: 'Réaction : ' + name, who: x.performed_by,
+          sub: what + ' ' + when + ' · ' + x.pages + ' page' + (x.pages > 1 ? 's' : '') + ((x.titles || []).length ? ' : ' + x.titles.filter(Boolean).slice(0, 3).join(', ') : ''),
+          contact_id: x.contact_id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom, key: x.key });
+      });
+      // Les réactions passent en tête : c'est le moment d'appeler.
+      var rank = function (it) { return it.kind === 'reaction' ? 0 : 1; };
+      items.sort(function (a, b) { return rank(a) - rank(b) || ((a.due || '9999') < (b.due || '9999') ? -1 : ((a.due || '9999') > (b.due || '9999') ? 1 : 0)); });
       return items;
     });
   }
-  var KIND_LABEL = { task: 'Tâche', relance: 'Relance', reply: 'Réponse' };
+  var KIND_LABEL = { task: 'Tâche', relance: 'Relance', reply: 'Réponse', reaction: 'Réaction' };
 
   function queueItemHtml(it, opts) {
     opts = opts || {};
@@ -223,8 +235,9 @@
     var dueCls = it.due ? (it.due < t ? 'crm-late' : (it.due === t ? 'crm-today' : '')) : '';
     var dueTxt = it.due ? (it.due < t ? 'En retard · ' + fmtDate(it.due) : (it.due === t ? "Aujourd'hui" : fmtDate(it.due))) : 'Sans échéance';
     if (it.kind === 'reply') dueTxt = it.due ? 'Reçue le ' + fmtDate(it.due) : 'Reçue';
+    if (it.kind === 'reaction') { dueTxt = it.sub; dueCls = 'crm-today'; }
     var sub = [];
-    if (it.kind === 'reply') dueCls = 'crm-today';
+    if (it.kind === 'reply' || it.kind === 'reaction') dueCls = 'crm-today';
     sub.push('<span class="' + dueCls + '">' + esc(dueTxt) + '</span>');
     if (it.account_nom) sub.push(it.account_id ? '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>' : esc(it.account_nom));
     if (it.kind === 'task' && it.contact_name) sub.push('<button type="button" class="crm-link" data-qct="' + esc(it.contact_id) + '">' + esc(it.contact_name) + '</button>');
@@ -237,6 +250,7 @@
       + '<button type="button" class="crm-btn sm primary" data-qrel="' + esc(it.contact_id) + '">' + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button>';
     if (it.kind === 'reply') actions = '<button type="button" class="crm-btn sm" data-qct="' + esc(it.contact_id) + '">Qualifier</button><button type="button" class="crm-btn sm" data-qcopy="' + esc(it.contact_id) + '" title="Copie nom, titre, organisation, pays, email et LinkedIn pour les coller dans Dynamics">Copier la fiche</button><button type="button" class="crm-btn sm primary" data-qtx="' + esc(it.contact_id) + '" title="Une fois le contact créé dans Dynamics. Scout n’envoie rien à Dynamics.">Saisi dans Dynamics ✓</button>';
     if (it.kind === 'reply' && it.x) { S.qx = S.qx || {}; S.qx[it.contact_id] = it.x; }
+    if (it.kind === 'reaction') actions = '<button type="button" class="crm-btn sm primary" data-qct="' + esc(it.contact_id) + '">Appeler ou écrire</button><button type="button" class="crm-btn sm ghost" data-qseen="' + esc(it.key) + '" title="Retirer de la file">Vu</button>';
     if (it.kind === 'task') actions = '<button type="button" class="del" data-deltask="' + esc(it.task.id) + '" title="Supprimer" aria-label="Supprimer la tâche">×</button>';
     return '<div class="crm-q k-' + it.kind + '">' + lead + '<div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
       + (it.kind === 'task' ? esc(it.title) : '<button type="button" class="crm-link strong" data-qct="' + esc(it.contact_id) + '">' + esc(it.title) + '</button>')
@@ -249,6 +263,9 @@
     root.querySelectorAll('[data-qct]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); openContact(b.getAttribute('data-qct')); }; });
     root.querySelectorAll('[data-qrel]').forEach(function (b) {
       b.onclick = function () { if (typeof window.trkRelance === 'function') { S.afterRelance = after; window.trkRelance(b.getAttribute('data-qrel')); } else openContact(b.getAttribute('data-qrel')); };
+    });
+    root.querySelectorAll('[data-qseen]').forEach(function (b) {
+      b.onclick = function (e) { e.stopPropagation(); b.disabled = true; api('/assist/reactions/seen', { method: 'POST', body: { key: b.getAttribute('data-qseen') } }).then(function () { if (after) after(); refreshBadge(); }).catch(function (er) { b.disabled = false; toast('Erreur : ' + er.message); }); };
     });
     root.querySelectorAll('[data-qcopy]').forEach(function (b) {
       b.onclick = function () {
@@ -2014,7 +2031,7 @@
     var p = document.getElementById('panel-tasks'); if (!p) return;
     if (!document.getElementById('crm-tasks')) {
       p.innerHTML = '<div class="crm-wrap" id="crm-tasks"><div class="crm-row" style="justify-content:space-between;margin-bottom:12px;gap:10px">'
-        + '<div class="crm-views" style="margin:0" role="tablist">' + [['all', 'Tout'], ['task', 'Tâches'], ['relance', 'Relances'], ['reply', 'Réponses']].map(function (x) { return '<button type="button" class="crm-chip" data-qf="' + x[0] + '">' + x[1] + '<span class="n" data-qn="' + x[0] + '"></span></button>'; }).join('') + '</div>'
+        + '<div class="crm-views" style="margin:0" role="tablist">' + [['all', 'Tout'], ['task', 'Tâches'], ['relance', 'Relances'], ['reply', 'Réponses et réactions']].map(function (x) { return '<button type="button" class="crm-chip" data-qf="' + x[0] + '">' + x[1] + '<span class="n" data-qn="' + x[0] + '"></span></button>'; }).join('') + '</div>'
         + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-scope="me">Moi</button><button type="button" class="crm-chip" data-scope="team">Équipe</button>'
         + '<button type="button" class="crm-chip" data-state="done">Terminées (30 j)</button></div></div>'
         + '<div class="crm-newtask"><input class="crm-input" id="crm-nt-title" maxlength="300" placeholder="Nouvelle tâche, ex. Préparer la démo pour le SDIS 69" aria-label="Nouvelle tâche">'
@@ -2063,18 +2080,21 @@
     }
     loadQueue(S.taskScope).then(function (items) {
       if (S.taskScope === 'me') updateBadge(items);
-      var counts = { all: items.length, task: 0, relance: 0, reply: 0 }; items.forEach(function (x) { counts[x.kind]++; });
+      var counts = { all: items.length, task: 0, relance: 0, reply: 0, reaction: 0 }; items.forEach(function (x) { counts[x.kind]++; });
+      counts.reply += counts.reaction;
       p.querySelectorAll('[data-qn]').forEach(function (n) { var c = counts[n.getAttribute('data-qn')]; n.textContent = c ? ' ' + c : ''; });
-      var shown = S.qFilter === 'all' ? items : items.filter(function (x) { return x.kind === S.qFilter; });
+      var shown = S.qFilter === 'all' ? items : items.filter(function (x) { return x.kind === S.qFilter || (S.qFilter === 'reply' && x.kind === 'reaction'); });
       if (!shown.length) { list.innerHTML = '<div class="crm-empty">Rien dans cette file. Les tâches créées depuis une fiche, les relances dues et les réponses positives arrivent ici.</div>'; return; }
       var t = todayStr(), w = addDays(7), html = '';
+      var isLive = function (x) { return x.kind === 'reply' || x.kind === 'reaction'; };
       [
+        { k: 'reaction', label: 'Réactions à tes emails', test: function (x) { return x.kind === 'reaction'; } },
         { k: 'reply', label: 'Réponses à traiter', test: function (x) { return x.kind === 'reply'; } },
-        { k: 'late', label: 'En retard', test: function (x) { return x.kind !== 'reply' && x.due && x.due < t; } },
-        { k: 'today', label: "Aujourd'hui", test: function (x) { return x.kind !== 'reply' && x.due === t; } },
-        { k: 'week', label: '7 prochains jours', test: function (x) { return x.kind !== 'reply' && x.due > t && x.due <= w; } },
-        { k: 'later', label: 'Plus tard', test: function (x) { return x.kind !== 'reply' && x.due > w; } },
-        { k: 'none', label: 'Sans échéance', test: function (x) { return x.kind !== 'reply' && !x.due; } }
+        { k: 'late', label: 'En retard', test: function (x) { return !isLive(x) && x.due && x.due < t; } },
+        { k: 'today', label: "Aujourd'hui", test: function (x) { return !isLive(x) && x.due === t; } },
+        { k: 'week', label: '7 prochains jours', test: function (x) { return !isLive(x) && x.due > t && x.due <= w; } },
+        { k: 'later', label: 'Plus tard', test: function (x) { return !isLive(x) && x.due > w; } },
+        { k: 'none', label: 'Sans échéance', test: function (x) { return !isLive(x) && !x.due; } }
       ].forEach(function (g) {
         var its = shown.filter(g.test); if (!its.length) return;
         html += '<div class="crm-tasks-sec"><h4 class="' + (g.k === 'late' ? 'late' : '') + '">' + g.label + ' · ' + its.length + '</h4><div class="crm-card" style="padding-top:4px;padding-bottom:4px">'

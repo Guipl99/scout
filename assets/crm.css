@@ -561,3 +561,6 @@ body.theme-light .crm-q-kind.k-reply, body.theme-light .crm-q-ic.k-reply { color
 .crm-brief p { margin: 0; font-size: 12.5px; line-height: 1.45; }
 .crm-brief-next { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12.5px; }
 @media (max-width: 760px) { .crm-brief-grid { grid-template-columns: minmax(0, 1fr); } }
+.crm-q-ic.k-reaction, .crm-q-kind.k-reaction { color: var(--accent2); }
+body.theme-light .crm-q-ic.k-reaction, body.theme-light .crm-q-kind.k-reaction { color: var(--accent); }
+.crm-q.k-reaction { box-shadow: inset 2px 0 0 var(--accent); }
