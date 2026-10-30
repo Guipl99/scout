@@ -771,7 +771,7 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <link rel="stylesheet" href="assets/crm.css?v=202">
-<link rel="stylesheet" href="assets/brand.css?v=17">
+<link rel="stylesheet" href="assets/brand.css?v=18">
 <link rel="stylesheet" href="assets/app.css?v=2">
 </head>
 <body>
@@ -2333,6 +2333,7 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     <div id="panel-people" class="panel"></div>
     <div id="panel-stats" class="panel"></div>
     <div id="panel-market" class="panel"></div>
+    <div id="panel-veille" class="panel"></div>
 
     <div id="panel-end-users" class="panel">
       <div id="eu-list-view">
@@ -3224,6 +3225,7 @@ const NAV_GROUPS = [
   { id: 'signaux', label: 'Signaux', tabs: [
       { panel: 'feed',      label: 'Fil' },
       { panel: 'market',    label: 'Marchés' },
+      { panel: 'veille',    label: 'Veille' },
       { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' },
       { panel: 'chat',      label: 'Chat du site', badge: 'subnav-chat-badge' },
       { panel: 'signals',   label: 'À traiter', hidden: true, alias: 'market' },
@@ -3381,7 +3383,7 @@ function go(id, opts) {
     });
     loadContacts(forceReload);
   }
-  if (window.scoutCrm && (id === 'accounts' || id === 'home' || id === 'people' || id === 'stats' || id === 'market' || id === 'feed')) window.scoutCrm.onPanel(id, opts);
+  if (window.scoutCrm && (id === 'accounts' || id === 'home' || id === 'people' || id === 'stats' || id === 'market' || id === 'veille' || id === 'feed')) window.scoutCrm.onPanel(id, opts);
   // Persister l'onglet dans le hash
   try { if (typeof _setCurrentView === 'function') _setCurrentView({ kind:'panel', id: id, tab: opts && opts.tab }); } catch(e){}
   // Historique : une entrée par changement d'onglet, pour que le bouton Retour du navigateur marche.
@@ -5265,7 +5267,7 @@ if ('serviceWorker' in navigator) {
   const hash = window.location.hash.slice(1); // ex: "end-users/contacts"
   if (!hash) return;
   const [panel, tab] = hash.split('/');
-  const validPanels = ['dashboard','home','societes','produits-db','contracts','end-users','accounts','people','tasks','config','hot','contacts','tracking','visitors','resellers','chat','market','prospection','stats','signals','feed'];
+  const validPanels = ['dashboard','home','societes','produits-db','contracts','end-users','accounts','people','tasks','config','hot','contacts','tracking','visitors','resellers','chat','market','veille','prospection','stats','signals','feed'];
   if (!validPanels.includes(panel)) return;
   // Attendre que le DOM soit prêt
   if (document.readyState === 'loading') {
@@ -10473,7 +10475,7 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=218"></script>
+<script src="assets/crm.js?v=219"></script>
 <script src="assets/settings.js?v=2"></script>
 <script src="assets/app.js?v=4"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>

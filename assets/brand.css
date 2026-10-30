@@ -287,3 +287,12 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .crm-score-cell { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .crm-score-cell .crm-web { margin-left: 0; }
 .crm-score-cell .crm-buy { line-height: 1.5; }
+
+/* Veille drone filaire */
+.crm-vacc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.crm-vh { display: flex; gap: 8px; align-items: flex-start; padding: 7px 0; border-top: 1px solid var(--border, rgba(127,127,127,.18)); flex-wrap: wrap; }
+.crm-vh .m { flex: 1; min-width: 200px; font-size: 13px; line-height: 1.4; }
+.crm-vh .r { white-space: nowrap; font-size: 12px; }
+.crm-vk { display: inline-block; flex: none; min-width: 74px; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 6px; border: 1px solid var(--text2, #888); color: var(--text2, #888); border-radius: 2px; margin-top: 1px; }
+.crm-vk.hot { border-color: var(--accent); background: var(--accent); color: #fff; }
+.crm-buy-c { border-style: dashed; }

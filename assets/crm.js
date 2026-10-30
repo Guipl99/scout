@@ -694,6 +694,85 @@
     run();
   }
 
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // VEILLE : comptes qui évaluent, testent, achètent ou utilisent un drone filaire
+  // (posts LinkedIn publics, sites des concurrents et distributeurs, presse). Centré comptes.
+  // ═════════════════════════════════════════════════════════════════════════
+  var VK = { evaluation: 'Évalue', demo: 'Démo', achat: 'Achète', ao: 'Appel d’offres', livraison: 'Livré', usage: 'Utilise' };
+  var VK_HOT = { evaluation: 1, demo: 1, achat: 1, ao: 1 };
+  function veilleKind(k) { return '<span class="crm-vk' + (VK_HOT[k] ? ' hot' : '') + '">' + esc(VK[k] || k) + '</span>'; }
+  function veilleHit(h, withOrg) {
+    var src = h.source === 'linkedin' ? 'LinkedIn' : 'Web';
+    return '<div class="crm-vh" data-vh="' + h.id + '">' + veilleKind(h.kind)
+      + '<span class="m">' + (withOrg ? '<b>' + esc(h.org_name) + '</b> <span class="crm-meta">' + esc([h.org_country, h.secteur].filter(Boolean).join(' · ')) + '</span><br>' : '')
+      + esc(h.evidence || h.title || '') + '<br><span class="crm-meta">' + esc([h.competitor ? 'Concurrent : ' + h.competitor : '', h.date ? fmtDate(h.date) : ''].filter(Boolean).join(' · '))
+      + ' · <a class="crm-link" href="' + esc(h.url) + '" target="_blank" rel="noopener">' + src + '</a></span></span>'
+      + '<span class="r"><button type="button" class="crm-link crm-vh-ign" data-ign="' + h.id + '" title="Hors sujet : ne plus afficher">Ignorer</button></span></div>';
+  }
+  function onVeillePanel() {
+    var p = document.getElementById('panel-veille'); if (!p) return;
+    S.vFilter = S.vFilter || lsGet('scout_veille_f', 'hot'); S.vMine = S.vMine == null ? lsGet('scout_veille_mine', false) : S.vMine;
+    p.innerHTML = '<div class="crm-wrap crm-home">'
+      + '<div class="crm-row crm-home-head"><div class="crm-meta crm-lead-in">Comptes qui évaluent, testent, achètent ou utilisent un drone filaire, repérés chaque jour sur LinkedIn (posts publics), les sites des concurrents et de leurs distributeurs, et la presse.</div></div>'
+      + '<div class="crm-row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px"><div class="crm-seg">'
+      + '<button type="button" class="crm-chip" data-vf="hot">En phase d’achat</button><button type="button" class="crm-chip" data-vf="client">Équipés chez un concurrent</button><button type="button" class="crm-chip" data-vf="all">Tout</button></div>'
+      + '<label class="crm-meta" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="crm-v-mine"' + (S.vMine ? ' checked' : '') + '> Mes comptes</label>'
+      + '<span class="crm-meta" id="crm-v-last" style="margin-left:auto"></span></div>'
+      + '<div id="crm-v-body"><div class="crm-empty">Chargement…</div></div></div>';
+    p.querySelectorAll('[data-vf]').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-vf') === S.vFilter);
+      b.onclick = function () { S.vFilter = b.getAttribute('data-vf'); lsSet('scout_veille_f', S.vFilter); onVeillePanel(); };
+    });
+    document.getElementById('crm-v-mine').onchange = function () { S.vMine = this.checked; lsSet('scout_veille_mine', S.vMine); drawVeille(); };
+    Promise.all([S.facets ? Promise.resolve(S.facets) : loadFacets().catch(function () { return null; }), api('/crm/veille')]).then(function (r) {
+      S.veille = r[1]; drawVeille();
+    }).catch(function (e) { document.getElementById('crm-v-body').innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
+  }
+  function drawVeille() {
+    var body = document.getElementById('crm-v-body'); if (!body || !S.veille) return;
+    var d = S.veille, meId = S.facets && S.facets.me && String(S.facets.me.user_id);
+    var last = d.last && d.last.at ? 'Dernier passage : ' + fmtDate(d.last.at) : 'Premier passage en cours';
+    var lastEl = document.getElementById('crm-v-last'); if (lastEl) lastEl.textContent = d.running ? 'Recherche en cours…' : last;
+    var accs = (d.accounts || []).filter(function (a) {
+      if (S.vMine && String(a.owner_user_id) !== meId) return false;
+      if (S.vFilter === 'hot') return a.hot;
+      if (S.vFilter === 'client') return a.hits.some(function (h) { return !VK_HOT[h.kind]; });
+      return true;
+    });
+    var html = accs.length ? accs.map(function (a) {
+      var hits = S.vFilter === 'hot' ? a.hits.filter(function (h) { return VK_HOT[h.kind]; }) : S.vFilter === 'client' ? a.hits.filter(function (h) { return !VK_HOT[h.kind]; }) : a.hits;
+      return '<div class="crm-card crm-vacc"><div class="crm-vacc-head"><button type="button" class="crm-link strong" data-acc="' + esc(a.id) + '">' + esc(a.nom) + '</button>'
+        + heatBadge(a.score, a.heat) + (a.client_of ? '<span class="crm-buy">Client ' + esc(a.client_of) + '</span>' : '')
+        + '<span class="crm-meta">' + esc([a.pays, a.owner_name || 'Sans commercial'].filter(Boolean).join(' · ')) + '</span></div>'
+        + hits.slice(0, 4).map(function (h) { return veilleHit(h, false); }).join('')
+        + (hits.length > 4 ? '<div class="crm-meta">+ ' + (hits.length - 4) + ' autre' + (hits.length > 5 ? 's' : '') + ' dans la fiche</div>' : '') + '</div>';
+    }).join('') : '<div class="crm-empty">' + (d.last ? 'Aucun compte pour ce filtre.' : 'La première recherche tourne (quelques minutes). Revenez plus tard.') + '</div>';
+    var un = (d.unlinked || []);
+    if (un.length && !S.vMine) html += '<div class="crm-card"><h3>Organisations à rattacher <span class="crm-meta">' + un.length + '</span></h3>'
+      + '<div class="crm-meta" style="margin-bottom:6px">Nom ambigu ou hors secteurs cibles : reliez-les à un compte, ou ignorez-les.</div>'
+      + un.slice(0, 40).map(function (h) { return veilleHit(h, true).replace('<span class="r">', '<span class="r"><button type="button" class="crm-link" data-vlink="' + h.id + '">Relier</button> '); }).join('') + '</div>';
+    body.innerHTML = html;
+    body.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
+    body.querySelectorAll('[data-ign]').forEach(function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-ign');
+        api('/crm/veille/' + id + '/action', { method: 'POST', body: { action: 'ignore' } }).then(function () {
+          var row = b.closest('.crm-vh'); if (row) row.remove(); toast('Signal ignoré');
+        }).catch(function (e) { toast('Erreur : ' + e.message); });
+      };
+    });
+    body.querySelectorAll('[data-vlink]').forEach(function (b) {
+      b.onclick = function () {
+        var row = b.closest('.crm-vh'), host = document.createElement('div'); host.style.width = '100%'; row.appendChild(host);
+        acctPicker(host, { focus: true, placeholder: 'Relier à quel compte ?', onPick: function (acc) {
+          api('/crm/veille/' + b.getAttribute('data-vlink') + '/action', { method: 'POST', body: { action: 'link', end_user_id: acc.id } })
+            .then(function () { toast('Relié à ' + acc.nom); onVeillePanel(); }).catch(function (e) { toast('Erreur : ' + e.message); });
+        } });
+      };
+    });
+  }
+
   // ═════════════════════════════════════════════════════════════════════════
   // PROSPECTION : prochaine action, comptes chauds, comptes à ouvrir, VIP
   // ═════════════════════════════════════════════════════════════════════════
@@ -1488,7 +1567,7 @@
           + '<td class="c-tier">' + tierBadge(r.tier) + '</td>'
           + '<td class="c-nom"><div class="crm-acc-name" title="' + esc(r.nom) + '">' + esc(r.nom) + '</div><div class="crm-acc-sub">' + esc([r.pays, r.secteur].filter(Boolean).join(' · ')) + (r.n_contacts ? ' · ' + r.n_contacts + ' contact' + (r.n_contacts > 1 ? 's' : '') : '') + '</div></td>'
           + '<td class="c-prio">' + prioBadge(r.priority) + '</td>'
-          + '<td class="c-score"><span class="crm-score-cell">' + heatBadge(r.score, r.heat) + (r.n_market_recent && r.score === r.score_v2 ? (r.n_market_tethered ? '<span class="crm-buy crm-buy-t" title="' + r.n_market_tethered + ' marché(s) de drone filaire en 12 mois">Achat filaire</span>' : '<span class="crm-buy" title="' + r.n_market_recent + ' marché(s) drone en 12 mois">Achat drone</span>') : '') + (r.web_pages_90d ? '<span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</span></td>'
+          + '<td class="c-score"><span class="crm-score-cell">' + heatBadge(r.score, r.heat) + (r.client_of ? '<span class="crm-buy crm-buy-c" title="Équipé chez ce concurrent (veille)">Client ' + esc(r.client_of) + '</span>' : '') + (r.n_veille_eval && !r.n_market_tethered ? '<span class="crm-buy crm-buy-t" title="' + r.n_veille_eval + ' signal(s) en 12 mois : évaluation, démo ou achat de drone filaire (veille)">Achat filaire</span>' : '') + (r.n_market_recent && r.score === r.score_v2 ? (r.n_market_tethered ? '<span class="crm-buy crm-buy-t" title="' + r.n_market_tethered + ' marché(s) de drone filaire en 12 mois">Achat filaire</span>' : '<span class="crm-buy" title="' + r.n_market_recent + ' marché(s) drone en 12 mois">Achat drone</span>') : '') + (r.web_pages_90d ? '<span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</span></td>'
           + '<td class="c-status">' + statusPill(r.status) + '</td>'
           + '<td class="c-coverage">' + coverageDots(r.roles) + '</td>'
           + '<td class="c-owner">' + (r.owner_name ? '<span class="crm-owner"><span class="crm-avatar">' + esc(initials(r.owner_name)) + '</span>' + esc(r.owner_name) + '</span>' : '<span class="crm-muted">Personne</span>') + '</td>'
@@ -1804,6 +1883,7 @@
       + (openTasks.length ? openTasks.map(taskHtml).join('') : '<div class="crm-meta">Aucune tâche ouverte.</div>')
       + (doneTasks.length ? '<details style="margin-top:8px"><summary class="crm-meta" style="cursor:pointer">' + doneTasks.length + ' terminée' + (doneTasks.length > 1 ? 's' : '') + '</summary>' + doneTasks.map(taskHtml).join('') + '</details>' : '')
       + '</div>'
+      + (A.veille && A.veille.length ? '<div class="crm-card"><h3>Veille drone filaire <span class="crm-meta">' + A.veille.length + '</span></h3>' + A.veille.map(function (h) { return veilleHit(h, false); }).join('') + '<div class="crm-meta" style="margin-top:6px">Repéré sur LinkedIn, les sites des concurrents et la presse. Compte dans l’engagement.</div></div>' : '')
       + (A.market && A.market.length ? '<div class="crm-card"><h3>Marchés <span class="crm-meta">' + A.market.length + '</span></h3>' + A.market.map(function (m) {
         var val = m.value_max ? (m.value_max >= 1e9 ? (m.value_max / 1e9).toFixed(1).replace('.', ',') + ' Md' : Math.round(m.value_max / 1e6) + ' M') : '';
         var label = esc(m.title || 'Sans titre');
@@ -1832,6 +1912,9 @@
     if (!sm.parent_id) mountParent();
     var pe = document.getElementById('crm-parent-edit'); if (pe) pe.onclick = mountParent;
     var pc = document.getElementById('crm-parent-clear'); if (pc) pc.onclick = function () { setParent(null); };
+    d.querySelectorAll('[data-ign]').forEach(function (b) {
+      b.onclick = function () { api('/crm/veille/' + b.getAttribute('data-ign') + '/action', { method: 'POST', body: { action: 'ignore' } }).then(function () { var row = b.closest('.crm-vh'); if (row) row.remove(); toast('Signal ignoré'); }).catch(function (e) { toast('Erreur : ' + e.message); }); };
+    });
     acctPicker(document.getElementById('crm-child-pick'), { placeholder: '+ Rattacher un compte à celui-ci', exclude: [a.id].concat((A.children || []).map(function (c) { return c.id; })), onPick: function (x) {
       api('/crm/accounts/' + encodeURIComponent(x.id), { method: 'PATCH', body: { parent_id: a.id } })
         .then(function () { S.treeData = null; toast(x.nom + ' rattaché'); return reloadAccount(); }).catch(function (e) { toast('Erreur : ' + e.message); });
@@ -2365,6 +2448,7 @@
       else if (id === 'home') onHomePanel();
       else if (id === 'stats') onStatsPanel();
       else if (id === 'market') onMarketPanel();
+      else if (id === 'veille') onVeillePanel();
       else if (id === 'feed') onFeedPanel();
       setTimeout(paintBadge, 30);
     } catch (e) { console.error('[crm] onPanel', e); }
