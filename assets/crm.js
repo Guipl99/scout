@@ -1692,10 +1692,11 @@
         ? '<div class="crm-card"><h3>Engagement <span class="crm-meta">ce que le compte fait envers nous</span></h3><div class="crm-score-big">' + heatBadge(sm.score, sm.heat) + '</div>'
           + '<ul class="crm-score-list">'
           + '<li><b>' + (sm.eng_echanges || 0) + '</b> échanges (réponses, rendez-vous, appels aboutis)</li>'
-          + '<li><b>' + (sm.eng_web || 0) + '</b> visites du site' + (sm.web_pages_90d ? ' (' + sm.web_pages_90d + ' pages en 90 j)' : (sm.domain ? '' : ' (renseignez le domaine)')) + '</li>'
+          + '<li><b>' + (sm.eng_web || 0) + '</b> visites du site' + (sm.web_pages_90d ? ' (' + sm.web_pages_90d + ' pages en 90 j' + (sm.eng_retours ? ', revient souvent' : '') + ')' : (sm.domain ? '' : ' (renseignez le domaine)')) + '</li>'
+          + (sm.eng_ao ? '<li><b>' + sm.eng_ao + '</b> marché filaire (appel d’offres ou contrat)</li>' : '')
           + (sm.eng_chat ? '<li><b>' + sm.eng_chat + '</b> chat sur le site</li>' : '')
           + (sm.eng_clics ? '<li><b>' + sm.eng_clics + '</b> clics sur nos emails</li>' : '')
-          + '</ul><div class="crm-meta" style="margin-top:6px">Un échange perd la moitié de sa valeur en 60 jours, une visite ou un chat en 30 jours. Nos propres envois ne comptent pas.</div>'
+          + '</ul><div class="crm-meta" style="margin-top:6px">Un échange perd la moitié de sa valeur en 60 jours, une visite ou un chat en 30 jours ; revenir plusieurs semaines compte en plus. Un appel d’offres filaire ouvert compte plein. Nos propres envois ne comptent pas.</div>'
           + (sm.n_market_recent ? '<div class="crm-buys"><span class="crm-buy">Achète</span> ' + sm.n_market_recent + ' marché' + (sm.n_market_recent > 1 ? 's' : '') + ' en 12 mois (compte dans la priorité)</div>' : '')
           + '</div></aside>'
         : '<div class="crm-card"><h3>Engagement <span class="crm-meta">90 jours</span></h3><div class="crm-score-big">' + heatBadge(sm.score, sm.heat) + '</div>'
