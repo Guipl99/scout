@@ -36,6 +36,8 @@
     today: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
     acc: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+    send: '<svg viewBox="0 0 24 24"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></svg>',
+    edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
     sig: '<svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0M8 12a4 4 0 0 1 8 0"/><circle cx="12" cy="12" r="1.2"/><path d="M12 13v7"/></svg>',
     me: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
     back: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
@@ -69,12 +71,12 @@
       + '<div class="sa-sheet" id="sa-sheet" hidden></div>'
       + '<nav class="sa-tabs" aria-label="Navigation">'
       + tabBtn('today', 'Aujourd’hui', I.today) + tabBtn('accounts', 'Comptes', I.acc)
-      + '<button type="button" class="sa-tab sa-add" data-tab="entry" aria-label="Saisir une activité"><span>' + I.plus + '</span></button>'
+      + '<button type="button" class="sa-tab sa-add" data-tab="burst" aria-label="Traiter ma file"><span>' + I.send + '</span><em class="sa-add-n" id="sa-burst-n" hidden></em></button>'
       + tabBtn('signals', 'Signaux', I.sig) + tabBtn('me', 'Moi', I.me) + '</nav>'
       + '<div class="sa-toast" id="sa-toast" role="status" aria-live="polite"></div>';
     document.body.appendChild(root);
     root.querySelectorAll('[data-tab]').forEach(function (b) {
-      b.onclick = function () { var t = b.getAttribute('data-tab'); if (t === 'entry') { openEntry({}); return; } show(t); };
+      b.onclick = function () { var t = b.getAttribute('data-tab'); if (t === 'entry') { openEntry({}); return; } if (t === 'burst') { openBurst(); return; } show(t); };
     });
     window.addEventListener('popstate', function () { if (A.stack.length && !A.locked) closeSheet(); });
     document.addEventListener('visibilitychange', function () {
@@ -128,12 +130,14 @@
     var v = document.getElementById('sa-view');
     if (!quiet) v.innerHTML = '<div class="sa-empty">Chargement…</div>';
     top('Bonjour ' + (s.first_name || ''), new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
-      '<button type="button" class="sa-chip' + (A.qScope === 'team' ? ' on' : '') + '" id="sa-scope">' + (A.qScope === 'team' ? 'Équipe' : 'Ma file') + '</button>');
+      '<div class="sa-top-r"><button type="button" class="sa-icon" id="sa-entry" aria-label="Saisir une activité">' + I.plus + '</button><button type="button" class="sa-chip' + (A.qScope === 'team' ? ' on' : '') + '" id="sa-scope">' + (A.qScope === 'team' ? 'Équipe' : 'Ma file') + '</button></div>');
+    document.getElementById('sa-entry').onclick = function () { openEntry({}); };
     document.getElementById('sa-scope').onclick = function () { A.qScope = A.qScope === 'team' ? 'me' : 'team'; renderToday(); };
     crm().loadQueue(A.qScope).then(function (items) {
       var now = items.filter(function (it) { return !it.later; });
       var urgent = now.filter(function (it) { return it.kind === 'reaction' || it.kind === 'reply' || (daysFrom(it.due) || 0) > 0; }).length;
       A.items = now;
+      burstBadge(now);
       var head = '<div class="sa-kpi"><b>' + now.length + '</b><span>à traiter' + (urgent ? ', dont <em>' + urgent + ' urgent' + (urgent > 1 ? 's' : '') + '</em>' : '') + '</span></div>';
       head = '<div id="sa-ao-box"></div>' + head;
       v.innerHTML = head + (now.length ? '<div class="sa-list">' + now.slice(0, 60).map(card).join('') + '</div>'
@@ -173,7 +177,7 @@
     if (it.kind === 'relance') act = '<button type="button" class="sa-btn primary" data-rel="' + esc(it.contact_id) + '">' + I.mail + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button>';
     else if (it.kind === 'task') act = '<button type="button" class="sa-btn primary" data-done="' + esc(it.task.id) + '">' + I.check + 'Fait</button>';
     else if (it.kind === 'reaction') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">' + I.phone + 'Appeler ou écrire</button><button type="button" class="sa-btn" data-seen="' + esc(it.key) + '">Vu</button>';
-    else if (it.kind === 'pitch') act = '<button type="button" class="sa-btn primary" data-pgo="' + esc(it.account_id) + '">' + I.mail + 'Préparer le mail</button><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
+    else if (it.kind === 'pitch') act = '<button type="button" class="sa-btn primary" data-pgo="' + esc(it.account_id) + '">' + I.mail + (it.pitch.draft ? 'Relire et envoyer' : 'Préparer le mail') + '</button><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
     else if (it.kind === 'find') act = '<a class="sa-btn primary" href="' + esc(it.pitch.linkedin_url) + '" target="_blank" rel="noopener">Chercher sur LinkedIn</a><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
     else if (it.kind === 'reply') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">Ouvrir</button><button type="button" class="sa-btn" data-tx="' + esc(it.contact_id) + '">Saisi dans Dynamics</button>';
     return '<article class="sa-card k-' + it.kind + (hot ? ' hot' : '') + '">'
@@ -181,6 +185,8 @@
       + '<button type="button" class="sa-card-t" ' + (it.contact_id ? 'data-ct="' + esc(it.contact_id) + '"' : (it.account_id ? 'data-acc="' + esc(it.account_id) + '"' : '')) + '>' + esc(title) + '</button>'
       + (it.kind === 'reaction' ? '<div class="sa-card-s hot">' + esc(when) + '</div>' : '')
       + (it.kind === 'pitch' || it.kind === 'find' ? '<div class="sa-card-s">' + esc((it.kind === 'pitch' && it.pitch.contact.titre ? it.pitch.contact.titre + ' · ' : '') + it.pitch.reason) + '</div>' : '')
+      + (it.kind === 'pitch' && it.pitch.draft ? '<div class="sa-draft"><b>' + esc(it.pitch.draft.subject) + '</b><span>' + esc(String(it.pitch.draft.body || '').replace(/\s+/g, ' ').slice(0, 140)) + '…</span></div>' : '')
+      + (it.kind === 'pitch' || it.kind === 'find' ? '<details class="sa-ctx"><summary>Contexte</summary>' + (it.pitch.context || []).map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</details>' : '')
       + (it.account_nom ? '<button type="button" class="sa-card-s sa-link" ' + (it.account_id ? 'data-acc="' + esc(it.account_id) + '"' : '') + '>' + esc(it.account_nom) + '</button>' : '')
       + (A.qScope === 'team' && it.who ? '<div class="sa-meta">' + esc(it.who) + '</div>' : '')
       + '<div class="sa-card-a">' + act + '</div></article>';
@@ -189,7 +195,7 @@
     root.querySelectorAll('[data-ct]').forEach(function (b) { b.onclick = function () { openContact(b.getAttribute('data-ct')); }; });
     root.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
     root.querySelectorAll('[data-rel]').forEach(function (b) { b.onclick = function () { openRelance(b.getAttribute('data-rel')); }; });
-    root.querySelectorAll('[data-pgo]').forEach(function (b) { b.onclick = function () { var p = crm().pitchMap()[b.getAttribute('data-pgo')]; if (p) crm().pitchGo(p); }; });
+    root.querySelectorAll('[data-pgo]').forEach(function (b) { b.onclick = function () { var p = crm().pitchMap()[b.getAttribute('data-pgo')]; if (p) crm().pitchGo(p, function (r) { if (r) fadeOut(b); }); }; });
     root.querySelectorAll('[data-psnz]').forEach(function (b) {
       b.onclick = function () { b.disabled = true; api('/crm/pitch/' + encodeURIComponent(b.getAttribute('data-psnz')), { method: 'POST', body: { action: 'snooze', days: 30 } }).then(function () { fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); }); };
     });
@@ -207,6 +213,97 @@
       b.onclick = function () { b.disabled = true; api('/action/transmit-crm', { method: 'POST', body: { contact_id: b.getAttribute('data-tx') } }).then(function () { toast('Marqué comme saisi dans Dynamics'); fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); }); };
     });
   }
+  // ── Traiter ma file (bouton central) : une carte « À écrire » à la fois, mail déjà rédigé.
+  // Glisser à droite : envoyer (messagerie du téléphone, puis « parti ? ») ; à gauche : pas maintenant ; toucher le mail : le modifier.
+  function burstItems(items) { return (items || []).filter(function (it) { return it.kind === 'pitch' && it.pitch && it.pitch.contact; }); }
+  function burstBadge(items) {
+    var n = burstItems(items).length, el = document.getElementById('sa-burst-n'); if (!el) return;
+    el.hidden = !n; el.textContent = n > 99 ? '99+' : String(n);
+  }
+  function openBurst() {
+    var go = function (items) {
+      var list = burstItems(items);
+      var B = { list: list, i: 0, sent: 0, later: 0 };
+      var ov = document.createElement('div'); ov.className = 'sa-burst'; ov.id = 'sa-burst';
+      document.getElementById('sa').appendChild(ov);
+      history.pushState({ burst: 1 }, '');
+      var closeB = function () { ov.remove(); window.removeEventListener('popstate', onPop); if (A.tab === 'today') renderToday(true); };
+      var onPop = function () { closeB(); };
+      window.addEventListener('popstate', onPop);
+      var draw = function () {
+        var p = B.list[B.i] && B.list[B.i].pitch;
+        if (!p) {
+          ov.innerHTML = '<div class="sa-burst-h"><b>Traiter ma file</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
+            + '<div class="sa-burst-end"><div class="big">' + (B.list.length ? 'C’est fait' : 'Rien à écrire') + '</div><div class="sa-meta">'
+            + (B.list.length ? B.sent + ' mail' + (B.sent > 1 ? 's' : '') + ' envoyé' + (B.sent > 1 ? 's' : '') + ', ' + B.later + ' remis à plus tard.' : 'Pas de compte à prospecter pour l’instant. Les nouveaux signaux arrivent ici, avec le mail déjà rédigé.')
+            + '</div><button type="button" class="sa-btn primary" data-x>Retour</button></div>';
+          ov.querySelectorAll('[data-x]').forEach(function (b) { b.onclick = function () { history.back(); }; });
+          return;
+        }
+        ov.innerHTML = '<div class="sa-burst-h"><b>' + (B.i + 1) + ' / ' + B.list.length + '</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
+          + '<div class="sa-burst-stage"><article class="sa-burst-card" id="sa-bc">'
+          + '<span class="sa-tag k-pitch">À écrire</span>'
+          + '<h2>' + esc(p.contact.name) + '</h2><div class="sa-meta">' + esc([p.contact.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div>'
+          + '<div class="sa-burst-why">' + esc(p.reason) + '</div>'
+          + '<div class="sa-burst-ctx">' + (p.context || []).map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div>'
+          + '<div class="sa-burst-mail" id="sa-bm"><div class="sa-meta">À ' + esc(p.contact.email) + '</div><div class="s" id="sa-bs"></div><div class="b" id="sa-bb"></div><div class="sa-meta sa-burst-hint">' + I.edit + ' Toucher pour modifier</div></div>'
+          + '</article><div class="sa-burst-lbl l">Plus tard</div><div class="sa-burst-lbl r">Envoyer</div></div>'
+          + '<div class="sa-burst-a"><button type="button" class="sa-btn" data-later>Pas maintenant</button><button type="button" class="sa-btn primary" data-send>' + I.send + 'Envoyer</button></div>';
+        ov.querySelector('[data-x]').onclick = function () { history.back(); };
+        var bs = ov.querySelector('#sa-bs'), bb = ov.querySelector('#sa-bb'), sendBtn = ov.querySelector('[data-send]');
+        var show = function () { bs.textContent = p.draft.subject || ''; bb.textContent = p.draft.body || ''; sendBtn.disabled = false; };
+        if (p.draft) show();
+        else { bs.textContent = ''; bb.textContent = 'Rédaction du mail…'; sendBtn.disabled = true; crm().pitchDraft(p).then(show).catch(function (e) { bb.textContent = 'Erreur : ' + e.message; }); }
+        // le suivant se rédige pendant qu'on lit celui-ci
+        var nx = B.list[B.i + 1] && B.list[B.i + 1].pitch; if (nx && !nx.draft && !nx._pre) { nx._pre = 1; crm().pitchDraft(nx).catch(function () { nx._pre = 0; }); }
+        // modifier : le mail devient éditable
+        ov.querySelector('#sa-bm').onclick = function () {
+          if (!p.draft || this.classList.contains('edit')) return;
+          this.classList.add('edit');
+          this.innerHTML = '<div class="sa-meta">À ' + esc(p.contact.email) + '</div><input class="sa-in" id="sa-es" value="' + esc(p.draft.subject || '') + '"><textarea class="sa-in" id="sa-eb" rows="12">' + esc(p.draft.body || '') + '</textarea>';
+          var es = this.querySelector('#sa-es'), eb = this.querySelector('#sa-eb');
+          es.oninput = eb.oninput = function () { crm().pitchSave(p, es.value, eb.value); };
+          eb.focus();
+        };
+        var next = function () { B.i++; draw(); };
+        var later = function () {
+          B.later++;
+          api('/crm/pitch/' + encodeURIComponent(p.account.id), { method: 'POST', body: { action: 'snooze', days: 30 } }).catch(function () {});
+          next();
+        };
+        var send = function () {
+          if (!p.draft) return;
+          crm().pitchSend(p, p.draft.subject, p.draft.body, function (ok) { if (ok) { B.sent++; next(); } else reset(); });
+        };
+        ov.querySelector('[data-later]').onclick = function () { fly(-1, later); };
+        sendBtn.onclick = function () { fly(1, send); };
+        // glisser
+        var card = ov.querySelector('#sa-bc'), x0 = null, y0 = null, dx = 0, drag = false;
+        var reset = function () { card.style.transition = 'transform .2s'; card.style.transform = ''; ov.classList.remove('to-l', 'to-r'); };
+        var fly = function (dir, fn) {
+          if (dir > 0 && !p.draft) { reset(); return; }
+          card.style.transition = 'transform .22s ease-in'; card.style.transform = 'translateX(' + (dir * 130) + '%) rotate(' + (dir * 12) + 'deg)';
+          setTimeout(fn, 200);
+        };
+        card.addEventListener('touchstart', function (e) { if (card.querySelector('.edit')) return; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; drag = false; card.style.transition = 'none'; }, { passive: true });
+        card.addEventListener('touchmove', function (e) {
+          if (x0 == null) return;
+          dx = e.touches[0].clientX - x0; var dy = e.touches[0].clientY - y0;
+          if (!drag && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) drag = true;
+          if (!drag) return;
+          card.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx / 25) + 'deg)';
+          ov.classList.toggle('to-r', dx > 60); ov.classList.toggle('to-l', dx < -60);
+        }, { passive: true });
+        card.addEventListener('touchend', function () {
+          if (x0 == null) return; x0 = null;
+          if (drag && dx > 100) fly(1, send); else if (drag && dx < -100) fly(-1, later); else reset();
+        });
+      };
+      draw();
+    };
+    if (A.items) go(A.items); else crm().loadQueue(A.qScope).then(go).catch(function (e) { toast('Erreur : ' + e.message); });
+  }
+
   function fadeOut(b) { var c = b.closest('.sa-card'); if (c) { c.classList.add('gone'); setTimeout(function () { c.remove(); try { if (crm().refreshBadge) crm().refreshBadge(); } catch (e) {} }, 300); } }
 
   // La relance s'ouvre dans la fenêtre de relecture existante : modifiable, rien ne part sans le commercial.

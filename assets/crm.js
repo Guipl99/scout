@@ -313,8 +313,10 @@
       if (opts.showWho && it.who) ps.push(esc(it.who));
       return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (rd ? ICON.mail : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
         + (rd ? '<button type="button" class="crm-link strong" data-qct="' + esc(it.contact_id) + '">' + esc(it.title) + '</button>' : '<button type="button" class="crm-link strong" data-qacc="' + esc(it.account_id) + '">' + esc(it.title) + '</button>')
-        + '</div><div class="s">' + ps.filter(Boolean).join(' · ') + '</div><div class="s crm-pitch-why">' + esc(P.reason) + (rd ? '' : ' · pas de contact joignable trouvé') + '</div></div>'
-        + '<div class="crm-q-a">' + (rd ? '<button type="button" class="crm-btn sm primary" data-pgo="' + esc(it.account_id) + '">' + ICON.mail + ' Préparer le mail</button>'
+        + '</div><div class="s">' + ps.filter(Boolean).join(' · ') + '</div><div class="s crm-pitch-why">' + esc(P.reason) + (rd ? '' : ' · pas de contact joignable trouvé') + '</div>'
+        + (rd && P.draft ? '<div class="s crm-pitch-draft">' + ICON.mail + ' <b>' + esc(P.draft.subject) + '</b> ' + esc(String(P.draft.body || '').replace(/\s+/g, ' ').slice(0, 110)) + '…</div>' : '')
+        + '<details class="crm-pitch-ctx"><summary>Contexte</summary>' + pitchContextHtml(P) + '</details></div>'
+        + '<div class="crm-q-a">' + (rd ? '<button type="button" class="crm-btn sm primary" data-pgo="' + esc(it.account_id) + '">' + ICON.mail + (P.draft ? ' Relire et envoyer' : ' Préparer le mail') + '</button>'
           : '<a class="crm-btn sm primary" href="' + esc(P.linkedin_url) + '" target="_blank" rel="noopener">Chercher sur LinkedIn</a>')
         + '<button type="button" class="crm-btn sm ghost" data-psnz="' + esc(it.account_id) + '" title="Retirer de la file pour 30 jours">Pas maintenant</button></div></div>';
     }
@@ -358,10 +360,71 @@
   }
 
   // Prospection sur signal : mail prêt à relire pour le meilleur contact ; sinon Scout cherche un contact.
-  function pitchGo(p) {
-    if (p && p.contact && typeof window.scoutPitch === 'function') { window.scoutPitch(p.contact.id, p.signal || p.reason); return true; }
-    if (p && p.contact) { openContact(p.contact.id); return true; }
+  function pitchGo(p, onDone) {
+    if (p && p.contact) { pitchReview(p, onDone); return true; }
     return false;
+  }
+  // Mail prêt : relecture, modification (enregistrée au fil de la frappe), envoi par la messagerie du commercial,
+  // puis confirmation « parti » qui enregistre l'email et programme la relance. Rien ne part sans lui.
+  function pitchSave(p, subj, body) {
+    if (!p.draft) return;
+    p.draft.subject = subj; p.draft.body = body;
+    clearTimeout(p._saveT);
+    p._saveT = setTimeout(function () { api('/crm/pitch/draft/' + encodeURIComponent(p.contact.id), { method: 'PUT', body: { subject: subj, body: body } }).catch(function () {}); }, 700);
+  }
+  function pitchDraft(p) {
+    return api('/crm/pitch/draft/' + encodeURIComponent(p.contact.id), { method: 'POST', body: { signal: p.signal || p.reason } })
+      .then(function (d) { p.draft = { subject: d.subject, body: d.body, edited: false }; return p.draft; });
+  }
+  function pitchSend(p, subj, body, cb) {
+    var to = p.contact.email, details = { subject: subj, body: body, to: to, source: 'pitch' };
+    api('/action/log-intent', { method: 'POST', body: { contact_id: p.contact.id, action_type: 'email', details: details } }).catch(function () {});
+    window.location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+    // au retour de la messagerie : le mail est-il parti ?
+    setTimeout(function () {
+      var ov = document.createElement('div'); ov.className = 'crm-pr-ask';
+      ov.innerHTML = '<div class="b"><b>Le mail à ' + esc(p.contact.name) + ' est parti ?</b><div class="crm-meta">Oui l’enregistre et programme la relance.</div>'
+        + '<div class="a"><button type="button" class="crm-btn primary" data-y>Oui, envoyé</button><button type="button" class="crm-btn" data-n>Pas encore</button></div></div>';
+      document.body.appendChild(ov);
+      ov.querySelector('[data-n]').onclick = function () { ov.remove(); if (cb) cb(false); };
+      ov.querySelector('[data-y]').onclick = function () {
+        this.disabled = true;
+        api('/action/confirm', { method: 'POST', body: { contact_id: p.contact.id, action_type: 'email', details: details } })
+          .then(function () { ov.remove(); toast('Envoyé : relance programmée'); try { refreshBadge(); } catch (e) {} if (cb) cb(true); })
+          .catch(function (e) { toast('Erreur : ' + e.message); ov.remove(); if (cb) cb(false); });
+      };
+    }, 900);
+  }
+  function pitchContextHtml(p) {
+    return '<div class="crm-pr-ctx">' + (p.context || []).map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div>';
+  }
+  function pitchReview(p, onDone) {
+    var ov = document.createElement('div'); ov.className = 'crm-pr'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Mail à ' + p.contact.name);
+    var close = function (sent) { ov.remove(); document.body.classList.remove('crm-pr-open'); if (onDone) onDone(sent); };
+    ov.innerHTML = '<div class="crm-pr-box"><div class="crm-pr-h"><div><b>' + esc(p.contact.name) + '</b><div class="crm-meta">' + esc([p.contact.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div></div>'
+      + '<button type="button" class="crm-pr-x" aria-label="Fermer">×</button></div>'
+      + '<div class="crm-pr-why">' + esc(p.reason) + '</div>' + pitchContextHtml(p)
+      + '<label class="crm-pr-l">À</label><div class="crm-pr-to">' + esc(p.contact.email) + '</div>'
+      + '<label class="crm-pr-l" for="crm-pr-s">Objet</label><input id="crm-pr-s" class="crm-input" autocomplete="off">'
+      + '<label class="crm-pr-l" for="crm-pr-b">Message</label><textarea id="crm-pr-b" class="crm-input" rows="12"></textarea>'
+      + '<div class="crm-pr-a"><button type="button" class="crm-btn primary" data-send>' + ICON.mail + ' Envoyer avec ma messagerie</button>'
+      + '<button type="button" class="crm-btn" data-redo>Refaire</button><button type="button" class="crm-btn ghost" data-later>Pas maintenant</button></div></div>';
+    document.body.appendChild(ov); document.body.classList.add('crm-pr-open');
+    var si = ov.querySelector('#crm-pr-s'), bi = ov.querySelector('#crm-pr-b'), send = ov.querySelector('[data-send]');
+    var fill = function (d) { si.value = d.subject || ''; bi.value = d.body || ''; si.disabled = bi.disabled = send.disabled = false; };
+    var load = function () {
+      si.value = ''; bi.value = 'Rédaction du mail…'; si.disabled = bi.disabled = send.disabled = true;
+      pitchDraft(p).then(fill).catch(function (e) { bi.value = 'Erreur : ' + e.message; });
+    };
+    if (p.draft) fill(p.draft); else load();
+    si.oninput = bi.oninput = function () { pitchSave(p, si.value, bi.value); };
+    ov.querySelector('.crm-pr-x').onclick = function () { close(false); };
+    ov.onclick = function (e) { if (e.target === ov) close(false); };
+    ov.querySelector('[data-redo]').onclick = load;
+    ov.querySelector('[data-later]').onclick = function () {
+      api('/crm/pitch/' + encodeURIComponent(p.account.id), { method: 'POST', body: { action: 'snooze', days: 30 } }).then(function () { toast('Retiré pour 30 jours'); close('snoozed'); }).catch(function (e) { toast('Erreur : ' + e.message); });
+    };
+    send.onclick = function () { pitchSend(p, si.value, bi.value, function (ok) { if (ok) close(true); }); };
   }
   function pitchAccount(accId, reason) {
     if (!accId) { toast('Rattache d’abord ce signal à un compte'); return Promise.resolve(); }
@@ -388,7 +451,7 @@
   function bindQueue(root, after) {
     bindTasks(root, after);
     root.querySelectorAll('[data-pgo]').forEach(function (b) {
-      b.onclick = function (e) { e.stopPropagation(); var p = (S.pitchMap || {})[b.getAttribute('data-pgo')]; if (p) pitchGo(p); };
+      b.onclick = function (e) { e.stopPropagation(); var p = (S.pitchMap || {})[b.getAttribute('data-pgo')]; if (p) pitchGo(p, function (r) { if (r) { var row = b.closest('.crm-q'); if (row) row.remove(); } }); };
     });
     root.querySelectorAll('[data-psnz]').forEach(function (b) {
       b.onclick = function (e) {
@@ -2555,7 +2618,7 @@
   }
 
   window.scoutCrm = { onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge, refreshPropBadge: refreshPropBadge,
-    loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
+    loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchSend: pitchSend, pitchSave: pitchSave, pitchDraft: pitchDraft, pitchReview: pitchReview, toast: toast, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
   setTimeout(refreshBadge, 2500);
   setInterval(refreshBadge, 5 * 60 * 1000);
   setTimeout(refreshPropBadge, 3500);

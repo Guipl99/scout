@@ -313,3 +313,23 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .crm-q .crm-pitch-why { color: var(--accent2, #B88A68); }
 .crm-q-kind.k-pitch { background: var(--accent); color: #fff; border-color: var(--accent); }
 .crm-q-a .crm-btn svg, .crm-feed-row .crm-btn svg { width: 14px; height: 14px; flex: none; vertical-align: -2px; }
+
+/* Mail prêt : relecture et envoi */
+.crm-pr { position: fixed; inset: 0; z-index: 9990; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.crm-pr-box { background: var(--bg2, #1A2A28); color: var(--text, #E5E2D2); border: 1px solid var(--border, rgba(229,226,210,.15)); border-radius: 6px; width: 100%; max-width: 680px; max-height: 92vh; overflow: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
+.crm-pr-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.crm-pr-h b { font-size: 16px; }
+.crm-pr-x { background: none; border: 0; color: inherit; font-size: 26px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.crm-pr-why { color: var(--accent2, #B88A68); font-size: 13px; }
+.crm-pr-ctx { font-size: 12.5px; color: var(--text2, #A9A6A0); line-height: 1.45; border-left: 2px solid var(--accent, #85593E); padding-left: 8px; margin: 4px 0; }
+.crm-pr-l { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text3, #888); margin-top: 6px; }
+.crm-pr-to { font-size: 13px; }
+.crm-pr textarea { min-height: 220px; resize: vertical; font: inherit; line-height: 1.5; }
+.crm-pr-a { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.crm-pr-a .crm-btn svg { width: 14px; height: 14px; vertical-align: -2px; }
+.crm-pr-ask { position: fixed; inset: 0; z-index: 9995; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; justify-content: center; padding: 16px; }
+.crm-pr-ask .b { background: var(--bg2, #1A2A28); color: var(--text, #E5E2D2); border-radius: 8px; padding: 18px; width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 8px; margin-bottom: env(safe-area-inset-bottom, 0); }
+.crm-pr-ask .a { display: flex; gap: 8px; } .crm-pr-ask .a .crm-btn { flex: 1; padding: 12px; }
+.crm-q .crm-pitch-draft { color: var(--text2); } .crm-q .crm-pitch-draft svg { width: 12px; height: 12px; vertical-align: -1px; }
+.crm-pitch-ctx summary { cursor: pointer; font-size: 12px; color: var(--text3, #888); margin-top: 2px; }
+@media (max-width: 640px) { .crm-pr { padding: 0; align-items: stretch; } .crm-pr-box { max-height: none; height: 100%; border-radius: 0; border: 0; } }
