@@ -1488,7 +1488,7 @@
           + '<td class="c-tier">' + tierBadge(r.tier) + '</td>'
           + '<td class="c-nom"><div class="crm-acc-name" title="' + esc(r.nom) + '">' + esc(r.nom) + '</div><div class="crm-acc-sub">' + esc([r.pays, r.secteur].filter(Boolean).join(' · ')) + (r.n_contacts ? ' · ' + r.n_contacts + ' contact' + (r.n_contacts > 1 ? 's' : '') : '') + '</div></td>'
           + '<td class="c-prio">' + prioBadge(r.priority) + '</td>'
-          + '<td class="c-score">' + heatBadge(r.score, r.heat) + (r.n_market_recent && r.score === r.score_v2 ? ' <span class="crm-buy" title="' + r.n_market_recent + ' marché(s) en 12 mois : achète des drones">Achète</span>' : '') + (r.web_pages_90d ? ' <span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</td>'
+          + '<td class="c-score"><span class="crm-score-cell">' + heatBadge(r.score, r.heat) + (r.n_market_recent && r.score === r.score_v2 ? '<span class="crm-buy" title="' + r.n_market_recent + ' marché(s) en 12 mois : achète des drones">Achète</span>' : '') + (r.web_pages_90d ? '<span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</span></td>'
           + '<td class="c-status">' + statusPill(r.status) + '</td>'
           + '<td class="c-coverage">' + coverageDots(r.roles) + '</td>'
           + '<td class="c-owner">' + (r.owner_name ? '<span class="crm-owner"><span class="crm-avatar">' + esc(initials(r.owner_name)) + '</span>' + esc(r.owner_name) + '</span>' : '<span class="crm-muted">Personne</span>') + '</td>'

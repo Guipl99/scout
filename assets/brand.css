@@ -281,3 +281,8 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .sa-ao-row:first-of-type { border-top: 0; }
 .sa-ao-row b { display: block; font-size: 14px; line-height: 1.3; }
 .sa-ao-row .u { color: var(--red, #c0392b); font-weight: 600; }
+
+/* liste des comptes : engagement et étiquettes sur une seule ligne */
+.crm-score-cell { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.crm-score-cell .crm-web { margin-left: 0; }
+.crm-score-cell .crm-buy { line-height: 1.5; }
