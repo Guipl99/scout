@@ -771,7 +771,7 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <link rel="stylesheet" href="assets/crm.css?v=202">
-<link rel="stylesheet" href="assets/brand.css?v=18">
+<link rel="stylesheet" href="assets/brand.css?v=19">
 <link rel="stylesheet" href="assets/app.css?v=2">
 </head>
 <body>
@@ -10502,6 +10502,49 @@ document.addEventListener('keydown', function (e) {
     }
   }
 });
+</script>
+<script>
+// Proposition d'installer l'app sur le téléphone : une fois connecté, sur mobile, hors app déjà installée.
+// Android / Chrome : bouton qui lance l'installation. iPhone : rappel du geste Partager › Sur l'écran d'accueil.
+(function () {
+  var KEY = 'scout_pwa_ask';
+  function standalone() { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
+  function mobile() { return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 900); }
+  function ios() { return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+  function loggedIn() { try { var s = JSON.parse(localStorage.getItem('scout_chat_session') || 'null'); return !!(s && s.token); } catch (e) { return false; } }
+  function snoozed() { try { var v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && (v.never || Date.now() < v.until); } catch (e) { return false; } }
+  function snooze(days, never) { try { localStorage.setItem(KEY, JSON.stringify(never ? { never: true } : { until: Date.now() + days * 864e5 })); } catch (e) {} }
+  var shown = false;
+  function show() {
+    if (shown || standalone() || !mobile() || !loggedIn() || snoozed() || (typeof pwaInstalled !== 'undefined' && pwaInstalled)) return;
+    var canPrompt = typeof deferredPrompt !== 'undefined' && deferredPrompt;
+    if (!canPrompt && !ios()) return; // Android sans invite disponible : rien à proposer de fiable
+    shown = true;
+    var el = document.createElement('div');
+    el.className = 'pwa-ask'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Installer Scout');
+    el.innerHTML = '<img src="icon-192.png" alt="" width="40" height="40">'
+      + '<div class="t"><b>Installer Scout sur ce téléphone</b><span>'
+      + (canPrompt ? 'Ouverture en un geste, plein écran, comme une vraie app.'
+        : 'Touchez <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v7h14v-7"/></svg> Partager, puis « Sur l’écran d’accueil ».')
+      + '</span></div>'
+      + '<div class="a">' + (canPrompt ? '<button type="button" class="go">Installer</button>' : '') + '<button type="button" class="no">Plus tard</button></div>';
+    document.body.appendChild(el);
+    requestAnimationFrame(function () { el.classList.add('on'); });
+    var close = function () { el.classList.remove('on'); setTimeout(function () { el.remove(); }, 250); };
+    el.querySelector('.no').onclick = function () { snooze(14); close(); };
+    var go = el.querySelector('.go');
+    if (go) go.onclick = function () {
+      try {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function (r) { if (r && r.outcome === 'accepted') snooze(0, true); else snooze(14); deferredPrompt = null; close(); });
+      } catch (e) { close(); }
+    };
+  }
+  window.addEventListener('appinstalled', function () { snooze(0, true); var el = document.querySelector('.pwa-ask'); if (el) el.remove(); });
+  window.addEventListener('beforeinstallprompt', function () { setTimeout(show, 2500); });
+  // après le chargement, et juste après la connexion (la session apparaît dans le stockage local)
+  var tries = 0, t = setInterval(function () { tries++; if (loggedIn()) { setTimeout(show, 2500); clearInterval(t); } else if (tries > 600) clearInterval(t); }, 1000);
+})();
 </script>
 </body>
 </html>

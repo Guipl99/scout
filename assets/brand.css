@@ -296,3 +296,17 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .crm-vk { display: inline-block; flex: none; min-width: 74px; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 6px; border: 1px solid var(--text2, #888); color: var(--text2, #888); border-radius: 2px; margin-top: 1px; }
 .crm-vk.hot { border-color: var(--accent); background: var(--accent); color: #fff; }
 .crm-buy-c { border-style: dashed; }
+
+/* Proposition d'installation de l'app (mobile) */
+.pwa-ask { position: fixed; left: 12px; right: 12px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 9999; display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; background: #1A2A28; color: #E5E2D2; border: 1px solid rgba(229,226,210,.18); border-radius: 6px; box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  transform: translateY(140%); transition: transform .25s ease; font-size: 13px; line-height: 1.35; }
+.pwa-ask.on { transform: none; }
+.pwa-ask img { border-radius: 8px; flex: none; }
+.pwa-ask .t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pwa-ask .t b { font-size: 14px; }
+.pwa-ask .t span { color: rgba(229,226,210,.75); }
+.pwa-ask .t svg { vertical-align: -2px; }
+.pwa-ask .a { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.pwa-ask button { font: inherit; font-weight: 600; padding: 7px 12px; border-radius: 2px; border: 1px solid rgba(229,226,210,.35); background: transparent; color: #E5E2D2; cursor: pointer; }
+.pwa-ask button.go { background: #85593E; border-color: #85593E; color: #fff; }
