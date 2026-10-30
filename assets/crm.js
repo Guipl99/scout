@@ -1488,7 +1488,7 @@
           + '<td class="c-tier">' + tierBadge(r.tier) + '</td>'
           + '<td class="c-nom"><div class="crm-acc-name" title="' + esc(r.nom) + '">' + esc(r.nom) + '</div><div class="crm-acc-sub">' + esc([r.pays, r.secteur].filter(Boolean).join(' · ')) + (r.n_contacts ? ' · ' + r.n_contacts + ' contact' + (r.n_contacts > 1 ? 's' : '') : '') + '</div></td>'
           + '<td class="c-prio">' + prioBadge(r.priority) + '</td>'
-          + '<td class="c-score"><span class="crm-score-cell">' + heatBadge(r.score, r.heat) + (r.n_market_recent && r.score === r.score_v2 ? '<span class="crm-buy" title="' + r.n_market_recent + ' marché(s) en 12 mois : achète des drones">Achète</span>' : '') + (r.web_pages_90d ? '<span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</span></td>'
+          + '<td class="c-score"><span class="crm-score-cell">' + heatBadge(r.score, r.heat) + (r.n_market_recent && r.score === r.score_v2 ? (r.n_market_tethered ? '<span class="crm-buy crm-buy-t" title="' + r.n_market_tethered + ' marché(s) de drone filaire en 12 mois">Achat filaire</span>' : '<span class="crm-buy" title="' + r.n_market_recent + ' marché(s) drone en 12 mois">Achat drone</span>') : '') + (r.web_pages_90d ? '<span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</span></td>'
           + '<td class="c-status">' + statusPill(r.status) + '</td>'
           + '<td class="c-coverage">' + coverageDots(r.roles) + '</td>'
           + '<td class="c-owner">' + (r.owner_name ? '<span class="crm-owner"><span class="crm-avatar">' + esc(initials(r.owner_name)) + '</span>' + esc(r.owner_name) + '</span>' : '<span class="crm-muted">Personne</span>') + '</td>'
@@ -1775,7 +1775,7 @@
           + (sm.eng_chat ? '<li><b>' + sm.eng_chat + '</b> chat sur le site</li>' : '')
           + (sm.eng_clics ? '<li><b>' + sm.eng_clics + '</b> clics sur nos emails</li>' : '')
           + '</ul><div class="crm-meta" style="margin-top:6px">Un échange perd la moitié de sa valeur en 60 jours, une visite ou un chat en 30 jours ; revenir plusieurs semaines compte en plus. Un appel d’offres filaire ouvert compte plein. Nos propres envois ne comptent pas.</div>'
-          + (sm.n_market_recent ? '<div class="crm-buys"><span class="crm-buy">Achète</span> ' + sm.n_market_recent + ' marché' + (sm.n_market_recent > 1 ? 's' : '') + ' en 12 mois (compte dans la priorité)</div>' : '')
+          + (sm.n_market_recent ? '<div class="crm-buys">' + (sm.n_market_tethered ? '<span class="crm-buy crm-buy-t">Achat filaire</span> ' : '<span class="crm-buy">Achat drone</span> ') + sm.n_market_recent + ' marché' + (sm.n_market_recent > 1 ? 's' : '') + ' drone en 12 mois' + (sm.n_market_tethered ? ', dont ' + sm.n_market_tethered + ' filaire' + (sm.n_market_tethered > 1 ? 's' : '') : '') + ' (compte dans la priorité)</div>' : '')
           + '</div></aside>'
         : '<div class="crm-card"><h3>Engagement <span class="crm-meta">90 jours</span></h3><div class="crm-score-big">' + heatBadge(sm.score, sm.heat) + '</div>'
           + '<ul class="crm-score-list"><li>Actions et activités sur les contacts</li>'

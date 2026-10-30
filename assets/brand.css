@@ -252,6 +252,7 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .crm-sigstats td, .crm-sigstats th { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .crm-sigstats td:last-child { white-space: normal; }
 .crm-buy { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 1px 6px; border: 1px solid var(--accent); color: var(--accent2); border-radius: 2px; vertical-align: middle; }
+.crm-buy-t { background: var(--accent); color: #fff; }
 .crm-buys { margin-top: 10px; font-size: 12.5px; color: var(--text2); }
 
 /* AO drone filaire ouverts (en tête d'Aujourd'hui) */
