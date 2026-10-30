@@ -820,7 +820,7 @@
     p.innerHTML = '<div class="crm-wrap crm-home" id="crm-tasks"><div class="crm-row crm-home-head">'
       + '<div><h2 class="crm-h2" id="crm-home-title">Bonjour' + (me ? ' ' + esc(me) : '') + '</h2><div class="crm-meta">' + esc(dateTxt) + '</div></div>'
       + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-hs="me">Moi</button><button type="button" class="crm-chip" data-hs="team">Équipe</button></div></div>'
-      + '<div id="crm-home-digest"></div><div id="crm-home-hero"></div>'
+      + '<div id="crm-home-ao"></div><div id="crm-home-digest"></div><div id="crm-home-hero"></div>'
       + '<div class="crm-home-cols"><div class="crm-home-main">'
       + '<div class="crm-row crm-qbar"><div class="crm-views" style="margin:0" role="tablist">' + QF.map(function (x) { return '<button type="button" class="crm-chip sm" data-qf="' + x[0] + '">' + x[1] + '<span class="n" data-qn="' + x[0] + '"></span></button>'; }).join('') + '</div>'
       + '<button type="button" class="crm-btn sm" id="crm-nt-open">+ Nouvelle tâche</button></div>'
@@ -873,6 +873,7 @@
       drawHero(queue, st);
       drawSide(d, st, team);
       loadDigest();
+      loadAo();
       if (S.taskState === 'done') drawDone(); else drawQueue();
     }).catch(function (e) { var l = document.getElementById('crm-tasks-list'); if (l) l.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
   }
@@ -901,6 +902,83 @@
       host.querySelector('[data-dg-close]').onclick = function () { lsSet('scout_digest_week', isoWeek()); host.innerHTML = ''; };
       var g = host.querySelector('[data-dg-go]'); if (g) g.onclick = function () { S.feedScope = 'unlinked'; go('feed'); };
     }).catch(function () { host.innerHTML = ''; });
+  }
+
+  // ── AO drone filaire ouverts : en tête d'Aujourd'hui pour toute l'équipe, pastille et alerte à l'arrivée ──
+  function aoHidden() { return lsGet('scout_ao_hidden', []) || []; }
+  function loadAo() {
+    if (typeof window.getAuthHeaders !== 'function' || !window.getAuthHeaders().Authorization) return Promise.resolve();
+    return api('/signals/tethered-open').then(function (d) {
+      var items = d.items || [];
+      S.ao = items; S.aoChannel = !!d.alert_channel;
+      var hid = aoHidden();
+      S.aoCount = items.filter(function (t) { return !t.decision && hid.indexOf(t.id) < 0; }).length;
+      paintBadge(); drawAo(); notifyAo(items);
+    }).catch(function () {});
+  }
+  function notifyAo(items) {
+    var seen = lsGet('scout_ao_seen', null);
+    var ids = items.map(function (t) { return t.id; });
+    if (!seen) { lsSet('scout_ao_seen', ids); return; } // première ouverture : le bandeau suffit
+    var fresh = items.filter(function (t) { return seen.indexOf(t.id) < 0 && !t.decision; });
+    if (!fresh.length) return;
+    lsSet('scout_ao_seen', seen.concat(fresh.map(function (t) { return t.id; })).slice(-300));
+    var t0 = fresh[0];
+    var msg = (fresh.length > 1 ? fresh.length + ' nouveaux AO drone filaire ouverts' : 'Nouvel AO drone filaire : ' + (t0.acheteur || t0.pays || '')) + ', en tête d’Aujourd’hui';
+    toast(msg);
+    try {
+      if (window.Notification && Notification.permission === 'granted') {
+        var n = new Notification('Scout · AO drone filaire', { body: fresh.map(function (t) { return (t.acheteur || '?') + (t.cloture ? ' · clôture ' + fmtDate(t.cloture) : ''); }).join('\n'), tag: 'scout-ao' });
+        n.onclick = function () { window.focus(); go('home'); n.close(); };
+      }
+    } catch (e) {}
+  }
+  function aoWhen(t) {
+    if (t.days_left == null) return 'Clôture non précisée';
+    if (t.days_left <= 0) return 'Clôture aujourd’hui';
+    return 'Clôture dans ' + t.days_left + ' j · ' + fmtDate(t.cloture);
+  }
+  function drawAo() {
+    var host = document.getElementById('crm-home-ao'); if (!host) return;
+    var hid = aoHidden();
+    var items = (S.ao || []).filter(function (t) { return hid.indexOf(t.id) < 0; });
+    if (!items.length) { host.innerHTML = ''; return; }
+    var askNotif = window.Notification && Notification.permission === 'default';
+    host.innerHTML = '<section class="crm-card crm-ao" aria-label="Appels d’offres drone filaire ouverts"><h3><span class="crm-ao-dot"></span>'
+      + (items.length > 1 ? items.length + ' appels d’offres drone filaire ouverts' : 'Appel d’offres drone filaire ouvert')
+      + (askNotif ? '<button type="button" class="crm-link" data-ao-notif>Être alerté sur cet appareil</button>' : '') + '</h3>'
+      + items.map(function (t) {
+        var acc = (t.accounts || [])[0];
+        var urgent = t.days_left != null && t.days_left <= 14;
+        var dec = t.decision === 'go' || t.decision === 'accept' ? '<span class="crm-ao-tag go">Go, tâche créée</span>' : '';
+        return '<div class="crm-ao-row" data-ao="' + esc(t.id) + '"><div class="crm-ao-main">'
+          + '<div class="crm-ao-t">' + esc(t.titre) + '</div>'
+          + '<div class="crm-meta">' + esc([t.acheteur, t.pays].filter(Boolean).join(' · ')) + (t.source_name ? ' · ' + esc(t.source_name) : '') + '</div>'
+          + '<div class="crm-meta">' + (acc ? 'Compte <button type="button" class="crm-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button> · ' + esc(acc.owner_name || 'sans commercial') : 'Pas encore de compte : à relier dans Signaux') + '</div></div>'
+          + '<div class="crm-ao-side"><span class="crm-ao-when' + (urgent ? ' urgent' : '') + '">' + esc(aoWhen(t)) + '</span>' + dec
+          + '<div class="crm-ao-act">' + (t.url ? '<a class="crm-btn sm" href="' + esc(t.url) + '" target="_blank" rel="noopener">Voir l’avis</a>' : '')
+          + (dec ? '' : '<button type="button" class="crm-btn sm primary" data-ao-go>Go</button><button type="button" class="crm-btn sm" data-ao-nogo>No-go</button>')
+          + '<button type="button" class="crm-link" data-ao-hide title="Masquer pour moi">Masquer</button></div></div></div>';
+      }).join('') + '</section>';
+    host.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
+    var nb = host.querySelector('[data-ao-notif]');
+    if (nb) nb.onclick = function () { Notification.requestPermission().then(function (p) { toast(p === 'granted' ? 'Alertes activées sur cet appareil' : 'Alertes refusées par le navigateur'); drawAo(); }); };
+    host.querySelectorAll('.crm-ao-row').forEach(function (row) {
+      var id = row.getAttribute('data-ao');
+      var send = function (body, msg) {
+        row.style.opacity = '.5';
+        api('/crm/signals/tender/' + encodeURIComponent(id) + '/action', { method: 'POST', body: body })
+          .then(function () { toast(msg); loadAo(); if (document.getElementById('crm-tasks-list')) loadHome(); })
+          .catch(function (e) { row.style.opacity = ''; toast('Erreur : ' + e.message); });
+      };
+      var g = row.querySelector('[data-ao-go]'); if (g) g.onclick = function () { send({ action: 'go' }, 'Go : tâche créée pour le commercial du compte'); };
+      var ng = row.querySelector('[data-ao-nogo]');
+      if (ng) ng.onclick = function () {
+        if (!ng.classList.contains('confirm')) { ng.classList.add('confirm'); ng.textContent = 'Confirmer le no-go'; return; }
+        send({ action: 'nogo', reason: 'décidé depuis Aujourd’hui' }, 'No-go noté');
+      };
+      row.querySelector('[data-ao-hide]').onclick = function () { lsSet('scout_ao_hidden', aoHidden().concat([id]).slice(-300)); loadAo(); };
+    });
   }
   function drawHero(queue, st) {
     var box = document.getElementById('crm-home-hero'); if (!box) return;
@@ -2265,8 +2343,8 @@
   }
   // Pastille du menu « Aujourd'hui » : urgences de la file + actions proposées par la veille
   function paintBadge() {
-    if (typeof S.badgeCount !== 'number' && typeof S.propCount !== 'number') return;
-    var n = (S.badgeCount || 0) + (S.propCount || 0);
+    if (typeof S.badgeCount !== 'number' && typeof S.propCount !== 'number' && typeof S.aoCount !== 'number') return;
+    var n = (S.badgeCount || 0) + (S.propCount || 0) + (S.aoCount || 0);
     ['nav-today-badge', 'bn-today-badge'].forEach(function (id) {
       var b = document.getElementById(id); if (!b) return;
       b.textContent = n > 99 ? '99+' : String(n); b.style.display = n ? 'inline-block' : 'none';
@@ -2339,9 +2417,11 @@
   }
 
   window.scoutCrm = { onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge, refreshPropBadge: refreshPropBadge,
-    loadQueue: loadQueue, api: api, personName: personName, actLabel: ACT_LABEL };
+    loadQueue: loadQueue, api: api, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
   setTimeout(refreshBadge, 2500);
   setInterval(refreshBadge, 5 * 60 * 1000);
   setTimeout(refreshPropBadge, 3500);
+  setTimeout(loadAo, 4500);
+  setInterval(loadAo, 10 * 60 * 1000);
   setInterval(refreshPropBadge, 5 * 60 * 1000);
 })();
