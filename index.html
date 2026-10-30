@@ -771,7 +771,7 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <link rel="stylesheet" href="assets/crm.css?v=202">
-<link rel="stylesheet" href="assets/brand.css?v=19">
+<link rel="stylesheet" href="assets/brand.css?v=20">
 <link rel="stylesheet" href="assets/app.css?v=2">
 </head>
 <body>
@@ -10401,7 +10401,8 @@ async function cdDraftEmail(id){
   const box=document.getElementById('cd-email-draft'); if(!box) return;
   box.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px;">G\u00e9n\u00e9ration de l\'email par Claude\u2026</div>';
   try{
-    const r=await fetch(API+'/action/draft-email',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:id})});
+    const sig=(window._cdSignal&&window._cdSignal.id===id)?window._cdSignal.signal:'';
+    const r=await fetch(API+'/action/draft-email',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify(sig?{contact_id:id,signal:sig}:{contact_id:id})});
     const d=await r.json();
     if(!r.ok){ box.innerHTML='<div style="color:#B5523B;font-size:12px;padding:8px;">'+esc(d.error||'Erreur g\u00e9n\u00e9ration')+'</div>'; return; }
     window._cdDraft={subject:d.subject,body:d.body,to:d.to};
@@ -10416,6 +10417,12 @@ async function cdDraftEmail(id){
   }catch(e){ box.innerHTML='<div style="color:#B5523B;font-size:12px;padding:8px;">Erreur : '+esc(e.message)+'</div>'; }
 }
 window.cdDraftEmail=cdDraftEmail;
+// Prospection sur signal : ouvre le contact et prépare tout de suite un mail qui cite le signal (relu et envoyé par le commercial).
+window.scoutPitch=async function(contactId, signal){
+  window._cdSignal={id:contactId, signal:String(signal||'').slice(0,600)};
+  await openContactDetail(contactId);
+  let n=0; const t=setInterval(function(){ n++; if(document.getElementById('cd-email-draft')){ clearInterval(t); cdDraftEmail(contactId); try{ document.getElementById('cd-email-draft').scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} } else if(n>40) clearInterval(t); },150);
+};
 function cdSendDraft(){ const d=window._cdDraft; if(!d) return; window.location.href='mailto:'+encodeURIComponent(d.to)+'?subject='+encodeURIComponent(d.subject)+'&body='+encodeURIComponent(d.body);
   try{ const cid=(window.__cdContact&&window.__cdContact.id); if(cid) fetch(API+'/action/log-intent',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:cid,action_type:'email',details:{subject:d.subject,body:d.body,to:d.to}})}); }catch(e){}
 }
@@ -10475,9 +10482,9 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=220"></script>
+<script src="assets/crm.js?v=221"></script>
 <script src="assets/settings.js?v=2"></script>
-<script src="assets/app.js?v=4"></script>
+<script src="assets/app.js?v=5"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>
 <script>
 // Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.

@@ -202,7 +202,9 @@
       prosp ? api('/crm/accounts?activity=never&contacts=with&sort=priority&dir=desc&limit=8' + own).catch(none('accounts')) : { accounts: [] },
       prosp ? api('/crm/contacts?vip=1&limit=8' + own).catch(none('contacts')) : { contacts: [] },
       // visites du site et chats sur mes comptes (fil des signaux, 14 jours)
-      prosp ? api('/signals/feed?days=14&scope=' + (team ? 'all' : 'me')).catch(none('items')) : { items: [] }
+      prosp ? api('/signals/feed?days=14&scope=' + (team ? 'all' : 'me')).catch(none('items')) : { items: [] },
+      // À écrire : comptes qui bougent avec leur meilleur contact (ou contact à trouver)
+      api('/crm/pitch?scope=' + (team ? 'all' : 'me')).catch(none('items'))
     ]).then(function (r) {
       var items = [];
       var ready = {}; (r[2].ready || []).forEach(function (d) { ready[d.contact_id] = d; });
@@ -229,15 +231,24 @@
           sub: what + ' ' + when + ' · ' + x.pages + ' page' + (x.pages > 1 ? 's' : '') + ((x.titles || []).length ? ' : ' + x.titles.filter(Boolean).slice(0, 3).join(', ') : ''),
           contact_id: x.contact_id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom, key: x.key });
       });
+      var seenAcc = {}; items.forEach(function (it) { if (it.account_id) seenAcc[it.account_id] = 1; });
+      S.pitchMap = S.pitchMap || {};
+      ((r[9] && r[9].items) || []).forEach(function (p) {
+        if (p.state === 'searching' || seenAcc[p.account.id]) return;
+        seenAcc[p.account.id] = 1; S.pitchMap[p.account.id] = p;
+        var ready = p.state === 'ready';
+        items.push({ kind: ready ? 'pitch' : 'find', id: 'pitch-' + p.account.id, pitch: p, title: ready ? p.contact.name : p.account.nom, sub: p.reason,
+          contact_id: ready ? p.contact.id : null, contact_name: ready ? p.contact.name : null, account_id: p.account.id, account_nom: p.account.nom, tier: p.account.tier,
+          who: p.account.owner_name, strength: p.strength || 0 });
+      });
       if (prosp) {
-        var seenAcc = {}; items.forEach(function (it) { if (it.account_id) seenAcc[it.account_id] = 1; });
         ((r[4] && r[4].rows) || []).forEach(function (sg) {
           var acc = (sg.accounts || [])[0];
           items.push({ kind: 'signal', id: 'sig-' + sg.kind + '-' + sg.ref_id, sg: sg, score: sg.score || 0, account_id: acc && acc.id, tier: acc && acc.tier });
           if (acc) seenAcc[acc.id] = 1;
         });
         ((r[8] && r[8].items) || []).forEach(function (f) {
-          if ((f.type !== 'visit' && f.type !== 'chat') || !f.account || f.imp < 2) return;
+          if ((f.type !== 'visit' && f.type !== 'chat') || !f.account || f.imp < 2 || seenAcc[f.account.id]) return;
           items.push({ kind: f.type, id: 'f-' + f.key, fkey: f.key, title: f.title, sub: f.why, account_id: f.account.id, account_nom: f.account.nom, tier: f.account.tier, who: f.account.owner_name, imp: f.imp, at: f.at, qualified: f.status === 'qualified' });
           seenAcc[f.account.id] = 1;
         });
@@ -264,7 +275,7 @@
       return items;
     });
   }
-  var KIND_LABEL = { task: 'Tâche', relance: 'Relance', reply: 'Réponse', reaction: 'Réaction', signal: 'Marché', hot: 'Compte chaud', open: 'À ouvrir', vip: 'VIP', visit: 'Visite', chat: 'Chat' };
+  var KIND_LABEL = { pitch: 'À écrire', find: 'Contact à trouver', task: 'Tâche', relance: 'Relance', reply: 'Réponse', reaction: 'Réaction', signal: 'Marché', hot: 'Compte chaud', open: 'À ouvrir', vip: 'VIP', visit: 'Visite', chat: 'Chat' };
   var PROSP_KINDS = { signal: 1, hot: 1, open: 1, vip: 1, visit: 1, chat: 1 };
 
   // File unique classée par importance et urgence, sans planning au jour ou à la semaine :
@@ -277,6 +288,8 @@
     if (it.kind === 'reaction') return 1000 - Math.min(99, Math.max(0, daysFrom(it.due) || 0)) + tierPts / 10;
     if (it.kind === 'reply') return 900 + tierPts / 10;
     if (it.kind === 'signal') return 600 + (it.score || 0) * 5 + tierPts / 10;
+    if (it.kind === 'pitch') return 680 + (it.strength || 0) * 15 + tierPts / 5;
+    if (it.kind === 'find') return 340 + (it.strength || 0) * 10 + tierPts / 5;
     if (it.kind === 'chat') return (it.qualified ? 700 : 450) + (it.imp || 0) * 5 + tierPts / 10;
     if (it.kind === 'visit') return 420 + (it.imp || 0) * 8 + tierPts / 2;
     if (it.kind === 'hot') return 400 + Math.min(it.score || 0, 50) + tierPts / 2;
@@ -292,6 +305,19 @@
   function queueItemHtml(it, opts) {
     opts = opts || {};
     if (it.kind === 'signal') return '<div class="crm-q k-signal">' + sigCard(it.sg) + '</div>';
+    if (it.kind === 'pitch' || it.kind === 'find') {
+      var P = it.pitch, rd = it.kind === 'pitch';
+      var ps = [];
+      if (rd) ps.push(esc([P.contact.titre || '', P.contact.role ? '(' + P.contact.role + ')' : ''].filter(Boolean).join(' ')));
+      ps.push((it.tier ? tierBadge(it.tier) + ' ' : '') + '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>');
+      if (opts.showWho && it.who) ps.push(esc(it.who));
+      return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (rd ? ICON.mail : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
+        + (rd ? '<button type="button" class="crm-link strong" data-qct="' + esc(it.contact_id) + '">' + esc(it.title) + '</button>' : '<button type="button" class="crm-link strong" data-qacc="' + esc(it.account_id) + '">' + esc(it.title) + '</button>')
+        + '</div><div class="s">' + ps.filter(Boolean).join(' · ') + '</div><div class="s crm-pitch-why">' + esc(P.reason) + (rd ? '' : ' · pas de contact joignable trouvé') + '</div></div>'
+        + '<div class="crm-q-a">' + (rd ? '<button type="button" class="crm-btn sm primary" data-pgo="' + esc(it.account_id) + '">' + ICON.mail + ' Préparer le mail</button>'
+          : '<a class="crm-btn sm primary" href="' + esc(P.linkedin_url) + '" target="_blank" rel="noopener">Chercher sur LinkedIn</a>')
+        + '<button type="button" class="crm-btn sm ghost" data-psnz="' + esc(it.account_id) + '" title="Retirer de la file pour 30 jours">Pas maintenant</button></div></div>';
+    }
     if (PROSP_KINDS[it.kind]) {
       var isCt = it.kind === 'vip';
       var target = isCt ? 'data-qct="' + esc(it.contact_id) + '"' : 'data-qacc="' + esc(it.account_id) + '"';
@@ -301,7 +327,7 @@
       return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (it.kind === 'open' ? ICON.send : it.kind === 'chat' ? ICON.chat : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
         + (!isCt && it.tier ? tierBadge(it.tier) + ' ' : '') + '<button type="button" class="crm-link strong" ' + target + '>' + esc(it.title) + '</button></div><div class="s">' + psub.filter(Boolean).join(' · ') + '</div></div>'
         + '<div class="crm-q-a"><button type="button" class="crm-btn sm" ' + target + '>' + (isCt ? 'Ouvrir le contact' : 'Ouvrir le compte') + '</button>'
-        + (it.fkey ? '<button type="button" class="crm-btn sm" data-ftask="' + esc(it.fkey) + '" data-facc-id="' + esc(it.account_id) + '" data-ftitle="' + esc(it.title) + '">' + ICON.check + ' Tâche</button><button type="button" class="crm-btn ghost sm" data-fdis="' + esc(it.fkey) + '">Écarter</button>' : '')
+        + (it.fkey ? '<button type="button" class="crm-btn sm" data-ftask="' + esc(it.fkey) + '" data-facc-id="' + esc(it.account_id) + '" data-ftitle="' + esc(it.title) + '">' + ICON.mail + ' Écrire</button><button type="button" class="crm-btn ghost sm" data-fdis="' + esc(it.fkey) + '">Écarter</button>' : '')
         + '</div><div class="crm-feed-pick" hidden></div></div>';
     }
     var t = todayStr();
@@ -331,6 +357,25 @@
       + '</div><div class="s">' + sub.join(' · ') + '</div></div><div class="crm-q-a">' + actions + '</div></div>';
   }
 
+  // Prospection sur signal : mail prêt à relire pour le meilleur contact ; sinon Scout cherche un contact.
+  function pitchGo(p) {
+    if (p && p.contact && typeof window.scoutPitch === 'function') { window.scoutPitch(p.contact.id, p.signal || p.reason); return true; }
+    if (p && p.contact) { openContact(p.contact.id); return true; }
+    return false;
+  }
+  function pitchAccount(accId, reason) {
+    if (!accId) { toast('Rattache d’abord ce signal à un compte'); return Promise.resolve(); }
+    return api('/crm/pitch/' + encodeURIComponent(accId), { method: 'POST', body: { action: 'force', reason: reason } })
+      .then(function () { return api('/crm/pitch/account/' + encodeURIComponent(accId)); })
+      .then(function (d) {
+        var p = d.item; if (p) { S.pitchMap = S.pitchMap || {}; S.pitchMap[accId] = p; }
+        if (p && p.state === 'ready') { pitchGo(p); return; }
+        if (p && p.state === 'searching') toast('Pas encore de contact joignable : Scout en cherche un, le mail arrivera dans ta file');
+        else if (p) { toast('Aucun contact joignable trouvé : recherche LinkedIn ouverte'); window.open(p.linkedin_url, '_blank', 'noopener'); }
+        else toast('Ajouté à ta file');
+      });
+  }
+
   var FEED_REASONS = ['Pas une cible', 'Déjà en contact', 'Concurrent ou fournisseur', 'Particulier ou étudiant', 'Autre'];
   // Écarter un signal visite / chat : raison demandée (elle sert au bilan des sources dans Pilotage)
   function askFeedReason(host, key, onDone) {
@@ -342,16 +387,25 @@
   }
   function bindQueue(root, after) {
     bindTasks(root, after);
+    root.querySelectorAll('[data-pgo]').forEach(function (b) {
+      b.onclick = function (e) { e.stopPropagation(); var p = (S.pitchMap || {})[b.getAttribute('data-pgo')]; if (p) pitchGo(p); };
+    });
+    root.querySelectorAll('[data-psnz]').forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation(); b.disabled = true;
+        api('/crm/pitch/' + encodeURIComponent(b.getAttribute('data-psnz')), { method: 'POST', body: { action: 'snooze', days: 30 } })
+          .then(function () { toast('Retiré pour 30 jours'); var row = b.closest('.crm-q'); if (row) row.remove(); }).catch(function (er) { b.disabled = false; toast('Erreur : ' + er.message); });
+      };
+    });
     root.querySelectorAll('[data-fdis]').forEach(function (b) {
       b.onclick = function (e) { e.stopPropagation(); var row = b.closest('.crm-q'); askFeedReason(row.querySelector('.crm-feed-pick'), b.getAttribute('data-fdis'), after); };
     });
     root.querySelectorAll('[data-ftask]').forEach(function (b) {
       b.onclick = function (e) {
         e.stopPropagation(); b.disabled = true;
-        var key = b.getAttribute('data-ftask'), t = (/^chat:/.test(key) ? 'Répondre au chat : ' : 'Relancer après la visite du site : ') + b.getAttribute('data-ftitle');
-        api('/crm/tasks', { method: 'POST', body: { title: t.slice(0, 280), end_user_id: b.getAttribute('data-facc-id') || null } })
-          .then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: key, state: 'task' } }); })
-          .then(function () { toast('Tâche créée'); after(); }).catch(function (er) { b.disabled = false; toast('Erreur : ' + er.message); });
+        var key = b.getAttribute('data-ftask'), why = (/^chat:/.test(key) ? 'a écrit sur le chat du site' : 'est venu sur elistair.com') ;
+        pitchAccount(b.getAttribute('data-facc-id'), why).then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: key, state: 'task' } }); })
+          .then(function () { b.disabled = false; }).catch(function (er) { b.disabled = false; toast('Erreur : ' + er.message); });
       };
     });
     root.querySelectorAll('[data-qacc]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); openAccount(b.getAttribute('data-qacc')); }; });
@@ -436,7 +490,7 @@
     var btns = '';
     if (!acc) btns += it.type === 'visit' ? '<button type="button" class="crm-btn sm primary" data-fa="create" data-i="' + i + '">Créer le compte</button><button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>'
       : '<button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>';
-    btns += '<button type="button" class="crm-btn sm' + (acc ? ' primary' : '') + '" data-fa="task" data-i="' + i + '">' + ICON.check + ' Tâche</button>';
+    btns += '<button type="button" class="crm-btn sm' + (acc ? ' primary' : '') + '" data-fa="task" data-i="' + i + '">' + (it.type === 'market' && it.flux === 1 ? ICON.check + ' Go' : ICON.mail + ' Écrire') + '</button>';
     if (it.type === 'visit' && acc && it.org && it.org.domain) btns += '<button type="button" class="crm-btn sm" data-fa="contacts" data-i="' + i + '" title="Recherche Hunter sur ' + esc(it.org.domain) + ' : 1 crédit">Chercher des contacts</button>';
     btns += '<button type="button" class="crm-btn ghost sm" data-fa="dismiss" data-i="' + i + '">Écarter</button>';
     return '<div class="crm-feed-row t-' + it.type + (it.imp >= 4 ? ' strong' : '') + '" data-row="' + i + '">'
@@ -497,12 +551,12 @@
         if (a === 'task') {
           if (it.type === 'market') {
             return api('/crm/signals/' + it.kind + '/' + encodeURIComponent(it.ref_id) + '/action', { method: 'POST', body: { action: it.flux === 1 ? 'go' : 'accept' } })
-              .then(function () { done(row, 'Tâche créée dans Aujourd’hui'); }).catch(function (e) { toast('Erreur : ' + e.message); });
+              .then(function () { done(row, it.flux === 1 ? 'Go : tâche « Répondre à l’AO » créée' : 'Ajouté à « À écrire » dans Aujourd’hui'); }).catch(function (e) { toast('Erreur : ' + e.message); });
           }
-          var title = it.type === 'visit' ? 'Relancer ' + it.title + ' : visite du site (' + (it.why || '').split(' · ')[0] + ')' : 'Répondre au chat : ' + it.title;
-          return api('/crm/tasks', { method: 'POST', body: { title: title.slice(0, 280), end_user_id: it.account ? it.account.id : null } })
+          if (!it.account) { toast('Rattache d’abord ce signal à un compte'); return; }
+          return pitchAccount(it.account.id, it.type === 'chat' ? 'a écrit sur le chat du site' : 'est venu sur elistair.com')
             .then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: it.key, state: 'task' } }); })
-            .then(function () { done(row, 'Tâche créée dans Aujourd’hui'); }).catch(function (e) { toast('Erreur : ' + e.message); });
+            .then(function () { row.classList.add('gone'); setTimeout(function () { row.remove(); }, 250); }).catch(function (e) { toast('Erreur : ' + e.message); });
         }
         if (a === 'contacts') return feedContacts(it, pick, b);
         if (a === 'create') {
@@ -615,7 +669,7 @@
         b.onclick = function () {
           var a = b.getAttribute('data-sa');
           if (a === 'go') return send({ action: 'go' }, 'Go : tâche créée dans À faire');
-          if (a === 'accept') return send({ action: 'accept' }, 'Action acceptée : tâche créée dans À faire');
+          if (a === 'accept') return send({ action: 'accept' }, 'Ajouté à « À écrire » : le mail sera prêt dans ta file');
           if (a === 'link') {
             var host = card.querySelector('.crm-ms-pick'); host.hidden = false;
             acctPicker(host, { focus: true, placeholder: 'Relier à quel compte ?', onPick: function (acc) { send({ action: 'link', end_user_id: acc.id }, 'Relié à ' + acc.nom); } });
@@ -2501,7 +2555,7 @@
   }
 
   window.scoutCrm = { onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge, refreshPropBadge: refreshPropBadge,
-    loadQueue: loadQueue, api: api, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
+    loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
   setTimeout(refreshBadge, 2500);
   setInterval(refreshBadge, 5 * 60 * 1000);
   setTimeout(refreshPropBadge, 3500);

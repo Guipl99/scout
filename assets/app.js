@@ -122,7 +122,7 @@
   }
 
   // ── Aujourd'hui ────────────────────────────────────────────────────────────
-  var KIND = { reaction: 'Réaction', reply: 'Réponse', relance: 'Relance', task: 'Tâche' };
+  var KIND = { pitch: 'À écrire', find: 'Contact à trouver', reaction: 'Réaction', reply: 'Réponse', relance: 'Relance', task: 'Tâche' };
   function renderToday(quiet) {
     var s = session() || {};
     var v = document.getElementById('sa-view');
@@ -173,11 +173,14 @@
     if (it.kind === 'relance') act = '<button type="button" class="sa-btn primary" data-rel="' + esc(it.contact_id) + '">' + I.mail + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button>';
     else if (it.kind === 'task') act = '<button type="button" class="sa-btn primary" data-done="' + esc(it.task.id) + '">' + I.check + 'Fait</button>';
     else if (it.kind === 'reaction') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">' + I.phone + 'Appeler ou écrire</button><button type="button" class="sa-btn" data-seen="' + esc(it.key) + '">Vu</button>';
+    else if (it.kind === 'pitch') act = '<button type="button" class="sa-btn primary" data-pgo="' + esc(it.account_id) + '">' + I.mail + 'Préparer le mail</button><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
+    else if (it.kind === 'find') act = '<a class="sa-btn primary" href="' + esc(it.pitch.linkedin_url) + '" target="_blank" rel="noopener">Chercher sur LinkedIn</a><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
     else if (it.kind === 'reply') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">Ouvrir</button><button type="button" class="sa-btn" data-tx="' + esc(it.contact_id) + '">Saisi dans Dynamics</button>';
     return '<article class="sa-card k-' + it.kind + (hot ? ' hot' : '') + '">'
       + '<div class="sa-card-h"><span class="sa-tag k-' + it.kind + '">' + KIND[it.kind] + '</span>' + (it.tier ? '<span class="sa-tier">T' + esc(it.tier) + '</span>' : '') + '<span class="sa-when' + (hot ? ' hot' : '') + '">' + esc(it.kind === 'reaction' ? '' : when) + '</span></div>'
       + '<button type="button" class="sa-card-t" ' + (it.contact_id ? 'data-ct="' + esc(it.contact_id) + '"' : (it.account_id ? 'data-acc="' + esc(it.account_id) + '"' : '')) + '>' + esc(title) + '</button>'
       + (it.kind === 'reaction' ? '<div class="sa-card-s hot">' + esc(when) + '</div>' : '')
+      + (it.kind === 'pitch' || it.kind === 'find' ? '<div class="sa-card-s">' + esc((it.kind === 'pitch' && it.pitch.contact.titre ? it.pitch.contact.titre + ' · ' : '') + it.pitch.reason) + '</div>' : '')
       + (it.account_nom ? '<button type="button" class="sa-card-s sa-link" ' + (it.account_id ? 'data-acc="' + esc(it.account_id) + '"' : '') + '>' + esc(it.account_nom) + '</button>' : '')
       + (A.qScope === 'team' && it.who ? '<div class="sa-meta">' + esc(it.who) + '</div>' : '')
       + '<div class="sa-card-a">' + act + '</div></article>';
@@ -186,6 +189,10 @@
     root.querySelectorAll('[data-ct]').forEach(function (b) { b.onclick = function () { openContact(b.getAttribute('data-ct')); }; });
     root.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
     root.querySelectorAll('[data-rel]').forEach(function (b) { b.onclick = function () { openRelance(b.getAttribute('data-rel')); }; });
+    root.querySelectorAll('[data-pgo]').forEach(function (b) { b.onclick = function () { var p = crm().pitchMap()[b.getAttribute('data-pgo')]; if (p) crm().pitchGo(p); }; });
+    root.querySelectorAll('[data-psnz]').forEach(function (b) {
+      b.onclick = function () { b.disabled = true; api('/crm/pitch/' + encodeURIComponent(b.getAttribute('data-psnz')), { method: 'POST', body: { action: 'snooze', days: 30 } }).then(function () { fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); }); };
+    });
     root.querySelectorAll('[data-done]').forEach(function (b) {
       b.onclick = function () {
         b.disabled = true;
@@ -437,7 +444,7 @@
           + '<div class="sa-card-t static">' + esc(g.title) + '</div>' + (g.why ? '<div class="sa-card-s">' + esc(g.why) + '</div>' : '')
           + (acc ? '<button type="button" class="sa-card-s sa-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + (acc.owner_name ? ' · ' + esc(acc.owner_name) : '') + '</button>' : '<div class="sa-meta">Sans compte</div>')
           + '<div class="sa-card-a">' + (g.type === 'market' && g.url ? '<a class="sa-btn" href="' + esc(g.url) + '" target="_blank" rel="noopener">Voir</a>' : '')
-          + '<button type="button" class="sa-btn primary" data-stask="' + i + '">' + I.check + 'Tâche</button><button type="button" class="sa-btn" data-sdis="' + i + '">Écarter</button></div></article>';
+          + '<button type="button" class="sa-btn primary" data-stask="' + i + '">' + (g.type === 'market' && g.flux === 1 ? I.check + 'Go' : I.mail + 'Écrire') + '</button><button type="button" class="sa-btn" data-sdis="' + i + '">Écarter</button></div></article>';
       }).join('') + '</div>' : '<div class="sa-empty">' + (A.sigScope === 'me' ? 'Rien de neuf sur tes comptes. Regarde « Tout ».' : 'Rien sur 30 jours.') + '</div>';
       bindCards(box);
       box.querySelectorAll('[data-stask]').forEach(function (b) {
@@ -445,9 +452,9 @@
           var g = list[+b.getAttribute('data-stask')]; b.disabled = true;
           var p = g.type === 'market'
             ? api('/crm/signals/' + g.kind + '/' + encodeURIComponent(g.ref_id) + '/action', { method: 'POST', body: { action: g.flux === 1 ? 'go' : 'accept' } })
-            : api('/crm/tasks', { method: 'POST', body: { title: (g.type === 'visit' ? 'Relancer ' + g.title + ' : visite du site' : 'Répondre au chat : ' + g.title).slice(0, 280), end_user_id: g.account ? g.account.id : null } })
-              .then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: g.key, reason: 'tâche créée' } }); });
-          p.then(function () { toast('Tâche créée dans Aujourd’hui'); fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
+            : (g.account ? crm().pitchAccount(g.account.id, g.type === 'chat' ? 'a écrit sur le chat du site' : 'est venu sur elistair.com') : Promise.reject(new Error('rattache d’abord un compte')))
+              .then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: g.key, state: 'task' } }); });
+          p.then(function () { if (g.type === 'market') toast(g.flux === 1 ? 'Go : tâche « Répondre à l’AO » créée' : 'Ajouté à « À écrire » dans Aujourd’hui'); fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
         };
       });
       box.querySelectorAll('[data-sdis]').forEach(function (b) {
