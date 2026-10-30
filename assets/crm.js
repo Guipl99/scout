@@ -714,7 +714,7 @@
     var p = document.getElementById('panel-veille'); if (!p) return;
     S.vFilter = S.vFilter || lsGet('scout_veille_f', 'hot'); S.vMine = S.vMine == null ? lsGet('scout_veille_mine', false) : S.vMine;
     p.innerHTML = '<div class="crm-wrap crm-home">'
-      + '<div class="crm-row crm-home-head"><div class="crm-meta crm-lead-in">Comptes qui évaluent, testent, achètent ou utilisent un drone filaire, repérés chaque jour sur LinkedIn (posts publics), les sites des concurrents et de leurs distributeurs, et la presse.</div></div>'
+      + '<div class="crm-row crm-home-head"><div class="crm-meta crm-lead-in">Comptes qui évaluent, testent, achètent ou utilisent un drone filaire, repérés chaque semaine sur LinkedIn (posts publics), les sites des concurrents et de leurs distributeurs, et la presse.</div></div>'
       + '<div class="crm-row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px"><div class="crm-seg">'
       + '<button type="button" class="crm-chip" data-vf="hot">En phase d’achat</button><button type="button" class="crm-chip" data-vf="client">Équipés chez un concurrent</button><button type="button" class="crm-chip" data-vf="all">Tout</button></div>'
       + '<label class="crm-meta" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="crm-v-mine"' + (S.vMine ? ' checked' : '') + '> Mes comptes</label>'
