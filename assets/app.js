@@ -84,8 +84,12 @@
       if (document.hidden) { A.hiddenAt = Date.now(); return; }
       if (lockDue()) lock(); else if (A.tab === 'today' && !A.stack.length) renderToday(true);
     });
+    // Tirer pour actualiser recharge la page : si l'appli était déverrouillée juste avant, on ne redemande pas le code
+    window.addEventListener('pagehide', function () { try { if (!A.locked) sessionStorage.setItem('scout_alive', String(Date.now())); else sessionStorage.removeItem('scout_alive'); } catch (e) {} });
     show('today');
-    if (lockConf()) lock();
+    var c0 = lockConf(), alive = 0;
+    try { alive = +sessionStorage.getItem('scout_alive') || 0; sessionStorage.removeItem('scout_alive'); } catch (e) {}
+    if (c0 && !(alive && Date.now() - alive < Math.max((c0.after || 0) * 60000, 30000))) lock();
   }
   function tabBtn(id, label, ic) { return '<button type="button" class="sa-tab" data-tab="' + id + '"><span>' + ic + '</span><b>' + label + '</b></button>'; }
 
