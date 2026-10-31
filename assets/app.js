@@ -387,7 +387,7 @@
   function contactBtns(c) {
     var out = [];
     if (c.telephone && !masked(c.telephone)) out.push('<a class="sa-round" href="tel:' + esc(String(c.telephone).replace(/[^\d+]/g, '')) + '" aria-label="Appeler ' + esc(pname(c)) + '">' + I.phone + '</a>');
-    if (c.email && !masked(c.email)) out.push('<a class="sa-round" href="mailto:' + esc(c.email) + '" aria-label="Écrire à ' + esc(pname(c)) + '">' + I.mail + '</a>');
+    if (c.email && !masked(c.email)) out.push('<a class="sa-round" href="' + esc(window.scoutMailHref ? window.scoutMailHref(c.email) : 'mailto:' + c.email) + '" aria-label="Écrire à ' + esc(pname(c)) + '">' + I.mail + '</a>');
     if (c.linkedin && !masked(c.linkedin)) out.push('<a class="sa-round" href="' + esc(/^https?:/.test(c.linkedin) ? c.linkedin : 'https://' + c.linkedin) + '" target="_blank" rel="noopener" aria-label="LinkedIn de ' + esc(pname(c)) + '">' + I.li + '</a>');
     return out.join('');
   }
@@ -638,9 +638,12 @@
         : '<p class="sa-meta">Protège Scout sur ton téléphone : un code à 4 à 6 chiffres, et ' + bioName() + ' si ton téléphone le permet.</p><button type="button" class="sa-btn primary wide" id="sa-l-on">' + I.lock + 'Activer le verrouillage</button>')
       + '</div>'
       + (s.role === 'admin' ? '<h3 class="sa-h3">Lancer maintenant</h3><div class="sa-box">' + Object.keys(crm().routines()).map(function (k) { return '<button type="button" class="sa-btn wide" data-routine="' + k + '">' + esc(crm().routines()[k].label) + '</button>'; }).join('') + '<p class="sa-meta" id="sa-rt-msg">Sans attendre la nuit : veille web, puis recherche de contacts, puis rédaction des mails.</p></div>' : '')
+      + '<h3 class="sa-h3">Mails</h3><div class="sa-box"><label class="sa-lbl" for="sa-mailapp">Ouvrir les mails dans</label><select id="sa-mailapp" class="sa-input">'
+        + [['outlook', 'Outlook (appli)'], ['web', 'Outlook dans le navigateur'], ['default', 'Appli mail par défaut du téléphone']].map(function (o) { var cur = (window.scoutMailPref ? window.scoutMailPref() : 'outlook'); return '<option value="' + o[0] + '"' + (cur === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div>'
       + '<h3 class="sa-h3">Affichage</h3><div class="sa-box"><button type="button" class="sa-btn wide" id="sa-full">Passer à la version complète</button>'
       + (standalone() ? '' : '<p class="sa-meta">Astuce : ajoute Scout à l’écran d’accueil (menu Partager puis « Sur l’écran d’accueil » sur iPhone, menu ⋮ puis « Installer l’application » sur Android) pour l’ouvrir comme une appli.</p>') + '</div>'
       + '<button type="button" class="sa-btn ghost wide danger" id="sa-logout">Se déconnecter</button></div>';
+    var ma = v.querySelector('#sa-mailapp'); if (ma) ma.onchange = function () { try { localStorage.setItem('scout_mail_app', ma.value); } catch (e) {} toast('C’est noté pour ce téléphone'); };
     var on = v.querySelector('#sa-l-on'); if (on) on.onclick = function () { setupLock(); };
     var pin = v.querySelector('#sa-l-pin'); if (pin) pin.onclick = function () { setupLock(true); };
     var off = v.querySelector('#sa-l-off'); if (off) off.onclick = function () { askPin('Code actuel pour désactiver', function (ok) { if (ok) { ls(LS_LOCK, null); toast('Verrouillage désactivé'); renderMe(); } }); };

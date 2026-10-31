@@ -1051,6 +1051,25 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 // Adresse de l'API : une seule définition pour toute la page.
 window.SCOUT_API_URL = window.SCOUT_API_URL || 'https://scout-api-production-fa8d.up.railway.app';
 // Échappement HTML et liens sûrs, disponibles pour tous les scripts de la page.
+// Ouvrir un mail dans la bonne appli. Chez Elistair c'est Outlook : sur téléphone, mailto: ouvre souvent Gmail,
+// donc on passe par l'appli Outlook (ms-outlook://). Sur ordinateur, mailto: ouvre le client par défaut (Outlook).
+// Réglage par appareil : localStorage scout_mail_app = 'outlook' (défaut) | 'default' (appli mail par défaut) | 'web' (Outlook web).
+function scoutMailPref(){ try { return localStorage.getItem('scout_mail_app') || 'outlook'; } catch (e) { return 'outlook'; } }
+function scoutIsMobile(){ return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || ''); }
+function scoutMailHref(to, subject, body){
+  var q = function (k, v) { return v ? k + '=' + encodeURIComponent(v) : ''; };
+  var pref = scoutMailPref(), parts = [q('subject', subject), q('body', body)].filter(Boolean).join('&');
+  if (pref === 'web') return 'https://outlook.office.com/mail/deeplink/compose?' + [q('to', to), parts].filter(Boolean).join('&');
+  if (pref === 'outlook' && scoutIsMobile()) return 'ms-outlook://compose?' + [q('to', to), parts].filter(Boolean).join('&');
+  return 'mailto:' + encodeURIComponent(to || '') + (parts ? '?' + parts : '');
+}
+function scoutOpenMail(to, subject, body){
+  var href = scoutMailHref(to, subject, body);
+  if (/^https:/.test(href)) { window.open(href, '_blank', 'noopener'); return; }
+  window.location.href = href;
+  // appli Outlook absente du téléphone : la page reste visible, on retombe sur l'appli mail par défaut
+  if (/^ms-outlook:/.test(href)) setTimeout(function () { if (document.visibilityState === 'visible') window.location.href = 'mailto:' + encodeURIComponent(to || '') + '?subject=' + encodeURIComponent(subject || '') + '&body=' + encodeURIComponent(body || ''); }, 1800);
+}
 function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailto:/i.test(u)) return esc(u); if(!/^https?:\/\//i.test(u)){ if(/^[a-z][a-z0-9+.-]*:/i.test(u)) return '#'; u='https://'+u.replace(/^\/+/,''); } return esc(u); }
 </script>
@@ -1851,8 +1870,7 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); if(!u) return ''; if(/^mailt
     sendEmail: () => {
       const d = window._scoutCurrentDraft;
       if (!d) return;
-      const url = `mailto:${encodeURIComponent(d.to)}?subject=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.body)}`;
-      window.location.href = url;
+      scoutOpenMail(d.to, d.subject, d.body);
       logIntent('email', {subject: d.subject, body: d.body, to: d.to});
       renderConfirmation('email', 'Email ouvert dans le client mail');
     },
@@ -7434,8 +7452,7 @@ async function exportLinkedInCsv(scope) {
   function sendEmail() {
     if (!currentDraft) return;
     syncDraft();
-    const url = `mailto:${encodeURIComponent(currentDraft.to)}?subject=${encodeURIComponent(currentDraft.subject)}&body=${encodeURIComponent(currentDraft.body)}`;
-    window.location.href = url;
+    scoutOpenMail(currentDraft.to, currentDraft.subject, currentDraft.body);
     logIntent('email', { subject: currentDraft.subject, body: currentDraft.body, to: currentDraft.to });
     renderConfirmBox('email', 'Email ouvert dans le client mail');
   }
@@ -10197,7 +10214,7 @@ async function trkRelance(id, regenerate){
   }catch(e){ const box=document.getElementById('trk-relance-body'); if(box) box.innerHTML='<span style="color:#B5523B;">Erreur : '+esc(e.message)+'</span>'; }
 }
 window.trkRelance=trkRelance;
-function trkSendRelance(){ const d=_trkFields(); if(!d||!d.to) return; window.location.href='mailto:'+encodeURIComponent(d.to)+'?subject='+encodeURIComponent(d.subject||'')+'&body='+encodeURIComponent(d.body||''); }
+function trkSendRelance(){ const d=_trkFields(); if(!d||!d.to) return; scoutOpenMail(d.to, d.subject||'', d.body||''); }
 window.trkSendRelance=trkSendRelance;
 function trkCopyRelance(btn){ const d=_trkFields(); if(!d) return; try{ navigator.clipboard.writeText('Objet : '+(d.subject||'')+'\n\n'+(d.body||'')); if(btn){ const o=btn.innerHTML; btn.innerHTML='Copié'; setTimeout(function(){btn.innerHTML=o;},1500); } }catch(e){} }
 window.trkCopyRelance=trkCopyRelance;
@@ -10419,7 +10436,7 @@ window.scoutPitch=async function(contactId, signal){
   await openContactDetail(contactId);
   let n=0; const t=setInterval(function(){ n++; if(document.getElementById('cd-email-draft')){ clearInterval(t); cdDraftEmail(contactId); try{ document.getElementById('cd-email-draft').scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} } else if(n>40) clearInterval(t); },150);
 };
-function cdSendDraft(){ const d=window._cdDraft; if(!d) return; window.location.href='mailto:'+encodeURIComponent(d.to)+'?subject='+encodeURIComponent(d.subject)+'&body='+encodeURIComponent(d.body);
+function cdSendDraft(){ const d=window._cdDraft; if(!d) return; scoutOpenMail(d.to, d.subject, d.body);
   try{ const cid=(window.__cdContact&&window.__cdContact.id); if(cid) fetch(API+'/action/log-intent',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},(typeof window.getAuthHeaders==='function')?window.getAuthHeaders():{}),body:JSON.stringify({contact_id:cid,action_type:'email',details:{subject:d.subject,body:d.body,to:d.to}})}); }catch(e){}
 }
 window.cdSendDraft=cdSendDraft;
@@ -10478,9 +10495,9 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=240"></script>
+<script src="assets/crm.js?v=241"></script>
 <script src="assets/settings.js?v=3"></script>
-<script src="assets/app.js?v=25"></script>
+<script src="assets/app.js?v=26"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>
 <script>
 // Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.

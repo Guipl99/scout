@@ -214,6 +214,9 @@
       });
       (r[1].tracking || []).forEach(function (x) {
         var name = personName(x);
+        // relance en retard de plus de 60 jours : trop tard pour être utile, on ne l'affiche plus (elle reste dans le suivi)
+        var late = x.next_relance ? (Date.now() - new Date(String(x.next_relance).slice(0, 10) + 'T12:00:00').getTime()) / 864e5 : 0;
+        if (late > 60) return;
         if (x.status === 'waiting' && (x.urgency === 'overdue' || x.urgency === 'due' || x.urgency === 'future') && x.next_relance) {
           items.push({ kind: 'relance', tier: x.account_tier || null, id: 'rel-' + x.id, due: String(x.next_relance).slice(0, 10), title: 'Relance : ' + name,
             sub: x.titre, who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x, draft: ready[x.id] || null });
@@ -434,7 +437,8 @@
   function pitchSend(p, subj, body, cb) {
     var to = p.contact.email, details = { subject: subj, body: body, to: to, source: 'pitch' };
     api('/action/log-intent', { method: 'POST', body: { contact_id: p.contact.id, action_type: 'email', details: details } }).catch(function () {});
-    window.location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+    if (window.scoutOpenMail) window.scoutOpenMail(to, subj, body);
+    else window.location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
     // au retour de la messagerie : le mail est-il parti ?
     setTimeout(function () {
       var ov = document.createElement('div'); ov.className = 'crm-pr-ask';
