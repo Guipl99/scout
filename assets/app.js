@@ -579,6 +579,7 @@
       var list = (d.items || []).slice(0, 60);
       var mention = function (g) {
         if (g.type === 'market') return '';
+        if (g.type === 'chat') return '<div class="sa-cstate">Suivi dans le CRM</div>';
         if (!g.account) return '<div class="sa-cstate">Pas encore de compte : « Écrire » le crée et Scout cherche un contact</div>';
         var p = PS[g.account.id]; if (!p) return '';
         if (p.state === 'ready') return '<div class="sa-cstate ok">Contact prêt : ' + esc(p.contact.name) + (p.contact.titre ? ', ' + esc(p.contact.titre) : '') + '</div>';
@@ -593,7 +594,7 @@
           + (acc ? '<button type="button" class="sa-card-s sa-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + (acc.owner_name ? ' · ' + esc(acc.owner_name) : '') + '</button>' : '<div class="sa-meta">Sans compte</div>')
           + mention(g)
           + '<div class="sa-card-a">' + (g.type === 'market' && g.url ? '<a class="sa-btn" href="' + esc(g.url) + '" target="_blank" rel="noopener">Voir</a>' : '')
-          + (g.type === 'market' || canWrite(g) ? '<button type="button" class="sa-btn primary" data-stask="' + i + '">' + (g.type === 'market' && g.flux === 1 ? I.check + 'Go' : I.mail + 'Écrire') + '</button>' : '') + '<button type="button" class="sa-btn" data-sdis="' + i + '">Écarter</button></div></article>';
+          + (g.type === 'market' || (g.type !== 'chat' && canWrite(g)) ? '<button type="button" class="sa-btn primary" data-stask="' + i + '">' + (g.type === 'market' && g.flux === 1 ? I.check + 'Go' : I.mail + 'Écrire') + '</button>' : '') + '<button type="button" class="sa-btn" data-sdis="' + i + '">Écarter</button></div></article>';
       }).join('') + '</div>' : '<div class="sa-empty">' + (A.sigScope === 'me' ? 'Rien de neuf sur tes comptes. Regarde « Tout ».' : 'Rien sur 30 jours.') + '</div>';
       bindCards(box);
       box.querySelectorAll('[data-stask]').forEach(function (b) {

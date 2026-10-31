@@ -252,7 +252,7 @@
           if (acc) seenAcc[acc.id] = 1;
         });
         ((r[8] && r[8].items) || []).forEach(function (f) {
-          if ((f.type !== 'visit' && f.type !== 'chat') || !f.account || f.imp < 2 || seenAcc[f.account.id]) return;
+          if (f.type !== 'visit' || !f.account || f.imp < 2 || seenAcc[f.account.id]) return;
           items.push({ kind: f.type, id: 'f-' + f.key, fkey: f.key, title: f.title, sub: f.why, account_id: f.account.id, account_nom: f.account.nom, tier: f.account.tier, who: f.account.owner_name, imp: f.imp, at: f.at, qualified: f.status === 'qualified' });
           seenAcc[f.account.id] = 1;
         });
@@ -623,13 +623,14 @@
     var accHtml = acc ? '<span class="crm-feed-acc">' + (acc.tier ? tierBadge(acc.tier) + ' ' : '') + '<button type="button" class="crm-link" data-facc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button>' + (acc.owner_name ? ' · ' + esc(acc.owner_name) : ' · sans commercial') + '</span>'
       : '<span class="crm-feed-acc none">Sans compte</span>';
     var btns = '';
-    if (!acc) btns += it.type === 'visit' ? '<button type="button" class="crm-btn sm primary" data-fa="create" data-i="' + i + '">Créer le compte</button><button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>'
+    if (it.type === 'chat') { /* chat : traité dans le CRM, ici seulement pour info */ }
+    else if (!acc) btns += it.type === 'visit' ? '<button type="button" class="crm-btn sm primary" data-fa="create" data-i="' + i + '">Créer le compte</button><button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>'
       : '<button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>';
     var PSx = acc && S.feedPitch ? S.feedPitch[acc.id] : null;
     var searching = it.type !== 'market' && PSx && PSx.state !== 'ready' && PSx.state !== 'linkedin';
-    var cstate = it.type === 'market' ? '' : !acc ? '' : !PSx ? '' : PSx.state === 'ready' ? '<div class="s crm-cstate ok">Contact prêt : ' + esc(PSx.contact.name) + (PSx.contact.titre ? ', ' + esc(PSx.contact.titre) : '') + '</div>'
+    var cstate = it.type === 'chat' ? '<div class="s crm-cstate">Suivi dans le CRM</div>' : it.type === 'market' ? '' : !acc ? '' : !PSx ? '' : PSx.state === 'ready' ? '<div class="s crm-cstate ok">Contact prêt : ' + esc(PSx.contact.name) + (PSx.contact.titre ? ', ' + esc(PSx.contact.titre) : '') + '</div>'
       : PSx.state === 'linkedin' ? '<div class="s crm-cstate ok">Contact trouvé sur LinkedIn : ' + esc(PSx.person.name) + '</div>' : '<div class="s crm-cstate">Scout cherche un contact qualifié (mail vérifié ou LinkedIn)</div>';
-    if (!searching) btns += '<button type="button" class="crm-btn sm' + (acc ? ' primary' : '') + '" data-fa="task" data-i="' + i + '">' + (it.type === 'market' && it.flux === 1 ? ICON.check + ' Go' : ICON.mail + ' Écrire') + '</button>';
+    if (!searching && it.type !== 'chat') btns += '<button type="button" class="crm-btn sm' + (acc ? ' primary' : '') + '" data-fa="task" data-i="' + i + '">' + (it.type === 'market' && it.flux === 1 ? ICON.check + ' Go' : ICON.mail + ' Écrire') + '</button>';
     // plus de recherche de contacts à la main : c'est le travail de Scout (mention ci-dessous)
     btns += '<button type="button" class="crm-btn ghost sm" data-fa="dismiss" data-i="' + i + '">Écarter</button>';
     return '<div class="crm-feed-row t-' + it.type + (it.imp >= 4 ? ' strong' : '') + '" data-row="' + i + '">'
