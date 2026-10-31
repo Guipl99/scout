@@ -185,9 +185,9 @@
     var hot = it.kind === 'reaction' || it.kind === 'reply' || late > 0;
     var title = it.kind === 'task' ? it.title : (it.contact_name || it.title);
     var act = '';
-    if (it.kind === 'relance') act = '<button type="button" class="sa-btn primary" data-rel="' + esc(it.contact_id) + '">' + I.mail + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button>';
+    if (it.kind === 'relance') act = '<button type="button" class="sa-btn primary" data-rel="' + esc(it.contact_id) + '">' + I.mail + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button><button type="button" class="sa-btn" data-replied="' + esc(it.contact_id) + '">Il a répondu</button>';
     else if (it.kind === 'task') act = (it.contact_id ? '<button type="button" class="sa-btn" data-ct="' + esc(it.contact_id) + '">' + I.phone + 'Contact</button>' : it.account_id ? '<button type="button" class="sa-btn" data-acc="' + esc(it.account_id) + '">Compte</button>' : '') + '<button type="button" class="sa-btn primary" data-done="' + esc(it.task.id) + '">' + I.check + 'Fait</button>';
-    else if (it.kind === 'reaction') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">' + I.phone + 'Appeler ou écrire</button><button type="button" class="sa-btn" data-seen="' + esc(it.key) + '">Vu</button>';
+    else if (it.kind === 'reaction') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">' + I.mail + 'Écrire</button><button type="button" class="sa-btn" data-seen="' + esc(it.key) + '">Vu</button>';
     else if (it.kind === 'pitch') act = '<button type="button" class="sa-btn primary" data-pgo="' + esc(it.account_id) + '">' + (it.li ? 'Écrire sur LinkedIn' : I.mail + (it.pitch.draft ? 'Relire et envoyer' : 'Préparer le mail')) + '</button><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
     else if (it.kind === 'find') act = '<a class="sa-btn primary" href="' + esc(it.pitch.linkedin_url) + '" target="_blank" rel="noopener">Chercher sur LinkedIn</a><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
     else if (it.kind === 'reply') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">Ouvrir</button><button type="button" class="sa-btn" data-tx="' + esc(it.contact_id) + '">Saisi dans Dynamics</button>';
@@ -207,6 +207,9 @@
     root.querySelectorAll('[data-ct]').forEach(function (b) { b.onclick = function () { openContact(b.getAttribute('data-ct')); }; });
     root.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
     root.querySelectorAll('[data-rel]').forEach(function (b) { b.onclick = function () { openRelance(b.getAttribute('data-rel')); }; });
+    root.querySelectorAll('[data-replied]').forEach(function (b) {
+      b.onclick = function () { b.disabled = true; api('/action/confirm', { method: 'POST', body: { contact_id: b.getAttribute('data-replied'), action_type: 'reply_outlook' } }).then(function () { toast('Noté : plus de relance'); fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); }); };
+    });
     root.querySelectorAll('[data-pgo]').forEach(function (b) {
       b.onclick = function () {
         var id = b.getAttribute('data-pgo'), it = (A.items || []).find(function (x) { return x.pitch && x.account_id === id; });

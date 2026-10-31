@@ -215,7 +215,7 @@
       (r[1].tracking || []).forEach(function (x) {
         var name = personName(x);
         if (x.status === 'waiting' && (x.urgency === 'overdue' || x.urgency === 'due' || x.urgency === 'future') && x.next_relance) {
-          items.push({ kind: 'relance', tier: x.account_tier || null, id: 'rel-' + x.id, due: String(x.next_relance).slice(0, 10), title: (x.stage === '1er mail' ? 'Relance 1' : 'Relance 2') + ' : ' + name,
+          items.push({ kind: 'relance', tier: x.account_tier || null, id: 'rel-' + x.id, due: String(x.next_relance).slice(0, 10), title: 'Relance : ' + name,
             sub: x.titre, who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x, draft: ready[x.id] || null });
         } else if (x.status === 'interested' && false) {
           // Les réponses arrivent dans Outlook et se traitent là : plus de carte « Réponse » dans la file
@@ -356,10 +356,11 @@
       : '<span class="crm-q-ic k-' + it.kind + '" aria-hidden="true">' + (it.kind === 'relance' ? ICON.mail : ICON.check) + '</span>';
     var actions = '';
     if (it.kind === 'relance') actions = (it.draft ? '<span class="crm-q-ready" title="Rédigée par Scout ce matin : à relire et modifier avant l’envoi">' + (it.draft.edited ? 'Brouillon relu' : 'Brouillon prêt') + '</span>' : '')
-      + '<button type="button" class="crm-btn sm primary" data-qrel="' + esc(it.contact_id) + '">' + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button>';
+      + '<button type="button" class="crm-btn sm primary" data-qrel="' + esc(it.contact_id) + '">' + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button>'
+      + '<button type="button" class="crm-btn sm ghost" data-qreplied="' + esc(it.contact_id) + '" title="Il a répondu dans Outlook : plus de relance">Il a déjà répondu</button>';
     if (it.kind === 'reply') actions = '<button type="button" class="crm-btn sm" data-qct="' + esc(it.contact_id) + '">Qualifier</button><button type="button" class="crm-btn sm" data-qcopy="' + esc(it.contact_id) + '" title="Copie nom, titre, organisation, pays, email et LinkedIn pour les coller dans Dynamics">Copier la fiche</button><button type="button" class="crm-btn sm primary" data-qtx="' + esc(it.contact_id) + '" title="Une fois le contact créé dans Dynamics. Scout n’envoie rien à Dynamics.">Saisi dans Dynamics ✓</button>';
     if (it.kind === 'reply' && it.x) { S.qx = S.qx || {}; S.qx[it.contact_id] = it.x; }
-    if (it.kind === 'reaction') actions = '<button type="button" class="crm-btn sm primary" data-qct="' + esc(it.contact_id) + '">Appeler ou écrire</button><button type="button" class="crm-btn sm ghost" data-qseen="' + esc(it.key) + '" title="Retirer de la file">Vu</button>';
+    if (it.kind === 'reaction') actions = '<button type="button" class="crm-btn sm primary" data-qct="' + esc(it.contact_id) + '">' + ICON.mail + ' Écrire</button><button type="button" class="crm-btn sm ghost" data-qseen="' + esc(it.key) + '" title="Retirer de la file">Vu</button>';
     if (it.kind === 'task') actions = '<button type="button" class="del" data-deltask="' + esc(it.task.id) + '" title="Supprimer" aria-label="Supprimer la tâche">×</button>';
     return '<div class="crm-q k-' + it.kind + '">' + lead + '<div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
       + (it.kind === 'task' ? esc(it.title) : '<button type="button" class="crm-link strong" data-qct="' + esc(it.contact_id) + '">' + esc(it.title) + '</button>')
@@ -529,6 +530,14 @@
     root.querySelectorAll('[data-qct]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); openContact(b.getAttribute('data-qct')); }; });
     root.querySelectorAll('[data-qrel]').forEach(function (b) {
       b.onclick = function () { if (typeof window.trkRelance === 'function') { S.afterRelance = after; window.trkRelance(b.getAttribute('data-qrel')); } else openContact(b.getAttribute('data-qrel')); };
+    });
+    root.querySelectorAll('[data-qreplied]').forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation(); b.disabled = true;
+        api('/action/confirm', { method: 'POST', body: { contact_id: b.getAttribute('data-qreplied'), action_type: 'reply_outlook' } })
+          .then(function () { toast('Noté : plus de relance pour ce contact'); var row = b.closest('.crm-q'); if (row) row.remove(); try { refreshBadge(); } catch (x) {} })
+          .catch(function (er) { b.disabled = false; toast('Erreur : ' + er.message); });
+      };
     });
     root.querySelectorAll('[data-qseen]').forEach(function (b) {
       b.onclick = function (e) { e.stopPropagation(); b.disabled = true; api('/assist/reactions/seen', { method: 'POST', body: { key: b.getAttribute('data-qseen') } }).then(function () { if (after) after(); refreshBadge(); }).catch(function (er) { b.disabled = false; toast('Erreur : ' + er.message); }); };

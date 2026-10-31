@@ -72,17 +72,16 @@
     try {
       var d = await call('/config'); var by = {}; (d.config || []).forEach(function (r) { by[r.key] = r.value; });
       var num = function (k, f, def) { var v = by[k]; var x = v && v[f] != null ? v[f] : v; x = parseInt(x, 10); return isFinite(x) ? x : def; };
-      document.getElementById('cfg-r1').value = num('relance_r1', 'days', 14);
-      document.getElementById('cfg-r2').value = num('relance_r2', 'days', 28);
+      document.getElementById('cfg-r1').value = num('relance_single_days', 'days', 30);
       document.getElementById('cfg-close').value = num('seq_close_days', 'days', 90);
       document.getElementById('cfg-minscore').value = String(num('signal_min_score', 'score', 5));
     } catch (x) { msg('cfg-seq-msg', 'Erreur : ' + x.message, true); }
   }
   async function put(key, value) { return call('/config', { method: 'PUT', body: { key: key, value: value } }); }
   async function saveSeq() {
-    var r1 = parseInt(document.getElementById('cfg-r1').value, 10), r2 = parseInt(document.getElementById('cfg-r2').value, 10), cl = parseInt(document.getElementById('cfg-close').value, 10);
-    if (!(r1 >= 1 && r2 > r1 && cl > r2)) { msg('cfg-seq-msg', 'La relance 2 doit venir après la relance 1, et la clôture après la relance 2.', true); return; }
-    try { await put('relance_r1', { days: r1 }); await put('relance_r2', { days: r2 }); await put('seq_close_days', { days: cl }); msg('cfg-seq-msg', 'Enregistré pour toute l’équipe.'); }
+    var r1 = parseInt(document.getElementById('cfg-r1').value, 10), cl = parseInt(document.getElementById('cfg-close').value, 10);
+    if (!(r1 >= 1 && cl > r1)) { msg('cfg-seq-msg', 'La clôture doit venir après la relance.', true); return; }
+    try { await put('relance_single_days', { days: r1 }); await put('seq_close_days', { days: cl }); msg('cfg-seq-msg', 'Enregistré pour toute l’équipe.'); }
     catch (x) { msg('cfg-seq-msg', 'Erreur : ' + x.message, true); }
   }
   async function saveMin() {

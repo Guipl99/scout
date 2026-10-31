@@ -2641,8 +2641,8 @@ Réinitialiser tous les filtres
             <div class="cfg-box">
               <div class="cfg-box-h"><b>Cadence des relances</b><span class="cfg-hint">Compté depuis le premier email. Les relances dues arrivent dans « À faire » de chacun.</span></div>
               <div class="cfg-inline">
-                <label>Relance 1 à J+<input type="number" id="cfg-r1" min="1" max="120"></label>
-                <label>Relance 2 à J+<input type="number" id="cfg-r2" min="2" max="180"></label>
+                <label>Relance unique à J+<input type="number" id="cfg-r1" min="1" max="120"></label>
+                <input type="hidden" id="cfg-r2">
                 <label>Séquence close sans réponse après <input type="number" id="cfg-close" min="14" max="365"> jours</label>
                 <button type="button" class="crm-btn sm" id="cfg-seq-save">Enregistrer</button>
                 <span id="cfg-seq-msg" class="cfg-hint" role="status" aria-live="polite"></span>
@@ -10482,9 +10482,9 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=228"></script>
-<script src="assets/settings.js?v=2"></script>
-<script src="assets/app.js?v=13"></script>
+<script src="assets/crm.js?v=229"></script>
+<script src="assets/settings.js?v=3"></script>
+<script src="assets/app.js?v=14"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>
 <script>
 // Échap ferme la fenêtre modale du dessus, si elle a un bouton de fermeture.
