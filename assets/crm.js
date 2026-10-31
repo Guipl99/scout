@@ -257,6 +257,7 @@
           seenAcc[f.account.id] = 1;
         });
         ((r[5] && r[5].accounts) || []).forEach(function (a) {
+          return; // plus de carte « Compte chaud » sans action : ces comptes passent par « À écrire » quand Scout a un bon contact
           if (seenAcc[a.id]) return; seenAcc[a.id] = 1;
           var why = [];
           if (a.web_pages_90d) why.push(a.web_pages_90d + ' page' + (a.web_pages_90d > 1 ? 's' : '') + ' vue' + (a.web_pages_90d > 1 ? 's' : '') + ' sur le site' + (a.last_visit ? ', ' + relTime(a.last_visit) : ''));
@@ -266,10 +267,12 @@
           items.push({ kind: 'hot', id: 'hot-' + a.id, title: a.nom, sub: why.join(' · ') || 'Engagement en hausse', account_id: a.id, account_nom: a.nom, tier: a.tier, who: a.owner_name, score: a.score || 0 });
         });
         ((r[7] && r[7].contacts) || []).forEach(function (c) {
+          return; // plus de carte VIP sans action
           items.push({ kind: 'vip', id: 'vip-' + c.id, title: personName(c), sub: [c.titre, c.pays].filter(Boolean).join(' · '), contact_id: c.id, contact_name: personName(c), account_id: c.end_user_id, account_nom: c.account_nom || c.organisation, tier: c.tier });
           if (c.end_user_id) seenAcc[c.end_user_id] = 1;
         });
         ((r[6] && r[6].accounts) || []).forEach(function (a) {
+          return; // plus de carte « À ouvrir » sans action
           if (seenAcc[a.id]) return; seenAcc[a.id] = 1;
           items.push({ kind: 'open', id: 'open-' + a.id, title: a.nom, sub: 'Jamais contacté · ' + (a.n_contacts || 0) + ' contact' + (a.n_contacts > 1 ? 's' : '') + (a.pays ? ' · ' + a.pays : ''), account_id: a.id, account_nom: a.nom, tier: a.tier, who: a.owner_name, priority: a.priority || 0 });
         });
@@ -1095,11 +1098,11 @@
   // Réunit l'ancienne « Ma journée », « À faire » et « Prospection » (actions proposées
   // par la veille, comptes chauds, comptes à ouvrir, VIP).
   // ═════════════════════════════════════════════════════════════════════════
-  var QF = [['all', 'Tout'], ['urgent', 'Urgent'], ['relance', 'Relances'], ['reply', 'Réponses et réactions'], ['task', 'Tâches'], ['prosp', 'Prospection']];
+  var QF = [['all', 'Tout'], ['hot', 'Hot'], ['pitch', 'À écrire'], ['relance', 'Relances'], ['reaction', 'Réactions'], ['task', 'Tâches'], ['prosp', 'Autres signaux']];
   function qMatch(x, f) {
     if (f === 'all') return true;
-    if (f === 'urgent') return x.kind === 'reaction' || x.kind === 'reply' || (!PROSP_KINDS[x.kind] && x.due && x.due < todayStr());
-    if (f === 'reply') return x.kind === 'reply' || x.kind === 'reaction';
+    if (f === 'hot') return x.kind === 'reaction' || (x.kind === 'pitch' && x.pcls === 'hot');
+    if (f === 'urgent') return qMatch(x, 'hot');
     if (f === 'prosp') return !!PROSP_KINDS[x.kind];
     return x.kind === f;
   }
@@ -1275,14 +1278,15 @@
   function drawHero(queue, st) {
     var box = document.getElementById('crm-home-hero'); if (!box) return;
     var now = queue.filter(function (x) { return !x.later; });
-    var urgent = now.filter(function (x) { return qMatch(x, 'urgent'); }).length;
-    var nReply = queue.filter(function (x) { return x.kind === 'reply'; }).length;
+    var nHot = now.filter(function (x) { return qMatch(x, 'hot'); }).length;
+    var nPitch = queue.filter(function (x) { return x.kind === 'pitch'; }).length;
+    var nPitchHot = queue.filter(function (x) { return x.kind === 'pitch' && x.pcls === 'hot'; }).length;
     var nProsp = queue.filter(function (x) { return PROSP_KINDS[x.kind]; }).length;
     box.innerHTML = '<div class="crm-hero">'
       + '<button type="button" class="crm-hero-card main" id="crm-hero-next" title="Scout choisit le meilleur contact à travailler dans tes segments : décideur vérifié, compte prioritaire, jamais contacté. Tu écris, Scout note et planifie la relance."><span class="ic">' + ICON.send + '</span><span><b>Prochaine action</b><small>Écrire au prochain contact suggéré</small></span><span class="go">→</span></button>'
-      + '<button type="button" class="crm-hero-card" data-hq="urgent"><b class="' + (urgent ? 'crm-late' : '') + '">' + (now.length - nProsp) + '</b><span>à traiter' + (urgent ? '<small class="crm-late">dont ' + urgent + ' urgent' + (urgent > 1 ? 's' : '') + '</small>' : '') + '</span></button>'
-      + '<button type="button" class="crm-hero-card" data-hq="reply"><b' + (nReply ? ' class="crm-today"' : '') + '>' + nReply + '</b><span>réponse' + (nReply > 1 ? 's' : '') + ' positive' + (nReply > 1 ? 's' : '') + ' à saisir dans Dynamics</span></button>'
-      + '<button type="button" class="crm-hero-card" data-hq="prosp"><b>' + nProsp + '</b><span>piste' + (nProsp > 1 ? 's' : '') + ' de prospection<small>signaux marché, comptes chauds, VIP</small></span></button>'
+      + '<button type="button" class="crm-hero-card" data-hq="hot"><b class="' + (nHot ? 'crm-late' : '') + '">' + nHot + '</b><span>hot<small>réactions à tes mails et signaux les plus qualifiés</small></span></button>'
+      + '<button type="button" class="crm-hero-card" data-hq="pitch"><b>' + nPitch + '</b><span>mail' + (nPitch > 1 ? 's' : '') + ' à écrire' + (nPitchHot ? '<small>dont ' + nPitchHot + ' hot</small>' : '<small>prêts, sur des comptes qui bougent</small>') + '</span></button>'
+      + '<button type="button" class="crm-hero-card" data-hq="relance"><b>' + now.filter(function (x) { return x.kind === 'relance'; }).length + '</b><span>relances<small>une seule, à J+30</small></span></button>'
       + '</div>';
     document.getElementById('crm-hero-next').onclick = function () { if (window.scoutAction && window.scoutAction.open) window.scoutAction.open(); };
     box.querySelectorAll('[data-hq]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-hq'); S.taskState = 'open'; drawQueue(); var l = document.getElementById('crm-tasks-list'); if (l) l.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
