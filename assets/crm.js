@@ -217,7 +217,9 @@
         if (x.status === 'waiting' && (x.urgency === 'overdue' || x.urgency === 'due' || x.urgency === 'future') && x.next_relance) {
           items.push({ kind: 'relance', tier: x.account_tier || null, id: 'rel-' + x.id, due: String(x.next_relance).slice(0, 10), title: (x.stage === '1er mail' ? 'Relance 1' : 'Relance 2') + ' : ' + name,
             sub: x.titre, who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x, draft: ready[x.id] || null });
-        } else if (x.status === 'interested') {
+        } else if (x.status === 'interested' && false) {
+          // Les réponses arrivent dans Outlook et se traitent là : plus de carte « Réponse » dans la file
+          // (le contact garde son statut « réponse positive » sur sa fiche).
           items.push({ kind: 'reply', tier: x.account_tier || null, id: 'rep-' + x.id, due: x.last_action_at ? String(x.last_action_at).slice(0, 10) : null, title: 'Réponse positive : ' + name,
             sub: 'À qualifier puis saisir dans Dynamics', who: x.owner, contact_id: x.id, contact_name: name, account_id: x.end_user_id, account_nom: x.account_nom || x.organisation, x: x });
         }
