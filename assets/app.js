@@ -332,7 +332,7 @@
         ov.querySelector('[data-drop]').onclick = function (e) {
           e.stopPropagation();
           var box = ov.querySelector('#sa-bdrop');
-          box.innerHTML = '<div class="sa-meta">Écarter ce compte :</div><button type="button" class="sa-btn" data-dd="14" data-r="plus_tard">Plus tard (2 semaines)</button><button type="button" class="sa-btn" data-dd="90" data-r="pas_pertinent">Pas pertinent (3 mois)</button><button type="button" class="sa-link" data-dc>Annuler</button>';
+          box.innerHTML = '<div class="sa-meta">Écarter ce compte :</div><button type="button" class="sa-btn" data-dd="14" data-r="plus_tard">Plus tard (2 semaines)</button><button type="button" class="sa-btn" data-dd="90" data-r="pas_pertinent">Pas pertinent (3 mois)</button><button type="button" class="sa-btn" data-dd="180" data-r="deja_en_contact" title="Relation existante ou compte déjà suivi dans le CRM">Déjà en contact, suivi dans le CRM (6 mois)</button><button type="button" class="sa-link" data-dc>Annuler</button>';
           box.classList.add('open');
           box.querySelectorAll('[data-dd]').forEach(function (b) { b.onclick = function (ev) { ev.stopPropagation(); var d = +b.getAttribute('data-dd'), r = b.getAttribute('data-r'); fly(-1, function () { drop(d, r); }); }; });
           box.querySelector('[data-dc]').onclick = function (ev) { ev.stopPropagation(); box.classList.remove('open'); box.innerHTML = '<button type="button" class="sa-link" data-drop>Écarter ce compte…</button>'; draw(); };
