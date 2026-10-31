@@ -229,3 +229,10 @@ body.theme-light .sa-add span { box-shadow: 0 6px 18px rgba(0,0,0,.15); }
 .sa-cstate.ok { color: var(--accent2); font-style: normal; }
 
 .sa-mini { flex: 1 0 100%; background: none; border: 0; padding: 2px 0 0; margin: 0; text-align: right; font-size: 12.5px; color: var(--text3); text-decoration: underline; text-decoration-color: var(--border2); text-underline-offset: 3px; cursor: pointer; }
+.sa-burst-hr { display: flex; align-items: center; gap: 4px; }
+.sa-shuf svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.sa-burst-drop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sa-burst-drop .sa-link { font-size: 13px; color: var(--text3) !important; text-decoration: underline; text-underline-offset: 3px; }
+.sa-burst-drop.open { align-self: stretch; padding: 10px 0 2px; border-top: 1px solid var(--border); }
+.sa-burst-drop.open .sa-meta { flex: 1 0 100%; }
+.sa-burst-drop.open .sa-btn { flex: 1 1 auto; min-height: 40px; font-size: 14px; }

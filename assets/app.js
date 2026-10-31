@@ -37,6 +37,7 @@
     acc: '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
     send: '<svg viewBox="0 0 24 24"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></svg>',
+    shuffle: '<svg viewBox="0 0 24 24"><path d="M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3"/></svg>',
     edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
     sig: '<svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0M8 12a4 4 0 0 1 8 0"/><circle cx="12" cy="12" r="1.2"/><path d="M12 13v7"/></svg>',
     me: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
@@ -251,7 +252,8 @@
   function openBurst() {
     var go = function (items) {
       var list = burstItems(items);
-      var B = { list: list, i: 0, sent: 0, later: 0 };
+      list.forEach(function (x) { x._seen = 0; });
+      var B = { list: list.slice(), sent: 0, out: 0 };
       var ov = document.createElement('div'); ov.className = 'sa-burst'; ov.id = 'sa-burst';
       document.getElementById('sa').appendChild(ov);
       history.pushState({ burst: 1 }, '');
@@ -259,20 +261,29 @@
       var onPop = function () { closeB(); };
       window.addEventListener('popstate', onPop);
       var draw = function () {
-        var p = B.list[B.i] && B.list[B.i].pitch;
+        var p = B.list[0] && B.list[0].pitch;
+        var allSeen = B.list.length && B.list.every(function (x) { return x._seen; });
+        if (allSeen) {
+          ov.innerHTML = '<div class="sa-burst-h"><b>Traiter ma file</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
+            + '<div class="sa-burst-end"><div class="big">Tu as tout vu</div><div class="sa-meta">' + (B.sent ? B.sent + ' envoyé' + (B.sent > 1 ? 's' : '') + '. ' : '') + B.list.length + ' carte' + (B.list.length > 1 ? 's' : '') + ' passée' + (B.list.length > 1 ? 's' : '') + ' : elle' + (B.list.length > 1 ? 's restent' : ' reste') + ' dans ta file.</div>'
+            + '<button type="button" class="sa-btn primary" data-again>Les revoir</button><button type="button" class="sa-btn" data-x>Retour</button></div>';
+          ov.querySelectorAll('[data-x]').forEach(function (b) { b.onclick = function () { history.back(); }; });
+          ov.querySelector('[data-again]').onclick = function () { B.list.forEach(function (x) { x._seen = 0; }); draw(); };
+          return;
+        }
         if (!p) {
           ov.innerHTML = '<div class="sa-burst-h"><b>Traiter ma file</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
-            + '<div class="sa-burst-end"><div class="big">' + (B.list.length ? 'C’est fait' : 'Rien à envoyer') + '</div><div class="sa-meta">'
-            + (B.list.length ? B.sent + ' mail' + (B.sent > 1 ? 's' : '') + ' envoyé' + (B.sent > 1 ? 's' : '') + ', ' + B.later + ' passé' + (B.later > 1 ? 's' : '') + ' (ils reviennent dans 3 jours).' : (crm().pitchPending && crm().pitchPending() ? 'Scout rédige ' + crm().pitchPending() + ' mail' + (crm().pitchPending() > 1 ? 's' : '') + ' : ils arrivent ici dans quelques minutes.' : 'Pas de compte à prospecter pour l’instant. Les nouveaux signaux arrivent ici, avec le mail déjà rédigé.'))
+            + '<div class="sa-burst-end"><div class="big">' + (B.sent || B.out ? 'C’est fait' : 'Rien à envoyer') + '</div><div class="sa-meta">'
+            + (B.sent || B.out ? B.sent + ' envoyé' + (B.sent > 1 ? 's' : '') + (B.out ? ', ' + B.out + ' écarté' + (B.out > 1 ? 's' : '') : '') + '.' : (crm().pitchPending && crm().pitchPending() ? 'Scout rédige ' + crm().pitchPending() + ' mail' + (crm().pitchPending() > 1 ? 's' : '') + ' : ils arrivent ici dans quelques minutes.' : 'Pas de compte à prospecter pour l’instant. Les nouveaux signaux arrivent ici, avec le mail déjà rédigé.'))
             + '</div><button type="button" class="sa-btn primary" data-x>Retour</button></div>';
           ov.querySelectorAll('[data-x]').forEach(function (b) { b.onclick = function () { history.back(); }; });
           return;
         }
         var li = !p.contact && !!p.person, W = li ? p.person : p.contact;
         var isReady = function () { return li ? !!p.liText : !!p.draft; };
-        ov.innerHTML = '<div class="sa-burst-h"><b>' + (B.i + 1) + ' / ' + B.list.length + '</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
+        ov.innerHTML = '<div class="sa-burst-h"><b>' + B.list.length + ' à traiter</b><span class="sa-burst-hr">' + (B.list.length > 2 ? '<button type="button" class="sa-icon sa-shuf" data-shuf aria-label="Mélanger" title="Mélanger : voir d’autres cartes">' + I.shuffle + '</button>' : '') + '<button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></span></div>'
           + '<div class="sa-burst-stage"><article class="sa-burst-card" id="sa-bc">'
-          + '<div class="sa-stamp l" id="sa-stl">Passer</div><div class="sa-stamp r" id="sa-str">' + (li ? 'LinkedIn' : 'Envoyer') + '</div>'
+          + '<div class="sa-stamp l" id="sa-stl">Suivante</div><div class="sa-stamp r" id="sa-str">' + (li ? 'LinkedIn' : 'Envoyer') + '</div>'
           + '<span class="sa-cls c-' + esc(p.cls || 'try') + '">' + esc(p.cls_label || 'À tenter') + '</span> <span class="sa-tag k-pitch">' + (li ? 'LinkedIn' : p.draft ? 'Mail prêt' : 'À écrire') + '</span>' + (p.why_top ? ' <span class="sa-meta">' + esc(p.why_top) + '</span>' : '')
           + '<h2>' + esc(W.name) + '</h2><div class="sa-meta">' + esc([W.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div>'
           + '<div class="sa-burst-who' + ((li && !p.person.found) || (p.contact && p.contact.from_signal) ? ' sig' : '') + '">' + esc(li ? (p.person.why || '') : (p.contact && p.contact.why) || '') + '</div>'
@@ -280,16 +291,24 @@
           + '<div class="sa-burst-ctx">' + (p.context || []).map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div>'
           + crm().pitchSourcesHtml(p)
           + '<div class="sa-burst-mail" id="sa-bm"><div class="sa-meta">' + (li ? 'Message LinkedIn' : 'À ' + esc(p.contact.email)) + '</div><div class="s" id="sa-bs"></div><div class="b" id="sa-bb"></div><div class="sa-meta sa-burst-hint">' + I.edit + ' Toucher pour modifier</div></div>'
-          + '<button type="button" class="sa-link sa-burst-drop" data-drop>Retirer ce compte pour 30 jours</button>'
-          + '</article><div class="sa-burst-lbl l">Passer</div><div class="sa-burst-lbl r">Envoyer</div></div>'
-          + '<div class="sa-burst-a"><button type="button" class="sa-btn" data-later>Passer</button><button type="button" class="sa-btn primary" data-send>' + I.send + (li ? 'LinkedIn' : 'Envoyer') + '</button></div>';
+          + '<div class="sa-burst-drop" id="sa-bdrop"><button type="button" class="sa-link" data-drop>Écarter ce compte…</button></div>'
+          + '</article><div class="sa-burst-lbl l">Suivante</div><div class="sa-burst-lbl r">Envoyer</div></div>'
+          + '<div class="sa-burst-a"><button type="button" class="sa-btn" data-later title="Voir la carte suivante : celle-ci reste dans ta file">Suivante</button><button type="button" class="sa-btn primary" data-send>' + I.send + (li ? 'LinkedIn' : 'Envoyer') + '</button></div>';
         ov.querySelector('[data-x]').onclick = function () { history.back(); };
+        var shuf = ov.querySelector('[data-shuf]');
+        if (shuf) shuf.onclick = function () {
+          var cur = B.list.shift(), rest = B.list;
+          for (var k = rest.length - 1; k > 0; k--) { var j = Math.floor(Math.random() * (k + 1)), t = rest[k]; rest[k] = rest[j]; rest[j] = t; }
+          rest.push(cur); B.list.forEach(function (x) { x._seen = 0; });
+          var c = ov.querySelector('#sa-bc'); c.style.transition = 'transform .18s, opacity .18s'; c.style.transform = 'scale(.94)'; c.style.opacity = '.3';
+          setTimeout(draw, 170);
+        };
         var bs = ov.querySelector('#sa-bs'), bb = ov.querySelector('#sa-bb'), sendBtn = ov.querySelector('[data-send]');
         var show = function () { if (li) { bs.textContent = ''; bb.textContent = p.liText || ''; } else { bs.textContent = p.draft.subject || ''; bb.textContent = p.draft.body || ''; } sendBtn.disabled = false; };
         if (isReady()) show();
         else { bs.textContent = ''; bb.textContent = li ? 'Rédaction du message…' : 'Rédaction du mail…'; sendBtn.disabled = true; (li ? crm().liDraft(p) : crm().pitchDraft(p)).then(show).catch(function (e) { bb.textContent = 'Erreur : ' + e.message; }); }
         // le suivant se rédige pendant qu'on lit celui-ci
-        var nx = B.list[B.i + 1] && B.list[B.i + 1].pitch;
+        var nx = B.list[1] && B.list[1].pitch;
         if (nx && !nx._pre) { var nli = !nx.contact && !!nx.person; if (nli ? !nx.liText : !nx.draft) { nx._pre = 1; (nli ? crm().liDraft(nx) : crm().pitchDraft(nx)).catch(function () { nx._pre = 0; }); } }
         // modifier : le mail devient éditable
         ov.querySelector('#sa-bm').onclick = function () {
@@ -301,20 +320,29 @@
           es.oninput = eb.oninput = function () { crm().pitchSave(p, es.value, eb.value); };
           eb.focus();
         };
-        var next = function () { B.i++; draw(); };
-        // Passer : un doute, on ne modifie pas, la carte revient dans 3 jours ; Retirer : 30 jours
-        var later = function (days) {
-          B.later++;
-          api('/crm/pitch/' + encodeURIComponent(p.account.id), { method: 'POST', body: { action: 'snooze', days: days || 3 } }).catch(function () {});
+        // Suivante : rien n'est enregistré, la carte reste dans la file et revient en fin de pile
+        var next = function () { B.list.shift(); draw(); };
+        var skip = function () { var c = B.list.shift(); c._seen = 1; B.list.push(c); draw(); };
+        // Écarter : choix explicite, avec une raison (sert à juger la qualité des cartes)
+        var drop = function (days, reason) {
+          B.out++;
+          api('/crm/pitch/' + encodeURIComponent(p.account.id), { method: 'POST', body: { action: 'snooze', days: days, reason: reason } }).catch(function () {});
           next();
         };
-        ov.querySelector('[data-drop]').onclick = function (e) { e.stopPropagation(); fly(-1, function () { later(30); }); };
+        ov.querySelector('[data-drop]').onclick = function (e) {
+          e.stopPropagation();
+          var box = ov.querySelector('#sa-bdrop');
+          box.innerHTML = '<div class="sa-meta">Écarter ce compte :</div><button type="button" class="sa-btn" data-dd="14" data-r="plus_tard">Plus tard (2 semaines)</button><button type="button" class="sa-btn" data-dd="90" data-r="pas_pertinent">Pas pertinent (3 mois)</button><button type="button" class="sa-link" data-dc>Annuler</button>';
+          box.classList.add('open');
+          box.querySelectorAll('[data-dd]').forEach(function (b) { b.onclick = function (ev) { ev.stopPropagation(); var d = +b.getAttribute('data-dd'), r = b.getAttribute('data-r'); fly(-1, function () { drop(d, r); }); }; });
+          box.querySelector('[data-dc]').onclick = function (ev) { ev.stopPropagation(); box.classList.remove('open'); box.innerHTML = '<button type="button" class="sa-link" data-drop>Écarter ce compte…</button>'; draw(); };
+        };
         var send = function () {
           if (!isReady()) return;
           if (li) { crm().pitchSendLinkedIn(p, p.liText, function (ok) { if (ok) { B.sent++; next(); } else reset(); }); return; }
           crm().pitchSend(p, p.draft.subject, p.draft.body, function (ok) { if (ok) { B.sent++; next(); } else reset(); });
         };
-        ov.querySelector('[data-later]').onclick = function () { fly(-1, function () { later(3); }); };
+        ov.querySelector('[data-later]').onclick = function () { fly(-1, skip); };
         sendBtn.onclick = function () { fly(1, send); };
         // glisser
         var card = ov.querySelector('#sa-bc'), x0 = null, y0 = null, dx = 0, drag = false;
@@ -340,7 +368,7 @@
         }, { passive: true });
         card.addEventListener('touchend', function () {
           if (x0 == null) return; x0 = null;
-          if (drag && dx > 100) fly(1, send); else if (drag && dx < -100) fly(-1, function () { later(3); }); else reset();
+          if (drag && dx > 100) fly(1, send); else if (drag && dx < -100) fly(-1, skip); else reset();
         });
       };
       draw();
