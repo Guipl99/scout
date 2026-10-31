@@ -331,7 +331,7 @@
         + '<details class="crm-pitch-ctx"><summary>Contexte</summary>' + pitchContextHtml(P) + '</details></div>'
         + '<div class="crm-q-a">' + (rd && it.li ? '<button type="button" class="crm-btn sm primary" data-pgo="' + esc(it.account_id) + '">Écrire sur LinkedIn</button>'
           : rd ? '<button type="button" class="crm-btn sm primary" data-pgo="' + esc(it.account_id) + '">' + ICON.mail + (P.draft ? ' Relire et envoyer' : ' Préparer le mail') + '</button>'
-          : '<a class="crm-btn sm primary" href="' + esc(P.linkedin_url) + '" target="_blank" rel="noopener">Chercher sur LinkedIn</a>')
+          : '')
         + '<button type="button" class="crm-btn sm ghost" data-psnz="' + esc(it.account_id) + '" title="Retirer de la file pour 30 jours">Pas maintenant</button></div></div>';
     }
     if (PROSP_KINDS[it.kind]) {

@@ -133,10 +133,12 @@
     document.getElementById('sa-entry').onclick = function () { openEntry({}); };
     document.getElementById('sa-scope').onclick = function () { A.qScope = A.qScope === 'team' ? 'me' : 'team'; renderToday(); };
     // Ouverture rapide : la dernière file connue s'affiche tout de suite, puis se met à jour
-    var QK = 'scout_app_q_' + A.qScope, scope0 = A.qScope;
+    var QK = 'scout_app_q2_' + A.qScope, scope0 = A.qScope; // q2 : l'ancienne file en mémoire (avec des cartes « Contact à trouver ») est ignorée
+    try { localStorage.removeItem('scout_app_q_me'); localStorage.removeItem('scout_app_q_team'); } catch (e) {}
     var draw = function (items, fresh) {
       if (A.tab !== 'today' || A.qScope !== scope0) return;
-      var now = items.filter(function (it) { return !it.later; });
+      // jamais de carte « chercher un contact » : c'est le travail de Scout
+      var now = items.filter(function (it) { return !it.later && it.kind !== 'find'; });
       var urgent = now.filter(function (it) { return it.kind === 'reaction' || it.kind === 'reply' || (daysFrom(it.due) || 0) > 0; }).length;
       A.items = now;
       burstBadge(now);
@@ -191,7 +193,7 @@
     else if (it.kind === 'task') act = (it.contact_id ? '<button type="button" class="sa-btn" data-ct="' + esc(it.contact_id) + '">' + I.phone + 'Contact</button>' : it.account_id ? '<button type="button" class="sa-btn" data-acc="' + esc(it.account_id) + '">Compte</button>' : '') + '<button type="button" class="sa-btn primary" data-done="' + esc(it.task.id) + '">' + I.check + 'Fait</button>';
     else if (it.kind === 'reaction') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">' + I.mail + 'Écrire</button><button type="button" class="sa-btn" data-seen="' + esc(it.key) + '">Vu</button>';
     else if (it.kind === 'pitch') act = '<button type="button" class="sa-btn primary" data-pgo="' + esc(it.account_id) + '">' + (it.li ? 'Écrire sur LinkedIn' : I.mail + (it.pitch.draft ? 'Relire et envoyer' : 'Préparer le mail')) + '</button><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
-    else if (it.kind === 'find') act = '<a class="sa-btn primary" href="' + esc(it.pitch.linkedin_url) + '" target="_blank" rel="noopener">Chercher sur LinkedIn</a><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
+    else if (it.kind === 'find') act = '';
     else if (it.kind === 'reply') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">Ouvrir</button><button type="button" class="sa-btn" data-tx="' + esc(it.contact_id) + '">Saisi dans Dynamics</button>';
     return '<article class="sa-card k-' + it.kind + (hot ? ' hot' : '') + '">'
       + '<div class="sa-card-h">' + (it.pitch ? '<span class="sa-cls c-' + esc(it.pitch.cls || 'try') + '">' + esc(it.pitch.cls_label || 'À tenter') + '</span>' : it.kind === 'reaction' ? '<span class="sa-cls c-hot">Hot</span>' : '') + '<span class="sa-tag k-' + it.kind + '">' + KIND[it.kind] + '</span>' + (it.tier ? '<span class="sa-tier">T' + esc(it.tier) + '</span>' : '') + '<span class="sa-when' + (hot ? ' hot' : '') + '">' + esc(it.kind === 'reaction' ? '' : when) + '</span></div>'
@@ -643,7 +645,7 @@
     v.querySelector('#sa-logout').onclick = function () {
       if (!confirm('Se déconnecter de Scout sur ce téléphone ?')) return;
       ls(LS_LOCK, null);
-      try { localStorage.removeItem('scout_app_q_me'); localStorage.removeItem('scout_app_q_team'); } catch (e) {}
+      try { ['scout_app_q_me', 'scout_app_q_team', 'scout_app_q2_me', 'scout_app_q2_team'].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {}
       if (window.scoutAction && window.scoutAction.logout) window.scoutAction.logout(); else { ls(LS_SESSION, null); location.reload(); }
     };
   }
