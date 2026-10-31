@@ -479,7 +479,7 @@
       + '<textarea id="crm-pr-b" class="crm-input" aria-label="Message"></textarea>'
       + '<details class="crm-pr-more"><summary>Contexte et sources</summary>' + (p.contact.why ? '<div class="crm-meta"><i>' + esc(p.contact.why) + '</i></div>' : '') + pitchContextHtml(p) + pitchSourcesHtml(p) + '</details></div>'
       + '<div class="crm-pr-a"><button type="button" class="crm-btn primary" data-send>' + ICON.mail + ' Envoyer</button>'
-      + '<button type="button" class="crm-btn" data-redo>Refaire</button><button type="button" class="crm-btn ghost" data-later>Pas maintenant</button></div></div>';
+      + '<button type="button" class="crm-btn" data-li>Plutôt sur LinkedIn</button><button type="button" class="crm-btn" data-redo>Refaire</button><button type="button" class="crm-btn ghost" data-later>Pas maintenant</button></div></div>';
     document.body.appendChild(ov); document.body.classList.add('crm-pr-open');
     var si = ov.querySelector('#crm-pr-s'), bi = ov.querySelector('#crm-pr-b'), send = ov.querySelector('[data-send]');
     var fill = function (d) { si.value = d.subject || ''; bi.value = d.body || ''; si.disabled = bi.disabled = send.disabled = false; };
@@ -496,6 +496,12 @@
       api('/crm/pitch/' + encodeURIComponent(p.account.id), { method: 'POST', body: { action: 'snooze', days: 30 } }).then(function () { toast('Retiré pour 30 jours'); close('snoozed'); }).catch(function (e) { toast('Erreur : ' + e.message); });
     };
     send.onclick = function () { pitchSend(p, si.value, bi.value, function (ok) { if (ok) close(true); }); };
+    // même contact, autre canal : sur LinkedIn le taux de réponse est parfois meilleur
+    ov.querySelector('[data-li]').onclick = function () {
+      var c = p.contact, url = c.linkedin || ('https://www.linkedin.com/search/results/people/?keywords=' + encodeURIComponent(c.name + ' ' + p.account.nom));
+      ov.remove(); document.body.classList.remove('crm-pr-open');
+      linkedinReview(Object.assign({}, p, { person: { id: c.id, name: c.name, titre: c.titre, linkedin: url, found: !!c.linkedin } }), onDone);
+    };
   }
   function pitchAccount(accId, reason) {
     if (!accId) { toast('Rattache d’abord ce signal à un compte'); return Promise.resolve(); }

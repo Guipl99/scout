@@ -356,4 +356,4 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .crm-pr-more[open] { display: flex; flex-direction: column; gap: 6px; }
 .crm-pr-a { flex-shrink: 0; padding-top: 10px; border-top: 1px solid var(--border, rgba(229,226,210,.15)); padding-bottom: env(safe-area-inset-bottom); }
 .crm-pr-a [data-send] { flex: 1 1 100%; padding: 12px; font-size: 15px; }
-@media (max-width: 640px) { .crm-pr-box { padding: 12px 14px; } .crm-pr-h b { font-size: 15px; } .crm-pr-a .crm-btn:not([data-send]) { flex: 1; } }
+@media (max-width: 640px) { .crm-pr-box { padding: 12px 14px; } .crm-pr-h b { font-size: 15px; } .crm-pr-a .crm-btn:not([data-send]) { flex: 1; padding: 10px 6px; font-size: 13px; } }
