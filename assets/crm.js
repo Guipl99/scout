@@ -234,7 +234,7 @@
       var seenAcc = {}; items.forEach(function (it) { if (it.account_id) seenAcc[it.account_id] = 1; });
       S.pitchMap = S.pitchMap || {};
       ((r[9] && r[9].items) || []).forEach(function (p) {
-        if (p.state === 'searching' || seenAcc[p.account.id]) return;
+        if (seenAcc[p.account.id]) return;
         seenAcc[p.account.id] = 1; S.pitchMap[p.account.id] = p;
         var ready = p.state === 'ready';
         items.push({ kind: ready ? 'pitch' : 'find', id: 'pitch-' + p.account.id, pitch: p, title: ready ? p.contact.name : p.account.nom, sub: p.reason,
@@ -313,7 +313,7 @@
       if (opts.showWho && it.who) ps.push(esc(it.who));
       return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (rd ? ICON.mail : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
         + (rd ? '<button type="button" class="crm-link strong" data-qct="' + esc(it.contact_id) + '">' + esc(it.title) + '</button>' : '<button type="button" class="crm-link strong" data-qacc="' + esc(it.account_id) + '">' + esc(it.title) + '</button>')
-        + '</div><div class="s">' + ps.filter(Boolean).join(' · ') + '</div><div class="s crm-pitch-why">' + esc(P.reason) + (rd ? '' : ' · pas de contact joignable trouvé') + '</div>'
+        + '</div><div class="s">' + ps.filter(Boolean).join(' · ') + '</div><div class="s crm-pitch-why">' + esc(P.reason) + (rd ? '' : P.state === 'searching' ? ' · pas encore de contact : Scout en cherche un cette nuit' : ' · pas de contact joignable trouvé') + '</div>'
         + (rd && P.draft ? '<div class="s crm-pitch-draft">' + ICON.mail + ' <b>' + esc(P.draft.subject) + '</b> ' + esc(String(P.draft.body || '').replace(/\s+/g, ' ').slice(0, 110)) + '…</div>' : '')
         + '<details class="crm-pitch-ctx"><summary>Contexte</summary>' + pitchContextHtml(P) + '</details></div>'
         + '<div class="crm-q-a">' + (rd ? '<button type="button" class="crm-btn sm primary" data-pgo="' + esc(it.account_id) + '">' + ICON.mail + (P.draft ? ' Relire et envoyer' : ' Préparer le mail') + '</button>'
