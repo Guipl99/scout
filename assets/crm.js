@@ -238,6 +238,8 @@
       ((r[9] && r[9].items) || []).forEach(function (p) {
         // pas de carte tant que Scout n'a pas trouvé un bon contact (mail ou LinkedIn) : chercher, c'est son travail
         if (seenAcc[p.account.id] || (p.state !== 'ready' && p.state !== 'linkedin')) return;
+        // ni au commercial d'écrire le mail : la carte n'apparaît qu'une fois le mail rédigé par Scout
+        if (p.state === 'ready' && !p.draft) return;
         seenAcc[p.account.id] = 1; S.pitchMap[p.account.id] = p;
         var ready = p.state === 'ready', li = p.state === 'linkedin';
         var who = ready ? p.contact : li ? p.person : null;
@@ -329,7 +331,7 @@
         + (rd && P.draft ? '<div class="s crm-pitch-draft">' + ICON.mail + ' <b>' + esc(P.draft.subject) + '</b> ' + esc(String(P.draft.body || '').replace(/\s+/g, ' ').slice(0, 110)) + '…</div>' : '')
         + '<details class="crm-pitch-ctx"><summary>Contexte</summary>' + pitchContextHtml(P) + '</details></div>'
         + '<div class="crm-q-a">' + (rd && it.li ? '<button type="button" class="crm-btn sm primary" data-pgo="' + esc(it.account_id) + '">Écrire sur LinkedIn</button>'
-          : rd ? '<button type="button" class="crm-btn sm primary" data-pgo="' + esc(it.account_id) + '">' + ICON.mail + (P.draft ? ' Relire et envoyer' : ' Préparer le mail') + '</button>'
+          : rd ? '<button type="button" class="crm-btn sm primary" data-pgo="' + esc(it.account_id) + '">' + ICON.mail + ' Relire et envoyer' + '</button>'
           : '')
         + '<button type="button" class="crm-btn sm ghost" data-psnz="' + esc(it.account_id) + '" title="Retirer de la file pour 30 jours">Pas maintenant</button></div></div>';
     }
@@ -493,7 +495,8 @@
       .then(function () { return api('/crm/pitch/account/' + encodeURIComponent(accId)); })
       .then(function (d) {
         var p = d.item; if (p) { S.pitchMap = S.pitchMap || {}; S.pitchMap[accId] = p; }
-        if (p && p.state === 'ready') { pitchGo(p); return; }
+        if (p && p.state === 'ready' && p.draft) { pitchGo(p); return; }
+        if (p && p.state === 'ready') { toast('Scout rédige le mail : la carte arrive dans ta file d’ici une minute'); return; }
         if (p && p.state === 'searching') toast('Pas encore de contact joignable : Scout en cherche un, le mail arrivera dans ta file');
         else if (p) { toast('Aucun contact joignable trouvé : recherche LinkedIn ouverte'); window.open(p.linkedin_url, '_blank', 'noopener'); }
         else toast('Ajouté à ta file');
@@ -1105,7 +1108,7 @@
   // Réunit l'ancienne « Ma journée », « À faire » et « Prospection » (actions proposées
   // par la veille, comptes chauds, comptes à ouvrir, VIP).
   // ═════════════════════════════════════════════════════════════════════════
-  var QF = [['all', 'Tout'], ['hot', 'Hot'], ['pitch', 'À écrire'], ['relance', 'Relances'], ['reaction', 'Réactions'], ['task', 'Tâches'], ['prosp', 'Autres signaux']];
+  var QF = [['all', 'Tout'], ['hot', 'Hot'], ['pitch', 'Mails prêts'], ['relance', 'Relances'], ['reaction', 'Réactions'], ['task', 'Tâches'], ['prosp', 'Autres signaux']];
   function qMatch(x, f) {
     if (f === 'all') return true;
     if (f === 'hot') return x.kind === 'reaction' || (x.kind === 'pitch' && x.pcls === 'hot');
@@ -1292,7 +1295,7 @@
     box.innerHTML = '<div class="crm-hero">'
       + '<button type="button" class="crm-hero-card main" id="crm-hero-next" title="Scout choisit le meilleur contact à travailler dans tes segments : décideur vérifié, compte prioritaire, jamais contacté. Tu écris, Scout note et planifie la relance."><span class="ic">' + ICON.send + '</span><span><b>Prochaine action</b><small>Écrire au prochain contact suggéré</small></span><span class="go">→</span></button>'
       + '<button type="button" class="crm-hero-card" data-hq="hot"><b class="' + (nHot ? 'crm-late' : '') + '">' + nHot + '</b><span>hot<small>réactions à tes mails et signaux les plus qualifiés</small></span></button>'
-      + '<button type="button" class="crm-hero-card" data-hq="pitch"><b>' + nPitch + '</b><span>mail' + (nPitch > 1 ? 's' : '') + ' à écrire' + (nPitchHot ? '<small>dont ' + nPitchHot + ' hot</small>' : '<small>prêts, sur des comptes qui bougent</small>') + '</span></button>'
+      + '<button type="button" class="crm-hero-card" data-hq="pitch"><b>' + nPitch + '</b><span>mail' + (nPitch > 1 ? 's' : '') + ' prêt' + (nPitch > 1 ? 's' : '') + ' à envoyer' + (nPitchHot ? '<small>dont ' + nPitchHot + ' hot</small>' : '<small>prêts, sur des comptes qui bougent</small>') + '</span></button>'
       + '<button type="button" class="crm-hero-card" data-hq="relance"><b>' + now.filter(function (x) { return x.kind === 'relance'; }).length + '</b><span>relances<small>une seule, à J+30</small></span></button>'
       + '</div>';
     document.getElementById('crm-hero-next').onclick = function () { if (window.scoutAction && window.scoutAction.open) window.scoutAction.open(); };

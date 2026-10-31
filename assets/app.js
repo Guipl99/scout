@@ -192,7 +192,7 @@
     if (it.kind === 'relance') act = '<button type="button" class="sa-btn primary" data-rel="' + esc(it.contact_id) + '">' + I.mail + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button><button type="button" class="sa-btn" data-replied="' + esc(it.contact_id) + '">Il a répondu</button>';
     else if (it.kind === 'task') act = (it.contact_id ? '<button type="button" class="sa-btn" data-ct="' + esc(it.contact_id) + '">' + I.phone + 'Contact</button>' : it.account_id ? '<button type="button" class="sa-btn" data-acc="' + esc(it.account_id) + '">Compte</button>' : '') + '<button type="button" class="sa-btn primary" data-done="' + esc(it.task.id) + '">' + I.check + 'Fait</button>';
     else if (it.kind === 'reaction') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">' + I.mail + 'Écrire</button><button type="button" class="sa-btn" data-seen="' + esc(it.key) + '">Vu</button>';
-    else if (it.kind === 'pitch') act = '<button type="button" class="sa-btn primary" data-pgo="' + esc(it.account_id) + '">' + (it.li ? 'Écrire sur LinkedIn' : I.mail + (it.pitch.draft ? 'Relire et envoyer' : 'Préparer le mail')) + '</button><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
+    else if (it.kind === 'pitch') act = '<button type="button" class="sa-btn primary" data-pgo="' + esc(it.account_id) + '">' + (it.li ? 'Écrire sur LinkedIn' : I.mail + 'Relire et envoyer') + '</button><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
     else if (it.kind === 'find') act = '';
     else if (it.kind === 'reply') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">Ouvrir</button><button type="button" class="sa-btn" data-tx="' + esc(it.contact_id) + '">Saisi dans Dynamics</button>';
     return '<article class="sa-card k-' + it.kind + (hot ? ' hot' : '') + '">'
@@ -258,7 +258,7 @@
         var p = B.list[B.i] && B.list[B.i].pitch;
         if (!p) {
           ov.innerHTML = '<div class="sa-burst-h"><b>Traiter ma file</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
-            + '<div class="sa-burst-end"><div class="big">' + (B.list.length ? 'C’est fait' : 'Rien à écrire') + '</div><div class="sa-meta">'
+            + '<div class="sa-burst-end"><div class="big">' + (B.list.length ? 'C’est fait' : 'Rien à envoyer') + '</div><div class="sa-meta">'
             + (B.list.length ? B.sent + ' mail' + (B.sent > 1 ? 's' : '') + ' envoyé' + (B.sent > 1 ? 's' : '') + ', ' + B.later + ' passé' + (B.later > 1 ? 's' : '') + ' (ils reviennent dans 3 jours).' : 'Pas de compte à prospecter pour l’instant. Les nouveaux signaux arrivent ici, avec le mail déjà rédigé.')
             + '</div><button type="button" class="sa-btn primary" data-x>Retour</button></div>';
           ov.querySelectorAll('[data-x]').forEach(function (b) { b.onclick = function () { history.back(); }; });
