@@ -245,6 +245,7 @@
         var isReady = function () { return li ? !!p.liText : !!p.draft; };
         ov.innerHTML = '<div class="sa-burst-h"><b>' + (B.i + 1) + ' / ' + B.list.length + '</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
           + '<div class="sa-burst-stage"><article class="sa-burst-card" id="sa-bc">'
+          + '<div class="sa-stamp l" id="sa-stl">Passer</div><div class="sa-stamp r" id="sa-str">' + (li ? 'LinkedIn' : 'Envoyer') + '</div>'
           + '<span class="sa-tag k-pitch">' + (li ? 'LinkedIn' : 'À écrire') + '</span>' + (p.why_top ? ' <span class="sa-meta">' + esc(p.why_top) + '</span>' : '')
           + '<h2>' + esc(W.name) + '</h2><div class="sa-meta">' + esc([W.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div>'
           + '<div class="sa-burst-who' + (li || (p.contact && p.contact.from_signal) ? ' sig' : '') + '">' + esc(li ? 'Cité dans le signal' : (p.contact && p.contact.why) || '') + '</div>'
@@ -290,9 +291,11 @@
         sendBtn.onclick = function () { fly(1, send); };
         // glisser
         var card = ov.querySelector('#sa-bc'), x0 = null, y0 = null, dx = 0, drag = false;
-        var reset = function () { card.style.transition = 'transform .2s'; card.style.transform = ''; ov.classList.remove('to-l', 'to-r'); };
+        var stl = ov.querySelector('#sa-stl'), str = ov.querySelector('#sa-str');
+        var reset = function () { card.style.transition = 'transform .2s'; card.style.transform = ''; ov.classList.remove('to-l', 'to-r'); card.classList.remove('go-l', 'go-r'); stl.style.opacity = 0; str.style.opacity = 0; };
         var fly = function (dir, fn) {
           if (dir > 0 && !isReady()) { reset(); return; }
+          (dir > 0 ? str : stl).style.opacity = 1;
           card.style.transition = 'transform .22s ease-in'; card.style.transform = 'translateX(' + (dir * 130) + '%) rotate(' + (dir * 12) + 'deg)';
           setTimeout(fn, 200);
         };
@@ -303,6 +306,9 @@
           if (!drag && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) drag = true;
           if (!drag) return;
           card.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx / 25) + 'deg)';
+          var o = Math.min(1, Math.abs(dx) / 90);
+          stl.style.opacity = dx < 0 ? o : 0; str.style.opacity = dx > 0 ? o : 0;
+          card.classList.toggle('go-r', dx > 90); card.classList.toggle('go-l', dx < -90);
           ov.classList.toggle('to-r', dx > 60); ov.classList.toggle('to-l', dx < -60);
         }, { passive: true });
         card.addEventListener('touchend', function () {

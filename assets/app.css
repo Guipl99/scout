@@ -215,3 +215,11 @@ body.theme-light .sa-add span { box-shadow: 0 6px 18px rgba(0,0,0,.15); }
 .sa-top-why { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent2); margin-top: 2px; }
 .sa-burst-who { font-size: 12.5px; color: var(--text3); font-style: italic; }
 .sa-burst-who.sig { color: var(--accent2); font-style: normal; font-weight: 600; }
+
+/* tampon visible sur la carte pendant le glissement */
+.sa-stamp { position: absolute; top: 18px; z-index: 5; padding: 6px 14px; border: 3px solid currentColor; border-radius: 6px; font: 800 22px var(--font-title, sans-serif); text-transform: uppercase; letter-spacing: .06em; opacity: 0; pointer-events: none; background: rgba(0,0,0,.35); transition: opacity .08s; }
+.sa-stamp.r { left: 18px; color: #7FC08A; transform: rotate(-12deg); }
+.sa-stamp.l { right: 18px; color: #E5E2D2; transform: rotate(12deg); }
+.sa-burst-card.go-r { border-color: #7FC08A; box-shadow: 0 0 0 2px #7FC08A inset; }
+.sa-burst-card.go-l { border-color: var(--text2); box-shadow: 0 0 0 2px var(--text2) inset; }
+.sa-burst-lbl { display: none; }
