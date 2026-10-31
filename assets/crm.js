@@ -591,6 +591,8 @@
   function loadFeed() {
     var body = document.getElementById('crm-feed-body'); if (!body) return;
     var seq = (S.feedSeq = (S.feedSeq || 0) + 1);
+    // état du contact par compte (file « À écrire » de l'équipe), pour la mention sous chaque visite ou chat
+    api('/crm/pitch?scope=all').then(function (pd) { S.feedPitch = {}; (pd.items || []).forEach(function (p) { S.feedPitch[p.account.id] = p; }); if (S.feedItems) drawFeed(); }).catch(function () {});
     api('/signals/feed?days=' + S.feedDays + '&scope=' + S.feedScope).then(function (d) {
       if (seq !== S.feedSeq) return;
       var c = d.counts || {}, items = d.items || [];
@@ -623,14 +625,19 @@
     var btns = '';
     if (!acc) btns += it.type === 'visit' ? '<button type="button" class="crm-btn sm primary" data-fa="create" data-i="' + i + '">Créer le compte</button><button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>'
       : '<button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>';
-    btns += '<button type="button" class="crm-btn sm' + (acc ? ' primary' : '') + '" data-fa="task" data-i="' + i + '">' + (it.type === 'market' && it.flux === 1 ? ICON.check + ' Go' : ICON.mail + ' Écrire') + '</button>';
-    if (it.type === 'visit' && acc && it.org && it.org.domain) btns += '<button type="button" class="crm-btn sm" data-fa="contacts" data-i="' + i + '" title="Recherche Hunter sur ' + esc(it.org.domain) + ' : 1 crédit">Chercher des contacts</button>';
+    var PSx = acc && S.feedPitch ? S.feedPitch[acc.id] : null;
+    var searching = it.type !== 'market' && PSx && PSx.state !== 'ready' && PSx.state !== 'linkedin';
+    var cstate = it.type === 'market' ? '' : !acc ? '' : !PSx ? '' : PSx.state === 'ready' ? '<div class="s crm-cstate ok">Contact prêt : ' + esc(PSx.contact.name) + (PSx.contact.titre ? ', ' + esc(PSx.contact.titre) : '') + '</div>'
+      : PSx.state === 'linkedin' ? '<div class="s crm-cstate ok">Contact trouvé sur LinkedIn : ' + esc(PSx.person.name) + '</div>' : '<div class="s crm-cstate">Scout cherche un contact qualifié (mail vérifié ou LinkedIn)</div>';
+    if (!searching) btns += '<button type="button" class="crm-btn sm' + (acc ? ' primary' : '') + '" data-fa="task" data-i="' + i + '">' + (it.type === 'market' && it.flux === 1 ? ICON.check + ' Go' : ICON.mail + ' Écrire') + '</button>';
+    // plus de recherche de contacts à la main : c'est le travail de Scout (mention ci-dessous)
     btns += '<button type="button" class="crm-btn ghost sm" data-fa="dismiss" data-i="' + i + '">Écarter</button>';
     return '<div class="crm-feed-row t-' + it.type + (it.imp >= 4 ? ' strong' : '') + '" data-row="' + i + '">'
       + '<span class="crm-q-kind k-' + it.type + '">' + FEED_TYPE[it.type] + '</span>'
       + '<div class="crm-feed-b"><div class="t">' + title + '</div>'
       + '<div class="s">' + sub.filter(Boolean).join(' ') + (it.why ? '<span class="crm-meta"> ' + esc(it.why) + '</span>' : '') + '</div>'
       + '<div class="s">' + accHtml + ' <span class="crm-meta">· ' + esc(relTime(it.at)) + '</span></div>'
+      + cstate
       + '<div class="crm-feed-pick" hidden></div></div>'
       + '<div class="crm-feed-a">' + btns + '</div></div>';
   }

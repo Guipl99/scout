@@ -573,15 +573,27 @@
     v.querySelectorAll('[data-ss]').forEach(function (b) { b.onclick = function () { A.sigScope = b.getAttribute('data-ss'); renderSignals(); }; });
     var box = document.getElementById('sa-sig-list');
     var TY = { market: 'Marché', visit: 'Visite', chat: 'Chat' };
-    api('/signals/feed?days=30&scope=' + A.sigScope).then(function (d) {
+    // état du contact par compte (file « À écrire », toute l'équipe, mise en cache côté serveur)
+    Promise.all([api('/signals/feed?days=30&scope=' + A.sigScope), api('/crm/pitch?scope=all').catch(function () { return { items: [] }; })]).then(function (rr) {
+      var d = rr[0], PS = {}; (rr[1].items || []).forEach(function (p) { PS[p.account.id] = p; });
       var list = (d.items || []).slice(0, 60);
+      var mention = function (g) {
+        if (g.type === 'market') return '';
+        if (!g.account) return '<div class="sa-cstate">Pas encore de compte : « Écrire » le crée et Scout cherche un contact</div>';
+        var p = PS[g.account.id]; if (!p) return '';
+        if (p.state === 'ready') return '<div class="sa-cstate ok">Contact prêt : ' + esc(p.contact.name) + (p.contact.titre ? ', ' + esc(p.contact.titre) : '') + '</div>';
+        if (p.state === 'linkedin') return '<div class="sa-cstate ok">Contact trouvé sur LinkedIn : ' + esc(p.person.name) + '</div>';
+        return '<div class="sa-cstate">Scout cherche un contact qualifié (mail vérifié ou LinkedIn)</div>';
+      };
+      var canWrite = function (g) { var p = g.account && PS[g.account.id]; return !p || p.state === 'ready' || p.state === 'linkedin'; };
       box.innerHTML = list.length ? '<div class="sa-list">' + list.map(function (g, i) {
         var acc = g.account;
         return '<article class="sa-card' + (g.imp >= 4 ? ' hot' : '') + '"><div class="sa-card-h"><span class="sa-tag">' + TY[g.type] + '</span>' + (acc && acc.tier ? '<span class="sa-tier">T' + esc(acc.tier) + '</span>' : '') + '<span class="sa-when">' + esc(rel(g.at)) + '</span></div>'
           + '<div class="sa-card-t static">' + esc(g.title) + '</div>' + (g.why ? '<div class="sa-card-s">' + esc(g.why) + '</div>' : '')
           + (acc ? '<button type="button" class="sa-card-s sa-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + (acc.owner_name ? ' · ' + esc(acc.owner_name) : '') + '</button>' : '<div class="sa-meta">Sans compte</div>')
+          + mention(g)
           + '<div class="sa-card-a">' + (g.type === 'market' && g.url ? '<a class="sa-btn" href="' + esc(g.url) + '" target="_blank" rel="noopener">Voir</a>' : '')
-          + '<button type="button" class="sa-btn primary" data-stask="' + i + '">' + (g.type === 'market' && g.flux === 1 ? I.check + 'Go' : I.mail + 'Écrire') + '</button><button type="button" class="sa-btn" data-sdis="' + i + '">Écarter</button></div></article>';
+          + (g.type === 'market' || canWrite(g) ? '<button type="button" class="sa-btn primary" data-stask="' + i + '">' + (g.type === 'market' && g.flux === 1 ? I.check + 'Go' : I.mail + 'Écrire') + '</button>' : '') + '<button type="button" class="sa-btn" data-sdis="' + i + '">Écarter</button></div></article>';
       }).join('') + '</div>' : '<div class="sa-empty">' + (A.sigScope === 'me' ? 'Rien de neuf sur tes comptes. Regarde « Tout ».' : 'Rien sur 30 jours.') + '</div>';
       bindCards(box);
       box.querySelectorAll('[data-stask]').forEach(function (b) {

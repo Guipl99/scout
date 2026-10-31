@@ -224,3 +224,5 @@ body.theme-light .sa-add span { box-shadow: 0 6px 18px rgba(0,0,0,.15); }
 .sa-burst-card.go-l { border-color: var(--text2); box-shadow: 0 0 0 2px var(--text2) inset; }
 .sa-burst-lbl { display: none; }
 .sa-upd { margin-left: 8px; font-size: 12px; }
+.sa-cstate { font-size: 13px; color: var(--text3); margin-top: 4px; font-style: italic; }
+.sa-cstate.ok { color: var(--accent2); font-style: normal; }

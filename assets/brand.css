@@ -345,3 +345,4 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .crm-cls.c-hot, .sa-cls.c-hot { background: #C2552F; border-color: #C2552F; color: #fff; }
 .crm-cls.c-good, .sa-cls.c-good { border-color: var(--accent, #85593E); color: var(--accent2, #B88A68); }
 .crm-cls.c-try, .sa-cls.c-try { border-color: var(--border2, rgba(229,226,210,.25)); color: var(--text3, #888); }
+.crm-cstate { font-size: 12.5px; color: var(--text3); font-style: italic; } .crm-cstate.ok { color: var(--accent2); font-style: normal; }
