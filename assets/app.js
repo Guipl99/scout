@@ -268,7 +268,7 @@
           + '<div class="sa-stamp l" id="sa-stl">Passer</div><div class="sa-stamp r" id="sa-str">' + (li ? 'LinkedIn' : 'Envoyer') + '</div>'
           + '<span class="sa-cls c-' + esc(p.cls || 'try') + '">' + esc(p.cls_label || 'À tenter') + '</span> <span class="sa-tag k-pitch">' + (li ? 'LinkedIn' : 'À écrire') + '</span>' + (p.why_top ? ' <span class="sa-meta">' + esc(p.why_top) + '</span>' : '')
           + '<h2>' + esc(W.name) + '</h2><div class="sa-meta">' + esc([W.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div>'
-          + '<div class="sa-burst-who' + (li || (p.contact && p.contact.from_signal) ? ' sig' : '') + '">' + esc(li ? 'Cité dans le signal' : (p.contact && p.contact.why) || '') + '</div>'
+          + '<div class="sa-burst-who' + ((li && !p.person.found) || (p.contact && p.contact.from_signal) ? ' sig' : '') + '">' + esc(li ? (p.person.why || '') : (p.contact && p.contact.why) || '') + '</div>'
           + '<div class="sa-burst-why">' + esc(p.reason) + '</div>'
           + '<div class="sa-burst-ctx">' + (p.context || []).map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div>'
           + crm().pitchSourcesHtml(p)

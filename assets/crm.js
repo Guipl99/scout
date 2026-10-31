@@ -236,7 +236,8 @@
       var seenAcc = {}; items.forEach(function (it) { if (it.account_id) seenAcc[it.account_id] = 1; });
       S.pitchMap = S.pitchMap || {};
       ((r[9] && r[9].items) || []).forEach(function (p) {
-        if (seenAcc[p.account.id]) return;
+        // pas de carte tant que Scout n'a pas trouvé un bon contact (mail ou LinkedIn) : chercher, c'est son travail
+        if (seenAcc[p.account.id] || (p.state !== 'ready' && p.state !== 'linkedin')) return;
         seenAcc[p.account.id] = 1; S.pitchMap[p.account.id] = p;
         var ready = p.state === 'ready', li = p.state === 'linkedin';
         var who = ready ? p.contact : li ? p.person : null;
@@ -316,7 +317,7 @@
       var ps = [];
       var Wc = it.li ? P.person : P.contact;
       if (rd) ps.push(esc([Wc.titre || '', !it.li && P.contact.role ? '(' + P.contact.role + ')' : ''].filter(Boolean).join(' ')));
-      if (rd) ps.push('<i class="crm-pitch-whoc">' + esc(it.li ? 'Cité dans le signal' : (P.contact.why || '')) + '</i>');
+      if (rd) ps.push('<i class="crm-pitch-whoc">' + esc(it.li ? (P.person.why || '') : (P.contact.why || '')) + '</i>');
       ps.push((it.tier ? tierBadge(it.tier) + ' ' : '') + '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>');
       if (opts.showWho && it.who) ps.push(esc(it.who));
       return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (rd ? ICON.mail : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-cls c-' + esc(P.cls || 'try') + '">' + esc(P.cls_label || 'À tenter') + '</span> <span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
