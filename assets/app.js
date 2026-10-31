@@ -196,7 +196,7 @@
     else if (it.kind === 'find') act = '';
     else if (it.kind === 'reply') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">Ouvrir</button><button type="button" class="sa-btn" data-tx="' + esc(it.contact_id) + '">Saisi dans Dynamics</button>';
     return '<article class="sa-card k-' + it.kind + (hot ? ' hot' : '') + '">'
-      + '<div class="sa-card-h">' + (it.pitch ? '<span class="sa-cls c-' + esc(it.pitch.cls || 'try') + '">' + esc(it.pitch.cls_label || 'À tenter') + '</span>' : it.kind === 'reaction' ? '<span class="sa-cls c-hot">Hot</span>' : '') + '<span class="sa-tag k-' + it.kind + '">' + KIND[it.kind] + '</span>' + (it.tier ? '<span class="sa-tier">T' + esc(it.tier) + '</span>' : '') + '<span class="sa-when' + (hot ? ' hot' : '') + '">' + esc(it.kind === 'reaction' ? '' : when) + '</span></div>'
+      + '<div class="sa-card-h">' + (it.pitch ? '<span class="sa-cls c-' + esc(it.pitch.cls || 'try') + '">' + esc(it.pitch.cls_label || 'À tenter') + '</span>' : it.kind === 'reaction' ? '<span class="sa-cls c-hot">Hot</span>' : '') + '<span class="sa-tag k-' + it.kind + '">' + (it.kind === 'pitch' ? (it.li ? 'LinkedIn' : it.pitch && it.pitch.draft ? 'Mail prêt' : 'À écrire') : KIND[it.kind]) + '</span>' + (it.tier ? '<span class="sa-tier">T' + esc(it.tier) + '</span>' : '') + '<span class="sa-when' + (hot ? ' hot' : '') + '">' + esc(it.kind === 'reaction' ? '' : when) + '</span></div>'
       + '<button type="button" class="sa-card-t" ' + (it.contact_id ? 'data-ct="' + esc(it.contact_id) + '"' : (it.account_id ? 'data-acc="' + esc(it.account_id) + '"' : '')) + '>' + esc(title) + '</button>'
       + (it.kind === 'reaction' ? '<div class="sa-card-s hot">' + esc(when) + '</div>' : '')
       + (it.kind === 'pitch' || it.kind === 'find' ? (it.pitch.why_top ? '<div class="sa-top-why">' + esc(it.pitch.why_top) + '</div>' : '') + '<div class="sa-card-s">' + esc((it.kind === 'pitch' && (it.li ? it.pitch.person : it.pitch.contact).titre ? (it.li ? it.pitch.person : it.pitch.contact).titre + ' · ' : '') + it.pitch.reason) + '</div>' : '')
@@ -269,7 +269,7 @@
         ov.innerHTML = '<div class="sa-burst-h"><b>' + (B.i + 1) + ' / ' + B.list.length + '</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
           + '<div class="sa-burst-stage"><article class="sa-burst-card" id="sa-bc">'
           + '<div class="sa-stamp l" id="sa-stl">Passer</div><div class="sa-stamp r" id="sa-str">' + (li ? 'LinkedIn' : 'Envoyer') + '</div>'
-          + '<span class="sa-cls c-' + esc(p.cls || 'try') + '">' + esc(p.cls_label || 'À tenter') + '</span> <span class="sa-tag k-pitch">' + (li ? 'LinkedIn' : 'À écrire') + '</span>' + (p.why_top ? ' <span class="sa-meta">' + esc(p.why_top) + '</span>' : '')
+          + '<span class="sa-cls c-' + esc(p.cls || 'try') + '">' + esc(p.cls_label || 'À tenter') + '</span> <span class="sa-tag k-pitch">' + (li ? 'LinkedIn' : p.draft ? 'Mail prêt' : 'À écrire') + '</span>' + (p.why_top ? ' <span class="sa-meta">' + esc(p.why_top) + '</span>' : '')
           + '<h2>' + esc(W.name) + '</h2><div class="sa-meta">' + esc([W.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div>'
           + '<div class="sa-burst-who' + ((li && !p.person.found) || (p.contact && p.contact.from_signal) ? ' sig' : '') + '">' + esc(li ? (p.person.why || '') : (p.contact && p.contact.why) || '') + '</div>'
           + '<div class="sa-burst-why">' + esc(p.reason) + '</div>'

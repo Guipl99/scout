@@ -322,7 +322,7 @@
       if (rd) ps.push('<i class="crm-pitch-whoc">' + esc(it.li ? (P.person.why || '') : (P.contact.why || '')) + '</i>');
       ps.push((it.tier ? tierBadge(it.tier) + ' ' : '') + '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>');
       if (opts.showWho && it.who) ps.push(esc(it.who));
-      return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (rd ? ICON.mail : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-cls c-' + esc(P.cls || 'try') + '">' + esc(P.cls_label || 'À tenter') + '</span> <span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
+      return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (rd ? ICON.mail : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-cls c-' + esc(P.cls || 'try') + '">' + esc(P.cls_label || 'À tenter') + '</span> <span class="crm-q-kind k-' + it.kind + '">' + (it.li ? 'LinkedIn' : P.draft ? 'Mail prêt' : 'À écrire') + '</span>'
         + (rd ? '<button type="button" class="crm-link strong" data-qct="' + esc(it.contact_id) + '">' + esc(it.title) + '</button>' : '<button type="button" class="crm-link strong" data-qacc="' + esc(it.account_id) + '">' + esc(it.title) + '</button>')
         + (P.why_top ? '<span class="crm-pitch-top" title="Pourquoi cette carte est à ce rang">' + esc(P.why_top) + '</span>' : '')
         + '</div><div class="s">' + ps.filter(Boolean).join(' · ') + '</div><div class="s crm-pitch-why">' + esc(P.reason) + (rd ? '' : P.state === 'searching' ? ' · pas encore de contact : Scout en cherche un cette nuit' : ' · pas de contact joignable trouvé') + '</div>'
