@@ -242,7 +242,7 @@
         var who = ready ? p.contact : li ? p.person : null;
         items.push({ kind: ready || li ? 'pitch' : 'find', li: li, id: 'pitch-' + p.account.id, pitch: p, title: who ? who.name : p.account.nom, sub: p.reason,
           contact_id: who ? who.id : null, contact_name: who ? who.name : null, account_id: p.account.id, account_nom: p.account.nom, tier: p.account.tier,
-          who: p.account.owner_name, pscore: p.score || 0 });
+          who: p.account.owner_name, pscore: p.score || 0, pcls: p.cls || 'try' });
       });
       if (prosp) {
         ((r[4] && r[4].rows) || []).forEach(function (sg) {
@@ -291,8 +291,11 @@
     if (it.kind === 'reaction') return 1000 - Math.min(99, Math.max(0, daysFrom(it.due) || 0)) + tierPts / 10;
     if (it.kind === 'reply') return 900 + tierPts / 10;
     if (it.kind === 'signal') return 600 + (it.score || 0) * 5 + tierPts / 10;
-    if (it.kind === 'pitch') return 480 + Math.min(it.pscore || 0, 130) * 3;
-    if (it.kind === 'find') return 230 + Math.min(it.pscore || 0, 130) * 2;
+    // Hot en tête (juste après les réactions à nos mails), puis Bon signal, puis À tenter
+    if (it.kind === 'pitch' || it.kind === 'find') {
+      var sc = Math.min(it.pscore || 0, 130);
+      return it.pcls === 'hot' ? 880 + sc : it.pcls === 'good' ? 470 + sc * 2 : 180 + sc;
+    }
     if (it.kind === 'chat') return (it.qualified ? 700 : 450) + (it.imp || 0) * 5 + tierPts / 10;
     if (it.kind === 'visit') return 420 + (it.imp || 0) * 8 + tierPts / 2;
     if (it.kind === 'hot') return 400 + Math.min(it.score || 0, 50) + tierPts / 2;
@@ -316,7 +319,7 @@
       if (rd) ps.push('<i class="crm-pitch-whoc">' + esc(it.li ? 'Cité dans le signal' : (P.contact.why || '')) + '</i>');
       ps.push((it.tier ? tierBadge(it.tier) + ' ' : '') + '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>');
       if (opts.showWho && it.who) ps.push(esc(it.who));
-      return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (rd ? ICON.mail : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
+      return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (rd ? ICON.mail : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-cls c-' + esc(P.cls || 'try') + '">' + esc(P.cls_label || 'À tenter') + '</span> <span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
         + (rd ? '<button type="button" class="crm-link strong" data-qct="' + esc(it.contact_id) + '">' + esc(it.title) + '</button>' : '<button type="button" class="crm-link strong" data-qacc="' + esc(it.account_id) + '">' + esc(it.title) + '</button>')
         + (P.why_top ? '<span class="crm-pitch-top" title="Pourquoi cette carte est à ce rang">' + esc(P.why_top) + '</span>' : '')
         + '</div><div class="s">' + ps.filter(Boolean).join(' · ') + '</div><div class="s crm-pitch-why">' + esc(P.reason) + (rd ? '' : P.state === 'searching' ? ' · pas encore de contact : Scout en cherche un cette nuit' : ' · pas de contact joignable trouvé') + '</div>'
@@ -362,7 +365,7 @@
     if (it.kind === 'reply' && it.x) { S.qx = S.qx || {}; S.qx[it.contact_id] = it.x; }
     if (it.kind === 'reaction') actions = '<button type="button" class="crm-btn sm primary" data-qct="' + esc(it.contact_id) + '">' + ICON.mail + ' Écrire</button><button type="button" class="crm-btn sm ghost" data-qseen="' + esc(it.key) + '" title="Retirer de la file">Vu</button>';
     if (it.kind === 'task') actions = '<button type="button" class="del" data-deltask="' + esc(it.task.id) + '" title="Supprimer" aria-label="Supprimer la tâche">×</button>';
-    return '<div class="crm-q k-' + it.kind + '">' + lead + '<div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
+    return '<div class="crm-q k-' + it.kind + '">' + lead + '<div class="crm-q-b"><div class="t">' + (it.kind === 'reaction' ? '<span class="crm-cls c-hot">Hot</span> ' : '') + '<span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
       + (it.kind === 'task' ? esc(it.title) : '<button type="button" class="crm-link strong" data-qct="' + esc(it.contact_id) + '">' + esc(it.title) + '</button>')
       + '</div><div class="s">' + sub.join(' · ') + '</div></div><div class="crm-q-a">' + actions + '</div></div>';
   }

@@ -339,3 +339,9 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .sa-burst-drop { align-self: flex-start; font-size: 13px !important; margin-top: 4px; }
 
 .crm-pitch-top { margin-left: 8px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--accent2, #B88A68); border: 1px solid currentColor; padding: 0 5px; border-radius: 2px; white-space: nowrap; }
+
+/* classes de cartes : Hot, Bon signal, À tenter */
+.crm-cls, .sa-cls { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; border: 1px solid; vertical-align: middle; }
+.crm-cls.c-hot, .sa-cls.c-hot { background: #C2552F; border-color: #C2552F; color: #fff; }
+.crm-cls.c-good, .sa-cls.c-good { border-color: var(--accent, #85593E); color: var(--accent2, #B88A68); }
+.crm-cls.c-try, .sa-cls.c-try { border-color: var(--border2, rgba(229,226,210,.25)); color: var(--text3, #888); }
