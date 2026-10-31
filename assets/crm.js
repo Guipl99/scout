@@ -398,12 +398,20 @@
   function pitchContextHtml(p) {
     return '<div class="crm-pr-ctx">' + (p.context || []).map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div>';
   }
+  // Sources du signal, à un toucher : le commercial vérifie sans chercher
+  function pitchSourcesHtml(p) {
+    var src = p.sources || [];
+    if (!src.length) return '<div class="crm-pr-src">Le mail ne cite aucun fait précis sur ce compte.</div>';
+    return '<div class="crm-pr-src">Le mail s’appuie sur : ' + src.map(function (x) {
+      return '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(String(x.label).slice(0, 90)) + '</a>' + (x.official ? ' <span class="ok">source officielle</span>' : '');
+    }).join(' · ') + '</div>';
+  }
   function pitchReview(p, onDone) {
     var ov = document.createElement('div'); ov.className = 'crm-pr'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Mail à ' + p.contact.name);
     var close = function (sent) { ov.remove(); document.body.classList.remove('crm-pr-open'); if (onDone) onDone(sent); };
     ov.innerHTML = '<div class="crm-pr-box"><div class="crm-pr-h"><div><b>' + esc(p.contact.name) + '</b><div class="crm-meta">' + esc([p.contact.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div></div>'
       + '<button type="button" class="crm-pr-x" aria-label="Fermer">×</button></div>'
-      + '<div class="crm-pr-why">' + esc(p.reason) + '</div>' + pitchContextHtml(p)
+      + '<div class="crm-pr-why">' + esc(p.reason) + '</div>' + pitchContextHtml(p) + pitchSourcesHtml(p)
       + '<label class="crm-pr-l">À</label><div class="crm-pr-to">' + esc(p.contact.email) + '</div>'
       + '<label class="crm-pr-l" for="crm-pr-s">Objet</label><input id="crm-pr-s" class="crm-input" autocomplete="off">'
       + '<label class="crm-pr-l" for="crm-pr-b">Message</label><textarea id="crm-pr-b" class="crm-input" rows="12"></textarea>'
@@ -2618,7 +2626,7 @@
   }
 
   window.scoutCrm = { onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge, refreshPropBadge: refreshPropBadge,
-    loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchSend: pitchSend, pitchSave: pitchSave, pitchDraft: pitchDraft, pitchReview: pitchReview, toast: toast, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
+    loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchSend: pitchSend, pitchSave: pitchSave, pitchDraft: pitchDraft, pitchReview: pitchReview, pitchSourcesHtml: pitchSourcesHtml, toast: toast, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
   setTimeout(refreshBadge, 2500);
   setInterval(refreshBadge, 5 * 60 * 1000);
   setTimeout(refreshPropBadge, 3500);

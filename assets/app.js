@@ -235,7 +235,7 @@
         if (!p) {
           ov.innerHTML = '<div class="sa-burst-h"><b>Traiter ma file</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
             + '<div class="sa-burst-end"><div class="big">' + (B.list.length ? 'C’est fait' : 'Rien à écrire') + '</div><div class="sa-meta">'
-            + (B.list.length ? B.sent + ' mail' + (B.sent > 1 ? 's' : '') + ' envoyé' + (B.sent > 1 ? 's' : '') + ', ' + B.later + ' remis à plus tard.' : 'Pas de compte à prospecter pour l’instant. Les nouveaux signaux arrivent ici, avec le mail déjà rédigé.')
+            + (B.list.length ? B.sent + ' mail' + (B.sent > 1 ? 's' : '') + ' envoyé' + (B.sent > 1 ? 's' : '') + ', ' + B.later + ' passé' + (B.later > 1 ? 's' : '') + ' (ils reviennent dans 3 jours).' : 'Pas de compte à prospecter pour l’instant. Les nouveaux signaux arrivent ici, avec le mail déjà rédigé.')
             + '</div><button type="button" class="sa-btn primary" data-x>Retour</button></div>';
           ov.querySelectorAll('[data-x]').forEach(function (b) { b.onclick = function () { history.back(); }; });
           return;
@@ -246,9 +246,11 @@
           + '<h2>' + esc(p.contact.name) + '</h2><div class="sa-meta">' + esc([p.contact.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div>'
           + '<div class="sa-burst-why">' + esc(p.reason) + '</div>'
           + '<div class="sa-burst-ctx">' + (p.context || []).map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div>'
+          + crm().pitchSourcesHtml(p)
           + '<div class="sa-burst-mail" id="sa-bm"><div class="sa-meta">À ' + esc(p.contact.email) + '</div><div class="s" id="sa-bs"></div><div class="b" id="sa-bb"></div><div class="sa-meta sa-burst-hint">' + I.edit + ' Toucher pour modifier</div></div>'
-          + '</article><div class="sa-burst-lbl l">Plus tard</div><div class="sa-burst-lbl r">Envoyer</div></div>'
-          + '<div class="sa-burst-a"><button type="button" class="sa-btn" data-later>Pas maintenant</button><button type="button" class="sa-btn primary" data-send>' + I.send + 'Envoyer</button></div>';
+          + '<button type="button" class="sa-link sa-burst-drop" data-drop>Retirer ce compte pour 30 jours</button>'
+          + '</article><div class="sa-burst-lbl l">Passer</div><div class="sa-burst-lbl r">Envoyer</div></div>'
+          + '<div class="sa-burst-a"><button type="button" class="sa-btn" data-later>Passer</button><button type="button" class="sa-btn primary" data-send>' + I.send + 'Envoyer</button></div>';
         ov.querySelector('[data-x]').onclick = function () { history.back(); };
         var bs = ov.querySelector('#sa-bs'), bb = ov.querySelector('#sa-bb'), sendBtn = ov.querySelector('[data-send]');
         var show = function () { bs.textContent = p.draft.subject || ''; bb.textContent = p.draft.body || ''; sendBtn.disabled = false; };
@@ -266,16 +268,18 @@
           eb.focus();
         };
         var next = function () { B.i++; draw(); };
-        var later = function () {
+        // Passer : un doute, on ne modifie pas, la carte revient dans 3 jours ; Retirer : 30 jours
+        var later = function (days) {
           B.later++;
-          api('/crm/pitch/' + encodeURIComponent(p.account.id), { method: 'POST', body: { action: 'snooze', days: 30 } }).catch(function () {});
+          api('/crm/pitch/' + encodeURIComponent(p.account.id), { method: 'POST', body: { action: 'snooze', days: days || 3 } }).catch(function () {});
           next();
         };
+        ov.querySelector('[data-drop]').onclick = function (e) { e.stopPropagation(); fly(-1, function () { later(30); }); };
         var send = function () {
           if (!p.draft) return;
           crm().pitchSend(p, p.draft.subject, p.draft.body, function (ok) { if (ok) { B.sent++; next(); } else reset(); });
         };
-        ov.querySelector('[data-later]').onclick = function () { fly(-1, later); };
+        ov.querySelector('[data-later]').onclick = function () { fly(-1, function () { later(3); }); };
         sendBtn.onclick = function () { fly(1, send); };
         // glisser
         var card = ov.querySelector('#sa-bc'), x0 = null, y0 = null, dx = 0, drag = false;
@@ -296,7 +300,7 @@
         }, { passive: true });
         card.addEventListener('touchend', function () {
           if (x0 == null) return; x0 = null;
-          if (drag && dx > 100) fly(1, send); else if (drag && dx < -100) fly(-1, later); else reset();
+          if (drag && dx > 100) fly(1, send); else if (drag && dx < -100) fly(-1, function () { later(3); }); else reset();
         });
       };
       draw();
