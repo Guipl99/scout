@@ -142,7 +142,8 @@
       burstBadge(now);
       var y = v.scrollTop;
       var hotN = now.filter(function (it) { return (it.pitch && it.pitch.cls === 'hot') || it.kind === 'reaction'; }).length;
-      var head = '<div class="sa-kpi"><b>' + now.length + '</b><span>à traiter' + (hotN ? ', dont <em>' + hotN + ' hot</em>' : (urgent ? ', dont <em>' + urgent + ' urgent' + (urgent > 1 ? 's' : '') + '</em>' : '')) + '</span>' + (fresh ? '' : '<span class="sa-meta sa-upd">mise à jour…</span>') + '</div>';
+      var relN = now.filter(function (it) { return it.kind === 'relance'; }).length;
+      var head = '<div class="sa-kpi"><b>' + now.length + '</b><span>à traiter' + [hotN ? '<em>' + hotN + ' hot</em>' : '', relN ? relN + ' relance' + (relN > 1 ? 's' : '') : ''].filter(Boolean).map(function (x, i) { return (i ? ', ' : ', dont ') + x; }).join('') + '</span>' + (fresh ? '' : '<span class="sa-meta sa-upd">mise à jour…</span>') + '</div>';
       head = '<div id="sa-ao-box"></div>' + head;
       v.innerHTML = head + (now.length ? '<div class="sa-list">' + now.slice(0, 60).map(card).join('') + '</div>'
         : '<div class="sa-empty">Rien d’urgent dans ta file.' + (A.qScope === 'me' ? '<br><br><button type="button" class="sa-btn" id="sa-see-team">Voir la file de l’équipe</button>' : '') + '</div>')
