@@ -835,6 +835,33 @@
       + ' · <a class="crm-link" href="' + esc(h.url) + '" target="_blank" rel="noopener">' + src + '</a></span></span>'
       + '<span class="r"><button type="button" class="crm-link crm-vh-ign" data-ign="' + h.id + '" title="Hors sujet : ne plus afficher">Ignorer</button></span></div>';
   }
+  // Lancer les routines à la main (admin) : veille web, recherche de contacts, rédaction des mails « À écrire »
+  var ROUTINES = {
+    veille: { label: 'Veille drone filaire (web)', path: '/crm/veille/run', done: 'Veille lancée : les comptes arrivent dans Signaux > Veille d’ici 10 à 20 min' },
+    enrich: { label: 'Chercher des contacts', path: '/crm/pitch-enrich/run?max=20', done: null },
+    drafts: { label: 'Rédiger les mails « À écrire »', path: '/crm/pitch-drafts/run', done: 'Rédaction lancée : les mails arrivent dans Aujourd’hui d’ici quelques minutes' }
+  };
+  function runRoutine(k) {
+    var R = ROUTINES[k];
+    return api(R.path, { method: 'POST' }).then(function (d) {
+      if (d && d.busy) return 'Déjà en cours';
+      if (k === 'enrich') return d.cap ? 'Plafond du jour atteint (20 comptes)' : (d.done || 0) + ' compte' + (d.done > 1 ? 's' : '') + ' cherché' + (d.done > 1 ? 's' : '') + ', ' + (d.created || 0) + ' contact' + (d.created > 1 ? 's' : '') + ' trouvé' + (d.created > 1 ? 's' : '');
+      return R.done;
+    });
+  }
+  function routinesHtml() {
+    return Object.keys(ROUTINES).map(function (k) { return '<button type="button" class="crm-btn sm" data-routine="' + k + '">' + esc(ROUTINES[k].label) + '</button>'; }).join(' ');
+  }
+  function bindRoutines(root, msgEl) {
+    root.querySelectorAll('[data-routine]').forEach(function (b) {
+      b.onclick = function () {
+        var k = b.getAttribute('data-routine'); b.disabled = true; var t = b.textContent; b.textContent = 'En cours…';
+        runRoutine(k).then(function (m) { toast(m); if (msgEl) msgEl.textContent = m; }).catch(function (e) { toast('Erreur : ' + e.message); })
+          .then(function () { b.disabled = false; b.textContent = t; });
+      };
+    });
+  }
+
   function onVeillePanel() {
     var p = document.getElementById('panel-veille'); if (!p) return;
     S.vFilter = S.vFilter || lsGet('scout_veille_f', 'hot'); S.vMine = S.vMine == null ? lsGet('scout_veille_mine', false) : S.vMine;
@@ -844,11 +871,13 @@
       + '<button type="button" class="crm-chip" data-vf="hot">En phase d’achat</button><button type="button" class="crm-chip" data-vf="client">Équipés chez un concurrent</button><button type="button" class="crm-chip" data-vf="all">Tout</button></div>'
       + '<label class="crm-meta" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="crm-v-mine"' + (S.vMine ? ' checked' : '') + '> Mes comptes</label>'
       + '<span class="crm-meta" id="crm-v-last" style="margin-left:auto"></span></div>'
+      + (isAdminNow() ? '<div class="crm-row crm-routines" style="gap:6px;flex-wrap:wrap;margin-bottom:10px"><span class="crm-meta">Lancer maintenant :</span> ' + routinesHtml() + '</div>' : '')
       + '<div id="crm-v-body"><div class="crm-empty">Chargement…</div></div></div>';
     p.querySelectorAll('[data-vf]').forEach(function (b) {
       b.classList.toggle('on', b.getAttribute('data-vf') === S.vFilter);
       b.onclick = function () { S.vFilter = b.getAttribute('data-vf'); lsSet('scout_veille_f', S.vFilter); onVeillePanel(); };
     });
+    bindRoutines(p);
     document.getElementById('crm-v-mine').onchange = function () { S.vMine = this.checked; lsSet('scout_veille_mine', S.vMine); drawVeille(); };
     Promise.all([S.facets ? Promise.resolve(S.facets) : loadFacets().catch(function () { return null; }), api('/crm/veille')]).then(function (r) {
       S.veille = r[1]; drawVeille();
@@ -2626,7 +2655,7 @@
   }
 
   window.scoutCrm = { onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge, refreshPropBadge: refreshPropBadge,
-    loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchSend: pitchSend, pitchSave: pitchSave, pitchDraft: pitchDraft, pitchReview: pitchReview, pitchSourcesHtml: pitchSourcesHtml, toast: toast, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
+    loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchSend: pitchSend, pitchSave: pitchSave, pitchDraft: pitchDraft, pitchReview: pitchReview, pitchSourcesHtml: pitchSourcesHtml, toast: toast, runRoutine: runRoutine, routines: function () { return ROUTINES; }, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
   setTimeout(refreshBadge, 2500);
   setInterval(refreshBadge, 5 * 60 * 1000);
   setTimeout(refreshPropBadge, 3500);

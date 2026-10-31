@@ -584,6 +584,7 @@
           + '<div class="sa-row-btns"><button type="button" class="sa-btn" id="sa-l-pin">Changer le code</button><button type="button" class="sa-btn ghost" id="sa-l-off">Désactiver</button></div>'
         : '<p class="sa-meta">Protège Scout sur ton téléphone : un code à 4 à 6 chiffres, et ' + bioName() + ' si ton téléphone le permet.</p><button type="button" class="sa-btn primary wide" id="sa-l-on">' + I.lock + 'Activer le verrouillage</button>')
       + '</div>'
+      + (s.role === 'admin' ? '<h3 class="sa-h3">Lancer maintenant</h3><div class="sa-box">' + Object.keys(crm().routines()).map(function (k) { return '<button type="button" class="sa-btn wide" data-routine="' + k + '">' + esc(crm().routines()[k].label) + '</button>'; }).join('') + '<p class="sa-meta" id="sa-rt-msg">Sans attendre la nuit : veille web, puis recherche de contacts, puis rédaction des mails.</p></div>' : '')
       + '<h3 class="sa-h3">Affichage</h3><div class="sa-box"><button type="button" class="sa-btn wide" id="sa-full">Passer à la version complète</button>'
       + (standalone() ? '' : '<p class="sa-meta">Astuce : ajoute Scout à l’écran d’accueil (menu Partager puis « Sur l’écran d’accueil » sur iPhone, menu ⋮ puis « Installer l’application » sur Android) pour l’ouvrir comme une appli.</p>') + '</div>'
       + '<button type="button" class="sa-btn ghost wide danger" id="sa-logout">Se déconnecter</button></div>';
@@ -593,6 +594,13 @@
     var aft = v.querySelector('#sa-l-after'); if (aft) aft.onchange = function () { var c = lockConf(); c.after = +aft.value; ls(LS_LOCK, JSON.stringify(c)); toast('Enregistré'); };
     var bio = v.querySelector('#sa-l-bio');
     if (bio) bioAvailable().then(function (ok) { if (ok) { bio.hidden = false; bio.onclick = function () { addBio().then(function () { renderMe(); }); }; } });
+    v.querySelectorAll('[data-routine]').forEach(function (b) {
+      b.onclick = function () {
+        var k = b.getAttribute('data-routine'), t = b.textContent; b.disabled = true; b.textContent = 'En cours…';
+        crm().runRoutine(k).then(function (m) { toast(m); var e = document.getElementById('sa-rt-msg'); if (e) e.textContent = m; })
+          .catch(function (e) { toast('Erreur : ' + e.message); }).then(function () { b.disabled = false; b.textContent = t; });
+      };
+    });
     v.querySelector('#sa-full').onclick = function () { ls(LS_PREF, 'full'); toFull(); };
     v.querySelector('#sa-logout').onclick = function () {
       if (!confirm('Se déconnecter de Scout sur ce téléphone ?')) return;
