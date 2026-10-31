@@ -238,6 +238,7 @@
       });
       var seenAcc = {}; items.forEach(function (it) { if (it.account_id) seenAcc[it.account_id] = 1; });
       S.pitchMap = S.pitchMap || {};
+      S.pitchCounts = (r[9] && r[9].counts) || {};
       ((r[9] && r[9].items) || []).forEach(function (p) {
         // pas de carte tant que Scout n'a pas trouvé un bon contact (mail ou LinkedIn) : chercher, c'est son travail
         if (seenAcc[p.account.id] || (p.state !== 'ready' && p.state !== 'linkedin')) return;
@@ -2731,7 +2732,7 @@
     }).catch(function () {});
   }
 
-  window.scoutCrm = { onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge, refreshPropBadge: refreshPropBadge,
+  window.scoutCrm = { pitchPending: function () { return (S.pitchCounts && S.pitchCounts.pending_drafts) || 0; }, onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge, refreshPropBadge: refreshPropBadge,
     loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchSend: pitchSend, pitchSave: pitchSave, pitchDraft: pitchDraft, pitchReview: pitchReview, pitchSourcesHtml: pitchSourcesHtml, liDraft: liDraft, pitchSendLinkedIn: pitchSendLinkedIn, toast: toast, runRoutine: runRoutine, routines: function () { return ROUTINES; }, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
   setTimeout(refreshBadge, 2500);
   setInterval(refreshBadge, 5 * 60 * 1000);

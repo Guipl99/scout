@@ -259,7 +259,7 @@
         if (!p) {
           ov.innerHTML = '<div class="sa-burst-h"><b>Traiter ma file</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
             + '<div class="sa-burst-end"><div class="big">' + (B.list.length ? 'C’est fait' : 'Rien à envoyer') + '</div><div class="sa-meta">'
-            + (B.list.length ? B.sent + ' mail' + (B.sent > 1 ? 's' : '') + ' envoyé' + (B.sent > 1 ? 's' : '') + ', ' + B.later + ' passé' + (B.later > 1 ? 's' : '') + ' (ils reviennent dans 3 jours).' : 'Pas de compte à prospecter pour l’instant. Les nouveaux signaux arrivent ici, avec le mail déjà rédigé.')
+            + (B.list.length ? B.sent + ' mail' + (B.sent > 1 ? 's' : '') + ' envoyé' + (B.sent > 1 ? 's' : '') + ', ' + B.later + ' passé' + (B.later > 1 ? 's' : '') + ' (ils reviennent dans 3 jours).' : (crm().pitchPending && crm().pitchPending() ? 'Scout rédige ' + crm().pitchPending() + ' mail' + (crm().pitchPending() > 1 ? 's' : '') + ' : ils arrivent ici dans quelques minutes.' : 'Pas de compte à prospecter pour l’instant. Les nouveaux signaux arrivent ici, avec le mail déjà rédigé.'))
             + '</div><button type="button" class="sa-btn primary" data-x>Retour</button></div>';
           ov.querySelectorAll('[data-x]').forEach(function (b) { b.onclick = function () { history.back(); }; });
           return;

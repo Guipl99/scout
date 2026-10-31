@@ -211,6 +211,7 @@ body.theme-light .sa-add span { box-shadow: 0 6px 18px rgba(0,0,0,.15); }
 .sa-burst-a { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; padding: 10px 14px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--bg2); }
 .sa-burst-a .sa-btn { justify-content: center; min-height: 52px; }
 .sa-burst-end { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; }
+.sa-burst-end .sa-btn { flex: 0 0 auto; align-self: center; min-width: 180px; }
 .sa-burst-end .big { font: 800 26px var(--font-title, sans-serif); text-transform: uppercase; }
 .sa-top-why { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--accent2); margin-top: 2px; }
 .sa-burst-who { font-size: 12.5px; color: var(--text3); font-style: italic; }
