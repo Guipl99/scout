@@ -128,25 +128,36 @@
   function renderToday(quiet) {
     var s = session() || {};
     var v = document.getElementById('sa-view');
-    if (!quiet) v.innerHTML = '<div class="sa-empty">Chargement…</div>';
     top('Bonjour ' + (s.first_name || ''), new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
       '<div class="sa-top-r"><button type="button" class="sa-icon" id="sa-entry" aria-label="Saisir une activité">' + I.plus + '</button><button type="button" class="sa-chip' + (A.qScope === 'team' ? ' on' : '') + '" id="sa-scope">' + (A.qScope === 'team' ? 'Équipe' : 'Ma file') + '</button></div>');
     document.getElementById('sa-entry').onclick = function () { openEntry({}); };
     document.getElementById('sa-scope').onclick = function () { A.qScope = A.qScope === 'team' ? 'me' : 'team'; renderToday(); };
-    crm().loadQueue(A.qScope).then(function (items) {
+    // Ouverture rapide : la dernière file connue s'affiche tout de suite, puis se met à jour
+    var QK = 'scout_app_q_' + A.qScope, scope0 = A.qScope;
+    var draw = function (items, fresh) {
+      if (A.tab !== 'today' || A.qScope !== scope0) return;
       var now = items.filter(function (it) { return !it.later; });
       var urgent = now.filter(function (it) { return it.kind === 'reaction' || it.kind === 'reply' || (daysFrom(it.due) || 0) > 0; }).length;
       A.items = now;
       burstBadge(now);
-      var head = '<div class="sa-kpi"><b>' + now.length + '</b><span>à traiter' + (urgent ? ', dont <em>' + urgent + ' urgent' + (urgent > 1 ? 's' : '') + '</em>' : '') + '</span></div>';
+      var y = v.scrollTop;
+      var head = '<div class="sa-kpi"><b>' + now.length + '</b><span>à traiter' + (urgent ? ', dont <em>' + urgent + ' urgent' + (urgent > 1 ? 's' : '') + '</em>' : '') + '</span>' + (fresh ? '' : '<span class="sa-meta sa-upd">mise à jour…</span>') + '</div>';
       head = '<div id="sa-ao-box"></div>' + head;
       v.innerHTML = head + (now.length ? '<div class="sa-list">' + now.slice(0, 60).map(card).join('') + '</div>'
         : '<div class="sa-empty">Rien d’urgent dans ta file.' + (A.qScope === 'me' ? '<br><br><button type="button" class="sa-btn" id="sa-see-team">Voir la file de l’équipe</button>' : '') + '</div>')
         + (now.length > 60 ? '<div class="sa-meta sa-center">Les ' + (now.length - 60) + ' suivants sont dans la version complète.</div>' : '');
+      v.scrollTop = y;
       bindCards(v);
       drawAoApp();
       var st = document.getElementById('sa-see-team'); if (st) st.onclick = function () { A.qScope = 'team'; renderToday(); };
-    }).catch(function (e) { v.innerHTML = '<div class="sa-empty">Erreur : ' + esc(e.message) + '</div>'; });
+    };
+    var cached = null; try { cached = JSON.parse(localStorage.getItem(QK) || 'null'); } catch (e) { cached = null; }
+    if (cached && cached.items && Date.now() - cached.at < 7 * 864e5) draw(cached.items, false);
+    else if (!quiet) v.innerHTML = '<div class="sa-empty">Chargement…</div>';
+    crm().loadQueue(A.qScope).then(function (items) {
+      draw(items, true);
+      try { localStorage.setItem(QK, JSON.stringify({ at: Date.now(), items: items.slice(0, 80) })); } catch (e) { /* stockage plein : sans cache */ }
+    }).catch(function (e) { if (!cached) v.innerHTML = '<div class="sa-empty">Erreur : ' + esc(e.message) + '</div>'; else { var u = v.querySelector('.sa-upd'); if (u) u.textContent = 'hors ligne'; } });
   }
 
   // AO drone filaire ouverts : même bloc que sur ordinateur, en tête de la file
@@ -196,7 +207,12 @@
     root.querySelectorAll('[data-ct]').forEach(function (b) { b.onclick = function () { openContact(b.getAttribute('data-ct')); }; });
     root.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
     root.querySelectorAll('[data-rel]').forEach(function (b) { b.onclick = function () { openRelance(b.getAttribute('data-rel')); }; });
-    root.querySelectorAll('[data-pgo]').forEach(function (b) { b.onclick = function () { var p = crm().pitchMap()[b.getAttribute('data-pgo')]; if (p) crm().pitchGo(p, function (r) { if (r) fadeOut(b); }); }; });
+    root.querySelectorAll('[data-pgo]').forEach(function (b) {
+      b.onclick = function () {
+        var id = b.getAttribute('data-pgo'), it = (A.items || []).find(function (x) { return x.pitch && x.account_id === id; });
+        var p = (it && it.pitch) || crm().pitchMap()[id]; if (p) crm().pitchGo(p, function (r) { if (r) fadeOut(b); });
+      };
+    });
     root.querySelectorAll('[data-psnz]').forEach(function (b) {
       b.onclick = function () { b.disabled = true; api('/crm/pitch/' + encodeURIComponent(b.getAttribute('data-psnz')), { method: 'POST', body: { action: 'snooze', days: 30 } }).then(function () { fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); }); };
     });
@@ -618,6 +634,7 @@
     v.querySelector('#sa-logout').onclick = function () {
       if (!confirm('Se déconnecter de Scout sur ce téléphone ?')) return;
       ls(LS_LOCK, null);
+      try { localStorage.removeItem('scout_app_q_me'); localStorage.removeItem('scout_app_q_team'); } catch (e) {}
       if (window.scoutAction && window.scoutAction.logout) window.scoutAction.logout(); else { ls(LS_SESSION, null); location.reload(); }
     };
   }
