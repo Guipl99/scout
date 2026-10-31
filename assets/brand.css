@@ -346,3 +346,14 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .crm-cls.c-good, .sa-cls.c-good { border-color: var(--accent, #85593E); color: var(--accent2, #B88A68); }
 .crm-cls.c-try, .sa-cls.c-try { border-color: var(--border2, rgba(229,226,210,.25)); color: var(--text3, #888); }
 .crm-cstate { font-size: 12.5px; color: var(--text3); font-style: italic; } .crm-cstate.ok { color: var(--accent2); font-style: normal; }
+
+/* relecture du mail : en-tête, corps qui défile, barre d'envoi fixe en bas */
+.crm-pr-box { overflow: hidden; }
+.crm-pr-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+.crm-pr-to { font-size: 13px; color: var(--text2, #A9A6A0); } .crm-pr-to .crm-pr-l { margin: 0 6px 0 0; }
+.crm-pr-body textarea { flex: 1; min-height: 180px; }
+.crm-pr-more summary { cursor: pointer; font-size: 12.5px; color: var(--text3, #888); padding: 4px 0; }
+.crm-pr-more[open] { display: flex; flex-direction: column; gap: 6px; }
+.crm-pr-a { flex-shrink: 0; padding-top: 10px; border-top: 1px solid var(--border, rgba(229,226,210,.15)); padding-bottom: env(safe-area-inset-bottom); }
+.crm-pr-a [data-send] { flex: 1 1 100%; padding: 12px; font-size: 15px; }
+@media (max-width: 640px) { .crm-pr-box { padding: 12px 14px; } .crm-pr-h b { font-size: 15px; } .crm-pr-a .crm-btn:not([data-send]) { flex: 1; } }

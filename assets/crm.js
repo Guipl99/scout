@@ -410,8 +410,9 @@
     var close = function (r) { ov.remove(); document.body.classList.remove('crm-pr-open'); if (onDone) onDone(r); };
     ov.innerHTML = '<div class="crm-pr-box"><div class="crm-pr-h"><div><b>' + esc(p.person.name) + '</b><div class="crm-meta">' + esc([p.person.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div></div>'
       + '<button type="button" class="crm-pr-x" aria-label="Fermer">×</button></div>'
-      + '<div class="crm-pr-why">' + esc(p.reason) + '</div>' + pitchContextHtml(p) + pitchSourcesHtml(p)
-      + '<label class="crm-pr-l" for="crm-li-b">Message LinkedIn (moins de 280 caractères)</label><textarea id="crm-li-b" class="crm-input" rows="6"></textarea>'
+      + '<div class="crm-pr-body"><div class="crm-pr-why">' + esc(p.reason) + '</div>'
+      + '<textarea id="crm-li-b" class="crm-input" aria-label="Message LinkedIn (moins de 280 caractères)"></textarea>'
+      + '<details class="crm-pr-more"><summary>Contexte et sources</summary>' + pitchContextHtml(p) + pitchSourcesHtml(p) + '</details></div>'
       + '<div class="crm-pr-a"><button type="button" class="crm-btn primary" data-send>Copier et ouvrir LinkedIn</button><button type="button" class="crm-btn" data-redo>Refaire</button><button type="button" class="crm-btn ghost" data-later>Pas maintenant</button></div></div>';
     document.body.appendChild(ov); document.body.classList.add('crm-pr-open');
     var bi = ov.querySelector('#crm-li-b'), send = ov.querySelector('[data-send]');
@@ -469,13 +470,15 @@
   function pitchReview(p, onDone) {
     var ov = document.createElement('div'); ov.className = 'crm-pr'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Mail à ' + p.contact.name);
     var close = function (sent) { ov.remove(); document.body.classList.remove('crm-pr-open'); if (onDone) onDone(sent); };
-    ov.innerHTML = '<div class="crm-pr-box"><div class="crm-pr-h"><div><b>' + esc(p.contact.name) + '</b><div class="crm-meta">' + esc([p.contact.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div><div class="crm-meta"><i>' + esc(p.contact.why || '') + '</i></div></div>'
+    // le mail d'abord, le bouton Envoyer toujours visible en bas ; le contexte et les sources sont repliés sous le mail
+    ov.innerHTML = '<div class="crm-pr-box"><div class="crm-pr-h"><div><b>' + esc(p.contact.name) + '</b><div class="crm-meta">' + esc([p.contact.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div></div>'
       + '<button type="button" class="crm-pr-x" aria-label="Fermer">×</button></div>'
-      + '<div class="crm-pr-why">' + esc(p.reason) + '</div>' + pitchContextHtml(p) + pitchSourcesHtml(p)
-      + '<label class="crm-pr-l">À</label><div class="crm-pr-to">' + esc(p.contact.email) + '</div>'
-      + '<label class="crm-pr-l" for="crm-pr-s">Objet</label><input id="crm-pr-s" class="crm-input" autocomplete="off">'
-      + '<label class="crm-pr-l" for="crm-pr-b">Message</label><textarea id="crm-pr-b" class="crm-input" rows="12"></textarea>'
-      + '<div class="crm-pr-a"><button type="button" class="crm-btn primary" data-send>' + ICON.mail + ' Envoyer avec ma messagerie</button>'
+      + '<div class="crm-pr-body"><div class="crm-pr-why">' + esc(p.reason) + '</div>'
+      + '<div class="crm-pr-to"><span class="crm-pr-l">À</span> ' + esc(p.contact.email) + '</div>'
+      + '<input id="crm-pr-s" class="crm-input" autocomplete="off" aria-label="Objet" placeholder="Objet">'
+      + '<textarea id="crm-pr-b" class="crm-input" aria-label="Message"></textarea>'
+      + '<details class="crm-pr-more"><summary>Contexte et sources</summary>' + (p.contact.why ? '<div class="crm-meta"><i>' + esc(p.contact.why) + '</i></div>' : '') + pitchContextHtml(p) + pitchSourcesHtml(p) + '</details></div>'
+      + '<div class="crm-pr-a"><button type="button" class="crm-btn primary" data-send>' + ICON.mail + ' Envoyer</button>'
       + '<button type="button" class="crm-btn" data-redo>Refaire</button><button type="button" class="crm-btn ghost" data-later>Pas maintenant</button></div></div>';
     document.body.appendChild(ov); document.body.classList.add('crm-pr-open');
     var si = ov.querySelector('#crm-pr-s'), bi = ov.querySelector('#crm-pr-b'), send = ov.querySelector('[data-send]');
