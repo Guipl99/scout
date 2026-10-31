@@ -311,6 +311,7 @@
       var ps = [];
       var Wc = it.li ? P.person : P.contact;
       if (rd) ps.push(esc([Wc.titre || '', !it.li && P.contact.role ? '(' + P.contact.role + ')' : ''].filter(Boolean).join(' ')));
+      if (rd) ps.push('<i class="crm-pitch-whoc">' + esc(it.li ? 'Cité dans le signal' : (P.contact.why || '')) + '</i>');
       ps.push((it.tier ? tierBadge(it.tier) + ' ' : '') + '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>');
       if (opts.showWho && it.who) ps.push(esc(it.who));
       return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (rd ? ICON.mail : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
@@ -452,7 +453,7 @@
   function pitchReview(p, onDone) {
     var ov = document.createElement('div'); ov.className = 'crm-pr'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Mail à ' + p.contact.name);
     var close = function (sent) { ov.remove(); document.body.classList.remove('crm-pr-open'); if (onDone) onDone(sent); };
-    ov.innerHTML = '<div class="crm-pr-box"><div class="crm-pr-h"><div><b>' + esc(p.contact.name) + '</b><div class="crm-meta">' + esc([p.contact.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div></div>'
+    ov.innerHTML = '<div class="crm-pr-box"><div class="crm-pr-h"><div><b>' + esc(p.contact.name) + '</b><div class="crm-meta">' + esc([p.contact.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div><div class="crm-meta"><i>' + esc(p.contact.why || '') + '</i></div></div>'
       + '<button type="button" class="crm-pr-x" aria-label="Fermer">×</button></div>'
       + '<div class="crm-pr-why">' + esc(p.reason) + '</div>' + pitchContextHtml(p) + pitchSourcesHtml(p)
       + '<label class="crm-pr-l">À</label><div class="crm-pr-to">' + esc(p.contact.email) + '</div>'
