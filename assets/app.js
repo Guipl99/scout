@@ -641,16 +641,37 @@
   // ── Signaux (appels d'offres et contrats) ──────────────────────────────────
   function renderSignals() {
     A.sigScope = A.sigScope || 'me';
-    top('Signaux', 'Marchés, visites du site, chats');
+    top('Signaux', 'Veille, marchés, visites du site, chats');
     var v = document.getElementById('sa-view');
     v.innerHTML = '<div class="sa-seg" role="tablist"><button type="button" data-ss="me" class="' + (A.sigScope === 'me' ? 'on' : '') + '">Mes comptes</button><button type="button" data-ss="all" class="' + (A.sigScope === 'all' ? 'on' : '') + '">Tout</button></div><div id="sa-sig-list"><div class="sa-empty">Chargement…</div></div>';
     v.querySelectorAll('[data-ss]').forEach(function (b) { b.onclick = function () { A.sigScope = b.getAttribute('data-ss'); renderSignals(); }; });
     var box = document.getElementById('sa-sig-list');
-    var TY = { market: 'Marché', visit: 'Visite', chat: 'Chat' };
+    var TY = { market: 'Marché', visit: 'Visite', chat: 'Chat', veille: 'Veille' };
+    var VKL = { evaluation: 'évalue', demo: 'a eu une démo de', achat: 'achète', ao: 'appel d’offres pour', livraison: 'a reçu', usage: 'utilise' }, VKH = { evaluation: 1, demo: 1, achat: 1, ao: 1 };
+    // veille web et LinkedIn (démos, achats, usages de drones filaires, y compris chez les concurrents) : une carte par compte, le signal le plus récent en titre
+    var veilleItems = function (d, meId) {
+      var out = [], lim = Date.now() - 30 * 864e5;
+      var mk = function (hits, acc, org) {
+        hits = hits.filter(function (h) { return new Date(h.date || h.found_at) >= lim; });
+        if (!hits.length) return;
+        var h = hits[0], hot = hits.some(function (x) { return VKH[x.kind]; });
+        var what = (VKL[h.kind] || h.kind) + ' drone filaire' + (h.competitor ? ' (' + h.competitor + ')' : '');
+        out.push({ type: 'veille', key: 'veille-' + h.id, vids: hits.map(function (x) { return x.id; }), at: h.date || h.found_at, imp: hot ? 4 : 2, url: h.url,
+          title: (acc ? acc.nom : h.org_name) + ' ' + what.replace(/^a eu une démo de drone/, 'a eu une démo de drone'),
+          why: (h.evidence || h.title || '') + (hits.length > 1 ? ' (+ ' + (hits.length - 1) + ' autre' + (hits.length > 2 ? 's' : '') + ' signal' + (hits.length > 2 ? 'aux' : '') + ')' : ''),
+          src: h.source === 'linkedin' ? 'Post LinkedIn' : 'Article', reason: what,
+          account: acc ? { id: acc.id, nom: acc.nom, tier: acc.tier, owner_name: acc.owner_name } : null,
+          org: org ? { name: h.org_name, country: h.org_country } : null });
+      };
+      (d.accounts || []).forEach(function (a) { if (A.sigScope === 'me' && String(a.owner_user_id) !== String(meId)) return; mk(a.hits || [], a, null); });
+      if (A.sigScope === 'all') { var byOrg = {}; (d.unlinked || []).forEach(function (h) { var k = String(h.org_name || '').toLowerCase(); (byOrg[k] = byOrg[k] || []).push(h); }); Object.keys(byOrg).forEach(function (k) { mk(byOrg[k], null, true); }); }
+      return out;
+    };
     // état du contact par compte (file « À écrire », toute l'équipe, mise en cache côté serveur)
-    Promise.all([api('/signals/feed?days=30&scope=' + A.sigScope), api('/crm/pitch?scope=all').catch(function () { return { items: [] }; })]).then(function (rr) {
+    Promise.all([api('/signals/feed?days=30&scope=' + A.sigScope), api('/crm/pitch?scope=all').catch(function () { return { items: [] }; }), api('/crm/veille?days=60').catch(function () { return {}; }), api('/crm/facets').catch(function () { return {}; })]).then(function (rr) {
       var d = rr[0], PS = {}; (rr[1].items || []).forEach(function (p) { PS[p.account.id] = p; });
-      var list = (d.items || []).slice(0, 60);
+      var meId = rr[3] && rr[3].me && rr[3].me.user_id;
+      var list = (d.items || []).concat(veilleItems(rr[2] || {}, meId)).sort(function (a, b) { return new Date(b.at) - new Date(a.at); }).slice(0, 80);
       var mention = function (g) {
         if (g.type === 'market') return '';
         if (g.type === 'chat') return g.crm ? '<div class="sa-cstate ok">Transmis au CRM</div>' : '<div class="sa-cstate">Suivi dans le CRM</div>';
@@ -667,7 +688,7 @@
           + '<div class="sa-card-t static">' + esc(g.title) + '</div>' + (g.why ? '<div class="sa-card-s">' + esc(g.why) + '</div>' : '')
           + (acc ? '<button type="button" class="sa-card-s sa-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + (acc.owner_name ? ' · ' + esc(acc.owner_name) : '') + '</button>' : '<div class="sa-meta">Sans compte</div>')
           + mention(g)
-          + '<div class="sa-card-a">' + (g.type === 'market' && g.url ? '<a class="sa-btn" href="' + esc(g.url) + '" target="_blank" rel="noopener">Voir</a>' : '')
+          + '<div class="sa-card-a">' + ((g.type === 'market' || g.type === 'veille') && g.url ? '<a class="sa-btn" href="' + esc(g.url) + '" target="_blank" rel="noopener">' + (g.type === 'veille' ? esc(g.src) : 'Voir') + '</a>' : '')
           + (g.type === 'market' || (g.type !== 'chat' && canWrite(g)) ? '<button type="button" class="sa-btn primary" data-stask="' + i + '">' + (g.type === 'market' && g.flux === 1 ? I.check + 'Go' : I.mail + 'Écrire') + '</button>' : '') + '<button type="button" class="sa-btn" data-sdis="' + i + '">Écarter</button></div></article>';
       }).join('') + '</div>' : '<div class="sa-empty">' + (A.sigScope === 'me' ? 'Rien de neuf sur tes comptes. Regarde « Tout ».' : 'Rien sur 30 jours.') + '</div>';
       bindCards(box);
@@ -680,8 +701,8 @@
                 // visite d'un organisme pas encore dans Scout : le compte est créé (domaine compris, ce qui relie ses visites), puis Scout cherche le contact
                 : (g.org && g.org.name ? api('/crm/accounts', { method: 'POST', body: { nom: g.org.name, pays: g.org.country || null, domain: g.org.domain || null, source: 'visite du site' } }).then(function (d) { if (d.account && !d.existed) toast('Compte créé : ' + d.account.nom); return d.account; })
                   : Promise.reject(new Error('organisme inconnu'))))
-              .then(function (acc) { return crm().pitchAccount(acc.id, g.type === 'chat' ? 'a écrit sur le chat du site' : 'est venu sur elistair.com'); })
-              .then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: g.key, state: 'task' } }); });
+              .then(function (acc) { return crm().pitchAccount(acc.id, g.type === 'veille' ? g.reason : g.type === 'chat' ? 'a écrit sur le chat du site' : 'est venu sur elistair.com'); })
+              .then(function () { if (g.type !== 'veille') return api('/signals/feed/dismiss', { method: 'POST', body: { key: g.key, state: 'task' } }); });
           p.then(function () { if (g.type === 'market') toast(g.flux === 1 ? 'Go : tâche « Répondre à l’AO » créée' : 'Ajouté à « À écrire » dans Aujourd’hui'); fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
         };
       });
@@ -690,6 +711,7 @@
           var g = list[+b.getAttribute('data-sdis')]; b.disabled = true;
           var p = g.type === 'market'
             ? api('/crm/signals/' + g.kind + '/' + encodeURIComponent(g.ref_id) + '/action', { method: 'POST', body: { action: g.flux === 1 ? 'nogo' : 'not_relevant', reason: 'Autre' } })
+            : g.type === 'veille' ? Promise.all(g.vids.map(function (id) { return api('/crm/veille/' + id + '/action', { method: 'POST', body: { action: 'ignore' } }); }))
             : api('/signals/feed/dismiss', { method: 'POST', body: { key: g.key } });
           p.then(function () { fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
         };
