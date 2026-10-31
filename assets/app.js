@@ -257,7 +257,42 @@
     var go = function (items) {
       var list = burstItems(items);
       list.forEach(function (x) { x._seen = 0; });
-      var B = { list: list.slice(), sent: 0, out: 0 };
+      var B = { list: list.slice(), sent: 0, out: 0, done: {}, adding: null };
+      // « En ajouter » : Scout rédige quelques mails de plus, ils arrivent dans le volet dès qu'ils sont prêts
+      var addMsg = function () {
+        if (B.adding === 'go' || B.adding === 'wait') return 'Scout rédige ' + (B.want || 'quelques') + ' mail' + (B.want > 1 ? 's' : '') + ' : ils arrivent ici dans une ou deux minutes.';
+        if (B.adding === 'none_search') return 'Plus de mail à rédiger pour l’instant : Scout cherche encore des contacts (' + B.searching + ' compte' + (B.searching > 1 ? 's' : '') + '), ils arriveront plus tard.';
+        if (B.adding === 'none') return 'Plus de compte à proposer pour l’instant. Les nouveaux signaux arrivent ici.';
+        return '';
+      };
+      var addBtn = function (primary) { return B.adding === 'none' || B.adding === 'none_search' ? '' : '<button type="button" class="sa-btn' + (primary ? ' primary' : '') + '" data-more' + (B.adding ? ' disabled' : '') + '>' + (B.adding ? 'Rédaction en cours…' : 'En ajouter') + '</button>'; };
+      var bindMore = function () { var m = ov.querySelector('[data-more]'); if (m) m.onclick = more; };
+      var more = function () {
+        if (B.adding) return; B.adding = 'go'; draw();
+        api('/crm/pitch-more' + (A.qScope === 'team' ? '?scope=all' : ''), { method: 'POST' }).then(function (r) {
+          if (!r.started) { B.adding = r.searching ? 'none_search' : 'none'; B.searching = r.searching; draw(); return; }
+          B.adding = 'wait'; B.want = r.started; B.got = 0; draw(); poll(0);
+        }).catch(function (e) { B.adding = null; toast('Erreur : ' + e.message); draw(); });
+      };
+      var poll = function (k) {
+        setTimeout(function () {
+          if (!document.getElementById('sa-burst')) return;
+          crm().loadQueue(A.qScope).then(function (items) {
+            if (!document.getElementById('sa-burst')) return;
+            var have = {}; B.list.forEach(function (x) { have[x.pitch.account.id] = 1; });
+            var add = burstItems(items).filter(function (x) { return !have[x.pitch.account.id] && !B.done[x.pitch.account.id]; });
+            var atEnd = !B.list.length || B.list.every(function (x) { return x._seen; });
+            if (add.length) {
+              add.forEach(function (x) { x._seen = 0; }); B.got += add.length;
+              B.list = atEnd ? add.concat(B.list) : B.list.concat(add);
+              if (atEnd) { B.adding = B.got >= B.want ? null : B.adding; draw(); }
+              else { var h = ov.querySelector('.sa-burst-h b'); if (h) h.textContent = B.list.length + ' à traiter'; }
+            }
+            if (B.got >= B.want || k >= 15) { B.adding = null; if (!B.got) toast('Pas de nouveau mail pour l’instant, réessaie dans quelques minutes'); if (atEnd) draw(); return; }
+            poll(k + 1);
+          }).catch(function () { if (k < 15) poll(k + 1); else { B.adding = null; draw(); } });
+        }, 20000);
+      };
       var ov = document.createElement('div'); ov.className = 'sa-burst'; ov.id = 'sa-burst';
       document.getElementById('sa').appendChild(ov);
       history.pushState({ burst: 1 }, '');
@@ -270,17 +305,19 @@
         if (allSeen) {
           ov.innerHTML = '<div class="sa-burst-h"><b>Traiter ma file</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
             + '<div class="sa-burst-end"><div class="big">Tu as tout vu</div><div class="sa-meta">' + (B.sent ? B.sent + ' envoyé' + (B.sent > 1 ? 's' : '') + '. ' : '') + B.list.length + ' carte' + (B.list.length > 1 ? 's' : '') + ' passée' + (B.list.length > 1 ? 's' : '') + ' : elle' + (B.list.length > 1 ? 's restent' : ' reste') + ' dans ta file.</div>'
-            + '<button type="button" class="sa-btn primary" data-again>Les revoir</button><button type="button" class="sa-btn" data-x>Retour</button></div>';
+            + (addMsg() ? '<div class="sa-meta">' + esc(addMsg()) + '</div>' : '') + addBtn(true) + '<button type="button" class="sa-btn" data-again>Les revoir</button><button type="button" class="sa-link" data-x>Retour</button></div>';
           ov.querySelectorAll('[data-x]').forEach(function (b) { b.onclick = function () { history.back(); }; });
           ov.querySelector('[data-again]').onclick = function () { B.list.forEach(function (x) { x._seen = 0; }); draw(); };
+          bindMore();
           return;
         }
         if (!p) {
           ov.innerHTML = '<div class="sa-burst-h"><b>Traiter ma file</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
             + '<div class="sa-burst-end"><div class="big">' + (B.sent || B.out ? 'C’est fait' : 'Rien à envoyer') + '</div><div class="sa-meta">'
             + (B.sent || B.out ? B.sent + ' envoyé' + (B.sent > 1 ? 's' : '') + (B.out ? ', ' + B.out + ' écarté' + (B.out > 1 ? 's' : '') : '') + '.' : (crm().pitchPending && crm().pitchPending() ? 'Scout rédige ' + crm().pitchPending() + ' mail' + (crm().pitchPending() > 1 ? 's' : '') + ' : ils arrivent ici dans quelques minutes.' : 'Pas de compte à prospecter pour l’instant. Les nouveaux signaux arrivent ici, avec le mail déjà rédigé.'))
-            + '</div><button type="button" class="sa-btn primary" data-x>Retour</button></div>';
+            + '</div>' + (addMsg() ? '<div class="sa-meta">' + esc(addMsg()) + '</div>' : '') + addBtn(true) + '<button type="button" class="sa-btn" data-x>Retour</button></div>';
           ov.querySelectorAll('[data-x]').forEach(function (b) { b.onclick = function () { history.back(); }; });
+          bindMore();
           return;
         }
         var li = !p.contact && !!p.person, W = li ? p.person : p.contact;
@@ -325,7 +362,7 @@
           eb.focus();
         };
         // Suivante : rien n'est enregistré, la carte reste dans la file et revient en fin de pile
-        var next = function () { B.list.shift(); draw(); };
+        var next = function () { var c = B.list.shift(); if (c) B.done[c.pitch.account.id] = 1; draw(); };
         var skip = function () { var c = B.list.shift(); c._seen = 1; B.list.push(c); draw(); };
         // Écarter : choix explicite, avec une raison (sert à juger la qualité des cartes)
         var drop = function (days, reason) {

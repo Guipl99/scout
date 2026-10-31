@@ -236,3 +236,5 @@ body.theme-light .sa-add span { box-shadow: 0 6px 18px rgba(0,0,0,.15); }
 .sa-burst-drop.open { align-self: stretch; padding: 10px 0 2px; border-top: 1px solid var(--border); }
 .sa-burst-drop.open .sa-meta { flex: 1 0 100%; }
 .sa-burst-drop.open .sa-btn { flex: 1 1 auto; min-height: 40px; font-size: 14px; }
+.sa-burst-end .sa-meta { max-width: 320px; }
+.sa-burst-end .sa-link { font-size: 14px; color: var(--text3) !important; text-decoration: underline; text-underline-offset: 3px; }
