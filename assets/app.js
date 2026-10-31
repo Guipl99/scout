@@ -579,7 +579,7 @@
       var list = (d.items || []).slice(0, 60);
       var mention = function (g) {
         if (g.type === 'market') return '';
-        if (g.type === 'chat') return '<div class="sa-cstate">Suivi dans le CRM</div>';
+        if (g.type === 'chat') return g.crm ? '<div class="sa-cstate ok">Transmis au CRM</div>' : '<div class="sa-cstate">Suivi dans le CRM</div>';
         if (!g.account) return '<div class="sa-cstate">Pas encore de compte : « Écrire » le crée et Scout cherche un contact</div>';
         var p = PS[g.account.id]; if (!p) return '';
         if (p.state === 'ready') return '<div class="sa-cstate ok">Contact prêt : ' + esc(p.contact.name) + (p.contact.titre ? ', ' + esc(p.contact.titre) : '') + '</div>';

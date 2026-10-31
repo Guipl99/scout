@@ -628,7 +628,7 @@
       : '<button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>';
     var PSx = acc && S.feedPitch ? S.feedPitch[acc.id] : null;
     var searching = it.type !== 'market' && PSx && PSx.state !== 'ready' && PSx.state !== 'linkedin';
-    var cstate = it.type === 'chat' ? '<div class="s crm-cstate">Suivi dans le CRM</div>' : it.type === 'market' ? '' : !acc ? '' : !PSx ? '' : PSx.state === 'ready' ? '<div class="s crm-cstate ok">Contact prêt : ' + esc(PSx.contact.name) + (PSx.contact.titre ? ', ' + esc(PSx.contact.titre) : '') + '</div>'
+    var cstate = it.type === 'chat' ? (it.crm ? '<div class="s crm-cstate ok">Transmis au CRM</div>' : '<div class="s crm-cstate">Suivi dans le CRM</div>') : it.type === 'market' ? '' : !acc ? '' : !PSx ? '' : PSx.state === 'ready' ? '<div class="s crm-cstate ok">Contact prêt : ' + esc(PSx.contact.name) + (PSx.contact.titre ? ', ' + esc(PSx.contact.titre) : '') + '</div>'
       : PSx.state === 'linkedin' ? '<div class="s crm-cstate ok">Contact trouvé sur LinkedIn : ' + esc(PSx.person.name) + '</div>' : '<div class="s crm-cstate">Scout cherche un contact qualifié (mail vérifié ou LinkedIn)</div>';
     if (!searching && it.type !== 'chat') btns += '<button type="button" class="crm-btn sm' + (acc ? ' primary' : '') + '" data-fa="task" data-i="' + i + '">' + (it.type === 'market' && it.flux === 1 ? ICON.check + ' Go' : ICON.mail + ' Écrire') + '</button>';
     // plus de recherche de contacts à la main : c'est le travail de Scout (mention ci-dessous)
