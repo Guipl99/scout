@@ -1065,7 +1065,22 @@ function scoutMailHref(to, subject, body){
   if (pref === 'outlook' && scoutIsMobile()) return 'ms-outlook://compose?' + [q('to', to), parts].filter(Boolean).join('&');
   return 'mailto:' + encodeURIComponent(to || '') + (parts ? '?' + parts : '');
 }
+// Outlook ajoute la signature de la personne (nom, fonction, téléphones, logo) : on retire celle du brouillon
+// (prénom, « Elistair »…) sous la formule de politesse, pour ne pas l'avoir en double.
+function scoutStripSignature(body){
+  var lines = String(body || '').replace(/\s+$/, '').split('\n');
+  var CLOSE = /^(best( regards)?|kind regards|regards|warm regards|many thanks|thanks|thank you|cordialement|bien cordialement|bien à vous|à bientôt|saludos( cordiales)?|un saludo|atentamente|cordiali saluti|mit freundlichen grüßen|viele grüße|met vriendelijke groet(en)?|vriendelijke groet(en)?|med vänliga hälsningar|com os melhores cumprimentos|atenciosamente)[,.!]?$/i;
+  for (var i = lines.length - 1; i >= Math.max(0, lines.length - 6); i--) {
+    if (CLOSE.test(lines[i].trim())) {
+      var tail = lines.slice(i + 1).filter(function (l) { return l.trim(); });
+      if (tail.length <= 4 && tail.every(function (l) { return l.trim().length <= 60; })) return lines.slice(0, i + 1).join('\n');
+      break;
+    }
+  }
+  return lines.join('\n');
+}
 function scoutOpenMail(to, subject, body){
+  body = scoutStripSignature(body);
   var href = scoutMailHref(to, subject, body);
   if (/^https:/.test(href)) { window.open(href, '_blank', 'noopener'); return; }
   window.location.href = href;
