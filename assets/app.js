@@ -177,14 +177,14 @@
     if (it.kind === 'relance') act = '<button type="button" class="sa-btn primary" data-rel="' + esc(it.contact_id) + '">' + I.mail + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button>';
     else if (it.kind === 'task') act = (it.contact_id ? '<button type="button" class="sa-btn" data-ct="' + esc(it.contact_id) + '">' + I.phone + 'Contact</button>' : it.account_id ? '<button type="button" class="sa-btn" data-acc="' + esc(it.account_id) + '">Compte</button>' : '') + '<button type="button" class="sa-btn primary" data-done="' + esc(it.task.id) + '">' + I.check + 'Fait</button>';
     else if (it.kind === 'reaction') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">' + I.phone + 'Appeler ou écrire</button><button type="button" class="sa-btn" data-seen="' + esc(it.key) + '">Vu</button>';
-    else if (it.kind === 'pitch') act = '<button type="button" class="sa-btn primary" data-pgo="' + esc(it.account_id) + '">' + I.mail + (it.pitch.draft ? 'Relire et envoyer' : 'Préparer le mail') + '</button><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
+    else if (it.kind === 'pitch') act = '<button type="button" class="sa-btn primary" data-pgo="' + esc(it.account_id) + '">' + (it.li ? 'Écrire sur LinkedIn' : I.mail + (it.pitch.draft ? 'Relire et envoyer' : 'Préparer le mail')) + '</button><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
     else if (it.kind === 'find') act = '<a class="sa-btn primary" href="' + esc(it.pitch.linkedin_url) + '" target="_blank" rel="noopener">Chercher sur LinkedIn</a><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
     else if (it.kind === 'reply') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">Ouvrir</button><button type="button" class="sa-btn" data-tx="' + esc(it.contact_id) + '">Saisi dans Dynamics</button>';
     return '<article class="sa-card k-' + it.kind + (hot ? ' hot' : '') + '">'
       + '<div class="sa-card-h"><span class="sa-tag k-' + it.kind + '">' + KIND[it.kind] + '</span>' + (it.tier ? '<span class="sa-tier">T' + esc(it.tier) + '</span>' : '') + '<span class="sa-when' + (hot ? ' hot' : '') + '">' + esc(it.kind === 'reaction' ? '' : when) + '</span></div>'
       + '<button type="button" class="sa-card-t" ' + (it.contact_id ? 'data-ct="' + esc(it.contact_id) + '"' : (it.account_id ? 'data-acc="' + esc(it.account_id) + '"' : '')) + '>' + esc(title) + '</button>'
       + (it.kind === 'reaction' ? '<div class="sa-card-s hot">' + esc(when) + '</div>' : '')
-      + (it.kind === 'pitch' || it.kind === 'find' ? '<div class="sa-card-s">' + esc((it.kind === 'pitch' && it.pitch.contact.titre ? it.pitch.contact.titre + ' · ' : '') + it.pitch.reason) + '</div>' : '')
+      + (it.kind === 'pitch' || it.kind === 'find' ? (it.pitch.why_top ? '<div class="sa-top-why">' + esc(it.pitch.why_top) + '</div>' : '') + '<div class="sa-card-s">' + esc((it.kind === 'pitch' && (it.li ? it.pitch.person : it.pitch.contact).titre ? (it.li ? it.pitch.person : it.pitch.contact).titre + ' · ' : '') + it.pitch.reason) + '</div>' : '')
       + (it.kind === 'find' ? '<div class="sa-meta">' + (it.pitch.state === 'searching' ? 'Pas encore de contact : Scout en cherche un cette nuit.' : 'Aucun contact joignable trouvé.') + '</div>' : '')
       + (it.kind === 'pitch' && it.pitch.draft ? '<div class="sa-draft"><b>' + esc(it.pitch.draft.subject) + '</b><span>' + esc(String(it.pitch.draft.body || '').replace(/\s+/g, ' ').slice(0, 140)) + '…</span></div>' : '')
       + (it.kind === 'pitch' || it.kind === 'find' ? '<details class="sa-ctx"><summary>Contexte</summary>' + (it.pitch.context || []).map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</details>' : '')
@@ -216,7 +216,7 @@
   }
   // ── Traiter ma file (bouton central) : une carte « À écrire » à la fois, mail déjà rédigé.
   // Glisser à droite : envoyer (messagerie du téléphone, puis « parti ? ») ; à gauche : pas maintenant ; toucher le mail : le modifier.
-  function burstItems(items) { return (items || []).filter(function (it) { return it.kind === 'pitch' && it.pitch && it.pitch.contact; }); }
+  function burstItems(items) { return (items || []).filter(function (it) { return it.kind === 'pitch' && it.pitch && (it.pitch.contact || it.pitch.person); }); }
   function burstBadge(items) {
     var n = burstItems(items).length, el = document.getElementById('sa-burst-n'); if (!el) return;
     el.hidden = !n; el.textContent = n > 99 ? '99+' : String(n);
@@ -241,28 +241,32 @@
           ov.querySelectorAll('[data-x]').forEach(function (b) { b.onclick = function () { history.back(); }; });
           return;
         }
+        var li = !p.contact && !!p.person, W = li ? p.person : p.contact;
+        var isReady = function () { return li ? !!p.liText : !!p.draft; };
         ov.innerHTML = '<div class="sa-burst-h"><b>' + (B.i + 1) + ' / ' + B.list.length + '</b><button type="button" class="sa-icon" data-x aria-label="Fermer">×</button></div>'
           + '<div class="sa-burst-stage"><article class="sa-burst-card" id="sa-bc">'
-          + '<span class="sa-tag k-pitch">À écrire</span>'
-          + '<h2>' + esc(p.contact.name) + '</h2><div class="sa-meta">' + esc([p.contact.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div>'
+          + '<span class="sa-tag k-pitch">' + (li ? 'LinkedIn' : 'À écrire') + '</span>' + (p.why_top ? ' <span class="sa-meta">' + esc(p.why_top) + '</span>' : '')
+          + '<h2>' + esc(W.name) + '</h2><div class="sa-meta">' + esc([W.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div>'
           + '<div class="sa-burst-why">' + esc(p.reason) + '</div>'
           + '<div class="sa-burst-ctx">' + (p.context || []).map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div>'
           + crm().pitchSourcesHtml(p)
-          + '<div class="sa-burst-mail" id="sa-bm"><div class="sa-meta">À ' + esc(p.contact.email) + '</div><div class="s" id="sa-bs"></div><div class="b" id="sa-bb"></div><div class="sa-meta sa-burst-hint">' + I.edit + ' Toucher pour modifier</div></div>'
+          + '<div class="sa-burst-mail" id="sa-bm"><div class="sa-meta">' + (li ? 'Message LinkedIn' : 'À ' + esc(p.contact.email)) + '</div><div class="s" id="sa-bs"></div><div class="b" id="sa-bb"></div><div class="sa-meta sa-burst-hint">' + I.edit + ' Toucher pour modifier</div></div>'
           + '<button type="button" class="sa-link sa-burst-drop" data-drop>Retirer ce compte pour 30 jours</button>'
           + '</article><div class="sa-burst-lbl l">Passer</div><div class="sa-burst-lbl r">Envoyer</div></div>'
-          + '<div class="sa-burst-a"><button type="button" class="sa-btn" data-later>Passer</button><button type="button" class="sa-btn primary" data-send>' + I.send + 'Envoyer</button></div>';
+          + '<div class="sa-burst-a"><button type="button" class="sa-btn" data-later>Passer</button><button type="button" class="sa-btn primary" data-send>' + I.send + (li ? 'LinkedIn' : 'Envoyer') + '</button></div>';
         ov.querySelector('[data-x]').onclick = function () { history.back(); };
         var bs = ov.querySelector('#sa-bs'), bb = ov.querySelector('#sa-bb'), sendBtn = ov.querySelector('[data-send]');
-        var show = function () { bs.textContent = p.draft.subject || ''; bb.textContent = p.draft.body || ''; sendBtn.disabled = false; };
-        if (p.draft) show();
-        else { bs.textContent = ''; bb.textContent = 'Rédaction du mail…'; sendBtn.disabled = true; crm().pitchDraft(p).then(show).catch(function (e) { bb.textContent = 'Erreur : ' + e.message; }); }
+        var show = function () { if (li) { bs.textContent = ''; bb.textContent = p.liText || ''; } else { bs.textContent = p.draft.subject || ''; bb.textContent = p.draft.body || ''; } sendBtn.disabled = false; };
+        if (isReady()) show();
+        else { bs.textContent = ''; bb.textContent = li ? 'Rédaction du message…' : 'Rédaction du mail…'; sendBtn.disabled = true; (li ? crm().liDraft(p) : crm().pitchDraft(p)).then(show).catch(function (e) { bb.textContent = 'Erreur : ' + e.message; }); }
         // le suivant se rédige pendant qu'on lit celui-ci
-        var nx = B.list[B.i + 1] && B.list[B.i + 1].pitch; if (nx && !nx.draft && !nx._pre) { nx._pre = 1; crm().pitchDraft(nx).catch(function () { nx._pre = 0; }); }
+        var nx = B.list[B.i + 1] && B.list[B.i + 1].pitch;
+        if (nx && !nx._pre) { var nli = !nx.contact && !!nx.person; if (nli ? !nx.liText : !nx.draft) { nx._pre = 1; (nli ? crm().liDraft(nx) : crm().pitchDraft(nx)).catch(function () { nx._pre = 0; }); } }
         // modifier : le mail devient éditable
         ov.querySelector('#sa-bm').onclick = function () {
-          if (!p.draft || this.classList.contains('edit')) return;
+          if (!isReady() || this.classList.contains('edit')) return;
           this.classList.add('edit');
+          if (li) { this.innerHTML = '<div class="sa-meta">Message LinkedIn</div><textarea class="sa-in" id="sa-eb" rows="8">' + esc(p.liText || '') + '</textarea>'; var lb = this.querySelector('#sa-eb'); lb.oninput = function () { p.liText = lb.value; }; lb.focus(); return; }
           this.innerHTML = '<div class="sa-meta">À ' + esc(p.contact.email) + '</div><input class="sa-in" id="sa-es" value="' + esc(p.draft.subject || '') + '"><textarea class="sa-in" id="sa-eb" rows="12">' + esc(p.draft.body || '') + '</textarea>';
           var es = this.querySelector('#sa-es'), eb = this.querySelector('#sa-eb');
           es.oninput = eb.oninput = function () { crm().pitchSave(p, es.value, eb.value); };
@@ -277,7 +281,8 @@
         };
         ov.querySelector('[data-drop]').onclick = function (e) { e.stopPropagation(); fly(-1, function () { later(30); }); };
         var send = function () {
-          if (!p.draft) return;
+          if (!isReady()) return;
+          if (li) { crm().pitchSendLinkedIn(p, p.liText, function (ok) { if (ok) { B.sent++; next(); } else reset(); }); return; }
           crm().pitchSend(p, p.draft.subject, p.draft.body, function (ok) { if (ok) { B.sent++; next(); } else reset(); });
         };
         ov.querySelector('[data-later]').onclick = function () { fly(-1, function () { later(3); }); };
@@ -286,7 +291,7 @@
         var card = ov.querySelector('#sa-bc'), x0 = null, y0 = null, dx = 0, drag = false;
         var reset = function () { card.style.transition = 'transform .2s'; card.style.transform = ''; ov.classList.remove('to-l', 'to-r'); };
         var fly = function (dir, fn) {
-          if (dir > 0 && !p.draft) { reset(); return; }
+          if (dir > 0 && !isReady()) { reset(); return; }
           card.style.transition = 'transform .22s ease-in'; card.style.transform = 'translateX(' + (dir * 130) + '%) rotate(' + (dir * 12) + 'deg)';
           setTimeout(fn, 200);
         };

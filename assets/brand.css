@@ -337,3 +337,5 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .crm-pr-src a { color: var(--accent2, #B88A68); text-decoration: underline; }
 .crm-pr-src .ok { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; border: 1px solid currentColor; padding: 0 4px; border-radius: 2px; color: #92A49D; }
 .sa-burst-drop { align-self: flex-start; font-size: 13px !important; margin-top: 4px; }
+
+.crm-pitch-top { margin-left: 8px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--accent2, #B88A68); border: 1px solid currentColor; padding: 0 5px; border-radius: 2px; white-space: nowrap; }

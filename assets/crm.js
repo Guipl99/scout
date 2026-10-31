@@ -236,10 +236,11 @@
       ((r[9] && r[9].items) || []).forEach(function (p) {
         if (seenAcc[p.account.id]) return;
         seenAcc[p.account.id] = 1; S.pitchMap[p.account.id] = p;
-        var ready = p.state === 'ready';
-        items.push({ kind: ready ? 'pitch' : 'find', id: 'pitch-' + p.account.id, pitch: p, title: ready ? p.contact.name : p.account.nom, sub: p.reason,
-          contact_id: ready ? p.contact.id : null, contact_name: ready ? p.contact.name : null, account_id: p.account.id, account_nom: p.account.nom, tier: p.account.tier,
-          who: p.account.owner_name, strength: p.strength || 0 });
+        var ready = p.state === 'ready', li = p.state === 'linkedin';
+        var who = ready ? p.contact : li ? p.person : null;
+        items.push({ kind: ready || li ? 'pitch' : 'find', li: li, id: 'pitch-' + p.account.id, pitch: p, title: who ? who.name : p.account.nom, sub: p.reason,
+          contact_id: who ? who.id : null, contact_name: who ? who.name : null, account_id: p.account.id, account_nom: p.account.nom, tier: p.account.tier,
+          who: p.account.owner_name, pscore: p.score || 0 });
       });
       if (prosp) {
         ((r[4] && r[4].rows) || []).forEach(function (sg) {
@@ -288,8 +289,8 @@
     if (it.kind === 'reaction') return 1000 - Math.min(99, Math.max(0, daysFrom(it.due) || 0)) + tierPts / 10;
     if (it.kind === 'reply') return 900 + tierPts / 10;
     if (it.kind === 'signal') return 600 + (it.score || 0) * 5 + tierPts / 10;
-    if (it.kind === 'pitch') return 680 + (it.strength || 0) * 15 + tierPts / 5;
-    if (it.kind === 'find') return 340 + (it.strength || 0) * 10 + tierPts / 5;
+    if (it.kind === 'pitch') return 480 + Math.min(it.pscore || 0, 130) * 3;
+    if (it.kind === 'find') return 230 + Math.min(it.pscore || 0, 130) * 2;
     if (it.kind === 'chat') return (it.qualified ? 700 : 450) + (it.imp || 0) * 5 + tierPts / 10;
     if (it.kind === 'visit') return 420 + (it.imp || 0) * 8 + tierPts / 2;
     if (it.kind === 'hot') return 400 + Math.min(it.score || 0, 50) + tierPts / 2;
@@ -308,15 +309,18 @@
     if (it.kind === 'pitch' || it.kind === 'find') {
       var P = it.pitch, rd = it.kind === 'pitch';
       var ps = [];
-      if (rd) ps.push(esc([P.contact.titre || '', P.contact.role ? '(' + P.contact.role + ')' : ''].filter(Boolean).join(' ')));
+      var Wc = it.li ? P.person : P.contact;
+      if (rd) ps.push(esc([Wc.titre || '', !it.li && P.contact.role ? '(' + P.contact.role + ')' : ''].filter(Boolean).join(' ')));
       ps.push((it.tier ? tierBadge(it.tier) + ' ' : '') + '<button type="button" class="crm-link" data-qacc="' + esc(it.account_id) + '">' + esc(it.account_nom) + '</button>');
       if (opts.showWho && it.who) ps.push(esc(it.who));
       return '<div class="crm-q k-' + it.kind + '"><span class="crm-q-ic k-prosp" aria-hidden="true">' + (rd ? ICON.mail : ICON.flag) + '</span><div class="crm-q-b"><div class="t"><span class="crm-q-kind k-' + it.kind + '">' + KIND_LABEL[it.kind] + '</span>'
         + (rd ? '<button type="button" class="crm-link strong" data-qct="' + esc(it.contact_id) + '">' + esc(it.title) + '</button>' : '<button type="button" class="crm-link strong" data-qacc="' + esc(it.account_id) + '">' + esc(it.title) + '</button>')
+        + (P.why_top ? '<span class="crm-pitch-top" title="Pourquoi cette carte est à ce rang">' + esc(P.why_top) + '</span>' : '')
         + '</div><div class="s">' + ps.filter(Boolean).join(' · ') + '</div><div class="s crm-pitch-why">' + esc(P.reason) + (rd ? '' : P.state === 'searching' ? ' · pas encore de contact : Scout en cherche un cette nuit' : ' · pas de contact joignable trouvé') + '</div>'
         + (rd && P.draft ? '<div class="s crm-pitch-draft">' + ICON.mail + ' <b>' + esc(P.draft.subject) + '</b> ' + esc(String(P.draft.body || '').replace(/\s+/g, ' ').slice(0, 110)) + '…</div>' : '')
         + '<details class="crm-pitch-ctx"><summary>Contexte</summary>' + pitchContextHtml(P) + '</details></div>'
-        + '<div class="crm-q-a">' + (rd ? '<button type="button" class="crm-btn sm primary" data-pgo="' + esc(it.account_id) + '">' + ICON.mail + (P.draft ? ' Relire et envoyer' : ' Préparer le mail') + '</button>'
+        + '<div class="crm-q-a">' + (rd && it.li ? '<button type="button" class="crm-btn sm primary" data-pgo="' + esc(it.account_id) + '">Écrire sur LinkedIn</button>'
+          : rd ? '<button type="button" class="crm-btn sm primary" data-pgo="' + esc(it.account_id) + '">' + ICON.mail + (P.draft ? ' Relire et envoyer' : ' Préparer le mail') + '</button>'
           : '<a class="crm-btn sm primary" href="' + esc(P.linkedin_url) + '" target="_blank" rel="noopener">Chercher sur LinkedIn</a>')
         + '<button type="button" class="crm-btn sm ghost" data-psnz="' + esc(it.account_id) + '" title="Retirer de la file pour 30 jours">Pas maintenant</button></div></div>';
     }
@@ -362,7 +366,46 @@
   // Prospection sur signal : mail prêt à relire pour le meilleur contact ; sinon Scout cherche un contact.
   function pitchGo(p, onDone) {
     if (p && p.contact) { pitchReview(p, onDone); return true; }
+    if (p && p.state === 'linkedin' && p.person) { linkedinReview(p, onDone); return true; }
     return false;
+  }
+  // Personne nommée sans email : message LinkedIn rédigé (même règles de précision), copié, profil ouvert, puis « envoyé ? »
+  function liDraft(p) {
+    return api('/action/draft-linkedin-message', { method: 'POST', body: { contact_id: p.person.id, signal: p.signal || p.reason } }).then(function (d) { p.liText = d.message || ''; return p.liText; });
+  }
+  function pitchSendLinkedIn(p, text, cb) {
+    try { if (navigator.clipboard) navigator.clipboard.writeText(text); } catch (e) {}
+    api('/action/log-intent', { method: 'POST', body: { contact_id: p.person.id, action_type: 'linkedin_message', details: { body: text, source: 'pitch' } } }).catch(function () {});
+    window.open(p.person.linkedin, '_blank', 'noopener');
+    setTimeout(function () {
+      var ov = document.createElement('div'); ov.className = 'crm-pr-ask';
+      ov.innerHTML = '<div class="b"><b>Message envoyé à ' + esc(p.person.name) + ' sur LinkedIn ?</b><div class="crm-meta">Le message est copié : colle-le dans l’invitation ou la messagerie LinkedIn.</div>'
+        + '<div class="a"><button type="button" class="crm-btn primary" data-y>Oui, envoyé</button><button type="button" class="crm-btn" data-n>Pas encore</button></div></div>';
+      document.body.appendChild(ov);
+      ov.querySelector('[data-n]').onclick = function () { ov.remove(); if (cb) cb(false); };
+      ov.querySelector('[data-y]').onclick = function () {
+        api('/action/confirm', { method: 'POST', body: { contact_id: p.person.id, action_type: 'linkedin_message', details: { body: text, source: 'pitch' } } })
+          .then(function () { ov.remove(); toast('Enregistré'); if (cb) cb(true); }).catch(function (e) { toast('Erreur : ' + e.message); ov.remove(); if (cb) cb(false); });
+      };
+    }, 900);
+  }
+  function linkedinReview(p, onDone) {
+    var ov = document.createElement('div'); ov.className = 'crm-pr'; ov.setAttribute('role', 'dialog');
+    var close = function (r) { ov.remove(); document.body.classList.remove('crm-pr-open'); if (onDone) onDone(r); };
+    ov.innerHTML = '<div class="crm-pr-box"><div class="crm-pr-h"><div><b>' + esc(p.person.name) + '</b><div class="crm-meta">' + esc([p.person.titre, p.account.nom].filter(Boolean).join(' · ')) + '</div></div>'
+      + '<button type="button" class="crm-pr-x" aria-label="Fermer">×</button></div>'
+      + '<div class="crm-pr-why">' + esc(p.reason) + '</div>' + pitchContextHtml(p) + pitchSourcesHtml(p)
+      + '<label class="crm-pr-l" for="crm-li-b">Message LinkedIn (moins de 280 caractères)</label><textarea id="crm-li-b" class="crm-input" rows="6"></textarea>'
+      + '<div class="crm-pr-a"><button type="button" class="crm-btn primary" data-send>Copier et ouvrir LinkedIn</button><button type="button" class="crm-btn" data-redo>Refaire</button><button type="button" class="crm-btn ghost" data-later>Pas maintenant</button></div></div>';
+    document.body.appendChild(ov); document.body.classList.add('crm-pr-open');
+    var bi = ov.querySelector('#crm-li-b'), send = ov.querySelector('[data-send]');
+    var load = function () { bi.value = 'Rédaction du message…'; send.disabled = true; liDraft(p).then(function (t) { bi.value = t; send.disabled = false; }).catch(function (e) { bi.value = 'Erreur : ' + e.message; }); };
+    if (p.liText) bi.value = p.liText; else load();
+    bi.oninput = function () { p.liText = bi.value; };
+    ov.querySelector('.crm-pr-x').onclick = function () { close(false); };
+    ov.querySelector('[data-redo]').onclick = load;
+    ov.querySelector('[data-later]').onclick = function () { api('/crm/pitch/' + encodeURIComponent(p.account.id), { method: 'POST', body: { action: 'snooze', days: 30 } }).then(function () { toast('Retiré pour 30 jours'); close('snoozed'); }); };
+    send.onclick = function () { pitchSendLinkedIn(p, bi.value, function (ok) { if (ok) close(true); }); };
   }
   // Mail prêt : relecture, modification (enregistrée au fil de la frappe), envoi par la messagerie du commercial,
   // puis confirmation « parti » qui enregistre l'email et programme la relance. Rien ne part sans lui.
@@ -401,8 +444,8 @@
   // Sources du signal, à un toucher : le commercial vérifie sans chercher
   function pitchSourcesHtml(p) {
     var src = p.sources || [];
-    if (!src.length) return '<div class="crm-pr-src">Le mail ne cite aucun fait précis sur ce compte.</div>';
-    return '<div class="crm-pr-src">Le mail s’appuie sur : ' + src.map(function (x) {
+    if (!src.length) return '<div class="crm-pr-src">Aucun fait précis cité sur ce compte.</div>';
+    return '<div class="crm-pr-src">S’appuie sur : ' + src.map(function (x) {
       return '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(String(x.label).slice(0, 90)) + '</a>' + (x.official ? ' <span class="ok">source officielle</span>' : '');
     }).join(' · ') + '</div>';
   }
@@ -2655,7 +2698,7 @@
   }
 
   window.scoutCrm = { onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge, refreshPropBadge: refreshPropBadge,
-    loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchSend: pitchSend, pitchSave: pitchSave, pitchDraft: pitchDraft, pitchReview: pitchReview, pitchSourcesHtml: pitchSourcesHtml, toast: toast, runRoutine: runRoutine, routines: function () { return ROUTINES; }, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
+    loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchSend: pitchSend, pitchSave: pitchSave, pitchDraft: pitchDraft, pitchReview: pitchReview, pitchSourcesHtml: pitchSourcesHtml, liDraft: liDraft, pitchSendLinkedIn: pitchSendLinkedIn, toast: toast, runRoutine: runRoutine, routines: function () { return ROUTINES; }, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
   setTimeout(refreshBadge, 2500);
   setInterval(refreshBadge, 5 * 60 * 1000);
   setTimeout(refreshPropBadge, 3500);
