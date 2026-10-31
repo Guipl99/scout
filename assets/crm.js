@@ -369,7 +369,8 @@
     var actions = '';
     if (it.kind === 'relance') actions = (it.draft ? '<span class="crm-q-ready" title="Rédigée par Scout ce matin : à relire et modifier avant l’envoi">' + (it.draft.edited ? 'Brouillon relu' : 'Brouillon prêt') + '</span>' : '')
       + '<button type="button" class="crm-btn sm primary" data-qrel="' + esc(it.contact_id) + '">' + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button>'
-      + '<button type="button" class="crm-btn sm ghost" data-qreplied="' + esc(it.contact_id) + '" title="Il a répondu dans Outlook : plus de relance">Il a déjà répondu</button>';
+      + '<button type="button" class="crm-btn sm ghost" data-qreplied="' + esc(it.contact_id) + '" title="Il a répondu dans Outlook : plus de relance">Il a déjà répondu</button>'
+      + '<button type="button" class="crm-btn sm ghost" data-qbounced="' + esc(it.contact_id) + '" title="Le mail est revenu en non remis : Scout retire l’adresse et cherche un autre contact">Mail non remis</button>';
     if (it.kind === 'reply') actions = '<button type="button" class="crm-btn sm" data-qct="' + esc(it.contact_id) + '">Qualifier</button><button type="button" class="crm-btn sm" data-qcopy="' + esc(it.contact_id) + '" title="Copie nom, titre, organisation, pays, email et LinkedIn pour les coller dans Dynamics">Copier la fiche</button><button type="button" class="crm-btn sm primary" data-qtx="' + esc(it.contact_id) + '" title="Une fois le contact créé dans Dynamics. Scout n’envoie rien à Dynamics.">Saisi dans Dynamics ✓</button>';
     if (it.kind === 'reply' && it.x) { S.qx = S.qx || {}; S.qx[it.contact_id] = it.x; }
     if (it.kind === 'reaction') actions = '<button type="button" class="crm-btn sm primary" data-qct="' + esc(it.contact_id) + '">' + ICON.mail + ' Écrire</button><button type="button" class="crm-btn sm ghost" data-qseen="' + esc(it.key) + '" title="Retirer de la file">Vu</button>';
@@ -553,6 +554,14 @@
     root.querySelectorAll('[data-qct]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); openContact(b.getAttribute('data-qct')); }; });
     root.querySelectorAll('[data-qrel]').forEach(function (b) {
       b.onclick = function () { if (typeof window.trkRelance === 'function') { S.afterRelance = after; window.trkRelance(b.getAttribute('data-qrel')); } else openContact(b.getAttribute('data-qrel')); };
+    });
+    root.querySelectorAll('[data-qbounced]').forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation(); b.disabled = true;
+        api('/action/email-bounced', { method: 'POST', body: { contact_id: b.getAttribute('data-qbounced') } })
+          .then(function () { toast('Noté : adresse retirée, Scout cherche un autre contact'); var row = b.closest('.crm-q'); if (row) row.remove(); try { refreshBadge(); } catch (x) {} })
+          .catch(function (er) { b.disabled = false; toast('Erreur : ' + er.message); });
+      };
     });
     root.querySelectorAll('[data-qreplied]').forEach(function (b) {
       b.onclick = function (e) {

@@ -189,7 +189,7 @@
     var hot = it.kind === 'reaction' || it.kind === 'reply' || late > 0;
     var title = it.kind === 'task' ? it.title : (it.contact_name || it.title);
     var act = '';
-    if (it.kind === 'relance') act = '<button type="button" class="sa-btn primary" data-rel="' + esc(it.contact_id) + '">' + I.mail + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button><button type="button" class="sa-btn" data-replied="' + esc(it.contact_id) + '">Il a répondu</button>';
+    if (it.kind === 'relance') act = '<button type="button" class="sa-btn primary" data-rel="' + esc(it.contact_id) + '">' + I.mail + (it.draft ? 'Relire et envoyer' : 'Préparer la relance') + '</button><button type="button" class="sa-btn" data-replied="' + esc(it.contact_id) + '">Il a répondu</button><button type="button" class="sa-btn ghost" data-bounced="' + esc(it.contact_id) + '">Mail non remis</button>';
     else if (it.kind === 'task') act = (it.contact_id ? '<button type="button" class="sa-btn" data-ct="' + esc(it.contact_id) + '">' + I.phone + 'Contact</button>' : it.account_id ? '<button type="button" class="sa-btn" data-acc="' + esc(it.account_id) + '">Compte</button>' : '') + '<button type="button" class="sa-btn primary" data-done="' + esc(it.task.id) + '">' + I.check + 'Fait</button>';
     else if (it.kind === 'reaction') act = '<button type="button" class="sa-btn primary" data-ct="' + esc(it.contact_id) + '">' + I.mail + 'Écrire</button><button type="button" class="sa-btn" data-seen="' + esc(it.key) + '">Vu</button>';
     else if (it.kind === 'pitch') act = '<button type="button" class="sa-btn primary" data-pgo="' + esc(it.account_id) + '">' + (it.li ? 'Écrire sur LinkedIn' : I.mail + 'Relire et envoyer') + '</button><button type="button" class="sa-btn" data-psnz="' + esc(it.account_id) + '">Pas maintenant</button>';
@@ -211,6 +211,10 @@
     root.querySelectorAll('[data-ct]').forEach(function (b) { b.onclick = function () { openContact(b.getAttribute('data-ct')); }; });
     root.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
     root.querySelectorAll('[data-rel]').forEach(function (b) { b.onclick = function () { openRelance(b.getAttribute('data-rel')); }; });
+    // mail revenu en « non remis » : adresse invalidée, plus de relance, Scout cherche un autre contact sur le compte
+    root.querySelectorAll('[data-bounced]').forEach(function (b) {
+      b.onclick = function () { b.disabled = true; api('/action/email-bounced', { method: 'POST', body: { contact_id: b.getAttribute('data-bounced') } }).then(function () { toast('Noté : adresse retirée, Scout cherche un autre contact'); fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); }); };
+    });
     root.querySelectorAll('[data-replied]').forEach(function (b) {
       b.onclick = function () { b.disabled = true; api('/action/confirm', { method: 'POST', body: { contact_id: b.getAttribute('data-replied'), action_type: 'reply_outlook' } }).then(function () { toast('Noté : plus de relance'); fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); }); };
     });
@@ -463,6 +467,7 @@
         + ((!c.telephone || masked(c.telephone)) && (!c.email || masked(c.email)) ? '<div class="sa-meta">Coordonnées non visibles avec ton profil.</div>' : '')
         + '<div class="sa-actions"><button type="button" class="sa-btn primary" id="sa-c-entry">' + I.plus + 'Saisir une activité</button></div>'
         + '<h3 class="sa-h3">Historique</h3>' + historyHtml(D.timeline)
+        + (c.email && !masked(c.email) ? '<button type="button" class="sa-btn ghost wide" data-bounced="' + esc(c.id) + '">Mon mail est revenu « non remis »</button>' : '')
         + '<button type="button" class="sa-btn ghost wide" id="sa-c-full">Ouvrir la fiche complète</button></div>';
       openSheet(html, function (sh) {
         bindCards(sh);
