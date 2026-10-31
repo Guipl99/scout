@@ -587,7 +587,11 @@
           var g = list[+b.getAttribute('data-stask')]; b.disabled = true;
           var p = g.type === 'market'
             ? api('/crm/signals/' + g.kind + '/' + encodeURIComponent(g.ref_id) + '/action', { method: 'POST', body: { action: g.flux === 1 ? 'go' : 'accept' } })
-            : (g.account ? crm().pitchAccount(g.account.id, g.type === 'chat' ? 'a écrit sur le chat du site' : 'est venu sur elistair.com') : Promise.reject(new Error('rattache d’abord un compte')))
+            : (g.account ? Promise.resolve(g.account)
+                // visite d'un organisme pas encore dans Scout : le compte est créé (domaine compris, ce qui relie ses visites), puis Scout cherche le contact
+                : (g.org && g.org.name ? api('/crm/accounts', { method: 'POST', body: { nom: g.org.name, pays: g.org.country || null, domain: g.org.domain || null, source: 'visite du site' } }).then(function (d) { if (d.account && !d.existed) toast('Compte créé : ' + d.account.nom); return d.account; })
+                  : Promise.reject(new Error('organisme inconnu'))))
+              .then(function (acc) { return crm().pitchAccount(acc.id, g.type === 'chat' ? 'a écrit sur le chat du site' : 'est venu sur elistair.com'); })
               .then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: g.key, state: 'task' } }); });
           p.then(function () { if (g.type === 'market') toast(g.flux === 1 ? 'Go : tâche « Répondre à l’AO » créée' : 'Ajouté à « À écrire » dans Aujourd’hui'); fadeOut(b); }).catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
         };
