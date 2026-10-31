@@ -1060,6 +1060,8 @@ function scoutMailHref(to, subject, body){
   var q = function (k, v) { return v ? k + '=' + encodeURIComponent(v) : ''; };
   var pref = scoutMailPref(), parts = [q('subject', subject), q('body', body)].filter(Boolean).join('&');
   if (pref === 'web') return 'https://outlook.office.com/mail/deeplink/compose?' + [q('to', to), parts].filter(Boolean).join('&');
+  // Android : Chrome refuse ms-outlook:// ; on passe par un intent qui ouvre le mail directement dans l'appli Outlook
+  if (pref === 'outlook' && /Android/i.test(navigator.userAgent || '')) return 'intent:' + encodeURIComponent(to || '') + (parts ? '?' + parts : '') + '#Intent;scheme=mailto;action=android.intent.action.SENDTO;package=com.microsoft.office.outlook;end';
   if (pref === 'outlook' && scoutIsMobile()) return 'ms-outlook://compose?' + [q('to', to), parts].filter(Boolean).join('&');
   return 'mailto:' + encodeURIComponent(to || '') + (parts ? '?' + parts : '');
 }
