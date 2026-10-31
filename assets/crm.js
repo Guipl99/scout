@@ -300,7 +300,6 @@
       var sc = Math.min(it.pscore || 0, 130);
       return it.pcls === 'hot' ? 880 + sc : it.pcls === 'good' ? 470 + sc * 2 : 180 + sc;
     }
-    if (it.kind === 'chat') return (it.qualified ? 700 : 450) + (it.imp || 0) * 5 + tierPts / 10;
     if (it.kind === 'visit') return 420 + (it.imp || 0) * 8 + tierPts / 2;
     if (it.kind === 'hot') return 400 + Math.min(it.score || 0, 50) + tierPts / 2;
     if (it.kind === 'vip') return 380 + tierPts / 2;

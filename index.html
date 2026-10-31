@@ -2768,10 +2768,9 @@ Réinitialiser tous les filtres
         </label>
         <label class="vis-field" id="chat-view-field"><span>Vue</span>
           <select id="chat-view">
-            <option value="todo" selected>🔥 À traiter</option>
-            <option value="distribution">🤝 Distribution / revendeur</option>
+            <option value="all" selected>Toutes</option>
             <option value="qualified">✓ Qualifiées</option>
-            <option value="all">Toutes</option>
+            <option value="distribution">🤝 Distribution / revendeur</option>
           </select>
         </label>
         <button type="button" id="chat-refresh" class="vis-icon-btn" title="Actualiser" aria-label="Actualiser">↻</button>
@@ -9081,14 +9080,14 @@ function _chatWire() {
 // L'onglet a deux modes : le vrai trafic (par défaut) et le bac à sable qui
 // sert à essayer le bot. Le mode est retenu d'une visite à l'autre.
 var _chatMode = 'site';
-var _chatView = 'todo';
+var _chatView = 'all';
 var _chatSort = { by: '', dir: 'desc' };  // vide = ordre serveur (chaleur)
 var _chatConvs = [];
 var _chatCur = null;      // conversation ouverte dans le tiroir
 var _chatPreview = null;  // aperçu en attente de confirmation
 
 var CHAT_INTRO = {
-  site: "Les conversations tenues par la bulle sur elistair.com. Un lead qualifié déclenche une alerte, mais rien n'entre dans Scout tant que tu ne l'as pas décidé : le bouton de la fiche crée la société et le contact. Rien ne part vers le CRM.",
+  site: "Les conversations tenues par la bulle sur elistair.com. Elles sont traitées dans le CRM : quand un visiteur laisse son email, Scout transmet ses infos au formulaire du site et le lead suit le flow classique. Ici, c'est pour consulter.",
   sandbox: "Bac à sable, rien n'est en ligne. Le chat tourne ici pour essayer le bot : il répond à partir des fiches produit publiques et récupère prénom, nom, email et projet. Ni prix, ni délai, ni sujet contrôle export."
 };
 
@@ -9111,7 +9110,7 @@ function _chatApplyMode() {
 async function _chatLoadConvs() {
   var body = document.getElementById('chat-conv-body'); if (!body) return;
   try {
-    var r = await fetch(API + '/v/chat/sessions?source=site&view=' + encodeURIComponent(_chatView || 'todo') + '&limit=60', { headers: _chatH() });
+    var r = await fetch(API + '/v/chat/sessions?source=site&view=' + encodeURIComponent(_chatView || 'all') + '&limit=60', { headers: _chatH() });
     var j = await r.json();
     _chatConvs = j.sessions || [];
     _chatRenderTiles(j.totals || {});
@@ -9127,7 +9126,7 @@ function _chatRenderTiles(t) {
   // KPI actionnables, façon page Visiteurs : ce qu'il faut traiter d'abord, la
   // valeur (distribution), et une lecture honnête du bruit (conversations sans email).
   var tiles = [
-    [t.a_traiter || 0, 'à traiter (qualifiées, pas dans Scout)', t.a_traiter ? '#6A8B74' : ''],
+    [(t.crm_sent || 0) + (t.crm_ready || 0), t.crm_ready && !t.crm_sent ? 'prêtes pour le CRM (envoi pas encore activé)' : 'transmises au CRM', ''],
     [t.distribution || 0, 'distribution / revendeur', (t.distribution ? 'var(--accent2)' : '')],
     [t.site || 0, (t.sans_email ? (t.sans_email + ' sans email (pas exploitables)') : 'conversations réelles'), '']
   ];
@@ -9157,7 +9156,7 @@ function _chatRenderConvs() {
       + (on ? ' class="sorted"' : '') + '>' + label + arrow + '</th>';
   }
   body.innerHTML = '<table class="chat-conv"><thead><tr>'
-    + th('Visiteur', 'who') + th('Projet', 'besoin') + th('Page', 'page') + th('Score', 'score') + th('Dans Scout', 'scout') + th('', 'date')
+    + th('Visiteur', 'who') + th('Projet', 'besoin') + th('Page', 'page') + th('Score', 'score') + th('CRM', 'scout') + th('', 'date')
     + '</tr></thead><tbody>' + sortedConvs.map(function (c) {
       var L = c.lead || {}, I = c.inferred || {};
       var who = [L.prenom, L.nom].filter(Boolean).join(' ') || L.email || 'Anonyme';
@@ -9169,13 +9168,13 @@ function _chatRenderConvs() {
       var badges = (estDistrib ? '<span class="chat-badge" style="background:rgba(139,92,246,.15);color:#85593E;">🤝 distribution</span> ' : '')
         + (c.reply_lang && c.reply_lang !== 'fr' ? '<span class="sub" style="text-transform:uppercase;font-size:10px;border:1px solid var(--border);border-radius:4px;padding:1px 4px;">' + _chatEsc(c.reply_lang) + '</span> ' : '');
       return '<tr data-id="' + _chatEsc(c.id) + '">'
-        + '<td>' + (neuf ? '<i class="chat-dot" title="à traiter"></i>' : '')
+        + '<td>' + (neuf ? '<i class="chat-dot" title="nouveau"></i>' : '')
         + '<span class="who">' + _chatEsc(who) + '</span>'
         + (sub ? '<br><span class="sub">' + _chatEsc(sub) + '</span>' : '') + '</td>'
         + '<td>' + badges + _chatEsc((L.besoin || '—').slice(0, 60)) + '</td>'
         + '<td class="sub">' + _chatEsc((c.page || '—').slice(0, 34)) + '</td>'
         + '<td><span class="chat-badge ' + cls + '">' + _chatEsc(c.score_label) + '</span></td>'
-        + '<td class="sub">' + (c.contact_id ? '✓ contact créé' : c.handled_at ? '✓ traité' : c.status === 'qualified' ? '—' : '') + '</td>'
+        + '<td class="sub">' + ({ sent: '✓ transmis au CRM', dry: 'prêt pour le CRM', error: '⚠ échec CRM' }[c.forward_state] || '') + '</td>'
         + '<td class="sub" style="white-space:nowrap;">' + _chatEsc(_chatAgo(c.updated_at)) + '</td></tr>';
     }).join('') + '</tbody></table>';
   body.querySelectorAll('tr[data-id]').forEach(function (tr) {
@@ -9202,7 +9201,7 @@ function _chatSortConvs(list) {
       case 'besoin': return (L.besoin || 'zzz').toLowerCase();
       case 'page': return (c.page || 'zzz').toLowerCase();
       case 'score': return c.score || 0;
-      case 'scout': return c.contact_id ? 2 : c.handled_at ? 1 : 0;
+      case 'scout': return { sent: 3, dry: 2, error: 1 }[c.forward_state] || 0;
       case 'date': return new Date(c.updated_at || 0).getTime();
       default: return 0;
     }
@@ -9390,10 +9389,8 @@ function _chatRenderDrawer(msg) {
   }
 
   var actions;
-  if (j.contact_id) {
-    actions = '<p style="margin:0;font-size:13px;color:#7A9A84;">✓ Contact créé dans Scout.</p>';
-  } else if (!L.email) {
-    actions = '<p style="margin:0;font-size:13px;color:var(--text3);">Pas d\'adresse email : rien à créer pour l\'instant.</p>';
+  if (!L.email) {
+    actions = '<p style="margin:0;font-size:13px;color:var(--text3);">Pas d\'adresse email : rien à transmettre au CRM.</p>';
   } else if (_chatPreview) {
     // Confirmation : on montre ce qui sera écrit, et dans quelle société, avant d'écrire.
     var P = _chatPreview, C0 = P.contact || {}, S0 = P.societe || {};
@@ -9412,13 +9409,12 @@ function _chatRenderDrawer(msg) {
       + '<button type="button" class="btn btn-primary" id="chat-mk-confirm" style="padding:8px 14px;font-size:13px;">Confirmer la création</button>'
       + '<button type="button" class="btn btn-secondary" id="chat-mk-cancel" style="padding:8px 14px;font-size:13px;">Annuler</button></div>';
   } else {
-    var estATraiter = j.status === 'qualified' && !j.contact_id;
-    actions = '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-      + '<button type="button" class="btn btn-primary" id="chat-mk-contact" style="padding:8px 14px;font-size:13px;">Créer le contact dans Scout</button>'
-      + (estATraiter && !j.handled_at ? '<button type="button" class="btn btn-secondary" id="chat-mk-handled" style="padding:8px 14px;font-size:13px;">✓ Marquer traité</button>' : '')
-      + (j.handled_at ? '<button type="button" class="btn btn-secondary" id="chat-mk-unhandled" style="padding:8px 14px;font-size:13px;">↩ Rouvrir (non traité)</button>' : '')
-      + '</div>'
-      + '<p style="margin:8px 0 0;font-size:12px;color:var(--text3);line-height:1.5;">' + (j.handled_at ? 'Marqué traité — sorti de « À traiter ». ' : '') + 'Tu verras ce qui sera écrit avant de valider. Rien n\'est envoyé au CRM.</p>';
+    var FW = { sent: ['Transmis au CRM', '#7A9A84'], dry: ['Prêt à être transmis au CRM (envoi pas encore activé)', 'var(--text2)'], error: ['Échec de la transmission au CRM', '#C2552F'],
+      skip_email: ['Non transmis : email absent ou invalide', 'var(--text3)'], skip_intent: ['Non transmis : pas un prospect (presse, candidat, étudiant)', 'var(--text3)'], skip_dup: ['Non transmis : déjà transmis récemment pour cet email', 'var(--text3)'] };
+    var fw = FW[j.forward_state] || [j.lead && j.lead.email ? 'Sera transmis au CRM à la fin de la conversation' : 'Non transmis : pas d’email', 'var(--text3)'];
+    actions = '<div class="chat-lead-row"><span>Statut</span><b style="color:' + fw[1] + ';">' + _chatEsc(fw[0]) + (j.forward_at ? ' <span style="font-weight:400;color:var(--text3);">(' + _chatEsc(String(j.forward_at).slice(0, 10)) + ')</span>' : '') + '</b></div>'
+      + (j.forward_result && j.forward_state === 'error' ? '<p style="margin:6px 0 0;font-size:12px;color:var(--text3);">' + _chatEsc(j.forward_result) + '</p>' : '')
+      + '<p style="margin:8px 0 0;font-size:12px;color:var(--text3);line-height:1.5;">Les chats sont traités dans le CRM : Scout transmet les infos au formulaire du site, le lead suit le flow classique.</p>';
   }
   // Reclasser test ↔ trafic réel (un chat de test qui traîne dans le site = bruit).
   var estTest = j.source === 'test';
@@ -9439,7 +9435,7 @@ function _chatRenderDrawer(msg) {
     + '<button type="button" id="chat-drawer-close" aria-label="Fermer" style="background:none;border:none;color:var(--text2);font-size:24px;line-height:1;cursor:pointer;">×</button></div>'
     + (lignes || deduit ? '<div class="chat-dsec"><h3>Ce que le visiteur a dit</h3>' + lignes + deduit + '</div>' : '')
     + org
-    + '<div class="chat-dsec"><h3>Suite à donner</h3>' + actions
+    + '<div class="chat-dsec"><h3>CRM</h3>' + actions
     + (msg ? '<p style="margin:10px 0 0;font-size:13px;color:var(--text2);">' + _chatEsc(msg) + '</p>' : '') + '</div>'
     + '<div class="chat-dsec"><h3>La conversation</h3><div class="chat-thread">' + fil + '</div></div>';
 
@@ -10060,7 +10056,7 @@ function _navRenderBadges() {
   set('nav-prospects-badge', total, 'élément(s) à traiter');
   set('bn-prospects-badge', total, 'élément(s) à traiter');
 }
-function _chatSetNavBadge(n) { window.__navCounts.chat = n || 0; _navRenderBadges(); }
+function _chatSetNavBadge(n) { window.__navCounts.chat = 0; _navRenderBadges(); } // les chats sont traités dans le CRM, pas de « à traiter » dans Scout
 async function _chatPollLeads() {
   try {
     if (typeof window.getAuthHeaders !== 'function' || !window.getAuthHeaders().Authorization) return;
@@ -10482,7 +10478,7 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=237"></script>
+<script src="assets/crm.js?v=238"></script>
 <script src="assets/settings.js?v=3"></script>
 <script src="assets/app.js?v=23"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>
