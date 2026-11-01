@@ -728,7 +728,7 @@
         if (a === 'create') {
           b.disabled = true;
           return api('/crm/accounts', { method: 'POST', body: { nom: it.org.name, pays: it.org.country || null, domain: it.org.domain || null, type: it.org.org_type === 'government' ? 'Sécurité publique' : 'Entreprise', source: 'visite du site' } })
-            .then(function (r) { S.treeData = null; toast(r.existed ? 'Ce compte existait déjà : ' + r.account.nom : 'Compte créé' + (r.account.owner_name ? ', attribué à ' + r.account.owner_name : '')); loadFeed(); })
+            .then(function (r) { S.treeData = null; toast(r.existed ? 'Ce compte existait déjà (' + r.account.nom + ') : la visite y est rattachée' : 'Compte créé' + (r.account.owner_name ? ', attribué à ' + r.account.owner_name : '')); loadFeed(); })
             .catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
         }
         if (a === 'link') {
