@@ -567,6 +567,29 @@
     "Tout": "All",
     "Mails": "Emails",
     "Moi": "Me",
+    // ── Bureau : Aujourd'hui, comptes, fiche, signaux (vidéo démo)
+    'Ta semaine en signaux': 'Your week in signals', 'Fermer pour la semaine': 'Close for the week',
+    '{n} organisme public': '{n} public agency', '{n} organismes publics': '{n} public agencies',
+    'venus sur le site n’ont pas encore de compte :': 'visited the website and have no account yet:', 'venu sur le site n’a pas encore de compte :': 'visited the website and has no account yet:',
+    'à voir dans Signaux': 'see Signals', 'Écrire au prochain contact suggéré': 'Write to the next suggested contact',
+    'réactions à tes mails et signaux les plus qualifiés': 'reactions to your emails and the most qualified signals', 'mails prêts à envoyer': 'emails ready to send',
+    'dont {n} hot': 'including {n} hot', 'une seule, à J+{n}': 'just one, at D+{n}', 'Mails prêts': 'Emails ready', 'Réactions': 'Reactions', 'Autres signaux': 'Other signals',
+    'Brouillon prêt': 'Draft ready', 'Il a déjà répondu': 'Already replied', 'Mail non remis': 'Email bounced', 'T{n}–{n} sans activité {n} j': 'T{n}–{n} with no activity in {n} d',
+    '{n} comptes de l’équipe n’ont pas de tier.': '{n} team accounts have no tier.', 'Scout propose {n} en Tier {n}, {n} en Tier {n} et {n} en Tier {n}.': 'Scout suggests {n} in Tier {n}, {n} in Tier {n} and {n} in Tier {n}.',
+    'Voir et valider': 'Review and approve', 'Vues ▾': 'Views ▾', 'Colonnes ▾': 'Columns ▾', 'Filtres': 'Filters', 'Achat filaire': 'Tethered purchase',
+    'Mettre au propre': 'Clean up', 'Rien à afficher. Saisissez une activité ou une note.': 'Nothing to show yet. Log an activity or a note.',
+    'Repéré sur LinkedIn, les sites des concurrents et la presse. Compte dans l’engagement.': 'Spotted on LinkedIn, competitor websites and the press. Counts toward engagement.',
+    'Compte rendu : tape ou dicte en vrac, Scout le remet au propre': 'Report: type or dictate freely, Scout tidies it up', 'tape ou dicte en vrac, Scout le remet au propre': 'type or dictate freely, Scout tidies it up',
+    'Ex. envoyer la fiche SAFE-T et caler une démo': 'E.g. send the SAFE-T sheet and book a demo',
+    'Tout ce qui bouge : appels d’offres et contrats, organismes venus sur le site, chats. Ce qui concerne tes comptes remonte aussi dans Aujourd’hui.': 'Everything that moves: tenders and contracts, agencies visiting the website, chats. Anything about your accounts also shows up in Today.',
+    'Rien de neuf sur tes comptes sur cette période. Regarde « Tout » ou « Sans compte ».': 'Nothing new on your accounts in this period. Check "All" or "No account".',
+    'Pompiers': 'Fire & rescue', 'Dicter': 'Dictate', 'Veille drone filaire': 'Tethered drone intel', 'VEILLE DRONE FILAIRE': 'TETHERED DRONE INTEL',
+    'Comptes qui évaluent, testent, achètent ou utilisent un drone filaire, repérés chaque semaine sur LinkedIn (posts publics), les sites des concurrents et de leurs distributeurs, et la presse.': 'Accounts evaluating, testing, buying or using a tethered drone, spotted every week on LinkedIn (public posts), competitor and distributor websites, and the press.',
+    'En phase d’achat': 'Buying now', 'Équipés chez un concurrent': 'Equipped by a competitor', 'Dernier passage': 'Last run', 'Premier passage en cours': 'First run in progress',
+    'Évalue': 'Evaluating', 'Achète': 'Buying', 'Livré': 'Delivered', 'Utilise': 'Uses',
+    'Le message est copié : colle-le dans l’invitation ou la messagerie LinkedIn.': 'The message is copied: paste it into the LinkedIn invitation or chat.', 'Copier et ouvrir LinkedIn': 'Copy and open LinkedIn', 'Message LinkedIn (moins de 280 caractères)': 'LinkedIn message (under 280 characters)',
+    'Activité enregistrée': 'Activity saved', 'avec': 'with',
+    'Oui l’enregistre et programme la relance.': 'Yes logs it and schedules the follow-up.', 'Oui, envoyé': 'Yes, sent', 'Pas encore': 'Not yet', 'Envoyé : relance programmée': 'Sent: follow-up scheduled',
     // ── Mois / jours
     'janv.': 'Jan', 'févr.': 'Feb', 'mars': 'Mar', 'avr.': 'Apr', 'mai': 'May', 'juin': 'Jun', 'juil.': 'Jul', 'août': 'Aug', 'sept.': 'Sep', 'oct.': 'Oct', 'nov.': 'Nov', 'déc.': 'Dec'
   };
@@ -613,6 +636,10 @@
     [/^Choisi dans la base : (.+), pas cité dans le signal$/, function (m) { return 'Picked from the database: ' + ({ 'son poste touche aux drones': 'drone-related role', 'décideur du compte': 'decision-maker', 'acheteur du compte': 'buyer', 'meilleur contact joignable': 'best reachable contact' }[m[1]] || m[1]) + ', not named in the signal'; }],
     [/^AO ouvert, clôture le (.+)$/, function (m) { return 'Open tender, closes ' + m[1]; }], [/^acheteur hors base : (.+)$/, function (m) { return 'buyer not in database: ' + m[1]; }],
     [/^suivi par (.+)$/, function (m) { return 'owner ' + m[1]; }], [/^Compte qui (.+)$/, function (m) { return 'Account that ' + frag(m[1]); }],
+    [/^Due depuis (\{n\}) j$/, 'Overdue by {n} d'], [/^Échéance atteinte$/, 'Due today'],
+    [/^Message envoyé à (.+) sur LinkedIn \?$/, function (m) { return 'Message sent to ' + m[1] + ' on LinkedIn?'; }],
+    [/^Le mail à (.+) est parti \?$/, function (m) { return 'Did the email to ' + m[1] + ' go out?'; }],
+    [/^Client ([A-Z][\w-]+)$/, function (m) { return m[1] + ' customer'; }],
     [/^(\{n\}) envoyés?(, (\{n\}) écartés?)?\.$/, function (m) { return m[1] + ' sent' + (m[2] ? ', ' + m[3] + ' dismissed' : '') + '.'; }]
 
   ];
@@ -631,6 +658,7 @@
     [/Article \((\d{1,2}) ([a-zéû]+)/g, function (x, d, mo) { return 'Article (' + (FR_M[mo] || mo) + ' ' + d; }],
     [/\ble (\d{1,2})(?:er)? ([a-zéû]+)/g, function (x, d, mo) { return FR_M[mo] ? 'on ' + FR_M[mo] + ' ' + d : x; }],
     [/\bvers ([a-zéû]+) (\d{4})/g, function (x, mo, y) { return FR_M[mo] ? 'around ' + FR_M[mo] + ' ' + y : x; }],
+    [/\(décideur\)/g, '(decision-maker)'], [/\(utilisateur\)/g, '(user)'], [/\(acheteur\)/g, '(buyer)'], [/\(technique\)/g, '(technical)'],
     [/il y a (\d+) ?j\b/g, '$1 d ago'], [/il y a (\d+) mois/g, '$1 mo ago'], [/ : /g, ': ']
   ];
   function frag(t) { var o = t; FRAGS.forEach(function (f) { o = o.replace(f[0], f[1]); }); return o; }
@@ -676,7 +704,7 @@
     // « Libellé : valeur »
     var cm = t.match(/^([^:]{2,40}) : (.+)$/);
     if (cm) { var l = core(cm[1]); if (l != null) return l + ': ' + tr(cm[2]); }
-    if (/drone filaire|concurrent|Post LinkedIn|Article (du|\()|équipé chez|Équipé chez|jamais contacté| le \d{1,2} [a-z]|il y a \d/.test(t)) { var f = frag(t); if (f !== t) return f; }
+    if (/drone filaire|concurrent|Post LinkedIn|Article (du|\()|équipé chez|Équipé chez|jamais contacté| le \d{1,2} [a-z]|il y a \d|\((décideur|utilisateur|acheteur|technique)\)/.test(t)) { var f = frag(t); if (f !== t) return f; }
     return t;
   }
   window.scoutT = function (s) { return lang === 'en' ? tr(String(s)) : s; };
