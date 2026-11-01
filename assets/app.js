@@ -154,13 +154,14 @@
       var hotN = now.filter(function (it) { return (it.pitch && it.pitch.cls === 'hot') || it.kind === 'reaction'; }).length;
       var relN = now.filter(function (it) { return it.kind === 'relance'; }).length;
       var head = '<div class="sa-kpi"><b>' + now.length + '</b><span>à traiter' + [hotN ? '<em>' + hotN + ' hot</em>' : '', relN ? relN + ' relance' + (relN > 1 ? 's' : '') : ''].filter(Boolean).map(function (x, i) { return (i ? ', ' : ', dont ') + x; }).join('') + '</span>' + (fresh ? '' : '<span class="sa-meta sa-upd">mise à jour…</span>') + '</div>';
-      head = '<div id="sa-ao-box"></div>' + head;
+      head = '<div id="sa-ao-box"></div><div id="sa-news-box"></div>' + head;
       v.innerHTML = head + (now.length ? '<div class="sa-list">' + now.slice(0, 60).map(card).join('') + '</div>'
         : '<div class="sa-empty">Rien d’urgent dans ta file.' + (A.qScope === 'me' ? '<br><br><button type="button" class="sa-btn" id="sa-see-team">Voir la file de l’équipe</button>' : '') + '</div>')
         + (now.length > 60 ? '<div class="sa-meta sa-center">Les ' + (now.length - 60) + ' suivants sont dans la version complète.</div>' : '');
       v.scrollTop = y;
       bindCards(v);
       drawAoApp();
+      drawNewsApp();
       var st = document.getElementById('sa-see-team'); if (st) st.onclick = function () { A.qScope = 'team'; renderToday(); };
     };
     var cached = null; try { cached = JSON.parse(localStorage.getItem(QK) || 'null'); } catch (e) { cached = null; }
@@ -170,6 +171,31 @@
       draw(items, true);
       try { localStorage.setItem(QK, JSON.stringify({ at: Date.now(), items: items.slice(0, 80) })); } catch (e) { /* stockage plein : sans cache */ }
     }).catch(function (e) { if (!cached) v.innerHTML = '<div class="sa-empty">Erreur : ' + esc(e.message) + '</div>'; else { var u = v.querySelector('.sa-upd'); if (u) u.textContent = 'hors ligne'; } });
+  }
+
+  // Tethered Business News : même bloc que sur ordinateur, sous les AO ouverts
+  function drawNewsApp() {
+    var box = document.getElementById('sa-news-box'); if (!box || !crm().api) return;
+    var paint = function (items) {
+      if (!items || !items.length) { box.innerHTML = ''; return; }
+      var open = !!A.newsOpen, n = open ? items.length : Math.min(3, items.length);
+      box.innerHTML = '<section class="sa-ao tbn"><h4>Tethered Business News <span class="sa-meta">' + items.length + ' cette semaine</span></h4>'
+        + items.slice(0, n).map(function (it) {
+          var who = [it.org, it.pays].filter(Boolean).join(' · ');
+          var comp = it.competitor ? (it.competitor === 'Elistair' ? ' · Elistair' : ' · avec ' + esc(it.competitor)) : '';
+          return '<div class="tbn-row' + (it.mine ? ' mine' : '') + '"><div class="tbn-top"><span class="tbn-tag">' + esc(it.tag) + '</span><span class="tbn-at">' + esc(it.at ? fmtDate(it.at) : '') + '</span></div>'
+            + '<b>' + esc(who) + comp + '</b>'
+            + (it.text ? '<div class="tbn-txt">' + esc(it.text) + '</div>' : '')
+            + (it.person ? '<div class="sa-meta">Personne nommée : ' + esc(it.person.name) + (it.person.title ? ', ' + esc(it.person.title) : '') + '</div>' : '')
+            + '<div class="sa-meta">' + (it.account ? '<button type="button" class="sa-link" data-acc="' + esc(it.account.id) + '">' + esc(it.account.nom) + '</button>' + (it.mine ? ' <span class="tbn-mine">ton compte</span>' : '') : '')
+            + (it.url ? (it.account ? ' · ' : '') + '<a href="' + safeUrl(it.url) + '" target="_blank" rel="noopener">' + esc(it.source || 'Source') + ' ↗</a>' : '') + '</div></div>';
+        }).join('')
+        + (items.length > 3 ? '<button type="button" class="sa-link tbn-more" id="sa-tbn-more">' + (open ? 'Réduire' : 'Voir les ' + items.length) + '</button>' : '') + '</section>';
+      box.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
+      var m = document.getElementById('sa-tbn-more'); if (m) m.onclick = function () { A.newsOpen = !open; paint(items); };
+    };
+    if (A.news && Date.now() - A.news.at < 10 * 60e3) { paint(A.news.items); return; }
+    crm().api('/signals/news?days=7').then(function (d) { A.news = { at: Date.now(), items: d.items || [] }; paint(A.news.items); }).catch(function () { box.innerHTML = ''; });
   }
 
   // AO drone filaire ouverts : même bloc que sur ordinateur, en tête de la file

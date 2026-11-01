@@ -357,3 +357,21 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .crm-pr-a { flex-shrink: 0; padding-top: 10px; border-top: 1px solid var(--border, rgba(229,226,210,.15)); padding-bottom: env(safe-area-inset-bottom); }
 .crm-pr-a [data-send] { flex: 1 1 100%; padding: 12px; font-size: 15px; }
 @media (max-width: 640px) { .crm-pr-box { padding: 12px 14px; } .crm-pr-h b { font-size: 15px; } .crm-pr-a .crm-btn:not([data-send]) { flex: 1; padding: 10px 6px; font-size: 13px; } }
+
+/* Tethered Business News (accueil ordinateur et mobile) */
+.tbn { margin-bottom: 12px; border-left: 3px solid var(--accent, #85593E); }
+.tbn h3, .tbn h4 { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.tbn-row { padding: 9px 0; border-top: 1px solid var(--border, rgba(127,127,127,.25)); }
+.tbn-row:first-of-type { border-top: 0; }
+.tbn-row.mine { box-shadow: inset 3px 0 0 var(--accent, #85593E); padding-left: 9px; }
+.tbn-top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 13px; }
+.tbn-tag { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 1px 6px; border: 1px solid var(--accent, #85593E); color: var(--accent, #85593E); border-radius: 3px; flex: none; }
+.tbn-who { font-weight: 600; flex: 1 1 auto; min-width: 0; }
+.tbn-at { margin-left: auto; font-size: 12px; opacity: .7; flex: none; }
+.tbn-txt { font-size: 13px; line-height: 1.4; margin: 3px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tbn-meta { font-size: 12px; opacity: .85; }
+.tbn-mine { font-size: 11px; padding: 0 5px; border-radius: 3px; background: var(--accent, #85593E); color: #fff; }
+.tbn-more { margin-top: 6px; }
+.sa-ao.tbn .tbn-row b { display: block; font-size: 14px; line-height: 1.3; margin-top: 2px; }
+.tbn a { color: var(--accent, #85593E); text-decoration: none; }
+.tbn a:hover { text-decoration: underline; }

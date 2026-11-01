@@ -1148,7 +1148,7 @@
     p.innerHTML = '<div class="crm-wrap crm-home" id="crm-tasks"><div class="crm-row crm-home-head">'
       + '<div><h2 class="crm-h2" id="crm-home-title">Bonjour' + (me ? ' ' + esc(me) : '') + '</h2><div class="crm-meta">' + esc(dateTxt) + '</div></div>'
       + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-hs="me">Moi</button><button type="button" class="crm-chip" data-hs="team">Équipe</button></div></div>'
-      + '<div id="crm-home-ao"></div><div id="crm-home-digest"></div><div id="crm-home-hero"></div>'
+      + '<div id="crm-home-ao"></div><div id="crm-home-digest"></div><div id="crm-home-news"></div><div id="crm-home-hero"></div>'
       + '<div class="crm-home-cols"><div class="crm-home-main">'
       + '<div class="crm-row crm-qbar"><div class="crm-views" style="margin:0" role="tablist">' + QF.map(function (x) { return '<button type="button" class="crm-chip sm" data-qf="' + x[0] + '">' + x[1] + '<span class="n" data-qn="' + x[0] + '"></span></button>'; }).join('') + '</div>'
       + '<button type="button" class="crm-btn sm" id="crm-nt-open">+ Nouvelle tâche</button></div>'
@@ -1202,6 +1202,7 @@
       drawSide(d, st, team);
       loadDigest();
       loadAo();
+      loadNews();
       if (S.taskState === 'done') drawDone(); else drawQueue();
     }).catch(function (e) { var l = document.getElementById('crm-tasks-list'); if (l) l.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
   }
@@ -1229,6 +1230,30 @@
       host.innerHTML = '<div class="crm-card crm-digest"><h3>Ta semaine en signaux <span class="crm-meta">7 derniers jours</span><button type="button" class="crm-link" data-dg-close>Fermer pour la semaine</button></h3><ul>' + pts.map(function (p) { return '<li>' + p + '</li>'; }).join('') + '</ul></div>';
       host.querySelector('[data-dg-close]').onclick = function () { lsSet('scout_digest_week', isoWeek()); host.innerHTML = ''; };
       var g = host.querySelector('[data-dg-go]'); if (g) g.onclick = function () { S.feedScope = 'unlinked'; go('feed'); };
+    }).catch(function () { host.innerHTML = ''; });
+  }
+
+  // ── Tethered Business News : ce qui a bougé sur le drone filaire cette semaine (veille LinkedIn et web, marchés) ──
+  function newsRow(it, cls) {
+    var who = [it.org, it.pays].filter(Boolean).join(' · ');
+    var comp = it.competitor ? (it.competitor === 'Elistair' ? ' · <b>Elistair</b>' : ' · avec <b>' + esc(it.competitor) + '</b>') : '';
+    var acc = it.account ? '<button type="button" class="' + cls + '-link" data-acc="' + esc(it.account.id) + '">' + esc(it.account.nom) + '</button>' + (it.mine ? ' <span class="tbn-mine">ton compte</span>' : (it.account.owner_name ? ' · ' + esc(it.account.owner_name) : '')) : '';
+    return '<div class="tbn-row' + (it.mine ? ' mine' : '') + '"><div class="tbn-top"><span class="tbn-tag">' + esc(it.tag) + '</span><span class="tbn-who">' + esc(who) + comp + '</span><span class="tbn-at">' + esc(it.at ? fmtDate(it.at) : '') + '</span></div>'
+      + (it.text ? '<div class="tbn-txt">' + esc(it.text) + '</div>' : '')
+      + (it.person ? '<div class="tbn-meta">Personne nommée : <b>' + esc(it.person.name) + '</b>' + (it.person.title ? ', ' + esc(it.person.title) : '') + '</div>' : '')
+      + '<div class="tbn-meta">' + acc + (acc && it.url ? ' · ' : '') + (it.url ? '<a href="' + safeUrl(it.url) + '" target="_blank" rel="noopener">' + esc(it.source || 'Source') + ' ↗</a>' : '') + '</div></div>';
+  }
+  function loadNews() {
+    var host = document.getElementById('crm-home-news'); if (!host) return;
+    api('/signals/news?days=7').then(function (d) {
+      var items = d.items || [];
+      if (!items.length) { host.innerHTML = ''; return; }
+      var open = !!S.newsOpen, n = open ? items.length : Math.min(6, items.length);
+      host.innerHTML = '<section class="crm-card tbn" aria-label="Tethered Business News"><h3>Tethered Business News <span class="crm-meta">' + items.length + ' sur les 7 derniers jours</span></h3>'
+        + items.slice(0, n).map(function (it) { return newsRow(it, 'crm'); }).join('')
+        + (items.length > 6 ? '<button type="button" class="crm-link tbn-more" data-tbn-more>' + (open ? 'Réduire' : 'Voir les ' + items.length) + '</button>' : '') + '</section>';
+      host.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
+      var m = host.querySelector('[data-tbn-more]'); if (m) m.onclick = function () { S.newsOpen = !open; loadNews(); };
     }).catch(function () { host.innerHTML = ''; });
   }
 
