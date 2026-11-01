@@ -465,7 +465,7 @@
     var src = p.sources || [];
     if (!src.length) return '<div class="crm-pr-src">Aucun fait précis cité sur ce compte.</div>';
     return '<div class="crm-pr-src">S’appuie sur : ' + src.map(function (x) {
-      return '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(String(x.label).slice(0, 90)) + '</a>' + (x.official ? ' <span class="ok">source officielle</span>' : '');
+      return '<a href=\"' + safeUrl(x.url) + '\" target="_blank" rel="noopener">' + esc(String(x.label).slice(0, 90)) + '</a>' + (x.official ? ' <span class="ok">source officielle</span>' : '');
     }).join(' · ') + '</div>';
   }
   function pitchReview(p, onDone) {
@@ -638,7 +638,7 @@
   function feedRow(it, i) {
     var acc = it.account;
     var title = esc(it.title);
-    if (it.type === 'market' && it.url) title = '<a class="crm-link strong" href="' + esc(it.url) + '" target="_blank" rel="noopener">' + title + '</a>';
+    if (it.type === 'market' && it.url) title = '<a class="crm-link strong" href=\"' + safeUrl(it.url) + '\" target="_blank" rel="noopener">' + title + '</a>';
     else if (it.type === 'visit' && acc) title = '<button type="button" class="crm-link strong" data-facc="' + esc(acc.id) + '">' + title + '</button>';
     else if (it.type === 'chat') title = '<button type="button" class="crm-link strong" data-fchat="' + i + '">' + title + '</button>';
     else title = '<b>' + title + '</b>';
@@ -813,7 +813,7 @@
     if (!acc) btns = '<button type="button" class="crm-btn sm" data-sa="link">Relier à un compte</button>' + btns;
     return '<div class="crm-ms" data-sk="' + esc(sg.kind) + '" data-sr="' + esc(sg.ref_id) + '">'
       + '<div class="crm-ms-head">' + sigScore(sg.score) + '<span class="crm-ms-type">' + esc(sigType(sg)) + '</span>'
-      + '<b class="crm-ms-title">' + (sg.url ? '<a href="' + esc(sg.url) + '" target="_blank" rel="noopener">' + title + '</a>' : title) + '</b></div>'
+      + '<b class="crm-ms-title">' + (sg.url ? '<a href=\"' + safeUrl(sg.url) + '\" target="_blank" rel="noopener">' + title + '</a>' : title) + '</b></div>'
       + '<div class="crm-ms-body"><div><div class="crm-meta">Pourquoi : ' + esc(sg.why || '') + '</div>'
       + '<div class="crm-ms-act">' + esc(sg.action || '') + '</div>'
       + (sg.source ? '<div class="crm-meta">Source : ' + esc(sg.source) + (sg.type ? ' · ' + esc(sg.type) : '') + '</div>' : '')
@@ -872,7 +872,7 @@
     var acc = (sg.accounts || [])[0];
     var title = esc(sg.title || 'Sans titre');
     return '<div class="crm-mk-row">' + sigScore(sg.score)
-      + '<span class="m"><span class="crm-ms-type">' + esc(sigType(sg)) + '</span> <b>' + (sg.url ? '<a href="' + esc(sg.url) + '" target="_blank" rel="noopener">' + title + '</a>' : title) + '</b>'
+      + '<span class="m"><span class="crm-ms-type">' + esc(sigType(sg)) + '</span> <b>' + (sg.url ? '<a href=\"' + safeUrl(sg.url) + '\" target="_blank" rel="noopener">' + title + '</a>' : title) + '</b>'
       + '<span class="crm-meta">' + esc([sg.buyer, sg.pays, sg.supplier, val, sg.source].filter(Boolean).join(' · ')) + '</span>'
       + (sg.why ? '<span class="crm-meta">' + esc(sg.why) + '</span>' : '') + '</span>'
       + '<span class="r crm-meta">' + esc(sg.date ? fmtDate(sg.date) : '') + (acc ? '<br><button type="button" class="crm-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button>' : '') + '</span></div>';
@@ -927,7 +927,7 @@
     return '<div class="crm-vh" data-vh="' + h.id + '">' + veilleKind(h.kind)
       + '<span class="m">' + (withOrg ? '<b>' + esc(h.org_name) + '</b> <span class="crm-meta">' + esc([h.org_country, h.secteur].filter(Boolean).join(' · ')) + '</span><br>' : '')
       + esc(h.evidence || h.title || '') + '<br><span class="crm-meta">' + esc([h.competitor ? 'Concurrent : ' + h.competitor : '', h.date ? fmtDate(h.date) : ''].filter(Boolean).join(' · '))
-      + ' · <a class="crm-link" href="' + esc(h.url) + '" target="_blank" rel="noopener">' + src + '</a></span></span>'
+      + ' · <a class="crm-link" href=\"' + safeUrl(h.url) + '\" target="_blank" rel="noopener">' + src + '</a></span></span>'
       + '<span class="r"><button type="button" class="crm-link crm-vh-ign" data-ign="' + h.id + '" title="Hors sujet : ne plus afficher">Ignorer</button></span></div>';
   }
   // Lancer les routines à la main (admin) : veille web, recherche de contacts, rédaction des mails « À écrire »
@@ -1284,7 +1284,7 @@
           + '<div class="crm-meta">' + esc([t.acheteur, t.pays].filter(Boolean).join(' · ')) + (t.source_name ? ' · ' + esc(t.source_name) : '') + '</div>'
           + '<div class="crm-meta">' + (acc ? 'Compte <button type="button" class="crm-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button> · ' + esc(acc.owner_name || 'sans commercial') : 'Pas encore de compte : à relier dans Signaux') + '</div></div>'
           + '<div class="crm-ao-side"><span class="crm-ao-when' + (urgent ? ' urgent' : '') + '">' + esc(aoWhen(t)) + '</span>' + dec
-          + '<div class="crm-ao-act">' + (t.url ? '<a class="crm-btn sm" href="' + esc(t.url) + '" target="_blank" rel="noopener">Voir l’avis</a>' : '')
+          + '<div class="crm-ao-act">' + (t.url ? '<a class="crm-btn sm" href=\"' + safeUrl(t.url) + '\" target="_blank" rel="noopener">Voir l’avis</a>' : '')
           + (dec ? '' : '<button type="button" class="crm-btn sm primary" data-ao-go>Go</button><button type="button" class="crm-btn sm" data-ao-nogo>No-go</button>')
           + '<button type="button" class="crm-link" data-ao-hide title="Masquer pour moi">Masquer</button></div></div></div>';
       }).join('') + '</section>';
@@ -2138,7 +2138,7 @@
         var val = m.value_max ? (m.value_max >= 1e9 ? (m.value_max / 1e9).toFixed(1).replace('.', ',') + ' Md' : Math.round(m.value_max / 1e6) + ' M') : '';
         var label = esc(m.title || 'Sans titre');
         return '<div class="crm-webrow" style="align-items:flex-start;gap:8px"><span><span class="crm-q-kind k-' + (m.kind === 'tender' ? 'relance' : 'task') + '">' + (m.kind === 'tender' ? 'Appel d’offres' : 'Contrat') + '</span> '
-          + (m.url ? '<a class="crm-link" href="' + esc(m.url) + '" target="_blank" rel="noopener">' + label + '</a>' : label)
+          + (m.url ? '<a class="crm-link" href=\"' + safeUrl(m.url) + '\" target="_blank" rel="noopener">' + label + '</a>' : label)
           + '<br><span class="crm-meta">' + esc([m.buyer, val].filter(Boolean).join(' · ')) + '</span>'
           + (m.why ? '<br><span class="crm-meta">' + esc(m.why) + '</span>' : '') + '</span>'
           + '<span class="crm-meta" style="white-space:nowrap;text-align:right">' + (m.score != null ? '<span class="crm-ms-score s' + (m.score >= 5 ? 'hi' : 'mid') + '" title="Note sur 8">' + m.score + '/8</span><br>' : '') + esc(m.date ? fmtDate(m.date) : '') + '</span></div>';

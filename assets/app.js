@@ -11,6 +11,7 @@
   var A = { tab: 'today', stack: [], qScope: 'me', accQ: '', fails: 0 };
 
   // ── utilitaires ────────────────────────────────────────────────────────────
+  function safeUrl(u) { u = String(u == null ? '' : u).trim(); if (!u) return '#'; if (!/^https?:\/\//i.test(u)) { if (/^[a-z][a-z0-9+.-]*:/i.test(u)) return '#'; u = 'https://' + u.replace(/^\/+/, ''); } return esc(u); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
   function session() { try { return JSON.parse(ls(LS_SESSION) || 'null'); } catch (e) { return null; } }
@@ -183,7 +184,7 @@
           return '<div class="sa-ao-row"><b>' + esc(t.acheteur || t.titre) + '</b><div class="sa-meta">' + esc((t.titre || '').slice(0, 120)) + '</div>'
             + '<div class="sa-meta"><span class="' + (u ? 'u' : '') + '">' + esc(t.days_left == null ? 'Clôture non précisée' : 'Clôture dans ' + Math.max(0, t.days_left) + ' j') + '</span>'
             + (acc ? ' · <button type="button" class="sa-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button>' : '') + '</div>'
-            + (t.url ? '<a class="sa-btn" href="' + esc(t.url) + '" target="_blank" rel="noopener">Voir l’avis</a>' : '') + '</div>';
+            + (t.url ? '<a class="sa-btn" href="' + safeUrl(t.url) + '" target="_blank" rel="noopener">Voir l’avis</a>' : '') + '</div>';
         }).join('') + '</section>';
       box.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
     });
@@ -690,7 +691,7 @@
           + '<div class="sa-card-t static">' + esc(g.title) + '</div>' + (g.why ? '<div class="sa-card-s">' + esc(g.why) + '</div>' : '')
           + (acc ? '<button type="button" class="sa-card-s sa-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + (acc.owner_name ? ' · ' + esc(acc.owner_name) : '') + '</button>' : '<div class="sa-meta">Sans compte</div>')
           + mention(g)
-          + '<div class="sa-card-a">' + ((g.type === 'market' || g.type === 'veille') && g.url ? '<a class="sa-btn" href="' + esc(g.url) + '" target="_blank" rel="noopener">' + (g.type === 'veille' ? esc(g.src) : 'Voir') + '</a>' : '')
+          + '<div class="sa-card-a">' + ((g.type === 'market' || g.type === 'veille') && g.url ? '<a class="sa-btn" href="' + safeUrl(g.url) + '" target="_blank" rel="noopener">' + (g.type === 'veille' ? esc(g.src) : 'Voir') + '</a>' : '')
           + (g.type === 'market' || (g.type !== 'chat' && canWrite(g)) ? '<button type="button" class="sa-btn primary" data-stask="' + i + '">' + (g.type === 'market' && g.flux === 1 ? I.check + 'Go' : I.mail + 'Écrire') + '</button>' : '') + '<button type="button" class="sa-btn" data-sdis="' + i + '">Écarter</button></div></article>';
       }).join('') + '</div>' : '<div class="sa-empty">' + (A.sigScope === 'me' ? 'Rien de neuf sur tes comptes. Regarde « Tout ».' : 'Rien sur 30 jours.') + '</div>';
       bindCards(box);
@@ -888,12 +889,13 @@
     var c = lockConf(); if (!c || A.locked) return;
     A.locked = true; document.body.classList.add('sa-locked');
     var s = session() || {};
-    var unlock = function (el) { A.locked = false; A.fails = 0; A.hiddenAt = null; document.body.classList.remove('sa-locked'); el.remove(); if (A.tab === 'today' && !A.stack.length) renderToday(true); };
+    var unlock = function (el) { A.locked = false; A.fails = 0; try { localStorage.removeItem('scout_lock_fails'); } catch (e) {} A.hiddenAt = null; document.body.classList.remove('sa-locked'); el.remove(); if (A.tab === 'today' && !A.stack.length) renderToday(true); };
     var el = keypad('Bonjour ' + (s.first_name || ''), 'Saisis ton code', function (p, el, err) {
       checkPin(p).then(function (ok) {
         if (ok) { unlock(el); return; }
-        A.fails++;
-        if (A.fails >= 5) { err('Trop d’essais : déconnexion.'); setTimeout(function () { ls(LS_LOCK, null); ls(LS_SESSION, null); location.reload(); }, 1200); return; }
+        // le compteur survit à un rechargement de la page : 5 erreurs au total, pas 5 par rechargement
+        try { A.fails = (+localStorage.getItem('scout_lock_fails') || 0) + 1; localStorage.setItem('scout_lock_fails', String(A.fails)); } catch (e) { A.fails++; }
+        if (A.fails >= 5) { err('Trop d’essais : déconnexion.'); setTimeout(function () { try { localStorage.removeItem('scout_lock_fails'); } catch (e) {} ls(LS_LOCK, null); if (window.scoutAction && window.scoutAction.logout) window.scoutAction.logout(); else { ls(LS_SESSION, null); location.reload(); } }, 1200); return; }
         err('Code incorrect, encore ' + (5 - A.fails) + ' essai' + (5 - A.fails > 1 ? 's' : ''));
       });
     }, { len: c.pin.len || 0, free: !c.pin.len, bio: c.cred ? function () { bioUnlock().then(function (ok) { if (ok) unlock(el); }); } : null });
