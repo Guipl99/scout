@@ -4976,28 +4976,27 @@ function _parseCSV(text){
   const nonEmpty = rows.filter(r=>r.some(c=>String(c).trim()!==''));
   if(!nonEmpty.length) return { headers:[], rows:[] };
   const headers = nonEmpty[0].map(h=>String(h).trim());
-  const out = nonEmpty.slice(1).map(r=>{ const o={}; headers.forEach((h,idx)=>o[h]=r[idx]!==undefined?String(r[idx]).trim():''); return o; });
+  const out = nonEmpty.slice(1).map(r=>{ const o={}; headers.forEach((h,idx)=>{ if(h==='__proto__'||h==='constructor'||h==='prototype') return; o[h]=r[idx]!==undefined?String(r[idx]).trim():''; }); return o; });
   return { headers, rows: out };
 }
-function _loadSheetJS(){
+// SECURITY : SheetJS tourne dans un worker (assets/vendor, hébergé avec l'appli, plus de CDN) :
+// un fichier piégé reste confiné et une lecture trop longue est coupée au bout de 30 s.
+function _readSheetInWorker(buf){
   return new Promise((resolve,reject)=>{
-    if(window.XLSX) return resolve(window.XLSX);
-    const sc=document.createElement('script');
-    sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-    sc.onload=()=>resolve(window.XLSX); sc.onerror=()=>reject(new Error('Impossible de charger le lecteur Excel'));
-    document.head.appendChild(sc);
+    let w; try { w = new Worker('assets/vendor/xlsx-worker.js'); } catch(e){ return reject(new Error('Impossible de charger le lecteur Excel')); }
+    const t = setTimeout(()=>{ w.terminate(); reject(new Error('Fichier Excel trop long à lire')); }, 30000);
+    w.onmessage = e => { clearTimeout(t); w.terminate(); if (e.data && e.data.error) reject(new Error(e.data.error)); else resolve((e.data && e.data.aoa) || []); };
+    w.onerror = () => { clearTimeout(t); w.terminate(); reject(new Error('Impossible de lire ce fichier Excel')); };
+    w.postMessage(buf, [buf]);
   });
 }
 async function _parseXLSX(file){
-  const XLSX = await _loadSheetJS();
   const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type:'array' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const aoa = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', raw:false });
+  const aoa = await _readSheetInWorker(buf);
   const nonEmpty = aoa.filter(r=>r.some(c=>String(c).trim()!==''));
   if(!nonEmpty.length) return { headers:[], rows:[] };
   const headers = nonEmpty[0].map(h=>String(h).trim());
-  const rows = nonEmpty.slice(1).map(r=>{ const o={}; headers.forEach((h,idx)=>o[h]=r[idx]!==undefined?String(r[idx]).trim():''); return o; });
+  const rows = nonEmpty.slice(1).map(r=>{ const o={}; headers.forEach((h,idx)=>{ if(h==='__proto__'||h==='constructor'||h==='prototype') return; o[h]=r[idx]!==undefined?String(r[idx]).trim():''; }); return o; });
   return { headers, rows };
 }
 
