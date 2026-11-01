@@ -179,6 +179,7 @@
     '📊 Vue générale · équipe': '📊 Overview · team', 'Vue générale': 'Overview', 'Suivi & relances': 'Tracking & follow-ups', 'Vue détaillée des relances': 'Detailed follow-up view',
     'En attente de réponse': 'Waiting for reply', 'Close, sans réponse': 'Closed, no reply', 'Close, sans réponse ({n} j)': 'Closed, no reply ({n} d)', 'Hors séquence': 'Out of sequence',
     'Aucune réponse {n} jours après le dernier email': 'No reply {n} days after the last email', 'Prochaine relance': 'Next follow-up', 'Séquence épuisée': 'Sequence finished', '1er mail': '1st email',
+    'Verrouillage': 'Lock', 'Verrouiller': 'Lock', 'dès que je quitte l’appli': 'as soon as I leave the app', 'dès que tu quittes l’appli': 'as soon as you leave the app', 'après {n} min': 'after {n} min', 'après {n} h': 'after {n} h', 'Changer le code': 'Change code', 'Désactiver': 'Turn off', 'Activer le verrouillage': 'Turn on lock', 'Code actuel': 'Current code',
     'Filtrer par contact / compte…': 'Filter by contact / account…', '✅ Ont répondu, à transmettre': '✅ Replied, to hand over', '⭐ VIP à contacter (pas encore approchés)': '⭐ VIPs to contact (not yet approached)',
     'Les leads à traiter en priorité : ceux qui ont répondu, et tes contacts VIP pas encore approchés.': 'Leads to work first: those who replied, and your VIP contacts not yet approached.',
     'Les prospects que tu as déjà contactés : relance-les au bon moment, suis leur statut, transmets au CRM.': 'Prospects you already contacted: follow up at the right time, track their status, hand over to the CRM.',

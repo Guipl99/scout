@@ -81,14 +81,16 @@
     });
     window.addEventListener('popstate', function () { if (A.stack.length && !A.locked) closeSheet(); });
     document.addEventListener('visibilitychange', function () {
-      if (document.hidden) { A.hiddenAt = Date.now(); return; }
+      if (document.hidden) { A.hiddenAt = Date.now(); markAlive(); return; }
       if (lockDue()) lock(); else if (A.tab === 'today' && !A.stack.length) renderToday(true);
     });
     // Tirer pour actualiser recharge la page : si l'appli était déverrouillée juste avant, on ne redemande pas le code
-    window.addEventListener('pagehide', function () { try { if (!A.locked) sessionStorage.setItem('scout_alive', String(Date.now())); else sessionStorage.removeItem('scout_alive'); } catch (e) {} });
+    // Le téléphone ferme souvent l'appli en arrière-plan : on garde l'heure de la dernière utilisation
+    // déverrouillée pour ne pas redemander le code à la réouverture si le délai choisi n'est pas écoulé.
+    window.addEventListener('pagehide', markAlive);
     show('today');
     var c0 = lockConf(), alive = 0;
-    try { alive = +sessionStorage.getItem('scout_alive') || 0; sessionStorage.removeItem('scout_alive'); } catch (e) {}
+    try { alive = +localStorage.getItem('scout_alive') || 0; } catch (e) {}
     if (c0 && !(alive && Date.now() - alive < Math.max((c0.after || 0) * 60000, 30000))) lock();
   }
   function tabBtn(id, label, ic) { return '<button type="button" class="sa-tab" data-tab="' + id + '"><span>' + ic + '</span><b>' + label + '</b></button>'; }
@@ -728,7 +730,7 @@
       + '<h3 class="sa-h3">Verrouillage</h3>'
       + '<div class="sa-box">' + (L
         ? '<div class="sa-line">' + I.lock + '<span><b>Activé</b><br><span class="sa-meta">Code' + (L.cred ? ' et ' + bioName() : '') + ' · se verrouille ' + afterLabel(L.after) + '</span></span></div>'
-          + '<label class="sa-lbl" for="sa-l-after">Verrouiller</label><select id="sa-l-after" class="sa-input">' + [[0, 'dès que je quitte l’appli'], [1, 'après 1 min'], [5, 'après 5 min'], [15, 'après 15 min']].map(function (o) { return '<option value="' + o[0] + '"' + (L.after === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>'
+          + '<label class="sa-lbl" for="sa-l-after">Verrouiller</label><select id="sa-l-after" class="sa-input">' + [[0, 'dès que je quitte l’appli'], [5, 'après 5 min'], [30, 'après 30 min'], [60, 'après 1 h'], [240, 'après 4 h'], [720, 'après 12 h']].map(function (o) { return '<option value="' + o[0] + '"' + (L.after === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>'
           + (L.cred ? '' : '<button type="button" class="sa-btn" id="sa-l-bio" hidden>' + I.finger + 'Ajouter ' + bioName() + '</button>')
           + '<div class="sa-row-btns"><button type="button" class="sa-btn" id="sa-l-pin">Changer le code</button><button type="button" class="sa-btn ghost" id="sa-l-off">Désactiver</button></div>'
         : '<p class="sa-meta">Protège Scout sur ton téléphone : un code à 4 à 6 chiffres, et ' + bioName() + ' si ton téléphone le permet.</p><button type="button" class="sa-btn primary wide" id="sa-l-on">' + I.lock + 'Activer le verrouillage</button>')
@@ -761,7 +763,7 @@
       if (window.scoutAction && window.scoutAction.logout) window.scoutAction.logout(); else { ls(LS_SESSION, null); location.reload(); }
     };
   }
-  function afterLabel(m) { return !m ? 'dès que tu quittes l’appli' : 'après ' + m + ' min'; }
+  function afterLabel(m) { return !m ? 'dès que tu quittes l’appli' : 'après ' + (m >= 60 ? (m / 60) + ' h' : m + ' min'); }
 
   // passage à la version complète (un bouton permet de revenir)
   function toFull(then) {
@@ -784,7 +786,15 @@
   // VERROU : code (PBKDF2, jamais stocké en clair) + Face ID / empreinte (WebAuthn
   // de l'appareil). C'est un verrou local du téléphone : 5 codes faux = déconnexion.
   // ═════════════════════════════════════════════════════════════════════════
-  function lockConf() { try { var c = JSON.parse(ls(LS_LOCK) || 'null'); return c && c.pin ? c : null; } catch (e) { return null; } }
+  function lockConf() {
+    try {
+      var c = JSON.parse(ls(LS_LOCK) || 'null'); if (!c || !c.pin) return null;
+      // novembre 2026 : le délai par défaut passe de 5 à 30 min (trop de demandes de code) ; une seule fois
+      if (!c.v2) { if (c.after == null || c.after === 1 || c.after === 5 || c.after === 15) c.after = 30; c.v2 = 1; ls(LS_LOCK, JSON.stringify(c)); }
+      return c;
+    } catch (e) { return null; }
+  }
+  function markAlive() { try { if (!A.locked && lockConf()) localStorage.setItem('scout_alive', String(Date.now())); } catch (e) {} }
   function lockDue() { var c = lockConf(); if (!c || !A.hiddenAt || A.locked) return false; return Date.now() - A.hiddenAt >= (c.after || 0) * 60000; }
   function bioName() { return /iPhone|iPad|Mac/.test(navigator.userAgent) ? 'Face ID ou Touch ID' : 'l’empreinte ou le visage'; }
   function bioAvailable() {
@@ -856,7 +866,7 @@
           if (p2 !== p1) { err('Les deux codes sont différents. Recommence.'); setTimeout(function () { el2.remove(); go(); }, 900); return; }
           var salt = rnd(16), it = 150000;
           hashPin(p1, salt, it).then(function (h) {
-            var c = lockConf() || { after: 5 };
+            var c = lockConf() || { after: 30, v2: 1 };
             c.pin = { salt: b64(salt), hash: h, it: it, len: p1.length }; ls(LS_LOCK, JSON.stringify(c));
             el2.remove(); toast(change ? 'Code changé' : 'Verrouillage activé');
             if (change || c.cred) { renderMe(); return; }
