@@ -1148,7 +1148,7 @@
     p.innerHTML = '<div class="crm-wrap crm-home" id="crm-tasks"><div class="crm-row crm-home-head">'
       + '<div><h2 class="crm-h2" id="crm-home-title">Bonjour' + (me ? ' ' + esc(me) : '') + '</h2><div class="crm-meta">' + esc(dateTxt) + '</div></div>'
       + '<div class="crm-views" style="margin:0"><button type="button" class="crm-chip" data-hs="me">Moi</button><button type="button" class="crm-chip" data-hs="team">Équipe</button></div></div>'
-      + '<div id="crm-home-ao"></div><div id="crm-home-digest"></div><div id="crm-home-news"></div><div id="crm-home-hero"></div>'
+      + '<div id="crm-home-ao"></div><div id="crm-home-hero"></div>'
       + '<div class="crm-home-cols"><div class="crm-home-main">'
       + '<div class="crm-row crm-qbar"><div class="crm-views" style="margin:0" role="tablist">' + QF.map(function (x) { return '<button type="button" class="crm-chip sm" data-qf="' + x[0] + '">' + x[1] + '<span class="n" data-qn="' + x[0] + '"></span></button>'; }).join('') + '</div>'
       + '<button type="button" class="crm-btn sm" id="crm-nt-open">+ Nouvelle tâche</button></div>'
@@ -1158,7 +1158,7 @@
       + '<button class="crm-btn primary" type="button" id="crm-nt-save">Ajouter</button></div>'
       + '<div id="crm-tasks-list"><div class="crm-empty">Chargement…</div></div>'
       + '<div class="crm-meta crm-q-foot"><button type="button" class="crm-link" id="crm-q-done"></button></div>'
-      + '</div><aside class="crm-home-side" id="crm-home-side"></aside></div></div>';
+      + '</div><aside class="crm-home-side"><div id="crm-home-digest"></div><div id="crm-home-news"></div><div id="crm-home-side"></div></aside></div></div>';
     p.querySelectorAll('[data-hs]').forEach(function (b) { b.onclick = function () { S.homeScope = b.getAttribute('data-hs'); S.taskState = 'open'; loadHome(); }; });
     p.querySelectorAll('[data-qf]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-qf'); S.taskState = 'open'; drawQueue(); }; });
     document.getElementById('crm-q-done').onclick = function () { S.taskState = S.taskState === 'done' ? 'open' : 'done'; S.taskState === 'done' ? drawDone() : drawQueue(); };
@@ -1227,7 +1227,7 @@
       var un = items.filter(function (it) { return it.type === 'visit' && !it.account; }).length;
       if (un) pts.push('<b>' + un + ' organisme' + (un > 1 ? 's' : '') + ' public' + (un > 1 ? 's' : '') + '</b> venus sur le site n’ont pas encore de compte : <button type="button" class="crm-link" data-dg-go>à voir dans Signaux</button>.');
       if (!pts.length) { host.innerHTML = ''; return; }
-      host.innerHTML = '<div class="crm-card crm-digest"><h3>Ta semaine en signaux <span class="crm-meta">7 derniers jours</span><button type="button" class="crm-link" data-dg-close>Fermer pour la semaine</button></h3><ul>' + pts.map(function (p) { return '<li>' + p + '</li>'; }).join('') + '</ul></div>';
+      host.innerHTML = '<div class="crm-card crm-digest"><h3>Ta semaine en signaux <button type="button" class="crm-link" data-dg-close title="Fermer pour la semaine" aria-label="Fermer pour la semaine">×</button></h3><ul>' + pts.map(function (p) { return '<li>' + p + '</li>'; }).join('') + '</ul></div>';
       host.querySelector('[data-dg-close]').onclick = function () { lsSet('scout_digest_week', isoWeek()); host.innerHTML = ''; };
       var g = host.querySelector('[data-dg-go]'); if (g) g.onclick = function () { S.feedScope = 'unlinked'; go('feed'); };
     }).catch(function () { host.innerHTML = ''; });
@@ -1238,7 +1238,7 @@
     var who = [it.org, it.pays].filter(Boolean).join(' · ');
     var comp = it.competitor ? (it.competitor === 'Elistair' ? ' · <b>Elistair</b>' : ' · avec <b>' + esc(it.competitor) + '</b>') : '';
     var acc = it.account ? '<button type="button" class="' + cls + '-link" data-acc="' + esc(it.account.id) + '">' + esc(it.account.nom) + '</button>' + (it.mine ? ' <span class="tbn-mine">ton compte</span>' : (it.account.owner_name ? ' · ' + esc(it.account.owner_name) : '')) : '';
-    return '<div class="tbn-row' + (it.mine ? ' mine' : '') + '"><div class="tbn-top"><span class="tbn-tag">' + esc(it.tag) + '</span><span class="tbn-who">' + esc(who) + comp + '</span><span class="tbn-at">' + esc(it.at ? fmtDate(it.at) : '') + '</span></div>'
+    return '<div class="tbn-row' + (it.mine ? ' mine' : '') + '"><div class="tbn-top"><span class="tbn-tag">' + esc(it.tag) + '</span><span class="tbn-at">' + esc(it.at ? fmtDate(it.at) : '') + '</span></div><div class="tbn-who">' + esc(who) + comp + '</div>'
       + (it.text ? '<div class="tbn-txt">' + esc(it.text) + '</div>' : '')
       + (it.person ? '<div class="tbn-meta">Personne nommée : <b>' + esc(it.person.name) + '</b>' + (it.person.title ? ', ' + esc(it.person.title) : '') + '</div>' : '')
       + '<div class="tbn-meta">' + acc + (acc && it.url ? ' · ' : '') + (it.url ? '<a href="' + safeUrl(it.url) + '" target="_blank" rel="noopener">' + esc(it.source || 'Source') + ' ↗</a>' : '') + '</div></div>';
@@ -1248,10 +1248,10 @@
     api('/signals/news?days=7').then(function (d) {
       var items = d.items || [];
       if (!items.length) { host.innerHTML = ''; return; }
-      var open = !!S.newsOpen, n = open ? items.length : Math.min(6, items.length);
+      var open = !!S.newsOpen, n = open ? items.length : Math.min(5, items.length);
       host.innerHTML = '<section class="crm-card tbn" aria-label="Tethered Business News"><h3>Tethered Business News <span class="crm-meta">' + items.length + ' sur les 7 derniers jours</span></h3>'
         + items.slice(0, n).map(function (it) { return newsRow(it, 'crm'); }).join('')
-        + (items.length > 6 ? '<button type="button" class="crm-link tbn-more" data-tbn-more>' + (open ? 'Réduire' : 'Voir les ' + items.length) + '</button>' : '') + '</section>';
+        + (items.length > 5 ? '<button type="button" class="crm-link tbn-more" data-tbn-more>' + (open ? 'Réduire' : 'Voir les ' + items.length) + '</button>' : '') + '</section>';
       host.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
       var m = host.querySelector('[data-tbn-more]'); if (m) m.onclick = function () { S.newsOpen = !open; loadNews(); };
     }).catch(function () { host.innerHTML = ''; });

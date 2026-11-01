@@ -353,6 +353,12 @@ body.theme-light .crm-q-kind.k-reply, body.theme-light .crm-q-ic.k-reply { color
 .crm-next .d { width: 54px; flex: none; color: var(--text2); font-variant-numeric: tabular-nums; }
 .crm-next .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 1280px) {
+  .crm-home-cols { grid-template-columns: minmax(0, 1fr) 300px; }
+  .crm-hero { gap: 8px; }
+  .crm-hero-card { padding: 10px 12px; gap: 10px; }
+  .crm-hero-card b { font-size: 22px; }
+}
+@media (max-width: 1080px) {
   .crm-home-cols { grid-template-columns: minmax(0, 1fr); }
   .crm-home-side { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
   .crm-home-side .crm-card { margin: 0; }
@@ -604,3 +610,8 @@ body.theme-light .crm-q-ic.k-reaction, body.theme-light .crm-q-kind.k-reaction {
 .crm-org-card > summary h3 .crm-meta { margin-left: auto; }
 .crm-auto-tag { font-size: 11px; padding: 1px 6px; border: 1px dashed var(--border2); border-radius: 3px; color: var(--text3); white-space: nowrap; }
 .crm-org-box.auto:not(.on) { border-style: dashed; }
+/* Accueil, écrans moyens : les boutons d'action passent sous la carte au lieu d'écraser le texte */
+@media (max-width: 1440px) {
+  .crm-home .crm-q { flex-wrap: wrap; }
+  .crm-home .crm-q-a { width: 100%; justify-content: flex-start; padding-left: 36px; }
+}

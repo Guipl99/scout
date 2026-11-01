@@ -178,19 +178,21 @@
     var box = document.getElementById('sa-news-box'); if (!box || !crm().api) return;
     var paint = function (items) {
       if (!items || !items.length) { box.innerHTML = ''; return; }
-      var open = !!A.newsOpen, n = open ? items.length : Math.min(3, items.length);
-      box.innerHTML = '<section class="sa-ao tbn"><h4>Tethered Business News <span class="sa-meta">' + items.length + ' cette semaine</span></h4>'
-        + items.slice(0, n).map(function (it) {
+      var open = !!A.newsOpen;
+      var line = function (it) { var who = [it.org, it.pays].filter(Boolean).join(' · '); return '<div class="tbn-line' + (it.mine ? ' mine' : '') + '"><span class="tbn-tag">' + esc(it.tag) + '</span><span>' + esc(who) + (it.competitor ? ' · ' + esc(it.competitor) : '') + '</span></div>'; };
+      var full = function (it) {
           var who = [it.org, it.pays].filter(Boolean).join(' · ');
           var comp = it.competitor ? (it.competitor === 'Elistair' ? ' · Elistair' : ' · avec ' + esc(it.competitor)) : '';
           return '<div class="tbn-row' + (it.mine ? ' mine' : '') + '"><div class="tbn-top"><span class="tbn-tag">' + esc(it.tag) + '</span><span class="tbn-at">' + esc(it.at ? fmtDate(it.at) : '') + '</span></div>'
-            + '<b>' + esc(who) + comp + '</b>'
+            + '<div class="tbn-who">' + esc(who) + comp + '</div>'
             + (it.text ? '<div class="tbn-txt">' + esc(it.text) + '</div>' : '')
-            + (it.person ? '<div class="sa-meta">Personne nommée : ' + esc(it.person.name) + (it.person.title ? ', ' + esc(it.person.title) : '') + '</div>' : '')
             + '<div class="sa-meta">' + (it.account ? '<button type="button" class="sa-link" data-acc="' + esc(it.account.id) + '">' + esc(it.account.nom) + '</button>' + (it.mine ? ' <span class="tbn-mine">ton compte</span>' : '') : '')
             + (it.url ? (it.account ? ' · ' : '') + '<a href="' + safeUrl(it.url) + '" target="_blank" rel="noopener">' + esc(it.source || 'Source') + ' ↗</a>' : '') + '</div></div>';
-        }).join('')
-        + (items.length > 3 ? '<button type="button" class="sa-link tbn-more" id="sa-tbn-more">' + (open ? 'Réduire' : 'Voir les ' + items.length) + '</button>' : '') + '</section>';
+      };
+      // replié : 3 lignes courtes pour laisser la file à l'écran ; déplié : toutes les nouvelles en détail
+      box.innerHTML = '<section class="sa-ao tbn"><h4>Tethered Business News <span class="sa-meta">' + items.length + ' cette semaine</span></h4>'
+        + (open ? items.map(full).join('') : items.slice(0, 3).map(line).join(''))
+        + '<button type="button" class="sa-link tbn-more" id="sa-tbn-more">' + (open ? 'Réduire' : 'Voir le détail' + (items.length > 3 ? ' (' + items.length + ')' : '')) + '</button></section>';
       box.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
       var m = document.getElementById('sa-tbn-more'); if (m) m.onclick = function () { A.newsOpen = !open; paint(items); };
     };
