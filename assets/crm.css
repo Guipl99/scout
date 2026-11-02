@@ -668,3 +668,29 @@ a.crm-tree-acc { display: inline-flex; }
 .crm-tl-acts .crm-tl-del svg { width: 13px; height: 13px; display: block; margin-top: 2px; }
 .crm-tl-acts [data-editev]:hover { color: var(--accent2); }
 .crm-tl-edit { margin-top: 6px; }
+/* Organigramme : échelle de couleur de l'engagement, mode arbre compactable */
+.crm-os { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 10px; height: 10px; border-radius: 999px; font-size: 10px; font-weight: 700; line-height: 1; font-style: normal; background: var(--bg3); color: var(--text3); }
+.crm-os:not(:empty) { min-width: 22px; height: 17px; padding: 0 5px; }
+.crm-os.s0 { background: transparent; border: 1px solid var(--border2); }
+.crm-os.s1 { background: #5E7069; color: #fff; }
+.crm-os.s2 { background: #C9A04A; color: #1A2A28; }
+.crm-os.s3 { background: #D08A3C; color: #1A2A28; }
+.crm-os.s4 { background: #B8643A; color: #fff; }
+.crm-os.s5 { background: #9A3A24; color: #fff; }
+.crm-org-box.on .crm-os, .crm-ot-row.on .crm-os { box-shadow: 0 0 0 1px #fff; }
+/* une branche repliée qui cache un compte plus engagé : liseré de la couleur du meilleur score */
+.crm-org-box.b-s2, .crm-ot-row.b-s2 { box-shadow: inset 3px 0 0 #C9A04A; }
+.crm-org-box.b-s3, .crm-ot-row.b-s3 { box-shadow: inset 3px 0 0 #D08A3C; }
+.crm-org-box.b-s4, .crm-ot-row.b-s4 { box-shadow: inset 3px 0 0 #B8643A; }
+.crm-org-box.b-s5, .crm-ot-row.b-s5 { box-shadow: inset 3px 0 0 #9A3A24; }
+.crm-org-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 2px 0 8px; font-size: 12px; }
+.crm-org-tools .crm-link { font-size: 12px; }
+.crm-os-leg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-left: auto; color: var(--text2); font-size: 11px; }
+.crm-os-leg span { margin-right: 4px; }
+.crm-os-leg .crm-os { margin-left: 6px; }
+.crm-orgw { max-height: 520px; overflow: auto; padding: 4px 0 8px; }
+.crm-orgw .crm-org { overflow: visible; }
+a.crm-org-box { text-decoration: none; color: var(--text); background: var(--bg2); }
+.crm-org-tg { font: inherit; font-size: 11px; margin-top: 4px; padding: 0 8px; height: 18px; line-height: 16px; border: 1px solid var(--border2); border-radius: 999px; background: var(--bg); color: var(--text2); cursor: pointer; position: relative; z-index: 1; }
+.crm-org-tg:hover { color: var(--accent2); border-color: var(--accent2); }
+.crm-org-more { color: var(--text2); cursor: pointer; align-items: center; min-width: 90px; }

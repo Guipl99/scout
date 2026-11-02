@@ -1603,6 +1603,27 @@
       .then(function () { drawOrg(id); })
       .catch(function (e) { box.innerHTML = '<div class="crm-card"><h3>Organigramme</h3><div class="crm-meta">Indisponible : ' + esc(e.message) + '</div></div>'; });
   }
+  // Scores d'engagement des comptes de l'organigramme : pastille colorée + meilleur score de la branche repliée
+  function osClass(v) { return v >= 50 ? 's5' : v >= 30 ? 's4' : v >= 20 ? 's3' : v >= 10 ? 's2' : v > 0 ? 's1' : 's0'; }
+  function paintOrgScores(box, root, kids) {
+    S.orgScores = S.orgScores || {};
+    var ids = [], walk = function (a, d) { ids.push(a.id); if (d < 30) (kids[a.id] || []).forEach(function (k) { walk(k, d + 1); }); }; walk(root, 0);
+    var paint = function (sc) {
+      var best = {};
+      var sub = function (a, d) { var v = (sc[a.id] || {}).s || 0, m = 0; if (d < 30) (kids[a.id] || []).forEach(function (k) { m = Math.max(m, sub(k, d + 1)); }); best[a.id] = m; return Math.max(v, m); };
+      sub(root, 0);
+      box.querySelectorAll('[data-os]').forEach(function (el) {
+        var k = el.getAttribute('data-os'), v = (sc[k] || {}).s || 0, m = best[k] || 0;
+        el.className = 'crm-os ' + osClass(v); el.textContent = v ? v : '';
+        el.title = 'Engagement ' + v + (m > v ? ' · jusqu’à ' + m + ' dans ses rattachés' : '');
+        var host = el.closest('.crm-org-box, .crm-ot-row');
+        if (host) { host.classList.remove('b-s2', 'b-s3', 'b-s4', 'b-s5'); if (m > v && m >= 10) host.classList.add('b-' + osClass(m)); }
+      });
+    };
+    var key = root.id, have = S.orgScores[key];
+    if (have && Date.now() - have.at < 5 * 60 * 1000) { paint(have.sc); return; }
+    api('/crm/tree/scores', { method: 'POST', body: { ids: ids } }).then(function (d) { S.orgScores[key] = { at: Date.now(), sc: d.scores || {} }; if (document.body.contains(box)) paint(d.scores || {}); }).catch(function () {});
+  }
   function drawOrg(id) {
     var box = document.getElementById('crm-org'); if (!box || !S.treeData) return;
     var byId = {}, kids = {};
@@ -1626,12 +1647,26 @@
       }
       return nm;
     };
+    // pastille de score d'engagement, remplie quand les scores arrivent (échelle de couleur)
+    var os = function (a) { return '<span class="crm-os" data-os="' + esc(a.id) + '"></span>'; };
     var card = function (a) {
-      var n = (kids[a.id] || []).length;
+      var n = (kids[a.id] || []).length, me = a.id === id, tag = me ? 'button' : 'a';
       var meta = [a.n_contacts ? a.n_contacts + ' contact' + (a.n_contacts > 1 ? 's' : '') : '', a.owner_name ? first(a.owner_name) : ''].filter(Boolean).join(' · ');
-      return '<button type="button" class="crm-org-box' + (a.id === id ? ' on' : '') + (path[a.id] && a.id !== id ? ' path' : '') + (a.parent_source === 'auto' ? ' auto" title="Rattaché par Scout, à vérifier' : '') + '" data-org="' + esc(a.id) + '"' + (a.id === id ? ' aria-current="true"' : '') + '>'
-        + '<span class="t">' + (a.tier ? tierBadge(a.tier) : '') + '<b title="' + esc(a.nom) + '">' + esc(short(a)) + '</b></span>'
-        + (meta || n ? '<span class="crm-meta">' + esc(meta) + (n && meta ? ' · ' : '') + (n ? n + ' rattaché' + (n > 1 ? 's' : '') : '') + '</span>' : '') + '</button>';
+      return '<' + tag + (me ? ' type="button" aria-current="true"' : ' data-nav href="' + esc(accHref(a.id)) + '"') + ' class="crm-org-box' + (me ? ' on' : '') + (path[a.id] && !me ? ' path' : '') + (a.parent_source === 'auto' ? ' auto" title="Rattaché par Scout, à vérifier' : '') + '" data-org="' + esc(a.id) + '">'
+        + '<span class="t">' + os(a) + (a.tier ? tierBadge(a.tier) : '') + '<b title="' + esc(a.nom) + '">' + esc(short(a)) + '</b></span>'
+        + (meta ? '<span class="crm-meta">' + esc(meta) + '</span>' : '') + '</' + tag + '>';
+    };
+    // Arbre classique (de haut en bas), compactable : chaque case avec des rattachés se replie ou se déplie
+    S.orgExp = S.orgExp || {};
+    var MAXW = 12;
+    var cnode = function (a, d) {
+      var ch = kids[a.id] || [];
+      var open = ch.length && d < 14 && (S.orgExp[a.id] != null ? S.orgExp[a.id] : (!!path[a.id] || d < 1));
+      var tg = ch.length ? '<button type="button" class="crm-org-tg" data-tg="' + esc(a.id) + '" title="' + (open ? 'Replier' : 'Déplier') + ' les ' + ch.length + ' rattachés">' + (open ? '−' : '+ ' + ch.length) + '</button>' : '';
+      if (!open) return '<li>' + card(a) + tg + '</li>';
+      var vis = ch.slice(0, MAXW); ch.forEach(function (k) { if (path[k.id] && vis.indexOf(k) < 0) vis.push(k); });
+      return '<li>' + card(a) + tg + '<ul>' + vis.map(function (k) { return cnode(k, d + 1); }).join('')
+        + (ch.length > vis.length ? '<li><button type="button" class="crm-org-box crm-org-more" data-more="' + esc(a.id) + '">+ ' + (ch.length - vis.length) + ' autres</button></li>' : '') + '</ul></li>';
     };
     // Arbre vertical (type explorateur) : la branche du compte ouvert est dépliée, les autres branches
     // sont repliées sur une ligne (on les déplie au clic). Lisible même avec des centaines de comptes.
@@ -1641,7 +1676,7 @@
       var meta = [n ? n + ' rattaché' + (n > 1 ? 's' : '') : '', a.n_contacts ? a.n_contacts + ' contact' + (a.n_contacts > 1 ? 's' : '') : '', a.owner_name ? first(a.owner_name) : ''].filter(Boolean).join(' · ');
       var me = a.id === id, tag = me ? 'button' : 'a';
       return '<' + tag + (me ? ' type="button"' : ' data-nav href="' + esc(accHref(a.id)) + '"') + ' class="crm-ot-row' + (me ? ' on' : '') + (path[a.id] && !me ? ' path' : '') + '" data-org="' + esc(a.id) + '">'
-        + (a.tier ? tierBadge(a.tier) : '') + '<b>' + esc(short(a)) + '</b>' + (meta ? '<span class="crm-meta">' + esc(meta) + '</span>' : '') + '</' + tag + '>';
+        + os(a) + (a.tier ? tierBadge(a.tier) : '') + '<b>' + esc(short(a)) + '</b>' + (meta ? '<span class="crm-meta">' + esc(meta) + '</span>' : '') + '</' + tag + '>';
     };
     var tnode = function (a, d) {
       var ch = kids[a.id] || [];
@@ -1651,17 +1686,28 @@
       return '<li><details' + (open ? ' open' : '') + '><summary>' + row(a) + '</summary><ul>' + vis.map(function (k) { return tnode(k, d + 1); }).join('')
         + (ch.length > vis.length ? '<li><span class="crm-meta">+ ' + (ch.length - vis.length) + ' autres</span></li>' : '') + '</ul></details></li>';
     };
-    var body = '<ul class="crm-ot">' + tnode(root, 0) + '</ul>';
+    var mode = 'list'; try { mode = localStorage.getItem('scout_org_mode') || 'list'; } catch (e) {}
+    if (S.orgMaxw && S.orgMaxw[root.id]) MAXW = S.orgMaxw[root.id];
+    var body = mode === 'tree' ? '<div class="crm-org"><ul>' + cnode(root, 0) + '</ul></div>' : '<ul class="crm-ot">' + tnode(root, 0) + '</ul>';
+    var legend = '<div class="crm-os-leg" title="Score d’engagement : ce que le compte fait envers nous (échanges, visites du site, chats, clics, veille)"><span>Engagement</span>'
+      + [['s0', '0'], ['s1', '1-9'], ['s2', '10-19'], ['s3', '20-29'], ['s4', '30-49'], ['s5', '50+']].map(function (x) { return '<i class="crm-os ' + x[0] + '"></i>' + x[1]; }).join(' ') + '</div>';
+    var tools = '<div class="crm-org-tools"><span class="crm-seg"><button type="button" class="crm-chip sm' + (mode === 'list' ? ' on' : '') + '" data-omode="list">Liste</button><button type="button" class="crm-chip sm' + (mode === 'tree' ? ' on' : '') + '" data-omode="tree">Arbre</button></span>'
+      + (mode === 'tree' ? '<button type="button" class="crm-link" data-oall="0">Tout replier</button><button type="button" class="crm-link" data-oall="1">Tout déplier</button>' : '') + legend + '</div>';
     var pref = null; try { pref = localStorage.getItem('scout_org_open'); } catch (e) {}
     var isOpen = pref ? pref === '1' : true;
     box.innerHTML = '<details class="crm-card crm-org-card"' + (isOpen ? ' open' : '') + '><summary><h3>Organigramme <span class="crm-meta">' + total + ' compte' + (total > 1 ? 's' : '') + ' sous ' + esc(root.nom) + '</span></h3></summary>'
-      + '<div class="crm-orgt" aria-label="Organigramme du groupe ' + esc(root.nom) + '">' + body + '</div></details>';
+      + tools + '<div class="' + (mode === 'tree' ? 'crm-orgw' : 'crm-orgt') + '" aria-label="Organigramme du groupe ' + esc(root.nom) + '">' + body + '</div></details>';
+    box.querySelectorAll('[data-omode]').forEach(function (b) { b.onclick = function () { try { localStorage.setItem('scout_org_mode', b.getAttribute('data-omode')); } catch (e) {} drawOrg(id); }; });
+    box.querySelectorAll('[data-tg]').forEach(function (b) { b.onclick = function (e) { e.preventDefault(); e.stopPropagation(); var k = b.getAttribute('data-tg'); var isOpen = !!b.nextElementSibling; S.orgExp[k] = !isOpen; drawOrg(id); }; });
+    box.querySelectorAll('[data-oall]').forEach(function (b) { b.onclick = function () { var v = b.getAttribute('data-oall') === '1'; var walk = function (a, d) { if ((kids[a.id] || []).length && d < 30) { S.orgExp[a.id] = d === 0 ? true : v; (kids[a.id] || []).forEach(function (k) { walk(k, d + 1); }); } }; walk(root, 0); drawOrg(id); }; });
+    box.querySelectorAll('[data-more]').forEach(function (b) { b.onclick = function () { S.orgMaxw = S.orgMaxw || {}; S.orgMaxw[root.id] = 1000; drawOrg(id); }; });
+    paintOrgScores(box, root, kids);
     var det = box.querySelector('details');
     det.addEventListener('toggle', function () { try { localStorage.setItem('scout_org_open', det.open ? '1' : '0'); } catch (e) {} if (det.open) center(); });
     box.querySelectorAll('[data-org]').forEach(function (b) { b.onclick = function (e) { var x = b.getAttribute('data-org'); if (x !== id) { e.preventDefault(); e.stopPropagation(); openAccount(x); } }; });
     var onRow = box.querySelector('.crm-ot-row.on'); if (onRow && onRow.scrollIntoView) { var sc = box.querySelector('.crm-orgt'); if (sc) sc.scrollTop = Math.max(0, onRow.offsetTop - sc.offsetTop - 80); }
     var center = function () {
-      var on = box.querySelector('.crm-org-box.on'), sc = box.querySelector('.crm-org'); if (!on || !sc) return;
+      var on = box.querySelector('.crm-org-box.on'), sc = box.querySelector('.crm-orgw'); if (!on || !sc) return;
       var r1 = on.getBoundingClientRect(), r2 = sc.getBoundingClientRect();
       sc.scrollLeft += (r1.left + r1.width / 2) - (r2.left + r2.width / 2);
     };
