@@ -1595,28 +1595,23 @@
         + '<span class="t">' + (a.tier ? tierBadge(a.tier) : '') + '<b title="' + esc(a.nom) + '">' + esc(short(a)) + '</b></span>'
         + (meta || n ? '<span class="crm-meta">' + esc(meta) + (n && meta ? ' · ' : '') + (n ? n + ' rattaché' + (n > 1 ? 's' : '') : '') + '</span>' : '') + '</button>';
     };
-    // profondeur affichée : 3 niveaux sous la tête, plus le chemin vers le compte ouvert et ses enfants directs
-    var node = function (a, d) {
-      var ch = kids[a.id] || [];
-      var open = ch.length && (d < 2 || path[a.id]);
-      if (!open) return '<li>' + card(a) + '</li>';
-      var leaves = ch.every(function (k) { return !(kids[k.id] || []).length; });
-      if (leaves && ch.length > 4) {
-        // beaucoup de feuilles : une colonne compacte plutôt qu'une ligne très large
-        var shown = ch.slice(0, 24);
-        if (path[a.id]) ch.forEach(function (k) { if (path[k.id] && shown.indexOf(k) < 0) shown.push(k); });
-        return '<li>' + card(a) + '<ul><li><div class="crm-org-stack" style="--cols:' + Math.min(4, Math.ceil(shown.length / 5)) + '">' + shown.map(card).join('')
-          + (ch.length > shown.length ? '<span class="crm-meta">+ ' + (ch.length - shown.length) + ' autres</span>' : '') + '</div></li></ul></li>';
-      }
-      var vis = ch.slice(0, MAXW);
-      ch.forEach(function (k) { if (path[k.id] && vis.indexOf(k) < 0) vis.push(k); });
-      return '<li>' + card(a) + '<ul>' + vis.map(function (k) { return node(k, d + 1); }).join('')
-        + (ch.length > vis.length ? '<li><span class="crm-org-more">+ ' + (ch.length - vis.length) + ' autres</span></li>' : '') + '</ul></li>';
-    };
+    // Vue centrée sur le compte ouvert, lisible quelle que soit la taille du groupe :
+    // le chemin depuis la tête (fil d'Ariane), puis le compte et ses voisins de même niveau, puis ses rattachés.
+    var chain = [], up = cur;
+    while (up.parent_id && byId[up.parent_id] && chain.length < 20) { up = byId[up.parent_id]; chain.unshift(up); }
+    var parent = chain.length ? chain[chain.length - 1] : null;
+    var sibs = parent ? (kids[parent.id] || []) : [cur];
+    var MAXS = 11, sv = sibs.slice(0, MAXS); if (sv.indexOf(cur) < 0) sv.push(cur);
+    var mine = kids[cur.id] || [], MAXK = 30, kv = mine.slice(0, MAXK);
+    var grid = function (list, more, extra) { return '<div class="crm-orgf-grid">' + list.map(card).join('') + (more > 0 ? '<span class="crm-meta crm-orgf-more">+ ' + more + ' autres</span>' : '') + (extra || '') + '</div>'; };
+    var crumb = chain.length ? '<div class="crm-orgf-crumb">' + chain.map(function (x) { return '<button type="button" class="crm-link" data-org="' + esc(x.id) + '">' + esc(x.nom) + '</button>'; }).join('<span class="crm-meta"> › </span>') + '</div>' : '';
+    var body = crumb
+      + '<div class="crm-orgf-lvl">' + (parent ? '<div class="crm-orgf-h">Au même niveau <span class="crm-meta">' + sibs.length + ' sous ' + esc(short(parent)) + '</span></div>' : '') + grid(sv, sibs.length - sv.length) + '</div>'
+      + (mine.length ? '<div class="crm-orgf-lvl"><div class="crm-orgf-h">Rattachés à ' + esc(short(cur)) + ' <span class="crm-meta">' + mine.length + '</span></div>' + grid(kv, mine.length - kv.length) + '</div>' : '');
     var pref = null; try { pref = localStorage.getItem('scout_org_open'); } catch (e) {}
     var isOpen = pref ? pref === '1' : true;
     box.innerHTML = '<details class="crm-card crm-org-card"' + (isOpen ? ' open' : '') + '><summary><h3>Organigramme <span class="crm-meta">' + total + ' compte' + (total > 1 ? 's' : '') + ' sous ' + esc(root.nom) + '</span></h3></summary>'
-      + '<div class="crm-org" tabindex="0" aria-label="Organigramme du groupe ' + esc(root.nom) + '"><ul>' + node(root, 0) + '</ul></div></details>';
+      + '<div class="crm-orgf" aria-label="Organigramme du groupe ' + esc(root.nom) + '">' + body + '</div></details>';
     var det = box.querySelector('details');
     det.addEventListener('toggle', function () { try { localStorage.setItem('scout_org_open', det.open ? '1' : '0'); } catch (e) {} if (det.open) center(); });
     box.querySelectorAll('[data-org]').forEach(function (b) { b.onclick = function () { var x = b.getAttribute('data-org'); if (x !== id) openAccount(x); }; });
