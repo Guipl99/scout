@@ -387,3 +387,13 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
   .crm-home .crm-q { flex-wrap: wrap; }
   .crm-home .crm-q-a { width: 100%; justify-content: flex-start; padding-left: 36px; }
 }
+/* Pourquoi c'est du drone filaire (fil des signaux, news) */
+.crm-teth { font-size: 12.5px; line-height: 1.4; margin: 3px 0 2px; padding: 3px 8px; border-left: 3px solid var(--border, rgba(127,127,127,.4)); border-radius: 2px; }
+.crm-teth b { font-weight: 700; margin-right: 2px; }
+.crm-teth mark { background: color-mix(in srgb, var(--accent, #85593E) 35%, transparent); color: inherit; padding: 0 2px; border-radius: 2px; font-weight: 600; }
+.crm-teth.ok { border-left-color: #6E9B7B; }
+.crm-teth.ok b { color: #6E9B7B; }
+.crm-teth.near, .crm-teth.maybe { border-left-color: var(--accent, #85593E); }
+.crm-teth.near b, .crm-teth.maybe b { color: var(--accent, #85593E); }
+.crm-teth.no { opacity: .75; }
+.crm-vh mark, .tbn-txt mark { background: color-mix(in srgb, var(--accent, #85593E) 35%, transparent); color: inherit; padding: 0 2px; border-radius: 2px; font-weight: 600; }

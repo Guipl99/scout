@@ -635,6 +635,17 @@
       S.feedItems = items; drawFeed();
     }).catch(function (e) { body.innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
   }
+  // Pourquoi c'est du drone filaire : l'extrait du texte qui le dit (mot clé surligné), ou pourquoi ça n'en est pas
+  function tethHtml(t, cls) {
+    if (!t) return '';
+    var hi = function (sn, kw) { var h = esc(sn || ''); if (!kw) return h; var k = esc(kw).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return h.replace(new RegExp('[\\wÀ-ÿ]*' + k + '[\\wÀ-ÿ]*', 'i'), function (x) { return '<mark>' + x + '</mark>'; }); };
+    var c = cls || 'crm-teth';
+    if (t.level === 'cite') return '<div class="' + c + ' ok"><b>Filaire</b> « ' + hi(t.snip, t.kw) + ' »</div>';
+    if (t.level === 'proche') return '<div class="' + c + ' near"><b>Proche du filaire</b> (' + esc(t.note || '') + ') « ' + hi(t.snip, t.kw) + ' »</div>';
+    if (t.level === 'possible') return '<div class="' + c + ' maybe"><b>Filaire possible</b> : ' + esc(t.note || '') + '</div>';
+    if (t.level === 'attaque') return '<div class="' + c + ' no"><b>Pas filaire</b> : ' + esc(t.note || '') + ' « ' + hi(t.snip, t.kw) + ' »</div>';
+    return '<div class="' + c + ' no"><b>Pas de filaire</b> : ' + esc(t.note || 'drone sans mention de filaire') + '</div>';
+  }
   function feedRow(it, i) {
     var acc = it.account;
     var title = esc(it.title);
@@ -661,6 +672,7 @@
     return '<div class="crm-feed-row t-' + it.type + (it.imp >= 4 ? ' strong' : '') + '" data-row="' + i + '">'
       + '<span class="crm-q-kind k-' + it.type + '">' + FEED_TYPE[it.type] + '</span>'
       + '<div class="crm-feed-b"><div class="t">' + title + '</div>'
+      + (it.type === 'market' ? tethHtml(it.tether) : '')
       + '<div class="s">' + sub.filter(Boolean).join(' ') + (it.why ? '<span class="crm-meta"> ' + esc(it.why) + '</span>' : '') + '</div>'
       + '<div class="s">' + accHtml + ' <span class="crm-meta">· ' + esc(relTime(it.at)) + '</span></div>'
       + cstate
@@ -922,11 +934,13 @@
   var VK = { evaluation: 'Évalue', demo: 'Démo', achat: 'Achète', ao: 'Appel d’offres', livraison: 'Livré', usage: 'Utilise' };
   var VK_HOT = { evaluation: 1, demo: 1, achat: 1, ao: 1 };
   function veilleKind(k) { return '<span class="crm-vk' + (VK_HOT[k] ? ' hot' : '') + '">' + esc(VK[k] || k) + '</span>'; }
+  // surligne ce qui fait de ce signal un signal « drone filaire »
+  function hlTeth(t) { return esc(t).replace(/(tethered|tether|captifs?|captive|filaires?|fesseldrohnen?|gefesselt\w*|cautivos?|vincolat[oi]|a[ée]rostats?)/gi, '<mark>$1</mark>'); }
   function veilleHit(h, withOrg) {
     var src = h.source === 'linkedin' ? 'LinkedIn' : 'Web';
     return '<div class="crm-vh" data-vh="' + h.id + '">' + veilleKind(h.kind)
       + '<span class="m">' + (withOrg ? '<b>' + esc(h.org_name) + '</b> <span class="crm-meta">' + esc([h.org_country, h.secteur].filter(Boolean).join(' · ')) + '</span><br>' : '')
-      + esc(h.evidence || h.title || '') + '<br><span class="crm-meta">' + esc([h.competitor ? 'Concurrent : ' + h.competitor : '', h.date ? fmtDate(h.date) : ''].filter(Boolean).join(' · '))
+      + hlTeth(h.evidence || h.title || '') + (/(tether|captif|captive|filaire|fessel|cautivo|vincolato|aerostat)/i.test(h.evidence || h.title || '') ? '' : ' <span class="crm-meta">(drone filaire' + (h.competitor ? ' ' + esc(h.competitor) : '') + ')</span>') + '<br><span class="crm-meta">' + esc([h.competitor ? 'Concurrent : ' + h.competitor : '', h.date ? fmtDate(h.date) : ''].filter(Boolean).join(' · '))
       + ' · <a class="crm-link" href=\"' + safeUrl(h.url) + '\" target="_blank" rel="noopener">' + src + '</a></span></span>'
       + '<span class="r"><button type="button" class="crm-link crm-vh-ign" data-ign="' + h.id + '" title="Hors sujet : ne plus afficher">Ignorer</button></span></div>';
   }
@@ -1239,7 +1253,8 @@
     var comp = it.competitor ? (it.competitor === 'Elistair' ? ' · <b>Elistair</b>' : ' · avec <b>' + esc(it.competitor) + '</b>') : '';
     var acc = it.account ? '<button type="button" class="' + cls + '-link" data-acc="' + esc(it.account.id) + '">' + esc(it.account.nom) + '</button>' + (it.mine ? ' <span class="tbn-mine">ton compte</span>' : (it.account.owner_name ? ' · ' + esc(it.account.owner_name) : '')) : '';
     return '<div class="tbn-row' + (it.mine ? ' mine' : '') + '"><div class="tbn-top"><span class="tbn-tag">' + esc(it.tag) + '</span><span class="tbn-at">' + esc(it.at ? fmtDate(it.at) : '') + '</span></div><div class="tbn-who">' + esc(who) + comp + '</div>'
-      + (it.text ? '<div class="tbn-txt">' + esc(it.text) + '</div>' : '')
+      + (it.text ? '<div class="tbn-txt">' + (it.type === 'veille' ? hlTeth(it.text) : esc(it.text)) + '</div>' : '')
+      + (it.type === 'market' ? tethHtml(it.tether) : '')
       + (it.person ? '<div class="tbn-meta">Personne nommée : <b>' + esc(it.person.name) + '</b>' + (it.person.title ? ', ' + esc(it.person.title) : '') + '</div>' : '')
       + '<div class="tbn-meta">' + acc + (acc && it.url ? ' · ' : '') + (it.url ? '<a href="' + safeUrl(it.url) + '" target="_blank" rel="noopener">' + esc(it.source || 'Source') + ' ↗</a>' : '') + '</div></div>';
   }
@@ -2776,7 +2791,7 @@
   }
 
   window.scoutCrm = { pitchPending: function () { return (S.pitchCounts && S.pitchCounts.pending_drafts) || 0; }, onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge, refreshPropBadge: refreshPropBadge,
-    loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchSend: pitchSend, pitchSave: pitchSave, pitchDraft: pitchDraft, pitchReview: pitchReview, pitchSourcesHtml: pitchSourcesHtml, liDraft: liDraft, pitchSendLinkedIn: pitchSendLinkedIn, toast: toast, runRoutine: runRoutine, routines: function () { return ROUTINES; }, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
+    loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchSend: pitchSend, pitchSave: pitchSave, pitchDraft: pitchDraft, pitchReview: pitchReview, pitchSourcesHtml: pitchSourcesHtml, liDraft: liDraft, pitchSendLinkedIn: pitchSendLinkedIn, toast: toast, runRoutine: runRoutine, routines: function () { return ROUTINES; }, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, tethHtml: tethHtml, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
   setTimeout(refreshBadge, 2500);
   setInterval(refreshBadge, 5 * 60 * 1000);
   setTimeout(refreshPropBadge, 3500);

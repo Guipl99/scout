@@ -186,6 +186,7 @@
           return '<div class="tbn-row' + (it.mine ? ' mine' : '') + '"><div class="tbn-top"><span class="tbn-tag">' + esc(it.tag) + '</span><span class="tbn-at">' + esc(it.at ? fmtDate(it.at) : '') + '</span></div>'
             + '<div class="tbn-who">' + esc(who) + comp + '</div>'
             + (it.text ? '<div class="tbn-txt">' + esc(it.text) + '</div>' : '')
+            + (it.type === 'market' && crm().tethHtml ? crm().tethHtml(it.tether) : '')
             + '<div class="sa-meta">' + (it.account ? '<button type="button" class="sa-link" data-acc="' + esc(it.account.id) + '">' + esc(it.account.nom) + '</button>' + (it.mine ? ' <span class="tbn-mine">ton compte</span>' : '') : '')
             + (it.url ? (it.account ? ' · ' : '') + '<a href="' + safeUrl(it.url) + '" target="_blank" rel="noopener">' + esc(it.source || 'Source') + ' ↗</a>' : '') + '</div></div>';
       };
