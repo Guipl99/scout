@@ -141,6 +141,12 @@
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function opt(v, label, cur) { return '<option value="' + esc(v) + '"' + (String(cur == null ? '' : cur) === String(v) ? ' selected' : '') + '>' + esc(label) + '</option>'; }
   // Liens réels vers les fiches : clic simple = navigation dans l'app, Ctrl/Cmd/Maj/clic molette/clic droit = nouvel onglet.
+  // Liste courte : n premiers éléments, le reste replié derrière « Voir les N autres »
+  function capList(list, n, fn) {
+    list = list || [];
+    var head = list.slice(0, n).map(fn).join(''), rest = list.slice(n);
+    return head + (rest.length ? '<details class="crm-more"><summary class="crm-meta">Voir ' + (rest.length > 1 ? 'les ' + rest.length + ' autres' : 'l’autre') + '</summary>' + rest.map(fn).join('') + '</details>' : '');
+  }
   function accHref(id) { return '#accounts/' + encodeURIComponent(id); }
   function ctHref(id) { return '#people/' + encodeURIComponent(id); }
   function navHrefOf(el) {
@@ -934,14 +940,17 @@
     S.mkQ = S.mkQ || ''; S.mkMin = S.mkMin == null ? 0 : S.mkMin; S.mkKind = S.mkKind || '';
     body.innerHTML = '<div class="crm-row" style="gap:8px;margin-bottom:10px;flex-wrap:wrap"><input type="search" class="crm-input" id="crm-mk-q" placeholder="Rechercher un titre, un acheteur, un pays, un fournisseur…" value="' + esc(S.mkQ) + '" style="flex:1;min-width:220px">'
       + '<select class="crm-input" id="crm-mk-kind" style="width:auto"><option value="">Tout</option><option value="tender">Appels d’offres</option><option value="contract">Contrats</option></select>'
+      + '<select class="crm-input" id="crm-mk-sort" style="width:auto" aria-label="Tri"><option value="recent">Plus récents d’abord</option><option value="score">Mieux notés d’abord</option></select>'
       + '<select class="crm-input" id="crm-mk-min" style="width:auto"><option value="0">Toutes les notes</option><option value="3">3 et plus</option><option value="5">5 et plus</option></select></div>'
       + '<div id="crm-mk-list"><div class="crm-empty">Chargement…</div></div>';
     var q = document.getElementById('crm-mk-q'), k = document.getElementById('crm-mk-kind'), m = document.getElementById('crm-mk-min');
+    var so = document.getElementById('crm-mk-sort'); S.mkSort = S.mkSort || lsGet('scout_market_sort', 'recent'); so.value = S.mkSort;
+    so.onchange = function () { S.mkSort = so.value; lsSet('scout_market_sort', S.mkSort); run(); };
     k.value = S.mkKind; m.value = String(S.mkMin);
     var t = null;
     var run = function () {
       S.mkQ = q.value.trim(); S.mkKind = k.value; S.mkMin = parseInt(m.value, 10) || 0;
-      api('/crm/market/library?q=' + encodeURIComponent(S.mkQ) + '&kind=' + S.mkKind + '&min=' + S.mkMin).then(function (d) {
+      api('/crm/market/library?q=' + encodeURIComponent(S.mkQ) + '&kind=' + S.mkKind + '&min=' + S.mkMin + '&sort=' + (S.mkSort || 'recent')).then(function (d) {
         var list = document.getElementById('crm-mk-list'); if (!list) return;
         var c = d.counts || {};
         list.innerHTML = '<div class="crm-meta" style="margin-bottom:8px">' + d.n + ' résultat' + (d.n > 1 ? 's' : '') + (d.n > 200 ? ' (200 affichés)' : '') + ' · ' + (c.total || 0) + ' en base, ' + (c.proposed || 0) + ' notés 5 et plus, ' + (c.watch || 0) + ' notés 3 ou 4</div>'
@@ -1460,7 +1469,7 @@
       + '<span class="crm-bar-r"><span class="crm-meta" id="crm-count" aria-live="polite"></span>'
       + '<span class="crm-seg" role="group" aria-label="Affichage"><button type="button" class="crm-chip sm' + (S.treeView ? '' : ' on') + '" id="crm-v-list">Liste</button><button type="button" class="crm-chip sm' + (S.treeView ? ' on' : '') + '" id="crm-v-tree">Arbre</button></span>'
       + '<span class="crm-menu" id="crm-cols"></span>'
-      + (isAdminNow() ? '<button class="crm-btn ghost sm" id="crm-export" type="button" title="Exporter la liste en CSV">Exporter</button>' : '') + '</span></div>'
+      + (isAdminNow() ? '<button class="crm-btn ghost sm" id="crm-export" type="button" title="Exporter la liste en CSV">Exporter</button>' : '') + '<button class="crm-btn primary sm" id="crm-new-acc" type="button">+ Compte</button></span></div>'
       + '<div class="crm-fpanel" id="crm-fpanel"></div>'
       + '<div id="crm-tier-banner"></div>'
       + '<div class="crm-table-wrap" id="crm-table-wrap"' + (S.treeView ? ' hidden' : '') + '><table class="crm-table" id="crm-table"><thead></thead><tbody></tbody></table>'
@@ -1470,6 +1479,7 @@
       + '</div><div class="crm-wrap crm-record" id="crm-detail" style="display:none"></div>';
     colsMenu(document.getElementById('crm-cols'), '#crm-table', 'scout_cols_acc', COLS.filter(function (c) { return c.k !== 'nom'; }).map(function (c) { return [c.k, c.label]; }));
     var exb = document.getElementById('crm-export'); if (exb) exb.onclick = function () { exportCsv(); };
+    var nab = document.getElementById('crm-new-acc'); if (nab) nab.onclick = newAccountDialog;
     document.getElementById('crm-more-btn').onclick = function () { fetchAccounts(true); };
     var setView = function (tree) {
       S.treeView = tree; lsSet('scout_crm_tree', tree ? 1 : 0);
@@ -1887,7 +1897,7 @@
           + '<td class="c-tier">' + tierBadge(r.tier) + '</td>'
           + '<td class="c-nom"><a data-nav class="crm-acc-name" href="' + esc(accHref(r.id)) + '" title="' + esc(r.nom) + '">' + esc(r.nom) + '</a><div class="crm-acc-sub">' + esc([r.pays, r.secteur].filter(Boolean).join(' · ')) + (r.n_contacts ? ' · ' + r.n_contacts + ' contact' + (r.n_contacts > 1 ? 's' : '') : '') + '</div></td>'
           + '<td class="c-prio">' + prioBadge(r.priority) + '</td>'
-          + '<td class="c-score"><span class="crm-score-cell">' + heatBadge(r.score, r.heat) + (r.client_of ? '<span class="crm-buy crm-buy-c" title="Équipé chez ce concurrent (veille)">Client ' + esc(r.client_of) + '</span>' : '') + (r.n_veille_eval && !r.n_market_tethered ? '<span class="crm-buy crm-buy-t" title="' + r.n_veille_eval + ' signal(s) en 12 mois : évaluation, démo ou achat de drone filaire (veille)">Achat filaire</span>' : '') + (r.n_market_recent && r.score === r.score_v2 ? (r.n_market_tethered ? '<span class="crm-buy crm-buy-t" title="' + r.n_market_tethered + ' marché(s) de drone filaire en 12 mois">Achat filaire</span>' : '<span class="crm-buy" title="' + r.n_market_recent + ' marché(s) drone en 12 mois">Achat drone</span>') : '') + (r.web_pages_90d ? '<span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</span></td>'
+          + '<td class="c-score"><span class="crm-score-cell">' + heatBadge(r.score, r.heat) + (r.client_of ? '<span class="crm-buy crm-buy-c" title="Équipé chez ce concurrent (veille)">Client ' + esc(r.client_of) + '</span>' : '') + (r.n_veille_eval && !r.n_market_tethered ? '<span class="crm-buy crm-buy-t" title="' + r.n_veille_eval + ' signal(s) de veille en 12 mois (démo, essai, appel d’offres ou achat de drone filaire) ; le badge montre le plus avancé">' + ({ achat: 'Achat filaire', ao: 'AO filaire', evaluation: 'Essai filaire', demo: 'Démo filaire' }[r.veille_top_kind] || 'Intérêt filaire') + '</span>' : '') + (r.n_market_recent && r.score === r.score_v2 ? (r.n_market_tethered ? '<span class="crm-buy crm-buy-t" title="' + r.n_market_tethered + ' marché(s) de drone filaire en 12 mois">Achat filaire</span>' : '<span class="crm-buy" title="' + r.n_market_recent + ' marché(s) drone en 12 mois">Achat drone</span>') : '') + (r.web_pages_90d ? '<span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</span></td>'
           + '<td class="c-status">' + statusPill(r.status) + '</td>'
           + '<td class="c-coverage">' + coverageDots(r.roles) + '</td>'
           + '<td class="c-owner">' + (r.owner_name ? '<span class="crm-owner"><span class="crm-avatar">' + esc(initials(r.owner_name)) + '</span>' + esc(r.owner_name) + '</span>' : '<span class="crm-muted">Personne</span>') + '</td>'
@@ -2189,8 +2199,8 @@
       // ── colonne droite : signaux, tâches, comptes rattachés, comité d'achat
       + '<aside class="crm-rec-right">'
       // signaux d'abord (veille filaire, marchés, visites du site), puis tâches, comptes rattachés, et le comité d'achat en bas
-      + (A.veille && A.veille.length ? '<div class="crm-card"><h3>Veille drone filaire <span class="crm-meta">' + A.veille.length + '</span></h3>' + A.veille.map(function (h) { return veilleHit(h, false); }).join('') + '<div class="crm-meta" style="margin-top:6px">Repéré sur LinkedIn, les sites des concurrents et la presse. Compte dans l’engagement.</div></div>' : '')
-      + (A.market && A.market.length ? '<div class="crm-card"><h3>Marchés <span class="crm-meta">' + A.market.length + '</span></h3>' + A.market.map(function (m) {
+      + (A.veille && A.veille.length ? '<div class="crm-card"><h3>Veille drone filaire <span class="crm-meta">' + A.veille.length + '</span></h3>' + capList(A.veille, 4, function (h) { return veilleHit(h, false); }) + '<div class="crm-meta" style="margin-top:6px">Repéré sur LinkedIn, les sites des concurrents et la presse. Compte dans l’engagement.</div></div>' : '')
+      + (A.market && A.market.length ? '<div class="crm-card"><h3>Marchés <span class="crm-meta">' + A.market.length + '</span></h3>' + capList(A.market, 4, function (m) {
         var val = m.value_max ? (m.value_max >= 1e9 ? (m.value_max / 1e9).toFixed(1).replace('.', ',') + ' Md' : Math.round(m.value_max / 1e6) + ' M') : '';
         var label = esc(m.title || 'Sans titre');
         return '<div class="crm-webrow" style="align-items:flex-start;gap:8px"><span><span class="crm-q-kind k-' + (m.kind === 'tender' ? 'relance' : 'task') + '">' + (m.kind === 'tender' ? 'Appel d’offres' : 'Contrat') + '</span> '
@@ -2198,10 +2208,17 @@
           + '<br><span class="crm-meta">' + esc([m.buyer, val].filter(Boolean).join(' · ')) + '</span>'
           + (m.tether ? tethHtml(m.tether) : (m.why ? '<br><span class="crm-meta">' + esc(m.why) + '</span>' : '')) + '</span>'
           + '<span class="crm-meta" style="white-space:nowrap;text-align:right">' + (m.score != null ? '<span class="crm-ms-score s' + (m.score >= 5 ? 'hi' : 'mid') + '" title="Note sur 8">' + m.score + '/8</span><br>' : '') + esc(m.date ? fmtDate(m.date) : '') + '</span></div>';
-      }).join('') + '<div class="crm-meta" style="margin-top:6px">Seuls les marchés notés 3 sur 8 et plus s’affichent ici. Rattachés par le nom de l’acheteur.</div></div>' : '')
-      + (A.web && A.web.length ? '<div class="crm-card"><h3>Pages vues <span class="crm-meta">elistair.com</span></h3>' + A.web.map(function (w) {
-        return '<div class="crm-webrow"><span>' + esc(w.title && w.title !== 'Elistair' ? w.title : w.path) + '</span><span class="crm-meta">' + esc(relTime(w.ts)) + '</span></div>';
-      }).join('') + '</div>' : '')
+      }) + '<div class="crm-meta" style="margin-top:6px">Seuls les marchés notés 3 sur 8 et plus s’affichent ici. Rattachés par le nom de l’acheteur.</div></div>' : '')
+      + (A.web && A.web.length ? (function () {
+        var wi = A.web_interest || {}, chips = function (arr) { return (arr || []).slice(0, 4).map(function (x) { return '<span class="crm-wi-chip">' + esc(x.label) + (x.count > 1 ? ' <b>' + x.count + '</b>' : '') + '</span>'; }).join(''); };
+        var rows = A.web.map(function (w) { return '<div class="crm-webrow"><span>' + esc(w.title && w.title !== 'Elistair' ? String(w.title).replace(/\s*[|–-]\s*Elistair.*$/i, '') : w.path) + '</span><span class="crm-meta">' + esc(relTime(w.ts)) + '</span></div>'; }).join('');
+        return '<div class="crm-card"><h3>Site elistair.com <span class="crm-meta">' + (wi.pages || A.web.length) + ' page' + ((wi.pages || A.web.length) > 1 ? 's' : '') + ' en 90 j · ' + esc(relTime(wi.last || A.web[0].ts)) + '</span></h3>'
+          + ((wi.products || []).length ? '<div class="crm-wi"><span class="crm-meta">Produits</span>' + chips(wi.products) + '</div>' : '')
+          + ((wi.usecases || []).length ? '<div class="crm-wi"><span class="crm-meta">Use cases</span>' + chips(wi.usecases) + '</div>' : '')
+          + ((wi.intent || []).length ? '<div class="crm-wi"><span class="crm-meta">Intention</span>' + chips(wi.intent) + '</div>' : '')
+          + (!(wi.products || []).length && !(wi.usecases || []).length && !(wi.intent || []).length ? '<div class="crm-meta">Pages générales, aucun produit ni cas d’usage précis.</div>' : '')
+          + '<details class="crm-more"><summary class="crm-meta">Dernières pages</summary>' + rows + '</details></div>';
+      })() : '')
       + '<div class="crm-card"><h3>Tâches <span class="crm-meta">' + openTasks.length + ' ouverte' + (openTasks.length > 1 ? 's' : '') + '</span></h3>'
       + (openTasks.length ? openTasks.map(taskHtml).join('') : '<div class="crm-meta">Aucune tâche ouverte.</div>')
       + (doneTasks.length ? '<details style="margin-top:8px"><summary class="crm-meta" style="cursor:pointer">' + doneTasks.length + ' terminée' + (doneTasks.length > 1 ? 's' : '') + '</summary>' + doneTasks.map(taskHtml).join('') + '</details>' : '')
@@ -2213,9 +2230,9 @@
       + KEY_ROLES.map(function (r) {
         var list = byRole[r] || [];
         return '<div class="crm-com"><div class="crm-com-h"><span class="crm-role r-' + r + '">' + ROLE_LABEL[r] + '</span><span class="crm-meta">' + esc(ROLE_HINT[r]) + '</span></div>'
-          + (list.length ? list.map(contactLine).join('') : '<button type="button" class="crm-com-miss" data-addrole="' + r + '">' + ICON.plus + ' Trouver ou ajouter un ' + ROLE_LABEL[r].toLowerCase() + '</button>') + '</div>';
+          + (list.length ? capList(list, 3, contactLine) : '<button type="button" class="crm-com-miss" data-addrole="' + r + '">' + ICON.plus + ' Trouver ou ajouter un ' + ROLE_LABEL[r].toLowerCase() + '</button>') + '</div>';
       }).join('')
-      + (others.length ? '<details class="crm-com"><summary class="crm-com-h" style="cursor:pointer"><span class="crm-role none">Autres</span><span class="crm-meta">' + others.length + ' contact' + (others.length > 1 ? 's' : '') + ', rôle à préciser</span></summary>' + others.map(contactLine).join('') + '</details>' : '')
+      + (others.length ? '<details class="crm-com"><summary class="crm-com-h" style="cursor:pointer"><span class="crm-role none">Autres</span><span class="crm-meta">' + others.length + ' contact' + (others.length > 1 ? 's' : '') + ', rôle à préciser</span></summary>' + capList(others, 6, contactLine) + '</details>' : '')
       + '</div>'
       + '</aside></div>';
 
@@ -2425,7 +2442,37 @@
     if (focus) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
-  function addContactDialog(a, role) {
+  // Création à la main : compte, et contact (choix du compte puis fiche contact)
+  function newAccountDialog() {
+    var inner = '<div class="crm-form">'
+      + '<label>Nom de l’organisme<input class="crm-input" id="na-nom" placeholder="Ex. SDIS 69, 1er régiment de chasseurs"></label>'
+      + '<div class="crm-form-2"><label>Pays<input class="crm-input" id="na-pays" placeholder="France"></label><label>Secteur<input class="crm-input" id="na-sect" list="na-sect-l" placeholder="Défense, Police, Pompiers…"></label></div>'
+      + '<datalist id="na-sect-l">' + ['Défense', 'Police', 'Gendarmerie', 'Pompiers', 'Sécurité civile', 'Garde-frontières', 'Garde-côtes', 'Douanes', 'Pénitentiaire', 'Infrastructures', 'Industrie', 'Intégrateur', 'Distributeur'].map(function (x) { return '<option value="' + esc(x) + '">'; }).join('') + '</datalist>'
+      + '<label>Site web (domaine)<input class="crm-input" id="na-dom" placeholder="exemple.fr"></label>'
+      + '<div class="crm-meta">Le domaine rattache automatiquement les visites du site et les emails à ce compte. Si un compte du même nom ou du même domaine existe, Scout l’ouvre au lieu d’en créer un second.</div></div>';
+    popup('Nouveau compte', inner, function (pop) {
+      var v = function (id) { return pop.querySelector('#' + id).value.trim(); };
+      if (v('na-nom').length < 2) { toast('Nom requis'); return false; }
+      var dom = v('na-dom').replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+      return api('/crm/accounts', { method: 'POST', body: { nom: v('na-nom'), pays: v('na-pays') || null, secteur: v('na-sect') || null, domain: dom || null, source: 'manuel' } }).then(function (d) {
+        S.treeData = null;
+        toast(d.existed ? 'Ce compte existe déjà : ouverture' : 'Compte créé');
+        if (d.account && d.account.id) openAccount(d.account.id);
+      });
+    }, 'Créer');
+  }
+  function newContactDialog() {
+    var pop = popup('Nouveau contact', '<div class="crm-meta" style="margin-bottom:8px">Pour quel compte ? Si l’organisme n’existe pas encore, créez d’abord le compte.</div><div id="nc-acc"></div>'
+      + '<div style="margin-top:8px"><button type="button" class="crm-link" id="nc-acc-new">+ Créer un nouveau compte</button></div>', function () { toast('Choisissez un compte'); return false; }, 'Suivant');
+    pop.querySelector('#nc-acc-new').onclick = function () { pop.remove(); newAccountDialog(); };
+    acctPicker(pop.querySelector('#nc-acc'), { placeholder: 'Rechercher un compte…', focus: true, onPick: function (x) {
+      pop.remove();
+      api('/crm/accounts/' + encodeURIComponent(x.id)).then(function (d) { return d.account || x; }).catch(function () { return x; }).then(function (a) {
+        addContactDialog(a, '', function (r) { if (r && r.id) openContact(r.id); });
+      });
+    } });
+  }
+  function addContactDialog(a, role, onDone) {
     var inner = '<div class="crm-form">'
       + '<div class="crm-form-2"><label>Prénom<input class="crm-input" id="nc-prenom"></label><label>Nom<input class="crm-input" id="nc-nom"></label></div>'
       + '<label>Titre / fonction<input class="crm-input" id="nc-titre" placeholder="Ex. Chef du service drones"></label>'
@@ -2437,7 +2484,7 @@
       var v = function (id) { return pop.querySelector('#' + id).value.trim(); };
       if (!v('nc-nom') && !v('nc-prenom')) { toast('Nom requis'); return false; }
       return api('/crm/contacts', { method: 'POST', body: { end_user_id: a.id, prenom: v('nc-prenom'), nom: v('nc-nom'), titre: v('nc-titre'), buying_role: v('nc-role') || null, email: v('nc-email') || null, telephone: v('nc-tel') || null, linkedin: v('nc-li') || null } })
-        .then(function () { toast('Contact ajouté'); return reloadAccount(); })
+        .then(function (r) { toast('Contact ajouté'); return onDone ? onDone(r) : reloadAccount(); })
         .catch(function (e) {
           if (e.status === 409 && e.data && e.data.contact_id && confirm(e.message + '. Ouvrir ce contact ?')) { openContact(e.data.contact_id); return; }
           throw e;
@@ -2484,14 +2531,34 @@
         else if (k === 'transmitted_crm') { ic = ICON.send; cls = 'k-sys'; }
         if (t.subject) body = '<div class="subj">« ' + esc(t.subject) + ' »</div>' + body;
       }
-      canDel = canDel && me && (me.role === 'admin' || t.author === me.name);
+      var mine = me && (me.role === 'admin' || t.author === me.name);
+      var canEdit = t.src === 'event' && (t.kind === 'note' || t.kind === 'activity') && mine;
+      canDel = canDel && mine;
       out.push('<div class="crm-tl-item"><span class="crm-tl-ic ' + cls + '" aria-hidden="true">' + ic + '</span><div class="crm-tl-body"><div>' + title + '</div><div class="who">' + who + '</div>' + body + '</div>'
-        + (canDel ? '<button type="button" class="crm-tl-del" data-delev="' + esc(t.id) + '" title="Supprimer" aria-label="Supprimer">×</button>' : '') + '</div>');
+        + (canEdit || canDel ? '<span class="crm-tl-acts">' + (canEdit ? '<button type="button" class="crm-tl-del" data-editev="' + esc(t.id) + '" title="Modifier" aria-label="Modifier">' + ICON.edit + '</button>' : '')
+          + (canDel ? '<button type="button" class="crm-tl-del" data-delev="' + esc(t.id) + '" title="Supprimer" aria-label="Supprimer">×</button>' : '') + '</span>' : '') + '</div>');
     });
     return out.join('');
   }
 
   function bindTimeline(root, reload) {
+    root.querySelectorAll('[data-editev]').forEach(function (b) {
+      b.onclick = function () {
+        var item = b.closest('.crm-tl-item'), bodyEl = item.querySelector('.crm-tl-body'), txt = bodyEl.querySelector('.txt');
+        if (bodyEl.querySelector('.crm-tl-edit')) return;
+        var cur = txt ? txt.textContent : '';
+        var box = document.createElement('div'); box.className = 'crm-tl-edit';
+        box.innerHTML = '<textarea class="crm-input" rows="4" style="width:100%;resize:vertical"></textarea><div class="crm-row" style="justify-content:flex-end;gap:6px;margin-top:6px"><button type="button" class="crm-btn ghost sm" data-x>Annuler</button><button type="button" class="crm-btn primary sm" data-s>Enregistrer</button></div>';
+        var ta = box.querySelector('textarea'); ta.value = cur;
+        if (txt) txt.style.display = 'none';
+        bodyEl.appendChild(box); ta.focus();
+        box.querySelector('[data-x]').onclick = function () { box.remove(); if (txt) txt.style.display = ''; };
+        box.querySelector('[data-s]').onclick = function () {
+          var v = ta.value.trim(); if (!v) { toast('Texte vide'); return; }
+          api('/crm/events/' + b.getAttribute('data-editev'), { method: 'PATCH', body: { body: v } }).then(function () { toast('Note modifiée'); return reload(); }).catch(function (er) { toast('Erreur : ' + er.message); });
+        };
+      };
+    });
     root.querySelectorAll('#crm-tl [data-ct]').forEach(function (el) { el.onclick = function (e) { e.stopPropagation(); openContact(el.getAttribute('data-ct')); }; });
     root.querySelectorAll('[data-delev]').forEach(function (b) {
       b.onclick = function () {
@@ -2541,13 +2608,14 @@
     if (!document.getElementById('crm-plist')) {
       p.innerHTML = '<div class="crm-wrap" id="crm-plist"><div class="crm-bar"><div class="crm-toolbar" id="crm-ptoolbar"></div>'
         + '<div class="crm-views" id="crm-pviews" role="tablist" aria-label="Vues"></div>'
-        + '<span class="crm-bar-r"><span class="crm-meta" id="crm-pcount" aria-live="polite"></span><span class="crm-menu" id="crm-pcols"></span><button class="crm-btn ghost sm" id="crm-pexport" type="button" title="Exporter la liste en CSV">Exporter</button></span></div>'
+        + '<span class="crm-bar-r"><span class="crm-meta" id="crm-pcount" aria-live="polite"></span><span class="crm-menu" id="crm-pcols"></span><button class="crm-btn ghost sm" id="crm-pexport" type="button" title="Exporter la liste en CSV">Exporter</button><button class="crm-btn primary sm" id="crm-new-ct" type="button">+ Contact</button></span></div>'
         + '<div class="crm-fpanel" id="crm-pfpanel"></div>'
         + '<div class="crm-table-wrap"><table class="crm-table" id="crm-ptable"><thead></thead><tbody></tbody></table>'
         + '<div class="crm-more" id="crm-pmore" style="display:none"><button class="crm-btn" type="button" id="crm-pmore-btn">Afficher plus</button></div></div></div>'
         + '<div class="crm-wrap crm-record" id="crm-pdetail" style="display:none"></div>';
       document.getElementById('crm-pmore-btn').onclick = function () { fetchPeople(true); };
       document.getElementById('crm-pexport').onclick = exportPeople;
+      var ncb = document.getElementById('crm-new-ct'); if (ncb) ncb.onclick = newContactDialog;
       colsMenu(document.getElementById('crm-pcols'), '#crm-ptable', 'scout_cols_ppl', [['account', 'Compte'], ['role', 'Rôle'], ['email', 'Email'], ['owner', 'Propriétaire'], ['activity', 'Dernière activité']]);
     }
     var tab = opts && opts.tab;
@@ -2714,9 +2782,9 @@
         + '<div class="crm-meta" style="margin-top:6px">Propriétaire : ' + esc(c.owner_name || 'personne') + '</div></div>'
         : '<div class="crm-card"><h3>Compte</h3><div class="crm-meta">Ce contact n’est rattaché à aucun compte' + (c.organisation ? ' (organisation saisie : ' + esc(c.organisation) + ')' : '') + '.</div></div>')
       + '<div class="crm-card"><h3>Tâches <span class="crm-meta">' + openTasks.length + '</span></h3>' + (R.tasks.length ? R.tasks.map(taskHtml).join('') : '<div class="crm-meta">Aucune tâche.</div>') + '</div>'
-      + (R.colleagues.length ? '<div class="crm-card"><h3>Comité d’achat du compte</h3>' + R.colleagues.map(function (x) {
+      + (R.colleagues.length ? '<div class="crm-card"><h3>Comité d’achat du compte <span class="crm-meta">' + R.colleagues.length + '</span></h3>' + capList(R.colleagues, 5, function (x) {
         return '<div class="crm-ct" data-ct="' + esc(x.id) + '" role="button" tabindex="0"><span class="crm-avatar">' + esc(initials(personName(x))) + '</span><div style="min-width:0;flex:1"><div class="crm-ct-name">' + esc(personName(x)) + '</div><div class="crm-ct-sub">' + esc(x.titre || '') + '</div></div>' + rolePill(x.role, true) + '</div>';
-      }).join('') + '</div>' : '')
+      }) + '</div>' : '')
       + '</aside></div>';
 
     document.getElementById('crm-pback').onclick = function () { if (history.length > 1) history.back(); else go('people'); };
@@ -2823,6 +2891,23 @@
 
   window.scoutCrm = { pitchPending: function () { return (S.pitchCounts && S.pitchCounts.pending_drafts) || 0; }, onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge, refreshPropBadge: refreshPropBadge,
     loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchSend: pitchSend, pitchSave: pitchSave, pitchDraft: pitchDraft, pitchReview: pitchReview, pitchSourcesHtml: pitchSourcesHtml, liDraft: liDraft, pitchSendLinkedIn: pitchSendLinkedIn, toast: toast, runRoutine: runRoutine, routines: function () { return ROUTINES; }, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, tethHtml: tethHtml, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
+  // Bouton « remonter en haut » : apparaît dès qu'une liste ou une page a défilé
+  (function () {
+    var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'crm-totop'; btn.title = 'Remonter en haut'; btn.setAttribute('aria-label', 'Remonter en haut');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+    document.body.appendChild(btn);
+    var target = null;
+    var top = function (el) { return el === document || el === document.documentElement || el === document.body ? (window.scrollY || document.documentElement.scrollTop) : el.scrollTop; };
+    document.addEventListener('scroll', function (e) {
+      var el = e.target; if (el && el.nodeType === 1 && el.scrollHeight - el.clientHeight < 400 && el !== document.documentElement) return;
+      target = el; btn.classList.toggle('on', top(el) > 500);
+    }, true);
+    btn.onclick = function () {
+      if (!target || target === document || target === document.documentElement || target === document.body) window.scrollTo({ top: 0, behavior: 'smooth' });
+      else target.scrollTo({ top: 0, behavior: 'smooth' });
+      btn.classList.remove('on');
+    };
+  })();
   // Ouverture directe d'un lien (#accounts/<id>, #people/<id>…) : le routeur de la page a tourné avant le chargement de ce script.
   (function () {
     var h = (location.hash || '').slice(1).split('/'), panel = h[0], tab = h[1];
