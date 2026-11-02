@@ -1158,7 +1158,7 @@
       + '<button class="crm-btn primary" type="button" id="crm-nt-save">Ajouter</button></div>'
       + '<div id="crm-tasks-list"><div class="crm-empty">Chargement…</div></div>'
       + '<div class="crm-meta crm-q-foot"><button type="button" class="crm-link" id="crm-q-done"></button></div>'
-      + '</div><aside class="crm-home-side"><div id="crm-home-digest"></div><div id="crm-home-news"></div><div id="crm-home-side"></div></aside></div></div>';
+      + '</div><aside class="crm-home-side"><div id="crm-home-news"></div><div id="crm-home-digest"></div><div id="crm-home-side"></div></aside></div></div>';
     p.querySelectorAll('[data-hs]').forEach(function (b) { b.onclick = function () { S.homeScope = b.getAttribute('data-hs'); S.taskState = 'open'; loadHome(); }; });
     p.querySelectorAll('[data-qf]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-qf'); S.taskState = 'open'; drawQueue(); }; });
     document.getElementById('crm-q-done').onclick = function () { S.taskState = S.taskState === 'done' ? 'open' : 'done'; S.taskState === 'done' ? drawDone() : drawQueue(); };
@@ -1248,10 +1248,10 @@
     api('/signals/news?days=7').then(function (d) {
       var items = d.items || [];
       if (!items.length) { host.innerHTML = ''; return; }
-      var open = !!S.newsOpen, n = open ? items.length : Math.min(5, items.length);
-      host.innerHTML = '<section class="crm-card tbn" aria-label="Tethered Business News"><h3>Tethered Business News <span class="crm-meta">' + items.length + ' sur les 7 derniers jours</span></h3>'
+      var open = !!S.newsOpen, n = open ? items.length : Math.min(8, items.length);
+      host.innerHTML = '<section class="crm-card tbn tbn-hl" aria-label="Tethered Business News"><h3><span class="tbn-dot"></span>Tethered Business News <span class="tbn-count">' + items.length + ' cette semaine</span></h3>'
         + items.slice(0, n).map(function (it) { return newsRow(it, 'crm'); }).join('')
-        + (items.length > 5 ? '<button type="button" class="crm-link tbn-more" data-tbn-more>' + (open ? 'Réduire' : 'Voir les ' + items.length) + '</button>' : '') + '</section>';
+        + (items.length > 8 ? '<button type="button" class="crm-link tbn-more" data-tbn-more>' + (open ? 'Réduire' : 'Voir les ' + items.length) + '</button>' : '') + '</section>';
       host.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
       var m = host.querySelector('[data-tbn-more]'); if (m) m.onclick = function () { S.newsOpen = !open; loadNews(); };
     }).catch(function () { host.innerHTML = ''; });
