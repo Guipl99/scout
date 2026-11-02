@@ -920,6 +920,7 @@
     return '<div class="crm-mk-row">' + sigScore(sg.score)
       + '<span class="m"><span class="crm-ms-type">' + esc(sigType(sg)) + '</span> <b>' + (sg.url ? '<a href=\"' + safeUrl(sg.url) + '\" target="_blank" rel="noopener">' + title + '</a>' : title) + '</b>'
       + '<span class="crm-meta">' + esc([sg.buyer, sg.pays, sg.supplier, val, sg.source].filter(Boolean).join(' · ')) + '</span>'
+      + (sg.competitor && sg.competitor !== 'Elistair' ? '<div class="crm-teth ok"><b>Filaire</b> : contrat d’un fabricant de drones filaires (' + esc(sg.competitor) + ')</div>' : sg.self ? '<div class="crm-teth ok"><b>Filaire</b> : marché Elistair</div>' : tethHtml(sg.tether))
       + (sg.why ? '<span class="crm-meta">' + esc(sg.why) + '</span>' : '') + '</span>'
       + '<span class="r crm-meta">' + esc(sg.date ? fmtDate(sg.date) : '') + (acc ? '<br><a data-nav class="crm-link" href="' + esc(accHref(acc.id)) + '" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</a>' : '') + '</span></div>';
   }
@@ -950,12 +951,13 @@
     var t = null;
     var run = function () {
       S.mkQ = q.value.trim(); S.mkKind = k.value; S.mkMin = parseInt(m.value, 10) || 0;
-      api('/crm/market/library?q=' + encodeURIComponent(S.mkQ) + '&kind=' + S.mkKind + '&min=' + S.mkMin + '&sort=' + (S.mkSort || 'recent')).then(function (d) {
+      api('/crm/market/library?q=' + encodeURIComponent(S.mkQ) + '&kind=' + S.mkKind + '&min=' + S.mkMin + '&sort=' + (S.mkSort || 'recent') + (S.mkAll ? '&scope=all' : '')).then(function (d) {
         var list = document.getElementById('crm-mk-list'); if (!list) return;
         var c = d.counts || {};
-        list.innerHTML = '<div class="crm-meta" style="margin-bottom:8px">' + d.n + ' résultat' + (d.n > 1 ? 's' : '') + (d.n > 200 ? ' (200 affichés)' : '') + ' · ' + (c.total || 0) + ' en base, ' + (c.proposed || 0) + ' notés 5 et plus, ' + (c.watch || 0) + ' notés 3 ou 4</div>'
+        list.innerHTML = '<div class="crm-meta" style="margin-bottom:8px">' + d.n + ' résultat' + (d.n > 1 ? 's' : '') + (d.n > 200 ? ' (200 affichés)' : '') + ' · ' + (S.mkAll ? 'tous les marchés drone (' + (c.total || 0) + ' en base)' : 'drone filaire uniquement : ' + (c.tethered || 0) + ' sur ' + (c.total || 0) + ' marchés drone en base') + ' · <button type="button" class="crm-link" id="crm-mk-all">' + (S.mkAll ? 'Filaire uniquement' : 'Voir aussi les drones non filaires') + '</button></div>'
           + '<div class="crm-card">' + ((d.rows || []).map(mkRow).join('') || '<div class="crm-empty" style="padding:10px">Aucun résultat.</div>') + '</div>';
         list.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
+        var ab = document.getElementById('crm-mk-all'); if (ab) ab.onclick = function () { S.mkAll = !S.mkAll; run(); };
       }).catch(function (e) { document.getElementById('crm-mk-list').innerHTML = '<div class="crm-empty">Erreur : ' + esc(e.message) + '</div>'; });
     };
     q.oninput = function () { clearTimeout(t); t = setTimeout(run, 250); };
