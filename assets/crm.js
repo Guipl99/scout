@@ -140,6 +140,34 @@
   function lsGet(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function opt(v, label, cur) { return '<option value="' + esc(v) + '"' + (String(cur == null ? '' : cur) === String(v) ? ' selected' : '') + '>' + esc(label) + '</option>'; }
+  // Liens réels vers les fiches : clic simple = navigation dans l'app, Ctrl/Cmd/Maj/clic molette/clic droit = nouvel onglet.
+  function accHref(id) { return '#accounts/' + encodeURIComponent(id); }
+  function ctHref(id) { return '#people/' + encodeURIComponent(id); }
+  function navHrefOf(el) {
+    var a = el.closest('a[data-nav]'); if (a) return a.getAttribute('href');
+    var x = el.closest('[data-acc],[data-pacc],#crm-table tr[data-id]');
+    if (x) { var id = x.getAttribute('data-acc') || x.getAttribute('data-pacc') || x.getAttribute('data-id'); if (id) return accHref(id); }
+    var c = el.closest('[data-ct],#crm-ptable tr[data-pid],[data-qct],[data-tct]');
+    if (c) { var cid = c.getAttribute('data-ct') || c.getAttribute('data-pid') || c.getAttribute('data-qct') || c.getAttribute('data-tct'); if (cid) return ctHref(cid); }
+    return null;
+  }
+  function inCrm(el) { return !!el.closest('#panel-accounts, #panel-home, #panel-people, #panel-feed, #panel-market, #panel-veille, #panel-stats, .crm-root'); }
+  document.addEventListener('click', function (e) {
+    if (e.button !== 0 || !e.target.closest || !inCrm(e.target)) return;
+    if (e.target.closest('input, select, textarea, label, td.cb')) return;
+    var mod = e.ctrlKey || e.metaKey || e.shiftKey;
+    var a = e.target.closest('a[data-nav]');
+    if (!mod) { if (a) e.preventDefault(); return; }
+    var h = navHrefOf(e.target); if (!h) return;
+    e.stopPropagation();
+    if (a) return; // le navigateur ouvre le lien lui-même
+    e.preventDefault(); window.open(location.pathname + location.search + h, '_blank');
+  }, true);
+  document.addEventListener('auxclick', function (e) {
+    if (e.button !== 1 || !e.target.closest || !inCrm(e.target) || e.target.closest('a[href]')) return;
+    var h = navHrefOf(e.target); if (!h) return;
+    e.preventDefault(); e.stopPropagation(); window.open(location.pathname + location.search + h, '_blank');
+  }, true);
   function go(panel, opts) { if (typeof window.go === 'function') window.go(panel, opts || {}); }
   function personName(c) { return ((c.prenom || '') + ' ' + (c.nom || '')).trim() || 'Sans nom'; }
 
@@ -829,7 +857,7 @@
       + '<div class="crm-ms-body"><div><div class="crm-meta">Pourquoi : ' + esc(sg.why || '') + '</div>'
       + '<div class="crm-ms-act">' + esc(sg.action || '') + '</div>'
       + (sg.source ? '<div class="crm-meta">Source : ' + esc(sg.source) + (sg.type ? ' · ' + esc(sg.type) : '') + '</div>' : '')
-      + '<div class="crm-meta">' + (acc ? '<button type="button" class="crm-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button> · ' + esc(acc.owner_name || 'sans commercial') : 'Sans compte : à relier (tri admin)') + '</div></div>'
+      + '<div class="crm-meta">' + (acc ? '<a data-nav class="crm-link" href="' + esc(accHref(acc.id)) + '" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</a> · ' + esc(acc.owner_name || 'sans commercial') : 'Sans compte : à relier (tri admin)') + '</div></div>'
       + '<div class="crm-ms-btns">' + btns + '</div></div>'
       + '<div class="crm-ms-pick" hidden></div></div>';
   }
@@ -887,7 +915,7 @@
       + '<span class="m"><span class="crm-ms-type">' + esc(sigType(sg)) + '</span> <b>' + (sg.url ? '<a href=\"' + safeUrl(sg.url) + '\" target="_blank" rel="noopener">' + title + '</a>' : title) + '</b>'
       + '<span class="crm-meta">' + esc([sg.buyer, sg.pays, sg.supplier, val, sg.source].filter(Boolean).join(' · ')) + '</span>'
       + (sg.why ? '<span class="crm-meta">' + esc(sg.why) + '</span>' : '') + '</span>'
-      + '<span class="r crm-meta">' + esc(sg.date ? fmtDate(sg.date) : '') + (acc ? '<br><button type="button" class="crm-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button>' : '') + '</span></div>';
+      + '<span class="r crm-meta">' + esc(sg.date ? fmtDate(sg.date) : '') + (acc ? '<br><a data-nav class="crm-link" href="' + esc(accHref(acc.id)) + '" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</a>' : '') + '</span></div>';
   }
   function loadCompetitors() {
     var body = document.getElementById('crm-mk-body');
@@ -1005,7 +1033,7 @@
     });
     var html = accs.length ? accs.map(function (a) {
       var hits = S.vFilter === 'hot' ? a.hits.filter(function (h) { return VK_HOT[h.kind]; }) : S.vFilter === 'client' ? a.hits.filter(function (h) { return !VK_HOT[h.kind]; }) : a.hits;
-      return '<div class="crm-card crm-vacc"><div class="crm-vacc-head"><button type="button" class="crm-link strong" data-acc="' + esc(a.id) + '">' + esc(a.nom) + '</button>'
+      return '<div class="crm-card crm-vacc"><div class="crm-vacc-head"><a data-nav class="crm-link strong" href="' + esc(accHref(a.id)) + '" data-acc="' + esc(a.id) + '">' + esc(a.nom) + '</a>'
         + heatBadge(a.score, a.heat) + (a.client_of ? '<span class="crm-buy">Client ' + esc(a.client_of) + '</span>' : '')
         + '<span class="crm-meta">' + esc([a.pays, a.owner_name || 'Sans commercial'].filter(Boolean).join(' · ')) + '</span></div>'
         + hits.slice(0, 4).map(function (h) { return veilleHit(h, false); }).join('')
@@ -1251,12 +1279,12 @@
   function newsRow(it, cls) {
     var who = [it.org, it.pays].filter(Boolean).join(' · ');
     var comp = it.competitor ? (it.competitor === 'Elistair' ? ' · <b>Elistair</b>' : ' · avec <b>' + esc(it.competitor) + '</b>') : '';
-    var acc = it.account ? '<button type="button" class="' + cls + '-link" data-acc="' + esc(it.account.id) + '">' + esc(it.account.nom) + '</button>' + (it.mine ? ' <span class="tbn-mine">ton compte</span>' : (it.account.owner_name ? ' · ' + esc(it.account.owner_name) : '')) : '';
+    var acc = it.account ? '<a data-nav class="' + cls + '-link" href="' + esc(accHref(it.account.id)) + '" data-acc="' + esc(it.account.id) + '">' + esc(it.account.nom) + '</a>' + (it.mine ? ' <span class="tbn-mine">ton compte</span>' : (it.account.owner_name ? ' · ' + esc(it.account.owner_name) : '')) : '';
     return '<div class="tbn-row' + (it.mine ? ' mine' : '') + '"><div class="tbn-top"><span class="tbn-tag">' + esc(it.tag) + '</span><span class="tbn-at">' + esc(it.at ? fmtDate(it.at) : '') + '</span></div><div class="tbn-who">' + esc(who) + comp + '</div>'
       + (it.text ? '<div class="tbn-txt">' + (it.type === 'veille' ? hlTeth(it.text) : esc(it.text)) + '</div>' : '')
       + (it.type === 'market' ? tethHtml(it.tether) : '')
       + (it.person ? '<div class="tbn-meta">Personne nommée : <b>' + esc(it.person.name) + '</b>' + (it.person.title ? ', ' + esc(it.person.title) : '') + '</div>' : '')
-      + '<div class="tbn-meta">' + acc + (acc && it.url ? ' · ' : '') + (it.url ? '<a href="' + safeUrl(it.url) + '" target="_blank" rel="noopener">' + esc(it.source || 'Source') + ' ↗</a>' : '') + '</div></div>';
+      + '<div class="tbn-meta">' + acc + (acc && it.url ? ' · ' : '') + (it.url ? '<a href="' + safeUrl(it.url) + '" target="_blank" rel="noopener">' + esc(/linkedin\.com\/search\//i.test(it.url) ? 'Recherche LinkedIn' : /linkedin\.com\/(feed\/update|posts)\//i.test(it.url) ? 'Post LinkedIn' : (it.source || 'Source')) + ' ↗</a>' : '') + '</div></div>';
   }
   function loadNews() {
     var host = document.getElementById('crm-home-news'); if (!host) return;
@@ -1322,7 +1350,7 @@
         return '<div class="crm-ao-row" data-ao="' + esc(t.id) + '"><div class="crm-ao-main">'
           + '<div class="crm-ao-t">' + esc(t.titre) + '</div>'
           + '<div class="crm-meta">' + esc([t.acheteur, t.pays].filter(Boolean).join(' · ')) + (t.source_name ? ' · ' + esc(t.source_name) : '') + '</div>'
-          + '<div class="crm-meta">' + (acc ? 'Compte <button type="button" class="crm-link" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button> · ' + esc(acc.owner_name || 'sans commercial') : 'Pas encore de compte : à relier dans Signaux') + '</div></div>'
+          + '<div class="crm-meta">' + (acc ? 'Compte <a data-nav class="crm-link" href="' + esc(accHref(acc.id)) + '" data-acc="' + esc(acc.id) + '">' + esc(acc.nom) + '</a> · ' + esc(acc.owner_name || 'sans commercial') : 'Pas encore de compte : à relier dans Signaux') + '</div></div>'
           + '<div class="crm-ao-side"><span class="crm-ao-when' + (urgent ? ' urgent' : '') + '">' + esc(aoWhen(t)) + '</span>' + dec
           + '<div class="crm-ao-act">' + (t.url ? '<a class="crm-btn sm" href=\"' + safeUrl(t.url) + '\" target="_blank" rel="noopener">Voir l’avis</a>' : '')
           + (dec ? '' : '<button type="button" class="crm-btn sm primary" data-ao-go>Go</button><button type="button" class="crm-btn sm" data-ao-nogo>No-go</button>')
@@ -1405,7 +1433,7 @@
       + tile(k.stale || 0, 'T1–2 sans activité 30 j', { tier: '1,2', activity: 'stale30' }, k.stale ? 'warn' : '')
       + tile(k.gaps || 0, 'Comités incomplets', { tier: '1,2', coverage: 'incomplete' }, k.gaps ? 'warn' : '') + '</div></div>';
     if ((d.web || []).length) html += '<div class="crm-card"><h3>Visites sur elistair.com</h3>' + d.web.slice(0, 5).map(function (a) {
-      return '<button type="button" class="crm-mini" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier) + '<span class="m"><b>' + esc(a.nom) + '</b><span>' + esc(a.web_pages_90d + ' page' + (a.web_pages_90d > 1 ? 's' : '') + (a.last_visit ? ' · ' + relTime(a.last_visit) : '')) + '</span></span></button>';
+      return '<a data-nav class="crm-mini" href="' + esc(accHref(a.id)) + '" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier) + '<span class="m"><b>' + esc(a.nom) + '</b><span>' + esc(a.web_pages_90d + ' page' + (a.web_pages_90d > 1 ? 's' : '') + (a.last_visit ? ' · ' + relTime(a.last_visit) : '')) + '</span></span></a>';
     }).join('') + '</div>';
     box.innerHTML = html;
     box.querySelectorAll('[data-kf]').forEach(function (b) { b.onclick = function () { openAccountsWith(JSON.parse(b.getAttribute('data-kf'))); }; });
@@ -1543,7 +1571,7 @@
     shown.forEach(function (a) { if (!a.parent_id || !byId[a.parent_id]) (countries[a.pays || 'Sans pays'] = countries[a.pays || 'Sans pays'] || []).push(a); });
     var node = function (a, depth) {
       var ch = (kids[a.id] || []).filter(function (k) { return !keep || keep[k.id]; });
-      var label = '<button type="button" class="crm-tree-acc" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier) + '<span>' + esc(a.nom) + '</span>' + (ch.length ? '<span class="crm-meta">' + ch.length + '</span>' : '') + '</button>';
+      var label = '<a data-nav class="crm-tree-acc" href="' + esc(accHref(a.id)) + '" data-acc="' + esc(a.id) + '">' + tierBadge(a.tier) + '<span>' + esc(a.nom) + '</span>' + (ch.length ? '<span class="crm-meta">' + ch.length + '</span>' : '') + '</a>';
       if (!ch.length || depth > 8) return '<div class="crm-tree-leaf">' + label + '</div>';
       return '<details' + (ql || depth < 1 ? ' open' : '') + '><summary>' + label + '</summary><div class="crm-tree-kids">' + ch.map(function (k) { return node(k, depth + 1); }).join('') + '</div></details>';
     };
@@ -1601,8 +1629,9 @@
     var row = function (a) {
       var n = (kids[a.id] || []).length;
       var meta = [n ? n + ' rattaché' + (n > 1 ? 's' : '') : '', a.n_contacts ? a.n_contacts + ' contact' + (a.n_contacts > 1 ? 's' : '') : '', a.owner_name ? first(a.owner_name) : ''].filter(Boolean).join(' · ');
-      return '<button type="button" class="crm-ot-row' + (a.id === id ? ' on' : '') + (path[a.id] && a.id !== id ? ' path' : '') + '" data-org="' + esc(a.id) + '">'
-        + (a.tier ? tierBadge(a.tier) : '') + '<b>' + esc(short(a)) + '</b>' + (meta ? '<span class="crm-meta">' + esc(meta) + '</span>' : '') + '</button>';
+      var me = a.id === id, tag = me ? 'button' : 'a';
+      return '<' + tag + (me ? ' type="button"' : ' data-nav href="' + esc(accHref(a.id)) + '"') + ' class="crm-ot-row' + (me ? ' on' : '') + (path[a.id] && !me ? ' path' : '') + '" data-org="' + esc(a.id) + '">'
+        + (a.tier ? tierBadge(a.tier) : '') + '<b>' + esc(short(a)) + '</b>' + (meta ? '<span class="crm-meta">' + esc(meta) + '</span>' : '') + '</' + tag + '>';
     };
     var tnode = function (a, d) {
       var ch = kids[a.id] || [];
@@ -1856,7 +1885,7 @@
         return '<tr data-id="' + esc(r.id) + '" class="' + (sel ? 'sel' : '') + '">'
           + '<td class="cb"><input type="checkbox" data-cb="' + esc(r.id) + '" aria-label="Sélectionner ' + esc(r.nom) + '"' + (sel ? ' checked' : '') + '></td>'
           + '<td class="c-tier">' + tierBadge(r.tier) + '</td>'
-          + '<td class="c-nom"><div class="crm-acc-name" title="' + esc(r.nom) + '">' + esc(r.nom) + '</div><div class="crm-acc-sub">' + esc([r.pays, r.secteur].filter(Boolean).join(' · ')) + (r.n_contacts ? ' · ' + r.n_contacts + ' contact' + (r.n_contacts > 1 ? 's' : '') : '') + '</div></td>'
+          + '<td class="c-nom"><a data-nav class="crm-acc-name" href="' + esc(accHref(r.id)) + '" title="' + esc(r.nom) + '">' + esc(r.nom) + '</a><div class="crm-acc-sub">' + esc([r.pays, r.secteur].filter(Boolean).join(' · ')) + (r.n_contacts ? ' · ' + r.n_contacts + ' contact' + (r.n_contacts > 1 ? 's' : '') : '') + '</div></td>'
           + '<td class="c-prio">' + prioBadge(r.priority) + '</td>'
           + '<td class="c-score"><span class="crm-score-cell">' + heatBadge(r.score, r.heat) + (r.client_of ? '<span class="crm-buy crm-buy-c" title="Équipé chez ce concurrent (veille)">Client ' + esc(r.client_of) + '</span>' : '') + (r.n_veille_eval && !r.n_market_tethered ? '<span class="crm-buy crm-buy-t" title="' + r.n_veille_eval + ' signal(s) en 12 mois : évaluation, démo ou achat de drone filaire (veille)">Achat filaire</span>' : '') + (r.n_market_recent && r.score === r.score_v2 ? (r.n_market_tethered ? '<span class="crm-buy crm-buy-t" title="' + r.n_market_tethered + ' marché(s) de drone filaire en 12 mois">Achat filaire</span>' : '<span class="crm-buy" title="' + r.n_market_recent + ' marché(s) drone en 12 mois">Achat drone</span>') : '') + (r.web_pages_90d ? '<span class="crm-web" title="' + r.web_pages_90d + ' pages vues sur elistair.com (90 j)">web</span>' : '') + '</span></td>'
           + '<td class="c-status">' + statusPill(r.status) + '</td>'
@@ -2106,7 +2135,7 @@
 
     d.innerHTML = '<button class="crm-back" type="button" id="crm-back">← Comptes</button>'
       + '<div class="crm-rec-head"><div class="crm-rec-id">' + tierBadge(a.tier) + '<div style="min-width:0">'
-      + ((A.ancestors || []).length ? '<nav class="crm-crumbs" aria-label="Rattachement">' + A.ancestors.map(function (x) { return '<button type="button" class="crm-link" data-acc="' + esc(x.id) + '">' + esc(x.nom) + '</button>'; }).join(' › ') + ' ›</nav>' : '')
+      + ((A.ancestors || []).length ? '<nav class="crm-crumbs" aria-label="Rattachement">' + A.ancestors.map(function (x) { return '<a data-nav class="crm-link" href="' + esc(accHref(x.id)) + '" data-acc="' + esc(x.id) + '">' + esc(x.nom) + '</a>'; }).join(' › ') + ' ›</nav>' : '')
       + '<h2>' + esc(a.nom) + '</h2>'
       + '<div class="crm-meta">' + esc([a.pays, a.ville, a.secteur].filter(Boolean).join(' · ')) + (sm.domain ? ' · <a class="crm-link" href="https://' + esc(sm.domain) + '" target="_blank" rel="noopener">' + esc(sm.domain) + '</a>' : '') + '</div></div></div>'
       + '<div class="crm-rec-kpis">'
@@ -2127,7 +2156,7 @@
       // ── colonne gauche : à propos
       + '<aside class="crm-rec-left"><div class="crm-card"><h3>À propos du compte</h3><dl class="crm-fields" id="crm-acc-fields">' + fields.map(fieldRow).join('') + '</dl>'
       + '<div class="crm-parent"><div class="crm-meta" style="margin:10px 0 4px">Rattaché à</div>'
-      + (sm.parent_id ? '<div class="crm-row" style="gap:6px;flex-wrap:wrap"><button type="button" class="crm-link" data-acc="' + esc(sm.parent_id) + '">' + esc(sm.parent_nom || 'compte parent') + '</button>' + (a.parent_source === 'auto' ? '<span class="crm-auto-tag" title="Rattachement fait par Scout à partir du nom ou du domaine mail. Changez-le ou détachez-le s’il est faux : Scout ne le refera pas.">par Scout</span>' : '') + '<button type="button" class="crm-btn ghost sm" id="crm-parent-edit">Changer</button><button type="button" class="crm-btn ghost sm" id="crm-parent-clear">Détacher</button></div><div id="crm-parent-pick" hidden></div>'
+      + (sm.parent_id ? '<div class="crm-row" style="gap:6px;flex-wrap:wrap"><a data-nav class="crm-link" href="' + esc(accHref(sm.parent_id)) + '" data-acc="' + esc(sm.parent_id) + '">' + esc(sm.parent_nom || 'compte parent') + '</a>' + (a.parent_source === 'auto' ? '<span class="crm-auto-tag" title="Rattachement fait par Scout à partir du nom ou du domaine mail. Changez-le ou détachez-le s’il est faux : Scout ne le refera pas.">par Scout</span>' : '') + '<button type="button" class="crm-btn ghost sm" id="crm-parent-edit">Changer</button><button type="button" class="crm-btn ghost sm" id="crm-parent-clear">Détacher</button></div><div id="crm-parent-pick" hidden></div>'
         : '<div id="crm-parent-pick"></div>')
       + '</div>'
       + (typeof window._legacyOpenEndUser === 'function' ? '<button type="button" class="crm-link" id="crm-legacy" style="margin-top:10px;font-size:12.5px">Fiche marché : produits et fournisseurs</button>' : '') + '</div>'
@@ -2178,7 +2207,7 @@
       + (doneTasks.length ? '<details style="margin-top:8px"><summary class="crm-meta" style="cursor:pointer">' + doneTasks.length + ' terminée' + (doneTasks.length > 1 ? 's' : '') + '</summary>' + doneTasks.map(taskHtml).join('') + '</details>' : '')
       + '</div>'
       + '<div class="crm-card"><h3>Comptes rattachés <span class="crm-meta">' + (A.children || []).length + '</span></h3>'
-      + ((A.children || []).length ? A.children.map(function (c) { return '<button type="button" class="crm-mini" data-acc="' + esc(c.id) + '">' + tierBadge(c.tier) + '<span class="m"><b>' + esc(c.nom) + '</b><span>' + esc(c.pays || '') + '</span></span></button>'; }).join('') : '<div class="crm-meta">Aucun compte rattaché.</div>')
+      + ((A.children || []).length ? A.children.map(function (c) { return '<a data-nav class="crm-mini" href="' + esc(accHref(c.id)) + '" data-acc="' + esc(c.id) + '">' + tierBadge(c.tier) + '<span class="m"><b>' + esc(c.nom) + '</b><span>' + esc(c.pays || '') + '</span></span></a>'; }).join('') : '<div class="crm-meta">Aucun compte rattaché.</div>')
       + '<div id="crm-child-pick" style="margin-top:8px"></div></div>'
       + '<div class="crm-card"><h3>Comité d’achat <span class="crm-meta">' + (sm.coverage || 0) + ' / 4 rôles</span></h3>'
       + KEY_ROLES.map(function (r) {
@@ -2600,8 +2629,8 @@
     });
     document.getElementById('crm-pcount').textContent = P.total.toLocaleString('fr-FR') + ' contact' + (P.total > 1 ? 's' : '');
     tb.innerHTML = P.rows.length ? P.rows.map(function (c) {
-      return '<tr data-pid="' + esc(c.id) + '"><td class="c-nom"><div class="crm-acc-name" title="' + esc(personName(c)) + '">' + esc(personName(c)) + '</div><div class="crm-acc-sub" title="' + esc(c.titre || '') + '">' + esc(c.titre || '') + '</div></td>'
-        + '<td class="c-account">' + (c.end_user_id ? tierBadge(c.tier) + ' <button type="button" class="crm-link" data-pacc="' + esc(c.end_user_id) + '" title="' + esc(c.account_nom || c.organisation || '') + '">' + esc(c.account_nom || c.organisation || '') + '</button>' : '<span class="crm-muted">' + esc(c.organisation || 'Sans compte') + '</span>') + '</td>'
+      return '<tr data-pid="' + esc(c.id) + '"><td class="c-nom"><a data-nav class="crm-acc-name" href="' + esc(ctHref(c.id)) + '" title="' + esc(personName(c)) + '">' + esc(personName(c)) + '</a><div class="crm-acc-sub" title="' + esc(c.titre || '') + '">' + esc(c.titre || '') + '</div></td>'
+        + '<td class="c-account">' + (c.end_user_id ? tierBadge(c.tier) + ' <a data-nav class="crm-link" href="' + esc(accHref(c.end_user_id)) + '" data-pacc="' + esc(c.end_user_id) + '" title="' + esc(c.account_nom || c.organisation || '') + '">' + esc(c.account_nom || c.organisation || '') + '</a>' : '<span class="crm-muted">' + esc(c.organisation || 'Sans compte') + '</span>') + '</td>'
         + '<td class="c-role">' + rolePill(c.role, !!c.buying_role) + '</td>'
         + '<td class="c-email">' + (c.email ? esc(c.email) : '<span class="crm-muted">Aucun</span>') + '</td>'
         + '<td class="c-owner">' + (c.owner_name ? esc(c.owner_name) : '<span class="crm-muted">Personne</span>') + '</td>'
@@ -2665,7 +2694,7 @@
     var openTasks = R.tasks.filter(function (t) { return !t.done_at; });
     d.innerHTML = '<button class="crm-back" type="button" id="crm-pback">← Contacts</button>'
       + '<div class="crm-rec-head"><div class="crm-rec-id"><span class="crm-avatar lg">' + esc(initials(personName(c))) + '</span><div style="min-width:0"><h2>' + esc(personName(c)) + '</h2>'
-      + '<div class="crm-meta">' + esc(c.titre || 'Titre inconnu') + (c.end_user_id ? ' · <button type="button" class="crm-link" data-acc="' + esc(c.end_user_id) + '">' + esc(c.account_nom) + '</button>' : '') + '</div></div></div>'
+      + '<div class="crm-meta">' + esc(c.titre || 'Titre inconnu') + (c.end_user_id ? ' · <a data-nav class="crm-link" href="' + esc(accHref(c.end_user_id)) + '" data-acc="' + esc(c.end_user_id) + '">' + esc(c.account_nom) + '</a>' : '') + '</div></div></div>'
       + '<div class="crm-rec-kpis"><div><span>Rôle</span>' + rolePill(c.role, !!c.buying_role) + '</div>'
       + '<div><span>Email</span><b>' + (c.email ? '<span class="crm-dot ' + esc(R.email_status || '') + '"></span>' + esc(R.email_status === 'valid' ? 'Vérifié' : (R.email_status === 'invalid' ? 'Invalide' : (R.email_status ? 'Incertain' : 'Non vérifié'))) : 'Aucun') + '</b></div>'
       + '<div><span>Dernière activité</span><b>' + (R.timeline[0] ? esc(relTime(R.timeline[0].at)) : 'Jamais') + '</b></div></div></div>'
@@ -2681,7 +2710,7 @@
       + '<main class="crm-rec-main"><div class="crm-card crm-composer" id="crm-composer"></div>'
       + '<div class="crm-card"><h3>Historique</h3><div id="crm-tl">' + timelineHtml(R.timeline, false) + '</div></div></main>'
       + '<aside class="crm-rec-right">'
-      + (c.end_user_id ? '<div class="crm-card"><h3>Compte</h3><button type="button" class="crm-mini" data-acc="' + esc(c.end_user_id) + '">' + tierBadge(c.tier) + '<span class="m"><b>' + esc(c.account_nom) + '</b><span>' + esc([c.account_pays, c.account_secteur].filter(Boolean).join(' · ')) + '</span></span></button>'
+      + (c.end_user_id ? '<div class="crm-card"><h3>Compte</h3><a data-nav class="crm-mini" href="' + esc(accHref(c.end_user_id)) + '" data-acc="' + esc(c.end_user_id) + '">' + tierBadge(c.tier) + '<span class="m"><b>' + esc(c.account_nom) + '</b><span>' + esc([c.account_pays, c.account_secteur].filter(Boolean).join(' · ')) + '</span></span></a>'
         + '<div class="crm-meta" style="margin-top:6px">Propriétaire : ' + esc(c.owner_name || 'personne') + '</div></div>'
         : '<div class="crm-card"><h3>Compte</h3><div class="crm-meta">Ce contact n’est rattaché à aucun compte' + (c.organisation ? ' (organisation saisie : ' + esc(c.organisation) + ')' : '') + '.</div></div>')
       + '<div class="crm-card"><h3>Tâches <span class="crm-meta">' + openTasks.length + '</span></h3>' + (R.tasks.length ? R.tasks.map(taskHtml).join('') : '<div class="crm-meta">Aucune tâche.</div>') + '</div>'

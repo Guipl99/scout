@@ -641,3 +641,11 @@ body.theme-light .crm-q-ic.k-reaction, body.theme-light .crm-q-kind.k-reaction {
 .crm-ot-row.path b { font-weight: 700; }
 .crm-ot-row.on { background: var(--accent); border-color: var(--accent); color: #fff; cursor: default; }
 .crm-ot-row.on .crm-meta { color: rgba(255,255,255,.85); }
+/* Liens réels vers les fiches (ouvrables dans un nouvel onglet) */
+a[data-nav] { text-decoration: none; }
+a.crm-link:hover, a.tbn-link:hover { text-decoration: underline; }
+a.crm-acc-name { display: block; color: var(--text); }
+a.crm-acc-name:hover { text-decoration: underline; }
+a.crm-mini { box-sizing: border-box; }
+a.crm-link, a.crm-tree-acc { display: inline; }
+a.crm-tree-acc { display: inline-flex; }

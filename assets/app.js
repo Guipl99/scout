@@ -188,7 +188,7 @@
             + (it.text ? '<div class="tbn-txt">' + esc(it.text) + '</div>' : '')
             + (it.type === 'market' && crm().tethHtml ? crm().tethHtml(it.tether) : '')
             + '<div class="sa-meta">' + (it.account ? '<button type="button" class="sa-link" data-acc="' + esc(it.account.id) + '">' + esc(it.account.nom) + '</button>' + (it.mine ? ' <span class="tbn-mine">ton compte</span>' : '') : '')
-            + (it.url ? (it.account ? ' · ' : '') + '<a href="' + safeUrl(it.url) + '" target="_blank" rel="noopener">' + esc(it.source || 'Source') + ' ↗</a>' : '') + '</div></div>';
+            + (it.url ? (it.account ? ' · ' : '') + '<a href="' + safeUrl(it.url) + '" target="_blank" rel="noopener">' + esc(/linkedin\.com\/search\//i.test(it.url) ? 'Recherche LinkedIn' : /linkedin\.com\/(feed\/update|posts)\//i.test(it.url) ? 'Post LinkedIn' : (it.source || 'Source')) + ' ↗</a>' : '') + '</div></div>';
       };
       // replié : 3 lignes courtes pour laisser la file à l'écran ; déplié : toutes les nouvelles en détail
       box.innerHTML = '<section class="sa-ao tbn"><h4>Tethered Business News <span class="sa-meta">' + items.length + ' cette semaine</span></h4>'
