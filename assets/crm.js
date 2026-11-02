@@ -1595,26 +1595,32 @@
         + '<span class="t">' + (a.tier ? tierBadge(a.tier) : '') + '<b title="' + esc(a.nom) + '">' + esc(short(a)) + '</b></span>'
         + (meta || n ? '<span class="crm-meta">' + esc(meta) + (n && meta ? ' · ' : '') + (n ? n + ' rattaché' + (n > 1 ? 's' : '') : '') + '</span>' : '') + '</button>';
     };
-    // Vue centrée sur le compte ouvert, lisible quelle que soit la taille du groupe :
-    // le chemin depuis la tête (fil d'Ariane), puis le compte et ses voisins de même niveau, puis ses rattachés.
-    var chain = [], up = cur;
-    while (up.parent_id && byId[up.parent_id] && chain.length < 20) { up = byId[up.parent_id]; chain.unshift(up); }
-    var parent = chain.length ? chain[chain.length - 1] : null;
-    var sibs = parent ? (kids[parent.id] || []) : [cur];
-    var MAXS = 11, sv = sibs.slice(0, MAXS); if (sv.indexOf(cur) < 0) sv.push(cur);
-    var mine = kids[cur.id] || [], MAXK = 30, kv = mine.slice(0, MAXK);
-    var grid = function (list, more, extra) { return '<div class="crm-orgf-grid">' + list.map(card).join('') + (more > 0 ? '<span class="crm-meta crm-orgf-more">+ ' + more + ' autres</span>' : '') + (extra || '') + '</div>'; };
-    var crumb = chain.length ? '<div class="crm-orgf-crumb">' + chain.map(function (x) { return '<button type="button" class="crm-link" data-org="' + esc(x.id) + '">' + esc(x.nom) + '</button>'; }).join('<span class="crm-meta"> › </span>') + '</div>' : '';
-    var body = crumb
-      + '<div class="crm-orgf-lvl">' + (parent ? '<div class="crm-orgf-h">Au même niveau <span class="crm-meta">' + sibs.length + ' sous ' + esc(short(parent)) + '</span></div>' : '') + grid(sv, sibs.length - sv.length) + '</div>'
-      + (mine.length ? '<div class="crm-orgf-lvl"><div class="crm-orgf-h">Rattachés à ' + esc(short(cur)) + ' <span class="crm-meta">' + mine.length + '</span></div>' + grid(kv, mine.length - kv.length) + '</div>' : '');
+    // Arbre vertical (type explorateur) : la branche du compte ouvert est dépliée, les autres branches
+    // sont repliées sur une ligne (on les déplie au clic). Lisible même avec des centaines de comptes.
+    var MAXN = 25;
+    var row = function (a) {
+      var n = (kids[a.id] || []).length;
+      var meta = [n ? n + ' rattaché' + (n > 1 ? 's' : '') : '', a.n_contacts ? a.n_contacts + ' contact' + (a.n_contacts > 1 ? 's' : '') : '', a.owner_name ? first(a.owner_name) : ''].filter(Boolean).join(' · ');
+      return '<button type="button" class="crm-ot-row' + (a.id === id ? ' on' : '') + (path[a.id] && a.id !== id ? ' path' : '') + '" data-org="' + esc(a.id) + '">'
+        + (a.tier ? tierBadge(a.tier) : '') + '<b>' + esc(short(a)) + '</b>' + (meta ? '<span class="crm-meta">' + esc(meta) + '</span>' : '') + '</button>';
+    };
+    var tnode = function (a, d) {
+      var ch = kids[a.id] || [];
+      if (!ch.length || d > 12) return '<li>' + row(a) + '</li>';
+      var open = path[a.id] || a.id === id;
+      var vis = ch.slice(0, MAXN); ch.forEach(function (k) { if (path[k.id] && vis.indexOf(k) < 0) vis.push(k); });
+      return '<li><details' + (open ? ' open' : '') + '><summary>' + row(a) + '</summary><ul>' + vis.map(function (k) { return tnode(k, d + 1); }).join('')
+        + (ch.length > vis.length ? '<li><span class="crm-meta">+ ' + (ch.length - vis.length) + ' autres</span></li>' : '') + '</ul></details></li>';
+    };
+    var body = '<ul class="crm-ot">' + tnode(root, 0) + '</ul>';
     var pref = null; try { pref = localStorage.getItem('scout_org_open'); } catch (e) {}
     var isOpen = pref ? pref === '1' : true;
     box.innerHTML = '<details class="crm-card crm-org-card"' + (isOpen ? ' open' : '') + '><summary><h3>Organigramme <span class="crm-meta">' + total + ' compte' + (total > 1 ? 's' : '') + ' sous ' + esc(root.nom) + '</span></h3></summary>'
-      + '<div class="crm-orgf" aria-label="Organigramme du groupe ' + esc(root.nom) + '">' + body + '</div></details>';
+      + '<div class="crm-orgt" aria-label="Organigramme du groupe ' + esc(root.nom) + '">' + body + '</div></details>';
     var det = box.querySelector('details');
     det.addEventListener('toggle', function () { try { localStorage.setItem('scout_org_open', det.open ? '1' : '0'); } catch (e) {} if (det.open) center(); });
-    box.querySelectorAll('[data-org]').forEach(function (b) { b.onclick = function () { var x = b.getAttribute('data-org'); if (x !== id) openAccount(x); }; });
+    box.querySelectorAll('[data-org]').forEach(function (b) { b.onclick = function (e) { var x = b.getAttribute('data-org'); if (x !== id) { e.preventDefault(); e.stopPropagation(); openAccount(x); } }; });
+    var onRow = box.querySelector('.crm-ot-row.on'); if (onRow && onRow.scrollIntoView) { var sc = box.querySelector('.crm-orgt'); if (sc) sc.scrollTop = Math.max(0, onRow.offsetTop - sc.offsetTop - 80); }
     var center = function () {
       var on = box.querySelector('.crm-org-box.on'), sc = box.querySelector('.crm-org'); if (!on || !sc) return;
       var r1 = on.getBoundingClientRect(), r2 = sc.getBoundingClientRect();
