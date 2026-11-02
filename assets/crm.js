@@ -2823,6 +2823,13 @@
 
   window.scoutCrm = { pitchPending: function () { return (S.pitchCounts && S.pitchCounts.pending_drafts) || 0; }, onPanel: onPanel, openAccount: openAccount, openContact: openContact, openAccounts: openAccountsWith, refreshBadge: refreshBadge, refreshPropBadge: refreshPropBadge,
     loadQueue: loadQueue, api: api, pitchGo: pitchGo, pitchAccount: pitchAccount, pitchSend: pitchSend, pitchSave: pitchSave, pitchDraft: pitchDraft, pitchReview: pitchReview, pitchSourcesHtml: pitchSourcesHtml, liDraft: liDraft, pitchSendLinkedIn: pitchSendLinkedIn, toast: toast, runRoutine: runRoutine, routines: function () { return ROUTINES; }, pitchMap: function () { return S.pitchMap || {}; }, personName: personName, actLabel: ACT_LABEL, tethHtml: tethHtml, loadAo: loadAo, aoItems: function () { return S.ao || []; } };
+  // Ouverture directe d'un lien (#accounts/<id>, #people/<id>…) : le routeur de la page a tourné avant le chargement de ce script.
+  (function () {
+    var h = (location.hash || '').slice(1).split('/'), panel = h[0], tab = h[1];
+    if (['accounts', 'people', 'home', 'feed', 'market', 'veille', 'stats'].indexOf(panel) < 0) return;
+    var el = document.getElementById('panel-' + panel);
+    if (el && !el.children.length) setTimeout(function () { onPanel(panel, tab ? { tab: tab } : {}); }, 0);
+  })();
   setTimeout(refreshBadge, 2500);
   setInterval(refreshBadge, 5 * 60 * 1000);
   setTimeout(refreshPropBadge, 3500);
