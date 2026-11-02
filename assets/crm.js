@@ -935,7 +935,7 @@
   var VK_HOT = { evaluation: 1, demo: 1, achat: 1, ao: 1 };
   function veilleKind(k) { return '<span class="crm-vk' + (VK_HOT[k] ? ' hot' : '') + '">' + esc(VK[k] || k) + '</span>'; }
   // surligne ce qui fait de ce signal un signal « drone filaire »
-  function hlTeth(t) { return esc(t).replace(/(tethered|tether|captifs?|captive|filaires?|fesseldrohnen?|gefesselt\w*|cautivos?|vincolat[oi]|a[ée]rostats?)/gi, '<mark>$1</mark>'); }
+  function hlTeth(t) { return esc(t).replace(/\b(tethered|tether|captifs?|captive|filaires?|fesseldrohnen?|gefesselt\w*|cautivos?|vincolat[oi]|a[ée]rostats?)\b/gi, '<mark>$1</mark>'); }
   function veilleHit(h, withOrg) {
     var src = h.source === 'linkedin' ? 'LinkedIn' : 'Web';
     return '<div class="crm-vh" data-vh="' + h.id + '">' + veilleKind(h.kind)
@@ -2156,23 +2156,9 @@
       + '<div class="crm-card"><h3>Historique <span class="crm-tl-filters" role="tablist">'
       + [['all', 'Tout'], ['act', 'Activités'], ['note', 'Notes'], ['sys', 'Modifications']].map(function (x) { return '<button type="button" class="crm-chip sm' + (S.tlFilter === x[0] ? ' on' : '') + '" data-tlf="' + x[0] + '">' + x[1] + '</button>'; }).join('')
       + '</span></h3><div id="crm-tl">' + timelineHtml(filterTl(A.timeline), true) + '</div></div></main>'
-      // ── colonne droite : comité d'achat, tâches, contacts, web
+      // ── colonne droite : signaux, tâches, comptes rattachés, comité d'achat
       + '<aside class="crm-rec-right">'
-      + '<div class="crm-card"><h3>Comité d’achat <span class="crm-meta">' + (sm.coverage || 0) + ' / 4 rôles</span></h3>'
-      + KEY_ROLES.map(function (r) {
-        var list = byRole[r] || [];
-        return '<div class="crm-com"><div class="crm-com-h"><span class="crm-role r-' + r + '">' + ROLE_LABEL[r] + '</span><span class="crm-meta">' + esc(ROLE_HINT[r]) + '</span></div>'
-          + (list.length ? list.map(contactLine).join('') : '<button type="button" class="crm-com-miss" data-addrole="' + r + '">' + ICON.plus + ' Trouver ou ajouter un ' + ROLE_LABEL[r].toLowerCase() + '</button>') + '</div>';
-      }).join('')
-      + (others.length ? '<div class="crm-com"><div class="crm-com-h"><span class="crm-role none">Autres</span><span class="crm-meta">rôle à préciser</span></div>' + others.map(contactLine).join('') + '</div>' : '')
-      + '</div>'
-      + '<div class="crm-card"><h3>Comptes rattachés <span class="crm-meta">' + (A.children || []).length + '</span></h3>'
-      + ((A.children || []).length ? A.children.map(function (c) { return '<button type="button" class="crm-mini" data-acc="' + esc(c.id) + '">' + tierBadge(c.tier) + '<span class="m"><b>' + esc(c.nom) + '</b><span>' + esc(c.pays || '') + '</span></span></button>'; }).join('') : '<div class="crm-meta">Aucun compte rattaché.</div>')
-      + '<div id="crm-child-pick" style="margin-top:8px"></div></div>'
-      + '<div class="crm-card"><h3>Tâches <span class="crm-meta">' + openTasks.length + ' ouverte' + (openTasks.length > 1 ? 's' : '') + '</span></h3>'
-      + (openTasks.length ? openTasks.map(taskHtml).join('') : '<div class="crm-meta">Aucune tâche ouverte.</div>')
-      + (doneTasks.length ? '<details style="margin-top:8px"><summary class="crm-meta" style="cursor:pointer">' + doneTasks.length + ' terminée' + (doneTasks.length > 1 ? 's' : '') + '</summary>' + doneTasks.map(taskHtml).join('') + '</details>' : '')
-      + '</div>'
+      // signaux d'abord (veille filaire, marchés, visites du site), puis tâches, comptes rattachés, et le comité d'achat en bas
       + (A.veille && A.veille.length ? '<div class="crm-card"><h3>Veille drone filaire <span class="crm-meta">' + A.veille.length + '</span></h3>' + A.veille.map(function (h) { return veilleHit(h, false); }).join('') + '<div class="crm-meta" style="margin-top:6px">Repéré sur LinkedIn, les sites des concurrents et la presse. Compte dans l’engagement.</div></div>' : '')
       + (A.market && A.market.length ? '<div class="crm-card"><h3>Marchés <span class="crm-meta">' + A.market.length + '</span></h3>' + A.market.map(function (m) {
         var val = m.value_max ? (m.value_max >= 1e9 ? (m.value_max / 1e9).toFixed(1).replace('.', ',') + ' Md' : Math.round(m.value_max / 1e6) + ' M') : '';
@@ -2180,12 +2166,27 @@
         return '<div class="crm-webrow" style="align-items:flex-start;gap:8px"><span><span class="crm-q-kind k-' + (m.kind === 'tender' ? 'relance' : 'task') + '">' + (m.kind === 'tender' ? 'Appel d’offres' : 'Contrat') + '</span> '
           + (m.url ? '<a class="crm-link" href=\"' + safeUrl(m.url) + '\" target="_blank" rel="noopener">' + label + '</a>' : label)
           + '<br><span class="crm-meta">' + esc([m.buyer, val].filter(Boolean).join(' · ')) + '</span>'
-          + (m.why ? '<br><span class="crm-meta">' + esc(m.why) + '</span>' : '') + '</span>'
+          + (m.tether ? tethHtml(m.tether) : (m.why ? '<br><span class="crm-meta">' + esc(m.why) + '</span>' : '')) + '</span>'
           + '<span class="crm-meta" style="white-space:nowrap;text-align:right">' + (m.score != null ? '<span class="crm-ms-score s' + (m.score >= 5 ? 'hi' : 'mid') + '" title="Note sur 8">' + m.score + '/8</span><br>' : '') + esc(m.date ? fmtDate(m.date) : '') + '</span></div>';
       }).join('') + '<div class="crm-meta" style="margin-top:6px">Seuls les marchés notés 3 sur 8 et plus s’affichent ici. Rattachés par le nom de l’acheteur.</div></div>' : '')
       + (A.web && A.web.length ? '<div class="crm-card"><h3>Pages vues <span class="crm-meta">elistair.com</span></h3>' + A.web.map(function (w) {
         return '<div class="crm-webrow"><span>' + esc(w.title && w.title !== 'Elistair' ? w.title : w.path) + '</span><span class="crm-meta">' + esc(relTime(w.ts)) + '</span></div>';
       }).join('') + '</div>' : '')
+      + '<div class="crm-card"><h3>Tâches <span class="crm-meta">' + openTasks.length + ' ouverte' + (openTasks.length > 1 ? 's' : '') + '</span></h3>'
+      + (openTasks.length ? openTasks.map(taskHtml).join('') : '<div class="crm-meta">Aucune tâche ouverte.</div>')
+      + (doneTasks.length ? '<details style="margin-top:8px"><summary class="crm-meta" style="cursor:pointer">' + doneTasks.length + ' terminée' + (doneTasks.length > 1 ? 's' : '') + '</summary>' + doneTasks.map(taskHtml).join('') + '</details>' : '')
+      + '</div>'
+      + '<div class="crm-card"><h3>Comptes rattachés <span class="crm-meta">' + (A.children || []).length + '</span></h3>'
+      + ((A.children || []).length ? A.children.map(function (c) { return '<button type="button" class="crm-mini" data-acc="' + esc(c.id) + '">' + tierBadge(c.tier) + '<span class="m"><b>' + esc(c.nom) + '</b><span>' + esc(c.pays || '') + '</span></span></button>'; }).join('') : '<div class="crm-meta">Aucun compte rattaché.</div>')
+      + '<div id="crm-child-pick" style="margin-top:8px"></div></div>'
+      + '<div class="crm-card"><h3>Comité d’achat <span class="crm-meta">' + (sm.coverage || 0) + ' / 4 rôles</span></h3>'
+      + KEY_ROLES.map(function (r) {
+        var list = byRole[r] || [];
+        return '<div class="crm-com"><div class="crm-com-h"><span class="crm-role r-' + r + '">' + ROLE_LABEL[r] + '</span><span class="crm-meta">' + esc(ROLE_HINT[r]) + '</span></div>'
+          + (list.length ? list.map(contactLine).join('') : '<button type="button" class="crm-com-miss" data-addrole="' + r + '">' + ICON.plus + ' Trouver ou ajouter un ' + ROLE_LABEL[r].toLowerCase() + '</button>') + '</div>';
+      }).join('')
+      + (others.length ? '<details class="crm-com"><summary class="crm-com-h" style="cursor:pointer"><span class="crm-role none">Autres</span><span class="crm-meta">' + others.length + ' contact' + (others.length > 1 ? 's' : '') + ', rôle à préciser</span></summary>' + others.map(contactLine).join('') + '</details>' : '')
+      + '</div>'
       + '</aside></div>';
 
     // liaisons
