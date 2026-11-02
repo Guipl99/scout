@@ -1249,7 +1249,7 @@
       var items = d.items || [];
       if (!items.length) { host.innerHTML = ''; return; }
       var open = !!S.newsOpen, n = open ? items.length : Math.min(8, items.length);
-      host.innerHTML = '<section class="crm-card tbn tbn-hl" aria-label="Tethered Business News"><h3><span class="tbn-dot"></span>Tethered Business News <span class="tbn-count">' + items.length + ' cette semaine</span></h3>'
+      host.innerHTML = '<section class="crm-card tbn" aria-label="Tethered Business News"><h3>Tethered Business News <span class="crm-meta">' + items.length + ' sur les 7 derniers jours</span></h3>'
         + items.slice(0, n).map(function (it) { return newsRow(it, 'crm'); }).join('')
         + (items.length > 8 ? '<button type="button" class="crm-link tbn-more" data-tbn-more>' + (open ? 'Réduire' : 'Voir les ' + items.length) + '</button>' : '') + '</section>';
       host.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });

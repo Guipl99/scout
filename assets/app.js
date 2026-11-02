@@ -190,7 +190,7 @@
             + (it.url ? (it.account ? ' · ' : '') + '<a href="' + safeUrl(it.url) + '" target="_blank" rel="noopener">' + esc(it.source || 'Source') + ' ↗</a>' : '') + '</div></div>';
       };
       // replié : 3 lignes courtes pour laisser la file à l'écran ; déplié : toutes les nouvelles en détail
-      box.innerHTML = '<section class="sa-ao tbn tbn-hl"><h4><span class="tbn-dot"></span>Tethered Business News <span class="tbn-count">' + items.length + ' cette semaine</span></h4>'
+      box.innerHTML = '<section class="sa-ao tbn"><h4>Tethered Business News <span class="sa-meta">' + items.length + ' cette semaine</span></h4>'
         + (open ? items.map(full).join('') : items.slice(0, 5).map(line).join(''))
         + '<button type="button" class="sa-link tbn-more" id="sa-tbn-more">' + (open ? 'Réduire' : 'Voir le détail' + (items.length > 5 ? ' (' + items.length + ')' : '')) + '</button></section>';
       box.querySelectorAll('[data-acc]').forEach(function (b) { b.onclick = function () { openAccount(b.getAttribute('data-acc')); }; });
