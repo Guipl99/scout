@@ -16,7 +16,7 @@
 <meta name="theme-color" content="#142220">
 <link rel="manifest" href="manifest.json">
 <title>Scout</title>
-<script src="assets/i18n.js?v=17"></script>
+<script src="assets/i18n.js?v=18"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Zalando+Sans+Expanded:wght@400;600;700;800&display=swap');
 
@@ -3260,8 +3260,8 @@ const NAV_GROUPS = [
       { panel: 'contacts',  label: 'Contacts', hidden: true, alias: 'people' } ] },
   { id: 'signaux', label: 'Signaux', tabs: [
       { panel: 'feed',      label: 'Fil' },
-      { panel: 'market',    label: 'Marchés' },
-      { panel: 'veille',    label: 'Veille' },
+      { panel: 'market',    label: 'Marchés', badge: 'subnav-market-badge' },
+      { panel: 'veille',    label: 'LinkedIn & presse', badge: 'subnav-veille-badge' },
       { panel: 'visitors',  label: 'Visiteurs web', badge: 'subnav-visitors-badge' },
       { panel: 'chat',      label: 'Chat du site', badge: 'subnav-chat-badge' },
       { panel: 'signals',   label: 'À traiter', hidden: true, alias: 'market' },
@@ -3304,6 +3304,7 @@ function renderSubnav(activePanel) {
   if (!window.__subnavRO && window.ResizeObserver) { window.__subnavRO = new ResizeObserver(setH); window.__subnavRO.observe(el); }
   if (typeof _visPollAlerts === 'function') setTimeout(_visPollAlerts, 30);
   if (typeof _chatPollLeads === 'function') setTimeout(_chatPollLeads, 40);
+  if (typeof _tabMarkSeen === 'function') _tabMarkSeen(activePanel);
 }
 window.renderSubnav = renderSubnav;
 
@@ -10077,9 +10078,9 @@ function _visSetNavBadge(n) { window.__navCounts.vis = n || 0; _navRenderBadges(
 // Les pastilles du groupe « Prospects » sont partagées entre les visiteurs et
 // le chat. Sans compteur commun, chaque sondeur écrasait l'autre et le nombre
 // affiché était celui du dernier arrivé, pas la somme.
-window.__navCounts = window.__navCounts || { vis: 0, chat: 0 };
+window.__navCounts = window.__navCounts || { vis: 0, chat: 0, market: 0, veille: 0 };
 function _navRenderBadges() {
-  var c = window.__navCounts, total = (c.vis || 0) + (c.chat || 0);
+  var c = window.__navCounts, total = (c.vis || 0) + (c.chat || 0) + (c.market || 0) + (c.veille || 0);
   var set = function (id, n, label) {
     var b = document.getElementById(id); if (!b) return;
     b.textContent = n > 9 ? '9+' : String(n);
@@ -10087,11 +10088,32 @@ function _navRenderBadges() {
     b.setAttribute('aria-label', n + ' ' + label);
   };
   set('subnav-visitors-badge', c.vis || 0, 'alerte(s) visiteurs');
-  set('subnav-chat-badge', c.chat || 0, 'lead(s) de chat à traiter');
+  set('subnav-chat-badge', c.chat || 0, 'nouveau(x) chat(s)');
+  set('subnav-market-badge', c.market || 0, 'nouveau(x) marché(s) filaire(s)');
+  set('subnav-veille-badge', c.veille || 0, 'nouveau(x) signal(aux) LinkedIn et presse');
   set('nav-prospects-badge', total, 'élément(s) à traiter');
   set('bn-prospects-badge', total, 'élément(s) à traiter');
 }
-function _chatSetNavBadge(n) { window.__navCounts.chat = 0; _navRenderBadges(); } // les chats sont traités dans le CRM, pas de « à traiter » dans Scout
+function _chatSetNavBadge(n) { _navRenderBadges(); } // le compteur du chat vient de /crm/tab-badges (nouveaux depuis la dernière visite)
+// Pastilles Marchés, LinkedIn & presse, Chat du site : éléments arrivés depuis ta dernière ouverture de l'onglet.
+var _TAB_OF = { market: 'market', signals: 'market', contracts: 'market', veille: 'veille', chat: 'chat' };
+async function _tabPollBadges() {
+  try {
+    if (typeof window.getAuthHeaders !== 'function' || !window.getAuthHeaders().Authorization) return;
+    var r = await fetch(API + '/crm/tab-badges', { headers: window.getAuthHeaders() }); if (!r.ok) return;
+    var d = await r.json(), cur = _TAB_OF[(document.querySelector('.subnav-tab.active') || {}).dataset ? document.querySelector('.subnav-tab.active').dataset.panel : ''];
+    ['market', 'veille', 'chat'].forEach(function (k) { window.__navCounts[k] = k === cur ? 0 : (d[k] || 0); });
+    _navRenderBadges();
+  } catch (e) {}
+}
+function _tabMarkSeen(panel) {
+  var tab = _TAB_OF[panel]; if (!tab) { setTimeout(_tabPollBadges, 60); return; }
+  window.__navCounts[tab] = 0; _navRenderBadges();
+  try {
+    if (typeof window.getAuthHeaders !== 'function' || !window.getAuthHeaders().Authorization) return;
+    fetch(API + '/crm/tab-badges/seen', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, window.getAuthHeaders()), body: JSON.stringify({ tab: tab }) }).catch(function () {});
+  } catch (e) {}
+}
 async function _chatPollLeads() {
   try {
     if (typeof window.getAuthHeaders !== 'function' || !window.getAuthHeaders().Authorization) return;
@@ -10185,6 +10207,7 @@ async function _visPollAlerts() {
   });
   setTimeout(_visPollAlerts, 4000); setInterval(_visPollAlerts, 5 * 60 * 1000);
   setTimeout(_chatPollLeads, 5000); setInterval(_chatPollLeads, 5 * 60 * 1000);
+  setTimeout(_tabPollBadges, 4500); setInterval(_tabPollBadges, 5 * 60 * 1000);
 })();
 
 // ===================== Suivi & relances =====================
@@ -10513,7 +10536,7 @@ function navBack(){
   _updateBackBtn();
 }
 </script>
-<script src="assets/crm.js?v=262"></script>
+<script src="assets/crm.js?v=263"></script>
 <script src="assets/settings.js?v=3"></script>
 <script src="assets/app.js?v=43"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>

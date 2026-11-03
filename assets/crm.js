@@ -985,7 +985,7 @@
   }
   // Lancer les routines à la main (admin) : veille web, recherche de contacts, rédaction des mails « À écrire »
   var ROUTINES = {
-    veille: { label: 'Veille drone filaire (web)', path: '/crm/veille/run', done: 'Veille lancée : les comptes arrivent dans Signaux > Veille d’ici 10 à 20 min' },
+    veille: { label: 'Veille drone filaire (web)', path: '/crm/veille/run', done: 'Veille lancée : les comptes arrivent dans Signaux > LinkedIn & presse d’ici 10 à 20 min' },
     enrich: { label: 'Chercher des contacts', path: '/crm/pitch-enrich/run?max=20', done: null },
     drafts: { label: 'Rédiger les mails « À écrire »', path: '/crm/pitch-drafts/run', done: 'Rédaction lancée : les mails arrivent dans Aujourd’hui d’ici quelques minutes' }
   };
