@@ -593,7 +593,23 @@
     'Activité enregistrée': 'Activity saved', 'avec': 'with',
     'Oui l’enregistre et programme la relance.': 'Yes logs it and schedules the follow-up.', 'Oui, envoyé': 'Yes, sent', 'Pas encore': 'Not yet', 'Envoyé : relance programmée': 'Sent: follow-up scheduled',
     // ── Mois / jours
-    'janv.': 'Jan', 'févr.': 'Feb', 'mars': 'Mar', 'avr.': 'Apr', 'mai': 'May', 'juin': 'Jun', 'juil.': 'Jul', 'août': 'Aug', 'sept.': 'Sep', 'oct.': 'Oct', 'nov.': 'Nov', 'déc.': 'Dec'
+    'janv.': 'Jan', 'févr.': 'Feb', 'mars': 'Mar', 'avr.': 'Apr', 'mai': 'May', 'juin': 'Jun', 'juil.': 'Jul', 'août': 'Aug', 'sept.': 'Sep', 'oct.': 'Oct', 'nov.': 'Nov', 'déc.': 'Dec',
+    // ── Nov. 2026 : filaire, visites résumées, organigramme, création
+    'Filaire': 'Tethered', 'Filaire possible': 'Possibly tethered', 'Proche du filaire': 'Close to tethered', 'Pas de filaire': 'Not tethered', 'Pas filaire': 'Not tethered',
+    'drone sans mention de filaire': 'drone with no tethered mention', 'drone d’attaque, pas un drone filaire': 'attack drone, not a tethered drone',
+    'filaire cité seulement dans le texte complet de l’avis (pièces), pas dans le résumé': 'tethered only mentioned in the full notice documents, not in the summary',
+    'filaire ou captif cité': 'tethered or captive mentioned', 'concurrent filaire': 'tethered competitor', 'marché Elistair': 'Elistair contract',
+    '{n} pages vues': '{n} pages viewed', '{n} page vue': '{n} page viewed', '{n} pages vues sur elistair.com': '{n} pages viewed on elistair.com', '{n} page vue sur elistair.com': '{n} page viewed on elistair.com',
+    'pages vues': 'pages viewed', 'use cases': 'use cases', 'Use cases': 'Use cases', 'Produits': 'Products', 'Intention': 'Intent', 'Dernières pages': 'Latest pages',
+    'demande de contact ou devis': 'contact or quote request', 'page prix': 'pricing page', 'Événements': 'Events', 'Sécurité publique': 'Public safety', 'Secours': 'Rescue',
+    'Frontières': 'Borders', 'Sites et infrastructures': 'Sites and infrastructure', 'Défense / ISR': 'Defense / ISR', 'Véhicules': 'Vehicles', 'Relais télécom': 'Telecom relay',
+    'Pages générales, aucun produit ni cas d’usage précis.': 'General pages, no specific product or use case.', 'Site elistair.com': 'elistair.com site',
+    'Voir les {n} autres': 'See the other {n}', 'Voir l’autre': 'See the other one', 'Tout replier': 'Collapse all', 'Tout déplier': 'Expand all', 'Engagement': 'Engagement',
+    'Replier': 'Collapse', 'Déplier': 'Expand', '+ {n} autres': '+ {n} more', 'Remonter en haut': 'Back to top',
+    '+ Compte': '+ Account', '+ Contact': '+ Contact', 'Nouveau compte': 'New account', 'Nouveau contact': 'New contact', 'Nom de l’organisme': 'Organization name',
+    'Site web (domaine)': 'Website (domain)', 'Créer': 'Create', 'Suivant': 'Next', '+ Créer un nouveau compte': '+ Create a new account', 'Note modifiée': 'Note updated',
+    'Plus récents d’abord': 'Most recent first', 'Mieux notés d’abord': 'Best rated first', 'Voir aussi les drones non filaires': 'Also show non-tethered drones', 'Filaire uniquement': 'Tethered only',
+    'Démo filaire': 'Tethered demo', 'Essai filaire': 'Tethered trial', 'AO filaire': 'Tethered tender', 'Intérêt filaire': 'Tethered interest', 'Recherche LinkedIn': 'LinkedIn search', 'Post LinkedIn': 'LinkedIn post'
   };
 
   var MONTHS = { 'janvier': 'January', 'février': 'February', 'mars': 'March', 'avril': 'April', 'mai': 'May', 'juin': 'June', 'juillet': 'July', 'août': 'August', 'septembre': 'September', 'octobre': 'October', 'novembre': 'November', 'décembre': 'December',
