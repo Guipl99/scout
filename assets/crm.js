@@ -1697,7 +1697,7 @@
       + (mode === 'tree' ? '<button type="button" class="crm-link" data-oall="0">Tout replier</button><button type="button" class="crm-link" data-oall="1">Tout déplier</button>' : '') + legend + '</div>';
     var pref = null; try { pref = localStorage.getItem('scout_org_open'); } catch (e) {}
     var isOpen = pref ? pref === '1' : true;
-    box.innerHTML = '<details class="crm-card crm-org-card"' + (isOpen ? ' open' : '') + '><summary><h3>Organigramme <span class="crm-meta">' + total + ' compte' + (total > 1 ? 's' : '') + ' sous ' + esc(root.nom) + '</span></h3></summary>'
+    box.innerHTML = '<details class="crm-card crm-org-card"' + (isOpen ? ' open' : '') + '><summary><h3>Organigramme <span class="crm-meta">' + total + ' compte' + (total > 1 ? 's' : '') + '</span> <span class="crm-meta">sous</span> <span class="crm-meta">' + esc(root.nom) + '</span></h3></summary>'
       + tools + '<div class="' + (mode === 'tree' ? 'crm-orgw' : 'crm-orgt') + '" aria-label="Organigramme du groupe ' + esc(root.nom) + '">' + body + '</div></details>';
     box.querySelectorAll('[data-omode]').forEach(function (b) { b.onclick = function () { try { localStorage.setItem('scout_org_mode', b.getAttribute('data-omode')); } catch (e) {} drawOrg(id); }; });
     box.querySelectorAll('[data-tg]').forEach(function (b) { b.onclick = function (e) { e.preventDefault(); e.stopPropagation(); var k = b.getAttribute('data-tg'); var isOpen = !!b.nextElementSibling; S.orgExp[k] = !isOpen; drawOrg(id); }; });
