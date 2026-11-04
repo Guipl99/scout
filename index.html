@@ -9117,7 +9117,8 @@ function _chatWire() {
 // sert à essayer le bot. Le mode est retenu d'une visite à l'autre.
 var _chatMode = 'site';
 var _chatView = 'all';
-var _chatSort = { by: '', dir: 'desc' };  // vide = ordre serveur (chaleur)
+var _chatSort = { by: 'date', dir: 'desc' };  // par défaut : les plus récentes en tête ; vide = ordre serveur (chaleur)
+try { var _cs0 = JSON.parse(localStorage.getItem('scout_chat_sort') || 'null'); if (_cs0 && typeof _cs0.by === 'string') _chatSort = { by: _cs0.by, dir: _cs0.dir === 'asc' ? 'asc' : 'desc' }; } catch (e) {}
 var _chatConvs = [];
 var _chatCur = null;      // conversation ouverte dans le tiroir
 var _chatPreview = null;  // aperçu en attente de confirmation
@@ -9146,7 +9147,7 @@ function _chatApplyMode() {
 async function _chatLoadConvs() {
   var body = document.getElementById('chat-conv-body'); if (!body) return;
   try {
-    var r = await fetch(API + '/v/chat/sessions?source=site&view=' + encodeURIComponent(_chatView || 'all') + '&limit=60', { headers: _chatH() });
+    var r = await fetch(API + '/v/chat/sessions?source=site&view=' + encodeURIComponent(_chatView || 'all') + '&limit=100' + (_chatSort.by === 'date' ? '&sort=recent' : ''), { headers: _chatH() });
     var j = await r.json();
     _chatConvs = j.sessions || [];
     _chatRenderTiles(j.totals || {});
@@ -9192,7 +9193,7 @@ function _chatRenderConvs() {
       + (on ? ' class="sorted"' : '') + '>' + label + arrow + '</th>';
   }
   body.innerHTML = '<table class="chat-conv"><thead><tr>'
-    + th('Visiteur', 'who') + th('Projet', 'besoin') + th('Page', 'page') + th('Score', 'score') + th('CRM', 'scout') + th('', 'date')
+    + th('Visiteur', 'who') + th('Projet', 'besoin') + th('Page', 'page') + th('Score', 'score') + th('CRM', 'scout') + th('Date', 'date')
     + '</tr></thead><tbody>' + sortedConvs.map(function (c) {
       var L = c.lead || {}, I = c.inferred || {};
       var who = [L.prenom, L.nom].filter(Boolean).join(' ') || L.email || 'Anonyme';
@@ -9221,6 +9222,7 @@ function _chatRenderConvs() {
       var k = th.getAttribute('data-sort');
       if (_chatSort.by === k) _chatSort.dir = _chatSort.dir === 'asc' ? 'desc' : 'asc';
       else { _chatSort.by = k; _chatSort.dir = (k === 'score' || k === 'date') ? 'desc' : 'asc'; }
+      try { localStorage.setItem('scout_chat_sort', JSON.stringify(_chatSort)); } catch (e) {}
       _chatRenderConvs();
     });
   });
