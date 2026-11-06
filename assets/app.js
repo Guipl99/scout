@@ -703,7 +703,7 @@
     Promise.all([api('/signals/feed?days=30&scope=' + A.sigScope), api('/crm/pitch?scope=all').catch(function () { return { items: [] }; }), api('/crm/veille?days=60').catch(function () { return {}; }), api('/crm/facets').catch(function () { return {}; })]).then(function (rr) {
       var d = rr[0], PS = {}; (rr[1].items || []).forEach(function (p) { PS[p.account.id] = p; });
       var meId = rr[3] && rr[3].me && rr[3].me.user_id;
-      var list = (d.items || []).concat(veilleItems(rr[2] || {}, meId)).sort(function (a, b) { return new Date(b.at) - new Date(a.at); }).slice(0, 80);
+      var list = (d.items || []).filter(function (x) { return x.type !== 'veille'; }).concat(veilleItems(rr[2] || {}, meId)).sort(function (a, b) { return new Date(b.at) - new Date(a.at); }).slice(0, 80);
       var mention = function (g) {
         if (g.type === 'market') return '';
         if (g.type === 'chat') return g.crm ? '<div class="sa-cstate ok">Transmis au CRM</div>' : '<div class="sa-cstate">Suivi dans le CRM</div>';

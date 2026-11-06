@@ -635,12 +635,12 @@
   // SIGNAUX › FIL : marchés, visites du site, chats, du plus récent au plus ancien.
   // Trois gestes partout : rattacher (ou créer) le compte, créer une tâche, écarter.
   // ═════════════════════════════════════════════════════════════════════════
-  var FEED_TYPE = { market: 'Marché', visit: 'Visite', chat: 'Chat' };
+  var FEED_TYPE = { market: 'Marché', veille: 'LinkedIn', visit: 'Visite', chat: 'Chat' };
   function onFeedPanel() {
     var p = document.getElementById('panel-feed'); if (!p) return;
     S.feedScope = S.feedScope || lsGet('scout_feed_scope', 'me');
     S.feedType = S.feedType || 'all'; S.feedDays = S.feedDays || 30;
-    p.innerHTML = '<div class="crm-wrap crm-home"><div class="crm-row crm-home-head"><div><div class="crm-meta crm-lead-in">Tout ce qui bouge : appels d’offres et contrats, organismes venus sur le site, chats. Ce qui concerne tes comptes remonte aussi dans Aujourd’hui.</div></div>'
+    p.innerHTML = '<div class="crm-wrap crm-home"><div class="crm-row crm-home-head"><div><div class="crm-meta crm-lead-in">Tout ce qui bouge : appels d’offres et contrats, veille LinkedIn et presse, organismes venus sur le site, chats. Ce qui concerne tes comptes remonte aussi dans Aujourd’hui.</div></div>'
       + '<select class="crm-sel" id="crm-feed-days" aria-label="Période">' + [[7, '7 jours'], [30, '30 jours'], [90, '90 jours']].map(function (d) { return '<option value="' + d[0] + '"' + (S.feedDays === d[0] ? ' selected' : '') + '>' + d[1] + '</option>'; }).join('') + '</select></div>'
       + '<div class="crm-row crm-qbar"><div class="crm-views" style="margin:0" id="crm-feed-scope"></div><div class="crm-views" style="margin:0" id="crm-feed-type"></div></div>'
       + '<div id="crm-feed-body"><div class="crm-empty">Chargement…</div></div></div>';
@@ -655,14 +655,15 @@
     api('/signals/feed?days=' + S.feedDays + '&scope=' + S.feedScope).then(function (d) {
       if (seq !== S.feedSeq) return;
       var c = d.counts || {}, items = d.items || [];
+      if (S.feedScope === 'me' && !c.me && c.all && !S.feedScopePicked) { S.feedScope = 'all'; return loadFeed(); }
       var sc = document.getElementById('crm-feed-scope');
       sc.innerHTML = [['me', 'Mes comptes', c.me], ['all', 'Tout', c.all], ['unlinked', 'Sans compte', c.unlinked]].map(function (x) {
         return '<button type="button" class="crm-chip sm' + (S.feedScope === x[0] ? ' on' : '') + '" data-fs="' + x[0] + '">' + x[1] + '<span class="n"> ' + (x[2] || 0) + '</span></button>';
       }).join('');
-      sc.querySelectorAll('[data-fs]').forEach(function (b) { b.onclick = function () { S.feedScope = b.getAttribute('data-fs'); lsSet('scout_feed_scope', S.feedScope); loadFeed(); }; });
-      var byType = { all: items.length, market: 0, visit: 0, chat: 0 }; items.forEach(function (it) { byType[it.type]++; });
+      sc.querySelectorAll('[data-fs]').forEach(function (b) { b.onclick = function () { S.feedScope = b.getAttribute('data-fs'); S.feedScopePicked = true; lsSet('scout_feed_scope', S.feedScope); loadFeed(); }; });
+      var byType = { all: items.length, market: 0, veille: 0, visit: 0, chat: 0 }; items.forEach(function (it) { byType[it.type]++; });
       var ty = document.getElementById('crm-feed-type');
-      ty.innerHTML = [['all', 'Tous'], ['market', 'Marchés'], ['visit', 'Visites'], ['chat', 'Chats']].map(function (x) {
+      ty.innerHTML = [['all', 'Tous'], ['market', 'Marchés'], ['veille', 'LinkedIn & presse'], ['visit', 'Visites'], ['chat', 'Chats']].map(function (x) {
         return '<button type="button" class="crm-chip sm' + (S.feedType === x[0] ? ' on' : '') + '" data-ft="' + x[0] + '">' + x[1] + '<span class="n"> ' + (byType[x[0]] || 0) + '</span></button>';
       }).join('');
       ty.querySelectorAll('[data-ft]').forEach(function (b) { b.onclick = function () { S.feedType = b.getAttribute('data-ft'); drawFeed(); }; });
@@ -683,13 +684,14 @@
   function feedRow(it, i) {
     var acc = it.account;
     var title = esc(it.title);
-    if (it.type === 'market' && it.url) title = '<a class="crm-link strong" href=\"' + safeUrl(it.url) + '\" target="_blank" rel="noopener">' + title + '</a>';
+    if ((it.type === 'market' || it.type === 'veille') && it.url) title = '<a class="crm-link strong" href=\"' + safeUrl(it.url) + '\" target="_blank" rel="noopener">' + title + '</a>';
     else if (it.type === 'visit' && acc) title = '<button type="button" class="crm-link strong" data-facc="' + esc(acc.id) + '">' + title + '</button>';
     else if (it.type === 'chat') title = '<button type="button" class="crm-link strong" data-fchat="' + i + '">' + title + '</button>';
     else title = '<b>' + title + '</b>';
     var sub = [];
     if (it.type === 'market') { sub.push(sigScore(it.score)); if (it.flux) sub.push('<span class="crm-ms-type">' + esc(sigType(it)) + '</span>'); var v = it.value_max ? (it.value_max >= 1e9 ? (it.value_max / 1e9).toFixed(1).replace('.', ',') + ' Md' : it.value_max >= 1e6 ? Math.round(it.value_max / 1e6) + ' M' : '') : ''; sub.push(esc([it.buyer, it.pays, v].filter(Boolean).join(' · '))); }
     if (it.type === 'visit') sub.push(esc([it.org && it.org.country, it.org && it.org.domain].filter(Boolean).join(' · ')));
+    if (it.type === 'veille') sub.push(esc([it.source, it.pays, it.event_date ? 'le ' + it.event_date.split('-').reverse().join('/') : '', it.person ? it.person.name + (it.person.title ? ' (' + it.person.title + ')' : '') : ''].filter(Boolean).join(' · ')));
     var accHtml = acc ? '<span class="crm-feed-acc">' + (acc.tier ? tierBadge(acc.tier) + ' ' : '') + '<button type="button" class="crm-link" data-facc="' + esc(acc.id) + '">' + esc(acc.nom) + '</button>' + (acc.owner_name ? ' · ' + esc(acc.owner_name) : ' · sans commercial') + '</span>'
       : '<span class="crm-feed-acc none">Sans compte</span>';
     var btns = '';
@@ -697,14 +699,14 @@
     else if (!acc) btns += it.type === 'visit' ? '<button type="button" class="crm-btn sm primary" data-fa="create" data-i="' + i + '">Créer le compte</button><button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>'
       : '<button type="button" class="crm-btn sm" data-fa="link" data-i="' + i + '">Rattacher</button>';
     var PSx = acc && S.feedPitch ? S.feedPitch[acc.id] : null;
-    var searching = it.type !== 'market' && PSx && PSx.state !== 'ready' && PSx.state !== 'linkedin';
-    var cstate = it.type === 'chat' ? (it.crm ? '<div class="s crm-cstate ok">Transmis au CRM</div>' : '<div class="s crm-cstate">Suivi dans le CRM</div>') : it.type === 'market' ? '' : !acc ? '' : !PSx ? '' : PSx.state === 'ready' ? '<div class="s crm-cstate ok">Contact prêt : ' + esc(PSx.contact.name) + (PSx.contact.titre ? ', ' + esc(PSx.contact.titre) : '') + '</div>'
+    var searching = it.type !== 'market' && it.type !== 'veille' && PSx && PSx.state !== 'ready' && PSx.state !== 'linkedin';
+    var cstate = it.type === 'chat' ? (it.crm ? '<div class="s crm-cstate ok">Transmis au CRM</div>' : '<div class="s crm-cstate">Suivi dans le CRM</div>') : (it.type === 'market' || it.type === 'veille') ? '' : !acc ? '' : !PSx ? '' : PSx.state === 'ready' ? '<div class="s crm-cstate ok">Contact prêt : ' + esc(PSx.contact.name) + (PSx.contact.titre ? ', ' + esc(PSx.contact.titre) : '') + '</div>'
       : PSx.state === 'linkedin' ? '<div class="s crm-cstate ok">Contact trouvé sur LinkedIn : ' + esc(PSx.person.name) + '</div>' : '<div class="s crm-cstate">Scout cherche un contact qualifié (mail vérifié ou LinkedIn)</div>';
     if (!searching && it.type !== 'chat') btns += '<button type="button" class="crm-btn sm' + (acc ? ' primary' : '') + '" data-fa="task" data-i="' + i + '">' + (it.type === 'market' && it.flux === 1 ? ICON.check + ' Go' : ICON.mail + ' Écrire') + '</button>';
     // plus de recherche de contacts à la main : c'est le travail de Scout (mention ci-dessous)
     btns += '<button type="button" class="crm-btn ghost sm" data-fa="dismiss" data-i="' + i + '">Écarter</button>';
     return '<div class="crm-feed-row t-' + it.type + (it.imp >= 4 ? ' strong' : '') + '" data-row="' + i + '">'
-      + '<span class="crm-q-kind k-' + it.type + '">' + FEED_TYPE[it.type] + '</span>'
+      + '<span class="crm-q-kind k-' + it.type + '">' + (it.type === 'veille' ? (it.source === 'LinkedIn' ? 'LinkedIn' : 'Presse') : FEED_TYPE[it.type]) + '</span>'
       + '<div class="crm-feed-b"><div class="t">' + title + '</div>'
       + (it.type === 'market' ? tethHtml(it.tether) : '')
       + '<div class="s">' + sub.filter(Boolean).join(' ') + (it.why ? '<span class="crm-meta"> ' + esc(it.why) + '</span>' : '') + '</div>'
@@ -766,7 +768,7 @@
               .then(function () { done(row, it.flux === 1 ? 'Go : tâche « Répondre à l’AO » créée' : 'Ajouté à « À écrire » dans Aujourd’hui'); }).catch(function (e) { toast('Erreur : ' + e.message); });
           }
           if (!it.account) { toast('Rattache d’abord ce signal à un compte'); return; }
-          return pitchAccount(it.account.id, it.type === 'chat' ? 'a écrit sur le chat du site' : 'est venu sur elistair.com')
+          return pitchAccount(it.account.id, it.type === 'chat' ? 'a écrit sur le chat du site' : it.type === 'veille' ? ((it.tag || 'signal').toLowerCase() + ' de drone filaire' + (it.competitor ? ' ' + it.competitor : '') + ' vu' + (it.source === 'LinkedIn' ? ' sur LinkedIn' : ' dans la presse')) : 'est venu sur elistair.com')
             .then(function () { return api('/signals/feed/dismiss', { method: 'POST', body: { key: it.key, state: 'task' } }); })
             .then(function () { row.classList.add('gone'); setTimeout(function () { row.remove(); }, 250); }).catch(function (e) { toast('Erreur : ' + e.message); });
         }
@@ -789,6 +791,9 @@
                 if (D.account && D.account.domain && !D.account.domain_guessed && D.account.domain.toLowerCase() !== it.org.domain) { toast(acc.nom + ' a déjà le domaine ' + D.account.domain); return null; }
                 return api('/crm/accounts/' + encodeURIComponent(acc.id), { method: 'PATCH', body: { domain: it.org.domain } }).then(function () { toast('Rattaché à ' + acc.nom); loadFeed(); });
               }).catch(function (e) { toast('Erreur : ' + e.message); });
+            } else if (it.type === 'veille') {
+              api('/crm/veille/' + encodeURIComponent(it.veille_id) + '/action', { method: 'POST', body: { action: 'link', end_user_id: acc.id } })
+                .then(function () { toast('Rattaché à ' + acc.nom); loadFeed(); }).catch(function (e) { toast('Erreur : ' + e.message); });
             } else { toast('Rattache ce chat depuis l’onglet Chat du site'); go('chat'); }
           } });
         }

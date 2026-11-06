@@ -239,6 +239,7 @@ body.theme-light #scout-chat-btn { background: #fff !important; }
 .crm-q-kind.k-market { color: var(--accent2); }
 .crm-q-kind.k-visit { color: var(--teal); }
 .crm-q-kind.k-chat { color: var(--green); }
+.crm-q-kind.k-veille { color: var(--accent); }
 @media (max-width: 760px) { .crm-feed-row { flex-wrap: wrap; } .crm-feed-a { max-width: none; justify-content: flex-start; width: 100%; } }
 .crm-feed-cands { display: flex; flex-direction: column; gap: 4px; width: 100%; margin-bottom: 6px; }
 .crm-feed-cand { display: flex; gap: 6px; align-items: baseline; font-size: 12.5px; cursor: pointer; }
