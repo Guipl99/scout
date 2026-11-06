@@ -190,7 +190,7 @@
     tlFilter: 'all',
     taskScope: 'me', taskState: 'open',
     people: { filters: lsGet('scout_crm_pfilters', {}), sort: { sort: 'last_activity', dir: 'desc' }, rows: [], total: 0 },
-    homeScope: 'me'
+    homeScope: null
   };
 
   var BUILTIN_VIEWS = [
@@ -1199,7 +1199,8 @@
   }
   function onHomePanel() {
     var p = document.getElementById('panel-home'); if (!p) return;
-    S.homeScope = S.homeScope || 'me'; S.qFilter = S.qFilter || 'all'; S.taskState = S.taskState || 'open';
+    // Vue par défaut : Équipe pour un admin, Moi pour un commercial ; le dernier choix est gardé
+    S.homeScope = S.homeScope || lsGet('scout_home_scope', null) || (isAdminNow() ? 'team' : 'me'); S.qFilter = S.qFilter || 'all'; S.taskState = S.taskState || 'open';
     var me = (window.scoutSession && window.scoutSession.first_name) || '';
     var dateTxt = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
     dateTxt = dateTxt.charAt(0).toUpperCase() + dateTxt.slice(1);
@@ -1217,7 +1218,7 @@
       + '<div id="crm-tasks-list"><div class="crm-empty">Chargement…</div></div>'
       + '<div class="crm-meta crm-q-foot"><button type="button" class="crm-link" id="crm-q-done"></button></div>'
       + '</div><aside class="crm-home-side"><div id="crm-home-news"></div><div id="crm-home-digest"></div><div id="crm-home-side"></div></aside></div></div>';
-    p.querySelectorAll('[data-hs]').forEach(function (b) { b.onclick = function () { S.homeScope = b.getAttribute('data-hs'); S.taskState = 'open'; loadHome(); }; });
+    p.querySelectorAll('[data-hs]').forEach(function (b) { b.onclick = function () { S.homeScope = b.getAttribute('data-hs'); lsSet('scout_home_scope', S.homeScope); S.taskState = 'open'; loadHome(); }; });
     p.querySelectorAll('[data-qf]').forEach(function (b) { b.onclick = function () { S.qFilter = b.getAttribute('data-qf'); S.taskState = 'open'; drawQueue(); }; });
     document.getElementById('crm-q-done').onclick = function () { S.taskState = S.taskState === 'done' ? 'open' : 'done'; S.taskState === 'done' ? drawDone() : drawQueue(); };
     document.getElementById('crm-nt-open').onclick = function () { var r = document.getElementById('crm-nt-row'); r.hidden = !r.hidden; if (!r.hidden) document.getElementById('crm-nt-title').focus(); };
