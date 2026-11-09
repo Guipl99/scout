@@ -134,6 +134,66 @@
     } catch (x) { box.innerHTML = '<span class="cfg-hint" style="color:#C46A52">Erreur : ' + e(x.message) + '</span>'; }
   }
 
+  // ── Notifications push et installation de l'appli ──
+  var NOTIF_TYPES = [
+    ['chat', 'Nouveau chat sur le site', 'Un visiteur laisse ses coordonnées ou une demande.'],
+    ['ao', 'Appel d’offres ou contrat filaire', 'Dès qu’un nouveau marché drone filaire est relevé.'],
+    ['veille', 'Signal d’achat sur mes comptes', 'Achat, appel d’offres, essai ou démo vu sur LinkedIn ou dans la presse.'],
+    ['veille_all', 'Signal d’achat sur tous les comptes', 'Idem, pour toute l’équipe.'],
+    ['visit', 'Un de mes comptes est sur le site', 'Au plus une alerte par compte toutes les 12 heures.']
+  ];
+  function b64ToU8(b) { var p = '='.repeat((4 - b.length % 4) % 4), s = atob((b + p).replace(/-/g, '+').replace(/_/g, '/')), o = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) o[i] = s.charCodeAt(i); return o; }
+  async function swReg() { if (!('serviceWorker' in navigator)) return null; return (await navigator.serviceWorker.getRegistration('/scout/')) || (await navigator.serviceWorker.ready); }
+  function drawInstall() {
+    var box = document.getElementById('cfg-install-box'); if (!box) return;
+    var standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+    if (standalone) { box.innerHTML = '<div class="cfg-int">' + dot('ok') + '<div class="m"><b>Scout est installé sur cet appareil</b><span>Il s’ouvre dans sa propre fenêtre, depuis le menu Démarrer ou la barre des tâches.</span></div></div>'; return; }
+    var getP = function () { try { return typeof deferredPrompt !== 'undefined' ? deferredPrompt : null; } catch (x) { return null; } };
+    var can = !!getP();
+    box.innerHTML = '<div class="cfg-int">' + dot(can ? 'warn' : 'off') + '<div class="m"><b>Installer Scout comme une appli</b><span>'
+      + (can ? 'Scout aura sa fenêtre, son icône dans la barre des tâches et ses notifications.' : 'Dans Chrome ou Edge : icône d’installation à droite de la barre d’adresse (écran avec une flèche), ou menu ⋮ › Caster, enregistrer et partager › Installer la page en tant qu’application.')
+      + '</span></div>' + (can ? '<button type="button" class="btn" id="cfg-install-btn">Installer</button>' : '') + '</div>';
+    var ib = document.getElementById('cfg-install-btn');
+    if (ib) ib.onclick = async function () { var pr = getP(); if (!pr) return; pr.prompt(); try { await pr.userChoice; } catch (x) {} try { deferredPrompt = null; } catch (x) {} drawInstall(); };
+  }
+  async function drawNotif() {
+    drawInstall();
+    var box = document.getElementById('cfg-notif-box'); if (!box) return;
+    if (!('Notification' in window) || !('PushManager' in window) || !('serviceWorker' in navigator)) { box.innerHTML = '<span class="cfg-hint">Ce navigateur ne gère pas les notifications. Utilise Chrome ou Edge.</span>'; return; }
+    var reg = await swReg(), sub = reg && await reg.pushManager.getSubscription();
+    var st = { subscribed: false, prefs: {} };
+    if (sub) { try { st = await call('/notify/prefs?endpoint=' + encodeURIComponent(sub.endpoint)); } catch (x) {} }
+    var on = !!(sub && st.subscribed), denied = Notification.permission === 'denied';
+    var head = '<div class="cfg-int">' + dot(on ? 'ok' : denied ? 'warn' : 'off') + '<div class="m"><b>' + (on ? 'Notifications activées sur cet appareil' : 'Notifications désactivées sur cet appareil') + '</b><span>'
+      + (denied ? 'Le navigateur les bloque : clique sur le cadenas à gauche de l’adresse › Notifications › Autoriser, puis recharge.' : on ? 'Choisis ci-dessous ce que tu veux recevoir. Réglage propre à cet appareil.' : 'Active-les pour être prévenu même quand Scout est fermé.')
+      + '</span></div>' + (on ? '<button type="button" class="btn ghost" id="cfg-notif-test">Tester</button><button type="button" class="btn ghost" id="cfg-notif-off">Désactiver</button>' : (denied ? '' : '<button type="button" class="btn" id="cfg-notif-on">Activer</button>')) + '</div>';
+    var rows = on ? NOTIF_TYPES.map(function (t) {
+      return '<label class="cfg-check" style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer"><input type="checkbox" data-np="' + t[0] + '"' + (st.prefs[t[0]] ? ' checked' : '') + ' style="margin-top:3px"><span><b>' + e(t[1]) + '</b><br><span class="cfg-hint">' + e(t[2]) + '</span></span></label>';
+    }).join('') : '';
+    box.innerHTML = head + (rows ? '<div style="margin-top:8px">' + rows + '</div><span class="cfg-hint" id="cfg-notif-msg"></span>' : '');
+    var bOn = document.getElementById('cfg-notif-on');
+    if (bOn) bOn.onclick = async function () {
+      bOn.disabled = true;
+      try {
+        var perm = await Notification.requestPermission(); if (perm !== 'granted') return drawNotif();
+        var k = await call('/notify/key'); var r = await swReg();
+        var s2 = await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(k.key) });
+        await call('/notify/subscribe', { method: 'POST', body: { subscription: s2.toJSON(), prefs: k.defaults } });
+        drawNotif();
+      } catch (x) { bOn.disabled = false; box.insertAdjacentHTML('beforeend', '<span class="cfg-hint" style="color:#C46A52">Erreur : ' + e(x.message) + '</span>'); }
+    };
+    var bOff = document.getElementById('cfg-notif-off');
+    if (bOff) bOff.onclick = async function () { try { await call('/notify/unsubscribe', { method: 'POST', body: { endpoint: sub.endpoint } }); await sub.unsubscribe(); } catch (x) {} drawNotif(); };
+    var bT = document.getElementById('cfg-notif-test');
+    if (bT) bT.onclick = async function () { try { var r = await call('/notify/test', { method: 'POST', body: { endpoint: sub.endpoint } }); msg('cfg-notif-msg', r.ok ? 'Notification envoyée.' : 'Envoi refusé par le navigateur.', !r.ok); } catch (x) { msg('cfg-notif-msg', 'Erreur : ' + x.message, true); } };
+    box.querySelectorAll('[data-np]').forEach(function (c) {
+      c.onchange = async function () {
+        var p = {}; box.querySelectorAll('[data-np]').forEach(function (x) { p[x.dataset.np] = x.checked; });
+        try { await call('/notify/prefs', { method: 'PUT', body: { endpoint: sub.endpoint, prefs: p } }); msg('cfg-notif-msg', 'Enregistré.'); } catch (x) { msg('cfg-notif-msg', 'Erreur : ' + x.message, true); }
+      };
+    });
+  }
+
   var bound = false;
   function bind() {
     if (bound) return; bound = true;
@@ -148,6 +208,7 @@
       if (key === 'rules') { loadRules(); loadTeamRules(); }
       else if (key === 'integrations') loadIntegrations();
       else if (key === 'health') loadJobs();
+      else if (key === 'notif') drawNotif();
     }
   };
 })();

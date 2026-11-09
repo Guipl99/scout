@@ -16,7 +16,7 @@
 <meta name="theme-color" content="#142220">
 <link rel="manifest" href="manifest.json">
 <title>Scout</title>
-<script src="assets/i18n.js?v=19"></script>
+<script src="assets/i18n.js?v=20"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Zalando+Sans+Expanded:wght@400;600;700;800&display=swap');
 
@@ -2450,6 +2450,7 @@ Mes pays
         <div class="cfg-nav-sec">Mon compte</div>
         <button type="button" data-cfg="profil">Profil</button>
         <button type="button" data-cfg="prefs">Préférences</button>
+        <button type="button" data-cfg="notif">Notifications et appli</button>
         <button type="button" data-cfg="prosp">Ma prospection</button>
         <button type="button" data-cfg="data">Import et export</button>
         <div class="cfg-nav-sec" data-admin="1">Administration</div>
@@ -2487,6 +2488,13 @@ Mes pays
               <button type="button" onclick="if(confirm('Se déconnecter de cette session ?')){ try{localStorage.removeItem('scout_user_firstname');}catch(e){} if(window.scoutAction&&window.scoutAction.logout){window.scoutAction.logout();}else{try{localStorage.removeItem('scout_chat_session');}catch(e){} location.reload();} }" style="font-size:12px;color:#A44A35;background:var(--bg3);border:1px solid #A44A35;border-radius:var(--radius);padding:7px 12px;cursor:pointer;">🚪 Se déconnecter</button>
             </div>
             </div>
+          </div>
+        </section>
+        <section class="cfg-sec" data-sec="notif" hidden>
+          <header class="cfg-sec-head"><h2>Notifications et appli</h2><p>Installe Scout comme une appli sur ce PC et choisis les alertes que tu reçois, même quand Scout est fermé.</p></header>
+          <div class="cfg-sec-body">
+            <div class="cfg-box" id="cfg-install-box"></div>
+            <div class="cfg-box" id="cfg-notif-box"><span class="cfg-hint">Chargement…</span></div>
           </div>
         </section>
         <section class="cfg-sec" data-sec="prefs">
@@ -10539,7 +10547,7 @@ function navBack(){
 }
 </script>
 <script src="assets/crm.js?v=266"></script>
-<script src="assets/settings.js?v=3"></script>
+<script src="assets/settings.js?v=4"></script>
 <script src="assets/app.js?v=44"></script>
 <script>document.querySelectorAll('.lang-toggle button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===(window.scoutLang||'fr'))});</script>
 <script>
