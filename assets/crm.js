@@ -635,14 +635,16 @@
   // SIGNAUX › FIL : marchés, visites du site, chats, du plus récent au plus ancien.
   // Trois gestes partout : rattacher (ou créer) le compte, créer une tâche, écarter.
   // ═════════════════════════════════════════════════════════════════════════
+  var FEED_ZONES = [['all', 'Tous continents'], ['europe', 'Europe'], ['am_nord', 'Amérique du Nord'], ['am_latine', 'Amérique latine'], ['moyen_orient', 'Moyen-Orient'], ['afrique', 'Afrique'], ['asie', 'Asie'], ['oceanie', 'Océanie'], ['autre', 'Pays inconnu']];
   var FEED_TYPE = { market: 'Marché', veille: 'LinkedIn', visit: 'Visite', chat: 'Chat' };
   function onFeedPanel() {
     var p = document.getElementById('panel-feed'); if (!p) return;
     S.feedScope = S.feedScope || lsGet('scout_feed_scope', 'me');
-    S.feedType = S.feedType || 'all'; S.feedDays = S.feedDays || 30;
+    S.feedType = S.feedType || 'all'; S.feedDays = S.feedDays || 30; S.feedZone = S.feedZone || lsGet('scout_feed_zone', 'all');
     p.innerHTML = '<div class="crm-wrap crm-home"><div class="crm-row crm-home-head"><div><div class="crm-meta crm-lead-in">Tout ce qui bouge : appels d’offres et contrats, veille LinkedIn et presse, organismes venus sur le site, chats. Ce qui concerne tes comptes remonte aussi dans Aujourd’hui.</div></div>'
       + '<select class="crm-sel" id="crm-feed-days" aria-label="Période">' + [[7, '7 jours'], [30, '30 jours'], [90, '90 jours']].map(function (d) { return '<option value="' + d[0] + '"' + (S.feedDays === d[0] ? ' selected' : '') + '>' + d[1] + '</option>'; }).join('') + '</select></div>'
       + '<div class="crm-row crm-qbar"><div class="crm-views" style="margin:0" id="crm-feed-scope"></div><div class="crm-views" style="margin:0" id="crm-feed-type"></div></div>'
+      + '<div class="crm-row crm-qbar"><div class="crm-views" style="margin:0" id="crm-feed-zone"></div></div>'
       + '<div id="crm-feed-body"><div class="crm-empty">Chargement…</div></div></div>';
     document.getElementById('crm-feed-days').onchange = function () { S.feedDays = +this.value; loadFeed(); };
     loadFeed();
@@ -719,7 +721,17 @@
     var body = document.getElementById('crm-feed-body'); if (!body) return;
     document.querySelectorAll('#crm-feed-type [data-ft]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-ft') === S.feedType); });
     var all = S.feedItems || [];
-    var list = all.map(function (it, i) { return { it: it, i: i }; }).filter(function (x) { return S.feedType === 'all' || x.it.type === S.feedType; });
+    var byT = all.map(function (it, i) { return { it: it, i: i }; }).filter(function (x) { return S.feedType === 'all' || x.it.type === S.feedType; });
+    // filtre par continent (compté sur le type choisi)
+    var zc = { all: byT.length }; byT.forEach(function (x) { var z = x.it.zone || 'autre'; zc[z] = (zc[z] || 0) + 1; });
+    var zb = document.getElementById('crm-feed-zone');
+    if (zb) {
+      zb.innerHTML = FEED_ZONES.filter(function (z) { return z[0] === 'all' || zc[z[0]] || S.feedZone === z[0]; }).map(function (z) {
+        return '<button type="button" class="crm-chip sm' + (S.feedZone === z[0] ? ' on' : '') + '" data-fz="' + z[0] + '">' + z[1] + '<span class="n"> ' + (zc[z[0]] || 0) + '</span></button>';
+      }).join('');
+      zb.querySelectorAll('[data-fz]').forEach(function (b) { b.onclick = function () { S.feedZone = b.getAttribute('data-fz'); lsSet('scout_feed_zone', S.feedZone); drawFeed(); }; });
+    }
+    var list = byT.filter(function (x) { return S.feedZone === 'all' || (x.it.zone || 'autre') === S.feedZone; });
     if (!list.length) { body.innerHTML = '<div class="crm-empty">' + (S.feedScope === 'me' ? 'Rien de neuf sur tes comptes sur cette période. Regarde « Tout » ou « Sans compte ».' : 'Rien sur cette période.') + '</div>'; return; }
     var html = '', last = '';
     list.forEach(function (x) {
