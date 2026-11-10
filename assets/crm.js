@@ -127,6 +127,27 @@
   function statusPill(s) { return '<span class="crm-pill s-' + esc(s) + '">' + esc(STATUS_LABEL[s] || s) + '</span>'; }
   function tierBadge(t) { return t ? '<span class="crm-tier t' + esc(t) + '" title="Tier ' + esc(t) + '">T' + esc(t) + '</span>' : '<span class="crm-tier none" title="Pas de tier">·</span>'; }
   function heatBadge(score, heat) { return '<span class="crm-heat h-' + esc(heat || 'froid') + '" title="Engagement : ce que le compte fait envers nous">' + esc(score || 0) + '<small>' + esc(HEAT_LABEL[heat] || '') + '</small></span>'; }
+  // Doublon possible : même personne (nom sans accents ni casse) sur le même compte. Admin : fusion dans la fiche ouverte.
+  function foldName(x) { return String(personName(x) || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]+/g, ' ').trim(); }
+  function dupCardHtml(c, cols) {
+    if (!isAdminNow() || !cols || !cols.length) return '';
+    var me = foldName(c); if (!me) return '';
+    var d = cols.filter(function (x) { return foldName(x) === me; }); if (!d.length) return '';
+    return '<div class="crm-card"><h3>Doublon possible</h3>' + d.map(function (x) {
+      return '<div class="crm-row" style="gap:8px;align-items:center;margin-top:6px"><a data-nav class="crm-link" href="' + esc(ctHref(x.id)) + '">' + esc(personName(x)) + '</a><span class="crm-meta">' + esc(x.titre || '') + '</span>'
+        + '<button type="button" class="crm-btn sm" data-merge-ct="' + esc(x.id) + '" title="Son historique, ses tâches et ses infos manquantes passent sur cette fiche ; annulable">Fusionner ici</button></div>';
+    }).join('') + '</div>';
+  }
+  function bindDupMerge(root, keepId, after) {
+    root.querySelectorAll('[data-merge-ct]').forEach(function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        api('/crm/admin/cleanup', { method: 'POST', body: { batch: 'fusion-contacts-' + todayStr(), ops: [{ op: 'contact_merge', dup: b.getAttribute('data-merge-ct'), into: keepId }] } })
+          .then(function (r) { if (r.errors && r.errors.length) throw new Error(r.errors[0].r); toast('Contacts fusionnés'); if (after) after(); })
+          .catch(function (e) { b.disabled = false; toast('Erreur : ' + e.message); });
+      };
+    });
+  }
   function isAdminNow() { return (S.facets && S.facets.me && S.facets.me.role === 'admin') || (window.scoutSession && window.scoutSession.role === 'admin'); }
   function coverageDots(roles) {
     roles = roles || [];
@@ -2847,6 +2868,7 @@
       + (c.end_user_id ? '<div class="crm-card"><h3>Compte</h3><a data-nav class="crm-mini" href="' + esc(accHref(c.end_user_id)) + '" data-acc="' + esc(c.end_user_id) + '">' + tierBadge(c.tier) + '<span class="m"><b>' + esc(c.account_nom) + '</b><span>' + esc([c.account_pays, c.account_secteur].filter(Boolean).join(' · ')) + '</span></span></a>'
         + '<div class="crm-meta" style="margin-top:6px">Propriétaire : ' + esc(c.owner_name || 'personne') + '</div></div>'
         : '<div class="crm-card"><h3>Compte</h3><div class="crm-meta">Ce contact n’est rattaché à aucun compte' + (c.organisation ? ' (organisation saisie : ' + esc(c.organisation) + ')' : '') + '.</div></div>')
+      + dupCardHtml(c, R.colleagues)
       + '<div class="crm-card"><h3>Tâches <span class="crm-meta">' + openTasks.length + '</span></h3>' + (R.tasks.length ? R.tasks.map(taskHtml).join('') : '<div class="crm-meta">Aucune tâche.</div>') + '</div>'
       + (R.colleagues.length ? '<div class="crm-card"><h3>Comité d’achat du compte <span class="crm-meta">' + R.colleagues.length + '</span></h3>' + capList(R.colleagues, 5, function (x) {
         return '<div class="crm-ct" data-ct="' + esc(x.id) + '" role="button" tabindex="0"><span class="crm-avatar">' + esc(initials(personName(x))) + '</span><div style="min-width:0;flex:1"><div class="crm-ct-name">' + esc(personName(x)) + '</div><div class="crm-ct-sub">' + esc(x.titre || '') + '</div></div>' + rolePill(x.role, true) + '</div>';
@@ -2854,6 +2876,7 @@
       + '</aside></div>';
 
     document.getElementById('crm-pback').onclick = function () { if (history.length > 1) history.back(); else go('people'); };
+    bindDupMerge(document.getElementById('crm-pdetail'), c.id, function () { S.contact = null; renderContactDetail(c.id); });
     bindFields(document.getElementById('crm-ct-fields'), fields, function (k, v) {
       if (k == null) { drawContact(); return; }
       var body = {}; body[k] = v === '' ? null : v;
