@@ -2173,7 +2173,7 @@
     if (k.indexOf('already_client') >= 0) return 'client';
     if (k.indexOf('transmitted_crm') >= 0) return 'transmis';
     if (k.indexOf('reply_positive') >= 0) return 'engage';
-    var out = ['email', 'linkedin_message', 'linkedin_connect', 'phone', 'call', 'in_person', 'meeting', 'third_party', 'via_third_party', 'other'];
+    var out = ['email', 'linkedin_message', 'linkedin_connect', 'phone', 'call', 'in_person', 'meeting', 'third_party', 'via_third_party', 'other', 'activity'];
     if (k.some(function (x) { return out.indexOf(x) >= 0; })) return 'contacte';
     return 'nouveau';
   }
