@@ -2070,7 +2070,7 @@
     var empty = f.value == null || f.value === '';
     return '<div class="crm-f" data-fk="' + esc(f.k) + '"><dt>' + esc(f.label) + '</dt><dd>'
       + '<button type="button" class="crm-fv' + (empty ? ' empty' : '') + '" data-edit="' + esc(f.k) + '" title="Modifier">'
-      + (empty ? esc(f.placeholder || '—') : (f.display != null ? f.display : esc(f.value))) + '<span class="pen" aria-hidden="true">' + ICON.edit + '</span></button></dd></div>';
+      + (empty ? (f.display != null ? f.display : esc(f.placeholder || '—')) : (f.display != null ? f.display : esc(f.value))) + '<span class="pen" aria-hidden="true">' + ICON.edit + '</span></button></dd></div>';
   }
 
   function bindFields(root, fields, save) {
