@@ -189,7 +189,7 @@
     box.querySelectorAll('[data-np]').forEach(function (c) {
       c.onchange = async function () {
         var p = {}; box.querySelectorAll('[data-np]').forEach(function (x) { p[x.dataset.np] = x.checked; });
-        try { await call('/notify/prefs', { method: 'PUT', body: { endpoint: sub.endpoint, prefs: p } }); msg('cfg-notif-msg', 'Enregistré.'); } catch (x) { msg('cfg-notif-msg', 'Erreur : ' + x.message, true); }
+        try { var rp = await call('/notify/prefs', { method: 'PUT', body: { endpoint: sub.endpoint, prefs: p } }); msg('cfg-notif-msg', rp && rp.ok ? 'Enregistré.' : 'Cet appareil n’est plus abonné : réactive les notifications.', !(rp && rp.ok)); } catch (x) { msg('cfg-notif-msg', 'Erreur : ' + x.message, true); }
       };
     });
   }
