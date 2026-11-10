@@ -148,6 +148,47 @@
       };
     });
   }
+  // Rattachement du contact : changer de compte (recherche), ou détacher (mauvais compte, personne partie ailleurs)
+  function bindContactAccount(c) {
+    var box = document.getElementById('crm-ct-movebox'); if (!box) return;
+    var reload = function (msg) { toast(msg); S.contact = null; renderContactDetail(c.id); };
+    var save = function (body, msg) {
+      return api('/crm/contacts/' + encodeURIComponent(c.id), { method: 'PATCH', body: body }).then(function () { reload(msg); })
+        .catch(function (e) { toast('Erreur : ' + e.message); });
+    };
+    var mv = document.getElementById('crm-ct-move');
+    if (mv) mv.onclick = function () {
+      box.innerHTML = '<input type="search" class="crm-input" id="crm-ct-moveq" placeholder="Nom du compte (ex. Schiebel)" style="width:100%;margin-top:8px"><div id="crm-ct-moveres" style="margin-top:6px"></div>';
+      var q = document.getElementById('crm-ct-moveq'), res = document.getElementById('crm-ct-moveres'), t = null;
+      q.focus();
+      q.oninput = function () {
+        clearTimeout(t); var v = q.value.trim();
+        if (v.length < 2) { res.innerHTML = ''; return; }
+        t = setTimeout(function () {
+          api('/crm/accounts?limit=8&q=' + encodeURIComponent(v)).then(function (r) {
+            if (q.value.trim() !== v) return;
+            var L = (r.accounts || []).filter(function (a) { return a.id !== c.end_user_id; });
+            res.innerHTML = L.map(function (a) { return '<button type="button" class="crm-mini" data-mvto="' + esc(a.id) + '" style="width:100%;text-align:left"><span class="m"><b>' + esc(a.nom) + '</b><span>' + esc([a.pays, a.secteur].filter(Boolean).join(' · ')) + '</span></span></button>'; }).join('')
+              + '<button type="button" class="crm-btn sm ghost" id="crm-ct-mvnew" style="margin-top:6px">+ Créer le compte « ' + esc(v) + ' »</button>';
+            res.querySelectorAll('[data-mvto]').forEach(function (b) { b.onclick = function () { save({ end_user_id: b.getAttribute('data-mvto') }, 'Contact rattaché au compte'); }; });
+            document.getElementById('crm-ct-mvnew').onclick = function () {
+              api('/crm/accounts', { method: 'POST', body: { nom: v, pays: c.pays || c.account_pays || null, source: 'manuel' } })
+                .then(function (r) { var id = r.id || (r.account && r.account.id); if (!id) throw new Error('compte non créé'); return save({ end_user_id: id }, 'Compte créé, contact rattaché'); })
+                .catch(function (e) { toast('Erreur : ' + e.message); });
+            };
+          }).catch(function () {});
+        }, 220);
+      };
+    };
+    var dt = document.getElementById('crm-ct-detach');
+    if (dt) dt.onclick = function () {
+      box.innerHTML = '<div class="crm-meta" style="margin-top:8px">Détacher ' + esc(personName(c)) + ' de ' + esc(c.account_nom || 'ce compte') + ' ? Son historique le suit.</div>'
+        + '<input type="text" class="crm-input" id="crm-ct-neworg" placeholder="Organisation actuelle (facultatif)" style="width:100%;margin-top:6px">'
+        + '<div class="crm-row" style="gap:6px;margin-top:6px"><button type="button" class="crm-btn sm" id="crm-ct-detach-ok">Détacher</button><button type="button" class="crm-btn sm ghost" id="crm-ct-detach-no">Annuler</button></div>';
+      document.getElementById('crm-ct-detach-no').onclick = function () { box.innerHTML = ''; };
+      document.getElementById('crm-ct-detach-ok').onclick = function () { save({ end_user_id: null, organisation: document.getElementById('crm-ct-neworg').value.trim() }, 'Contact détaché du compte'); };
+    };
+  }
   function isAdminNow() { return (S.facets && S.facets.me && S.facets.me.role === 'admin') || (window.scoutSession && window.scoutSession.role === 'admin'); }
   function coverageDots(roles) {
     roles = roles || [];
@@ -2385,7 +2426,7 @@
   function filterTl(tl) {
     if (S.tlFilter === 'all') return tl;
     return tl.filter(function (t) {
-      var sys = t.src === 'event' && ['owner', 'status', 'field', 'contact_added'].indexOf(t.kind) >= 0;
+      var sys = t.src === 'event' && ['owner', 'status', 'field', 'contact_added', 'contact_removed'].indexOf(t.kind) >= 0;
       var note = t.src === 'event' && t.kind === 'note';
       if (S.tlFilter === 'sys') return sys;
       if (S.tlFilter === 'note') return note;
@@ -2604,6 +2645,7 @@
           title = (p.contact && showContact ? esc(p.contact) + ' : ' : '') + esc(lbl) + (p.field === 'description' ? ' modifiée' : ' : ' + esc(fmt(p.from)) + ' → <b>' + esc(fmt(p.to)) + '</b>');
         }
         else if (t.kind === 'contact_added') { ic = ICON.plus; cls = 'k-sys'; title = 'Contact ajouté : <b>' + esc(p.contact || t.contact_name || '') + '</b>'; }
+        else if (t.kind === 'contact_removed') { ic = ICON.edit; cls = 'k-sys'; title = 'Contact retiré du compte : <b>' + esc(p.contact || t.contact_name || '') + '</b>'; }
         else if (t.kind === 'task_done') { ic = ICON.check; cls = 'k-pos'; title = 'Tâche terminée' + ct; }
         else { title = esc(t.kind); }
       } else {
@@ -2866,8 +2908,11 @@
       + '<div class="crm-card"><h3>Historique</h3><div id="crm-tl">' + timelineHtml(R.timeline, false) + '</div></div></main>'
       + '<aside class="crm-rec-right">'
       + (c.end_user_id ? '<div class="crm-card"><h3>Compte</h3><a data-nav class="crm-mini" href="' + esc(accHref(c.end_user_id)) + '" data-acc="' + esc(c.end_user_id) + '">' + tierBadge(c.tier) + '<span class="m"><b>' + esc(c.account_nom) + '</b><span>' + esc([c.account_pays, c.account_secteur].filter(Boolean).join(' · ')) + '</span></span></a>'
-        + '<div class="crm-meta" style="margin-top:6px">Propriétaire : ' + esc(c.owner_name || 'personne') + '</div></div>'
-        : '<div class="crm-card"><h3>Compte</h3><div class="crm-meta">Ce contact n’est rattaché à aucun compte' + (c.organisation ? ' (organisation saisie : ' + esc(c.organisation) + ')' : '') + '.</div></div>')
+        + '<div class="crm-meta" style="margin-top:6px">Propriétaire : ' + esc(c.owner_name || 'personne') + '</div>'
+        + '<div class="crm-row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button type="button" class="crm-btn sm ghost" id="crm-ct-move">Changer de compte</button><button type="button" class="crm-btn sm ghost" id="crm-ct-detach">Détacher</button></div>'
+        + '<div id="crm-ct-movebox"></div></div>'
+        : '<div class="crm-card"><h3>Compte</h3><div class="crm-meta">Ce contact n’est rattaché à aucun compte' + (c.organisation ? ' (organisation saisie : ' + esc(c.organisation) + ')' : '') + '.</div>'
+        + '<div class="crm-row" style="gap:6px;margin-top:8px"><button type="button" class="crm-btn sm ghost" id="crm-ct-move">Rattacher à un compte</button></div><div id="crm-ct-movebox"></div></div>')
       + dupCardHtml(c, R.colleagues)
       + '<div class="crm-card"><h3>Tâches <span class="crm-meta">' + openTasks.length + '</span></h3>' + (R.tasks.length ? R.tasks.map(taskHtml).join('') : '<div class="crm-meta">Aucune tâche.</div>') + '</div>'
       + (R.colleagues.length ? '<div class="crm-card"><h3>Comité d’achat du compte <span class="crm-meta">' + R.colleagues.length + '</span></h3>' + capList(R.colleagues, 5, function (x) {
@@ -2877,6 +2922,7 @@
 
     document.getElementById('crm-pback').onclick = function () { if (history.length > 1) history.back(); else go('people'); };
     bindDupMerge(document.getElementById('crm-pdetail'), c.id, function () { S.contact = null; renderContactDetail(c.id); });
+    bindContactAccount(c);
     bindFields(document.getElementById('crm-ct-fields'), fields, function (k, v) {
       if (k == null) { drawContact(); return; }
       var body = {}; body[k] = v === '' ? null : v;
