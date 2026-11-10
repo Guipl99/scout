@@ -8095,7 +8095,29 @@ async function exportLinkedInCsv(scope) {
   input.addEventListener('input', () => {
     selectedIdx = 0;
     renderResults(input.value);
+    fetchApiHits(input.value);
   });
+
+  // Comptes et contacts : recherche côté serveur (sans accents ni casse), les listes locales ne sont plus chargées
+  let apiHits = { q: '', contacts: [], accounts: [] }, apiTimer = null, apiSeq = 0;
+  function fetchApiHits(q) {
+    q = String(q || '').trim(); clearTimeout(apiTimer);
+    if (q.length < 2) { apiHits = { q: '', contacts: [], accounts: [] }; return; }
+    apiTimer = setTimeout(async () => {
+      const seq = ++apiSeq;
+      try {
+        const tok = (JSON.parse(localStorage.getItem('scout_chat_session') || '{}') || {}).token;
+        const H = { Authorization: 'Bearer ' + tok }, base = window.SCOUT_API_URL;
+        const [a, c] = await Promise.all([
+          fetch(base + '/crm/accounts?limit=10&q=' + encodeURIComponent(q), { headers: H }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+          fetch(base + '/crm/contacts?limit=10&q=' + encodeURIComponent(q), { headers: H }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+        ]);
+        if (seq !== apiSeq || input.value.trim() !== q) return;
+        apiHits = { q, accounts: a.accounts || [], contacts: c.contacts || [] };
+        renderResults(input.value);
+      } catch (e) { /* recherche locale seulement */ }
+    }, 220);
+  }
 
   function updateSelection() {
     document.querySelectorAll('.scout-gs-item').forEach((el, i) => {
@@ -8109,7 +8131,7 @@ async function exportLinkedInCsv(scope) {
   function highlight(text, query) {
     if (!query || !text) return escapeHtml(text);
     const escaped = escapeHtml(text);
-    const qEscaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const qEscaped = escapeHtml(query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const re = new RegExp('(' + qEscaped + ')', 'gi');
     return escaped.replace(re, '<mark>$1</mark>');
   }
@@ -8209,6 +8231,19 @@ async function exportLinkedInCsv(scope) {
       }
     }
 
+    if (apiHits.q && apiHits.q === q.trim()) {
+      const seen = new Set(out.map(it => it.type + ':' + (it.data && it.data.id)));
+      const fq = foldGs(apiHits.q);
+      for (const c of apiHits.contacts) {
+        if (seen.has('contact:' + c.id)) continue;
+        const name = [c.prenom, c.nom].filter(Boolean).join(' ');
+        out.push({ type: 'contact', icon: '👤', name: name || c.email || c.id, meta: [c.titre, c.account_nom || c.organisation, c.pays].filter(Boolean).join(' • '), data: Object.assign({ crm: true }, c), score: computeScore(foldGs(name), fq) + 1 });
+      }
+      for (const a of apiHits.accounts) {
+        if (seen.has('buyer:' + a.id)) continue;
+        out.push({ type: 'buyer', icon: '🎯', name: a.nom, meta: [a.pays, a.secteur].filter(Boolean).join(' • '), data: Object.assign({ crm: true }, a), score: computeScore(foldGs(a.nom), fq) + 1 });
+      }
+    }
     // Sort by score (higher = better)
     out.sort((a, b) => b.score - a.score);
     return out.slice(0, 50);
@@ -8236,7 +8271,7 @@ async function exportLinkedInCsv(scope) {
     const askItem = { type: 'ask', name: q ? 'Demander à Scout : « ' + q + ' »' : 'Poser une question à Scout', meta: 'Assistant : comptes, contacts, marchés, conseils de prospection', icon: '?', data: { q: q } };
     if (!items.length) {
       results.innerHTML = `<div class="scout-gs-group-label">Assistant</div><div class="scout-gs-item selected" data-idx="0"><div class="type-icon">?</div><div class="content"><div class="name">${escapeHtmlGs(askItem.name)}</div><div class="meta">${askItem.meta}</div></div></div>`
-        + (q ? `<div class="scout-gs-empty">Aucun résultat dans la base</div>` : `<div class="scout-gs-empty">Ou tape un nom de compte, de contact, de contrat…</div>`);
+        + (q ? `<div class="scout-gs-empty">${q.trim().length >= 2 && apiHits.q !== q.trim() ? 'Recherche…' : 'Aucun résultat dans la base'}</div>` : `<div class="scout-gs-empty">Ou tape un nom de compte, de contact, de contrat…</div>`);
       currentResults = [askItem];
       const el0 = results.querySelector('.scout-gs-item'); if (el0) el0.addEventListener('click', () => { selectedIdx = 0; openItem(askItem); });
       return;
@@ -8308,6 +8343,7 @@ async function exportLinkedInCsv(scope) {
           if (window.scoutChat) { window.scoutChat.open(); if (d.q) setTimeout(() => window.scoutChat.useSuggestion(d.q), 300); }
           break;
         case 'contact':
+          if (d.crm) { location.hash = '#people/' + encodeURIComponent(d.id); break; }
           if (typeof openContactFromGrid === 'function') {
             openContactFromGrid(d.id);
           }
@@ -8325,6 +8361,7 @@ async function exportLinkedInCsv(scope) {
           setTimeout(() => { if (typeof openContractDetail === 'function') openContractDetail(d.id); }, 200);
           break;
         case 'buyer':
+          if (d.crm) { location.hash = '#accounts/' + encodeURIComponent(d.id); break; }
           if (typeof go === 'function') go('end-users');
           setTimeout(() => { if (typeof openEndUser === 'function') openEndUser(d.id); }, 150);
           break;
@@ -8334,6 +8371,7 @@ async function exportLinkedInCsv(scope) {
     }
   }
 
+  function foldGs(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/’/g, "'"); }
   function escapeHtmlGs(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   // Expose for external use (add a search button in header, etc.)
   window.scoutGlobalSearch = { open, close };
